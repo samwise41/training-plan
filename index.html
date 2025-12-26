@@ -133,9 +133,16 @@
             border-radius: 8px;
             border-left: 6px solid #64748b; /* Default Grey */
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            align-items: flex-start;
             transition: transform 0.2s;
+        }
+        @media (min-width: 400px) {
+            .zone-row {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
         }
         .zone-row:hover {
             transform: translateX(4px);
@@ -151,6 +158,10 @@
             font-weight: 700;
             color: #e2e8f0;
             font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        @media (min-width: 400px) {
+            .zone-label { margin-bottom: 0; }
         }
         .zone-range {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -377,6 +388,7 @@
                     return;
                 }
 
+                // Split into lines for analysis
                 const lines = section.split('\n');
                 let html = '<div id="zone-grid">';
                 let currentCategory = '';
@@ -397,13 +409,14 @@
                 lines.forEach(line => {
                     const trimmed = line.trim();
                     
-                    // Detect sub-headers like ### Cycling Power Zones
+                    // Detect sub-headers (### Category Name)
                     if (trimmed.startsWith('###')) {
                         flushCategory();
                         currentCategory = trimmed.replace(/^###\s*/, '').trim();
                     } 
-                    // Detect zone bullet points or entries containing "Zone" and a colon
+                    // Detect zone entries (Bullet points with "Zone X ... : ...")
                     else if (trimmed.includes('Zone') && trimmed.includes(':')) {
+                        // Clean up markdown syntax (*, -)
                         const cleanLine = trimmed.replace(/^[\s\*\-\+]+/, '').replace(/\*\*/g, '').trim();
                         const sepIndex = cleanLine.indexOf(':');
                         
@@ -411,12 +424,12 @@
                             const label = cleanLine.substring(0, sepIndex).trim();
                             const range = cleanLine.substring(sepIndex + 1).trim();
                             
-                            // Determine color class based on zone number
-                            let colorClass = 'zone-z1'; // default grey
-                            if (label.includes('2')) colorClass = 'zone-z2';
-                            else if (label.includes('3')) colorClass = 'zone-z3';
-                            else if (label.includes('4')) colorClass = 'zone-z4';
-                            else if (label.includes('5')) colorClass = 'zone-z5';
+                            // Color Logic
+                            let colorClass = 'zone-z1'; // Default Grey
+                            if (label.toLowerCase().includes('zone 2')) colorClass = 'zone-z2'; // Green
+                            else if (label.toLowerCase().includes('zone 3')) colorClass = 'zone-z3'; // Yellow
+                            else if (label.toLowerCase().includes('zone 4')) colorClass = 'zone-z4'; // Orange
+                            else if (label.toLowerCase().includes('zone 5')) colorClass = 'zone-z5'; // Red
 
                             categoryZones.push(`
                                 <div class="zone-row ${colorClass}">
@@ -428,13 +441,15 @@
                     }
                 });
 
-                flushCategory(); // Catch the last grouping
+                flushCategory(); // Capture the last category
                 html += '</div>';
 
                 const contentDiv = document.getElementById('markdown-content');
-                if (html) {
+                // Check if we actually found structured zones
+                if (html.includes('zone-row')) {
                     contentDiv.innerHTML = html;
                 } else {
+                    // Fallback if parsing fails (no ### headers or Zone lines found)
                     contentDiv.classList.add('markdown-body');
                     contentDiv.innerHTML = marked.parse(section);
                 }
@@ -480,13 +495,19 @@
             let capturing = false;
             let section = [];
             for (let line of lines) {
-                const isHeader = line.trim().startsWith('##');
-                if (isHeader && line.toLowerCase().includes(title.toLowerCase())) {
+                const trimmed = line.trim();
+                // Check if this is a main Level 2 header (## but not ###)
+                const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
+                
+                if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) {
                     capturing = true;
                     section.push(line);
                     continue;
                 }
-                if (capturing && isHeader) break;
+                
+                // Stop if we hit the next main header
+                if (capturing && isMainHeader) break;
+                
                 if (capturing) {
                     const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
                     section.push(cleanLine);
@@ -500,12 +521,16 @@
             let result = [];
             let skipping = false;
             for (let line of lines) {
-                const isHeader = line.trim().startsWith('##');
-                if (isHeader && line.toLowerCase().includes(title.toLowerCase())) {
+                const trimmed = line.trim();
+                const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
+                
+                if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) {
                     skipping = true;
                     continue;
                 }
-                if (skipping && isHeader) skipping = false;
+                
+                if (skipping && isMainHeader) skipping = false;
+                
                 if (!skipping) {
                     const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
                     result.push(cleanLine);
