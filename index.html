@@ -127,7 +127,7 @@
         <!-- DASHBOARD STATS -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Focus</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
                 <p class="text-lg font-semibold text-blue-400" id="stat-focus">--</p>
             </div>
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
@@ -136,7 +136,7 @@
             </div>
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
-                <p class="text-lg font-semibold text-emerald-400" id="stat-event">--</p>
+                <div class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event">--</div>
             </div>
         </div>
 
@@ -180,16 +180,18 @@
         // --- STATS PARSING ---
 
         function updateHeaderStats(md) {
-            // 1. Current Focus
+            // 1. Current Phase (Looking for **Phase:** in the status section)
             const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
             document.getElementById('stat-focus').innerText = phaseMatch ? phaseMatch[1].trim() : "TBD";
 
-            // 2. Current Week
-            const weekMatch = md.match(/##.*Weekly Schedule[:\s]*(.*)/i);
-            document.getElementById('stat-week').innerText = weekMatch ? weekMatch[1].trim() : "Active Week";
+            // 2. Current Week (Looking for **Week:** in the status section)
+            const weekMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
+            document.getElementById('stat-week').innerText = weekMatch ? weekMatch[1].trim() : "TBD";
 
-            // 3. Next Event
+            // 3. Next Event (Looking for ## Event Schedule table)
             const eventSection = extractSection(md, "Event Schedule");
+            const eventElement = document.getElementById('stat-event');
+
             if (eventSection) {
                 const lines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
                 if (lines.length > 0) {
@@ -200,20 +202,34 @@
                         if (!isNaN(eventDate)) {
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
-                            const diff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-                            const daysLabel = diff === 0 ? "Today" : (diff > 0 ? `${diff}d` : "Past");
-                            document.getElementById('stat-event').innerText = `${eventName} // ${daysLabel}`;
+                            const diffInMs = eventDate - today;
+                            const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
+                            
+                            if (diffInDays < 0) {
+                                eventElement.innerHTML = `<div>${eventName}</div><div class="text-sm font-normal text-slate-500">Event Completed</div>`;
+                            } else if (diffInDays === 0) {
+                                eventElement.innerHTML = `<div>${eventName}</div><div class="text-sm font-normal text-emerald-500">Event Today</div>`;
+                            } else {
+                                const weeks = Math.floor(diffInDays / 7);
+                                const days = diffInDays % 7;
+                                let countdownStr = "";
+                                if (weeks > 0) countdownStr += `${weeks} week${weeks > 1 ? 's' : ''}`;
+                                if (weeks > 0 && days > 0) countdownStr += " and ";
+                                if (days > 0 || weeks === 0) countdownStr += `${days} day${days !== 1 ? 's' : ''}`;
+                                
+                                eventElement.innerHTML = `<div>${eventName}</div><div class="text-sm font-normal text-slate-400">${countdownStr} until event</div>`;
+                            }
                         } else {
-                            document.getElementById('stat-event').innerText = eventName;
+                            eventElement.innerHTML = `<div>${eventName}</div><div class="text-sm font-normal text-slate-500">Date TBD</div>`;
                         }
                     } else {
-                        document.getElementById('stat-event').innerText = "None Scheduled";
+                        eventElement.innerText = "None Scheduled";
                     }
                 } else {
-                    document.getElementById('stat-event').innerText = "None Scheduled";
+                    eventElement.innerText = "None Scheduled";
                 }
             } else {
-                document.getElementById('stat-event').innerText = "TBD";
+                eventElement.innerText = "TBD";
             }
         }
 
