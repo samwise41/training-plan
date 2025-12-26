@@ -1,470 +1,313 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Athlete Performance Dashboard</title>
-    
-    <!-- Scripts & Styles -->
+    <title>Athlete Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
     
     <style>
         :root {
-            --bg-main: #0f172a;
-            --bg-card: rgba(30, 41, 59, 0.5);
-            --accent: #3b82f6;
+            --bg-dark: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.3);
+            --border-slate: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
         }
 
         body {
-            background-color: var(--bg-main);
-            color: #f8fafc;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        /* Nav highlighting */
+        .nav-link.active {
+            color: #3b82f6;
+            background-color: #1e293b;
+            border-right: 4px solid #3b82f6;
+        }
 
-        /* Markdown Overrides */
+        /* Sidebar transitions */
+        #sidebar { transition: transform 0.3s ease-in-out; z-index: 60; }
+        .sidebar-open { transform: translateX(0); }
+        .sidebar-closed { transform: translateX(-100%); }
+
+        @media (min-width: 1024px) {
+            #sidebar { transform: translateX(0); }
+            .main-content { margin-left: 260px; }
+        }
+
+        /* Markdown Styling Overrides */
         .markdown-body {
             background-color: transparent !important;
-            font-family: inherit;
             color: #cbd5e1 !important;
-            line-height: 1.7;
         }
         .markdown-body table {
-            border: 1px solid #334155;
-            border-radius: 12px;
-            overflow: hidden;
-            border-collapse: separate;
-            border-spacing: 0;
-            width: 100%;
-            margin-bottom: 2rem;
+            width: 100%; border: 1px solid #334155; border-radius: 8px; overflow: hidden;
         }
-        .markdown-body table th {
-            background-color: #1e293b !important;
-            color: var(--accent) !important;
-            text-transform: uppercase;
-            font-size: 0.7rem;
-            letter-spacing: 0.05em;
-            padding: 1rem !important;
-        }
-        .markdown-body table td {
-            padding: 1rem !important;
-            border-top: 1px solid #1e293b !important;
-        }
+        .markdown-body table th { background-color: #1e293b !important; color: #3b82f6 !important; padding: 12px !important; }
+        .markdown-body table tr { background-color: var(--bg-dark) !important; }
 
-        /* Nav State */
-        .nav-link.active {
-            color: var(--accent);
-            background: rgba(59, 130, 246, 0.1);
-            border-right: 3px solid var(--accent);
-        }
+        /* Gauge Components */
+        .gauge-wrapper { width: 100%; max-width: 400px; margin: 0 auto 3rem; text-align: center; }
+        .gauge-needle { transition: transform 2s cubic-bezier(0.17, 0.67, 0.38, 1); transform-origin: 150px 150px; }
 
-        /* Animations */
-        .fade-enter { opacity: 0; transform: translateY(10px); }
-        .fade-enter-active { opacity: 1; transform: translateY(0); transition: all 0.4s ease-out; }
-
-        .loader {
-            border-top-color: var(--accent);
-            animation: spinner 0.8s linear infinite;
+        /* Zone Layout */
+        #zone-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+        @media (min-width: 768px) { #zone-grid { grid-template-columns: 1fr 1fr; } }
+        
+        .zone-card { background-color: var(--bg-card); border: 1px solid var(--border-slate); border-radius: 12px; padding: 1.5rem; }
+        .zone-row {
+            margin-bottom: 0.75rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #64748b;
         }
-        @keyframes spinner {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Gauge Logic */
-        .gauge-needle {
-            transition: transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            transform-origin: 150px 150px;
-        }
+        .z-1 { border-left-color: #94a3b8; }
+        .z-2 { border-left-color: #22c55e; }
+        .z-3 { border-left-color: #eab308; }
+        .z-4 { border-left-color: #f97316; }
+        .z-5 { border-left-color: #ef4444; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col lg:flex-row">
+<body class="min-h-screen">
 
-    <!-- Mobile Overlay -->
-    <div id="overlay" class="fixed inset-0 bg-black/60 z-40 hidden lg:hidden transition-opacity"></div>
+    <div id="sidebar-overlay" onclick="App.toggleSidebar()" class="fixed inset-0 bg-black/50 hidden z-50"></div>
 
-    <!-- Sidebar -->
-    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-slate-900 border-r border-slate-800 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col">
-        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white italic">A</div>
-                <h2 class="text-sm font-bold tracking-tighter uppercase">Athlete<span class="text-blue-500">OS</span></h2>
-            </div>
-            <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 p-1 hover:bg-slate-800 rounded">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l18 18"></path></svg>
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="fixed top-0 left-0 h-full w-[260px] bg-slate-900 border-r border-slate-800 sidebar-closed lg:sidebar-open flex flex-col">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+            <span class="font-bold tracking-widest text-slate-400 text-xs uppercase">Navigation</span>
+            <button onclick="App.toggleSidebar()" class="lg:hidden text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
-
-        <nav class="flex-1 px-3 py-6 space-y-1">
-            <p class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Training</p>
-            <button onclick="navigate('schedule')" data-nav="schedule" class="nav-link w-full flex items-center gap-3 px-3 py-3 text-sm font-medium text-slate-400 rounded-md hover:bg-slate-800/50 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                Weekly Schedule
+        
+        <nav class="flex-1 py-4">
+            <button onclick="App.navigate('schedule')" id="nav-schedule" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3 active">
+                Schedule
             </button>
-            <button onclick="navigate('phases')" data-nav="phases" class="nav-link w-full flex items-center gap-3 px-3 py-3 text-sm font-medium text-slate-400 rounded-md hover:bg-slate-800/50 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                Periodization
+            <button onclick="App.navigate('phases')" id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                Phases
             </button>
-            <button onclick="navigate('zones')" data-nav="zones" class="nav-link w-full flex items-center gap-3 px-3 py-3 text-sm font-medium text-slate-400 rounded-md hover:bg-slate-800/50 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                Analysis & Zones
+            <button onclick="App.navigate('zones')" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                Zones
             </button>
-            <button onclick="navigate('full')" data-nav="full" class="nav-link w-full flex items-center gap-3 px-3 py-3 text-sm font-medium text-slate-400 rounded-md hover:bg-slate-800/50 transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <button onclick="App.navigate('full')" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 Full Plan
             </button>
         </nav>
 
         <div class="p-6 border-t border-slate-800">
-            <div class="flex items-center gap-3">
-                <div id="sync-indicator" class="w-2 h-2 rounded-full bg-slate-700"></div>
-                <div class="flex flex-col">
-                    <span id="sync-label" class="text-[9px] font-black uppercase text-slate-500 leading-none">Status</span>
-                    <span id="sync-text" class="text-[10px] text-slate-400 font-medium">Connecting...</span>
-                </div>
+            <div class="flex items-center space-x-2">
+                <div id="sync-status-dot" class="w-2 h-2 rounded-full bg-slate-600"></div>
+                <span id="sync-status-text" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">OFFLINE</span>
             </div>
         </div>
     </aside>
 
-    <!-- Content -->
-    <div class="flex-1 flex flex-col lg:ml-64 min-w-0">
-        <!-- Top Bar -->
-        <header class="h-16 lg:h-20 flex items-center justify-between px-6 border-b border-slate-800 sticky top-0 bg-slate-900/80 backdrop-blur-md z-30">
-            <div class="flex items-center gap-4">
-                <button onclick="toggleSidebar()" class="lg:hidden p-2 text-slate-400 hover:text-white">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-                </button>
-                <div>
-                    <h1 id="view-title" class="text-lg lg:text-xl font-bold tracking-tight text-white">Dashboard</h1>
-                    <p id="view-subtitle" class="text-[11px] text-slate-500 font-semibold uppercase tracking-wider hidden sm:block">Real-time Performance Data</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-800/40 border border-slate-700 rounded-full text-[10px] font-bold text-slate-300">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                ACTIVE PLAN
-            </div>
+    <div class="main-content">
+        <header class="max-w-5xl mx-auto px-4 pt-12 pb-8">
+            <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight" id="header-title">Weekly Schedule</h1>
+            <p class="mt-3 text-slate-400 text-lg">Synchronized with <span class="font-mono text-blue-400">endurance_plan.md</span></p>
         </header>
 
-        <main class="flex-1 p-6 lg:p-10 max-w-6xl mx-auto w-full">
-            <!-- Stats Grid -->
-            <div id="dashboard-stats" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 transition-all duration-500">
-                <div class="bg-slate-800/30 border border-slate-800 p-5 rounded-xl hover:border-slate-700 transition-colors">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Phase</p>
-                    <h3 id="stat-phase" class="text-xl font-bold text-blue-400">Loading...</h3>
+        <main class="max-w-5xl mx-auto px-4 pb-20">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
+                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
                 </div>
-                <div class="bg-slate-800/30 border border-slate-800 p-5 rounded-xl hover:border-slate-700 transition-colors">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Cycle</p>
-                    <h3 id="stat-week" class="text-xl font-bold text-slate-200">--</h3>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
+                    <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
                 </div>
-                <div class="bg-slate-800/30 border border-slate-800 p-5 rounded-xl hover:border-slate-700 transition-colors">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Goal Countdown</p>
-                    <div class="flex items-baseline gap-2">
-                        <h3 id="stat-event-days" class="text-xl font-bold text-emerald-400">--</h3>
-                        <span id="stat-event-name" class="text-xs text-slate-500 truncate max-w-[120px]">Days</span>
-                    </div>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
+                    <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
                 </div>
             </div>
 
-            <!-- Main Dynamic Container -->
-            <div class="relative min-h-[400px]">
-                <div id="loader" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-10 hidden">
-                    <div class="loader w-10 h-10 border-4 border-slate-700 rounded-full mb-4"></div>
-                    <span class="text-slate-500 text-xs font-bold uppercase tracking-widest">Parsing Data</span>
-                </div>
-
-                <div id="error-box" class="hidden p-8 bg-red-500/5 border border-red-500/20 rounded-2xl text-center">
-                    <h4 class="text-red-400 font-bold mb-2">Data Synchronisation Failed</h4>
-                    <p id="error-text" class="text-slate-500 text-sm mb-6">Could not locate 'endurance_plan.md'</p>
-                    <button onclick="window.location.reload()" class="px-5 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-colors">Retry Sync</button>
-                </div>
-
-                <div id="content-area" class="markdown-body transition-all duration-300">
-                    <!-- Dynamic content injected here -->
-                </div>
+            <div id="loader" class="flex flex-col items-center py-20 hidden">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
             </div>
+
+            <div id="content" class="markdown-body opacity-0 transition-opacity duration-500"></div>
         </main>
     </div>
 
     <script>
         /**
-         * APP CONFIGURATION & STATE
+         * CONFIGURATION
+         * Centralized settings for the W/kg profile
          */
         const CONFIG = {
             SOURCE_FILE: "endurance_plan.md",
-            G_MIN: 1.0,
-            G_MAX: 6.0
-        };
-
-        let state = {
-            markdown: null,
-            activeView: 'schedule',
-            isSidebarOpen: false
+            WKG_SCALE: { min: 1.0, max: 6.0 },
+            CATEGORIES: [
+                { threshold: 5.05, label: "Exceptional", color: "#a855f7" },
+                { threshold: 3.93, label: "Very Good",   color: "#3b82f6" },
+                { threshold: 2.79, label: "Good",        color: "#22c55e" },
+                { threshold: 2.23, label: "Fair",        color: "#f97316" },
+                { threshold: 0.00, label: "Untrained",   color: "#ef4444" }
+            ]
         };
 
         /**
-         * DATA PARSING ENGINE
+         * ATHLETE DATA PARSER
+         * Logic for extracting data from the Markdown file
          */
         const Parser = {
-            extractSection(md, header) {
-                if (!md) return "";
-                const regex = new RegExp(`##[^#]*${header}[\\s\\S]*?(?=##|$)`, 'i');
-                const match = md.match(regex);
-                return match ? match[0].replace(/^##.*\n/, "").trim() : "";
-            },
-            
-            getMetadata(md) {
-                const statusMatch = md.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
-                if (statusMatch) return { phase: statusMatch[1].trim(), week: statusMatch[2].trim() };
-                
-                const pMatch = md.match(/\*\*Phase:\*\*\s*(.*)/i);
-                const wMatch = md.match(/\*\*Week:\*\*\s*(.*)/i);
-                return { 
-                    phase: pMatch ? pMatch[1].trim() : "Plan Active", 
-                    week: wMatch ? wMatch[1].trim() : "TBD" 
-                };
-            },
-
-            getEvent(md) {
-                const section = this.extractSection(md, "Event Schedule");
-                if (!section) return null;
-                const rows = section.split('\n').filter(l => l.includes('|') && !l.includes('---') && !l.toLowerCase().includes('date'));
-                if (!rows.length) return null;
-                const parts = rows[0].split('|').map(p => p.trim()).filter(p => p);
-                return { date: new Date(parts[0]), name: parts[1] };
+            getSection(md, title) {
+                const lines = md.split('\n');
+                let capturing = false, section = [];
+                for (let line of lines) {
+                    const isHeader = line.trim().startsWith('##') && !line.trim().startsWith('###');
+                    if (isHeader && line.toLowerCase().includes(title.toLowerCase())) { capturing = true; continue; }
+                    if (capturing && isHeader) break;
+                    if (capturing) section.push(line);
+                }
+                return section.join('\n').trim();
             },
 
             getBiometrics(md) {
-                const section = this.extractSection(md, "User Profile") || this.extractSection(md, "Biometrics");
-                const ftp = section.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
-                const weight = section.match(/Weight[^0-9]*(\d{1,3})/i);
+                const profileSection = this.getSection(md, "2. User Profile & Health") || this.getSection(md, "Biometrics");
+                const ftp = profileSection.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
+                const weight = profileSection.match(/Weight[^0-9]*(\d{1,3})/i);
                 return {
-                    ftp: ftp ? parseInt(ftp[1]) : 0,
+                    watts: ftp ? parseInt(ftp[1]) : 0,
                     weight: weight ? parseInt(weight[1]) : 0
                 };
-            },
-
-            getZones(md) {
-                const section = this.extractSection(md, "Training Parameters") || this.extractSection(md, "Zones");
-                const results = {};
-                let currentCat = null;
-
-                section.split('\n').forEach(line => {
-                    const l = line.trim();
-                    if (l.startsWith('###')) {
-                        currentCat = l.replace('###', '').trim();
-                        results[currentCat] = [];
-                    } else if (currentCat && l.includes('Zone') && l.includes(':')) {
-                        const parts = l.replace(/[\*\-\+]/g, '').split(':');
-                        results[currentCat].push({ label: parts[0].trim(), range: parts[1].trim() });
-                    }
-                });
-                return results;
             }
         };
 
         /**
-         * UI ACTIONS
+         * CORE APP LOGIC
          */
-        function toggleSidebar() {
-            const sb = document.getElementById('sidebar');
-            const ov = document.getElementById('overlay');
-            state.isSidebarOpen = !state.isSidebarOpen;
+        const App = {
+            cachedMd: "",
             
-            if (state.isSidebarOpen) {
-                sb.classList.remove('-translate-x-full');
-                ov.classList.remove('hidden');
-            } else {
-                sb.classList.add('-translate-x-full');
-                ov.classList.add('hidden');
-            }
-        }
-
-        async function fetchData() {
-            if (state.markdown) return state.markdown;
-            
-            document.getElementById('loader').classList.remove('hidden');
-            try {
-                const res = await fetch(`./${CONFIG.SOURCE_FILE}?t=${Date.now()}`);
-                if (!res.ok) throw new Error("File not found");
-                
-                state.markdown = await res.text();
-                updateGlobalStats();
-                setSyncStatus(true);
-                return state.markdown;
-            } catch (e) {
-                setSyncStatus(false);
-                showError(e.message);
-                throw e;
-            } finally {
-                document.getElementById('loader').classList.add('hidden');
-            }
-        }
-
-        function setSyncStatus(isLive) {
-            const dot = document.getElementById('sync-indicator');
-            const txt = document.getElementById('sync-text');
-            const lbl = document.getElementById('sync-label');
-
-            if (isLive) {
-                dot.className = "w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]";
-                txt.innerText = "Sync Active";
-                txt.classList.replace('text-slate-400', 'text-emerald-400');
-                lbl.classList.replace('text-slate-500', 'text-emerald-600');
-            } else {
-                dot.className = "w-2 h-2 rounded-full bg-red-500";
-                txt.innerText = "Connection Lost";
-                txt.classList.add('text-red-400');
-            }
-        }
-
-        function updateGlobalStats() {
-            const meta = Parser.getMetadata(state.markdown);
-            const event = Parser.getEvent(state.markdown);
-            
-            document.getElementById('stat-phase').innerText = meta.phase;
-            document.getElementById('stat-week').innerText = meta.week;
-            
-            if (event && !isNaN(event.date)) {
-                const diff = Math.ceil((event.date - new Date().setHours(0,0,0,0)) / (86400000));
-                document.getElementById('stat-event-days').innerText = diff > 0 ? diff : "0";
-                document.getElementById('stat-event-name').innerText = diff >= 0 ? `Days to ${event.name}` : "Completed";
-            }
-        }
-
-        async function navigate(view) {
-            state.activeView = view;
-            
-            // UI Updates
-            const titles = {
-                schedule: "Weekly Schedule",
-                phases: "Periodization Plan",
-                zones: "Zone Analysis",
-                full: "Master Plan"
-            };
-            
-            document.getElementById('view-title').innerText = titles[view];
-            document.querySelectorAll('.nav-link').forEach(n => {
-                n.classList.toggle('active', n.dataset.nav === view);
-            });
-
-            if (window.innerWidth < 1024 && state.isSidebarOpen) toggleSidebar();
-
-            const area = document.getElementById('content-area');
-            area.classList.add('fade-enter');
-            
-            try {
-                const md = await fetchData();
-                let html = "";
-
-                if (view === 'zones') {
-                    html = renderZonesView(md);
-                } else if (view === 'schedule') {
-                    html = marked.parse(Parser.extractSection(md, "Weekly Schedule") || "*No schedule found*");
-                } else if (view === 'phases') {
-                    html = marked.parse(Parser.extractSection(md, "Periodization") || "*No phases found*");
-                } else {
-                    html = marked.parse(md.replace(/## Appendix C[\s\S]*/i, ""));
+            async init() {
+                try {
+                    const response = await fetch(`./${CONFIG.SOURCE_FILE}?t=${Date.now()}`);
+                    if (!response.ok) throw new Error("Sync Failed");
+                    this.cachedMd = await response.text();
+                    this.updateStats();
+                    this.navigate('schedule');
+                    this.updateSyncStatus(true);
+                } catch (e) {
+                    this.updateSyncStatus(false);
+                    document.getElementById('content').innerHTML = `<p class='text-red-400'>Error loading ${CONFIG.SOURCE_FILE}</p>`;
                 }
+            },
 
-                area.innerHTML = html;
+            updateSyncStatus(isLive) {
+                const dot = document.getElementById('sync-status-dot');
+                const text = document.getElementById('sync-status-text');
+                dot.className = `w-2 h-2 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`;
+                text.innerText = isLive ? "LIVE SYNC" : "OFFLINE";
+                text.className = `text-[10px] font-bold uppercase tracking-widest ${isLive ? 'text-green-400' : 'text-red-400'}`;
+            },
+
+            updateStats() {
+                const status = this.cachedMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
+                document.getElementById('stat-phase').innerText = status ? status[1] : "--";
+                document.getElementById('stat-week').innerText = status ? status[2] : "--";
+                
+                const events = Parser.getSection(this.cachedMd, "Event Schedule");
+                const firstEvent = events.split('\n').find(l => l.includes('|') && !l.toLowerCase().includes('date'));
+                if (firstEvent) {
+                    document.getElementById('stat-event-name').innerText = firstEvent.split('|')[2].trim();
+                }
+            },
+
+            navigate(view) {
+                const content = document.getElementById('content');
+                const titles = { schedule: 'Weekly Schedule', phases: 'Periodization', zones: 'Training Zones', full: 'Master Plan' };
+                
+                document.getElementById('header-title').innerText = titles[view];
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                document.getElementById(`nav-${view}`).classList.add('active');
+                
+                content.classList.add('opacity-0');
+                
                 setTimeout(() => {
-                    area.classList.remove('fade-enter');
-                    area.classList.add('fade-enter-active');
-                }, 50);
-            } catch (e) { console.error(e); }
-        }
+                    if (view === 'zones') this.renderZones();
+                    else this.renderMarkdown(view);
+                    content.classList.remove('opacity-0');
+                }, 200);
+            },
 
-        /**
-         * COMPONENT RENDERING
-         */
-        function renderZonesView(md) {
-            const bio = Parser.getBiometrics(md);
-            const zones = Parser.getZones(md);
-            
-            let wkg = 0;
-            let cat = "Insufficient Data";
-            let color = "#64748b";
+            renderMarkdown(view) {
+                const mdMap = {
+                    schedule: Parser.getSection(this.cachedMd, "Weekly Schedule"),
+                    phases: Parser.getSection(this.cachedMd, "Periodization"),
+                    full: this.cachedMd
+                };
+                document.getElementById('content').innerHTML = marked.parse(mdMap[view]);
+            },
 
-            if (bio.ftp && bio.weight) {
-                wkg = bio.ftp / (bio.weight * 0.453592);
-                if (wkg >= 5.0) { cat = "World Class"; color = "#a855f7"; }
-                else if (wkg >= 3.9) { cat = "Exceptional"; color = "#3b82f6"; }
-                else if (wkg >= 2.8) { cat = "Competitive"; color = "#22c55e"; }
-                else if (wkg >= 2.2) { cat = "Moderate"; color = "#f97316"; }
-                else { cat = "Recreational"; color = "#ef4444"; }
-            }
+            renderZones() {
+                const { watts, weight } = Parser.getBiometrics(this.cachedMd);
+                const weightKg = weight * 0.453592;
+                const wkg = watts > 0 ? (watts / weightKg).toFixed(2) : "0.00";
+                
+                const cat = CONFIG.CATEGORIES.find(c => parseFloat(wkg) >= c.threshold);
+                const percent = Math.min(Math.max((parseFloat(wkg) - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
+                const rotation = -90 + (percent * 180);
 
-            const rotation = -90 + (Math.min(Math.max((wkg - CONFIG.G_MIN) / (CONFIG.G_MAX - CONFIG.G_MIN), 0), 1) * 180);
-
-            let html = `
-                <div class="flex flex-col items-center mb-12">
-                    <div class="w-full max-w-[340px] relative">
-                        <svg viewBox="0 0 300 180" class="w-full drop-shadow-2xl">
-                            <!-- Background Tracks -->
-                            <path d="M 30 150 A 120 120 0 0 1 270 150" fill="none" stroke="#1e293b" stroke-width="26" stroke-linecap="round" />
-                            <!-- Active Ranges -->
-                            <path d="M 30 150 A 120 120 0 0 1 70 70" fill="none" stroke="#ef4444" stroke-width="20" stroke-opacity="0.6" />
-                            <path d="M 70 70 A 120 120 0 0 1 150 30" fill="none" stroke="#f97316" stroke-width="20" stroke-opacity="0.6" />
-                            <path d="M 150 30 A 120 120 0 0 1 230 70" fill="none" stroke="#22c55e" stroke-width="20" stroke-opacity="0.6" />
-                            <path d="M 230 70 A 120 120 0 0 1 270 150" fill="none" stroke="#3b82f6" stroke-width="20" stroke-opacity="0.6" />
-
-                            <text x="150" y="130" text-anchor="middle" class="fill-white text-4xl font-black italic">${wkg.toFixed(2)}</text>
-                            <text x="150" y="155" text-anchor="middle" class="font-bold text-[10px] uppercase tracking-widest" fill="${color}">${cat}</text>
-                            <text x="150" y="175" text-anchor="middle" class="fill-slate-600 text-[8px] font-bold tracking-[0.3em]">WATTS / KG</text>
-
+                const html = `
+                    <div class="gauge-wrapper">
+                        <svg viewBox="0 0 300 185" class="gauge-svg">
+                            <!-- SVG Paths Perfected for thresholds: 2.23, 2.79, 3.93, 5.05 -->
+                            <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" />
+                            <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" />
+                            <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
+                            <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" />
+                            <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" />
+                            <text x="150" y="135" text-anchor="middle" class="text-4xl font-black fill-white">${wkg}</text>
+                            <text x="150" y="160" text-anchor="middle" font-weight="800" fill="${cat.color}">${cat.label.toUpperCase()}</text>
                             <g class="gauge-needle" style="transform: rotate(${rotation}deg)">
-                                <path d="M 148 150 L 150 40 L 152 150 Z" fill="white" />
-                                <circle cx="150" cy="150" r="5" fill="#0f172a" stroke="white" stroke-width="2" />
+                                <path d="M 147 150 L 150 45 L 153 150 Z" fill="white" />
+                                <circle cx="150" cy="150" r="6" fill="white" />
                             </g>
                         </svg>
                     </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            `;
-
-            for (const [title, list] of Object.entries(zones)) {
-                html += `
-                    <div class="bg-slate-800/20 border border-slate-800 rounded-2xl p-6">
-                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 border-b border-slate-800 pb-4">${title}</h4>
-                        <div class="space-y-3">
-                            ${list.map((z, i) => `
-                                <div class="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border-l-4 ${getZoneColor(z.label)}">
-                                    <span class="text-xs font-bold text-slate-200">${z.label}</span>
-                                    <span class="text-xs font-mono text-slate-500">${z.range}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
+                    <div id="zone-grid">${this.parseZoneTables()}</div>
                 `;
+                document.getElementById('content').innerHTML = html;
+            },
+
+            parseZoneTables() {
+                const section = Parser.getSection(this.cachedMd, "Training Parameters");
+                let current = '', html = '', categories = {};
+                
+                section.split('\n').forEach(line => {
+                    if (line.trim().startsWith('###')) {
+                        current = line.replace(/###/g, '').trim();
+                        categories[current] = [];
+                    } else if (current && line.includes(':')) {
+                        const [label, range] = line.replace(/[\*\-\+]/g, '').split(':');
+                        const zClass = label.toLowerCase().match(/zone (\d)/);
+                        categories[current].push(`<div class="zone-row z-${zClass ? zClass[1] : '1'}"><span class="font-bold">${label.trim()}</span><span class="font-mono text-slate-400">${range.trim()}</span></div>`);
+                    }
+                });
+
+                Object.keys(categories).forEach(k => {
+                    html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`;
+                });
+                return html;
+            },
+
+            toggleSidebar() {
+                document.getElementById('sidebar').classList.toggle('sidebar-closed');
+                document.getElementById('sidebar-overlay').classList.toggle('hidden');
             }
-            html += `</div>`;
-            return html;
-        }
+        };
 
-        function getZoneColor(label) {
-            const l = label.toLowerCase();
-            if (l.includes('1')) return 'border-slate-500';
-            if (l.includes('2')) return 'border-emerald-500';
-            if (l.includes('3')) return 'border-yellow-500';
-            if (l.includes('4')) return 'border-orange-500';
-            if (l.includes('5')) return 'border-red-500';
-            return 'border-blue-500';
-        }
-
-        function showError(msg) {
-            document.getElementById('error-box').classList.remove('hidden');
-            document.getElementById('error-text').innerText = msg;
-        }
-
-        window.onload = () => navigate('schedule');
+        window.onload = () => App.init();
     </script>
 </body>
 </html>
