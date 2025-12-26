@@ -114,7 +114,7 @@
 
         <div id="error-container" class="hidden bg-red-900/20 border border-red-500/50 p-6 rounded-xl text-center">
             <p class="text-red-400 font-bold mb-2 text-lg">404: File Not Found</p>
-            <p class="text-red-300/80 mb-4">The file <code class="bg-red-900/40 px-1 rounded">endurance_plan.md</code> was not found in this repository.</p>
+            <p class="text-red-300/80 mb-4">The file <code class="bg-red-900/40 px-1 rounded">endurance_training_plan.md</code> was not found in this repository.</p>
             <button onclick="window.location.reload()" class="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-400 transition-colors">Retry Sync</button>
         </div>
 
@@ -127,9 +127,9 @@
     <script>
         /**
          * SETTINGS
-         * If your file name is different on GitHub, change it here.
+         * Updated to match your exact repository filename.
          */
-        const GITHUB_FILENAME = "endurance_plan.md"; 
+        const GITHUB_FILENAME = "endurance_training_plan.md"; 
 
         async function fetchAndRender() {
             const contentDiv = document.getElementById('markdown-content');
