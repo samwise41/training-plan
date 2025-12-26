@@ -77,14 +77,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Container for raw HTML infographics */
-        #infographic-container {
-            width: 100%;
-            border: none;
-            min-height: 600px;
-            background: transparent;
-        }
-
         /* Sidebar transitions */
         #sidebar {
             transition: transform 0.3s ease-in-out;
@@ -104,6 +96,78 @@
             .main-content {
                 margin-left: 260px;
             }
+        }
+
+        /* Zone List Styling */
+        #zone-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        @media (min-width: 768px) {
+            #zone-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .zone-card {
+            background-color: rgba(30, 41, 59, 0.3);
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            height: 100%;
+        }
+        .zone-card-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #f8fafc;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .zone-row {
+            margin-bottom: 0.75rem;
+            padding: 1rem;
+            background: #0f172a;
+            border-radius: 8px;
+            border-left: 6px solid #64748b; /* Default Grey */
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            transition: transform 0.2s;
+        }
+        @media (min-width: 400px) {
+            .zone-row {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
+        .zone-row:hover {
+            transform: translateX(4px);
+        }
+        /* Zone Colors */
+        .zone-z1 { border-left-color: #94a3b8 !important; } /* Grey */
+        .zone-z2 { border-left-color: #22c55e !important; } /* Green */
+        .zone-z3 { border-left-color: #eab308 !important; } /* Yellow */
+        .zone-z4 { border-left-color: #f97316 !important; } /* Orange */
+        .zone-z5 { border-left-color: #ef4444 !important; } /* Red */
+
+        .zone-label {
+            font-weight: 700;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        @media (min-width: 400px) {
+            .zone-label { margin-bottom: 0; }
+        }
+        .zone-range {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -126,17 +190,17 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 Weekly Schedule
             </button>
-            <button onclick="showFullPlan(); toggleSidebarMobile();" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Full Plan
-            </button>
             <button onclick="showPhases(); toggleSidebarMobile();" id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                 Phases
             </button>
-            <button onclick="showAppendix(); toggleSidebarMobile();" id="nav-appendix" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                Summary
+            <button onclick="showZones(); toggleSidebarMobile();" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                Zones
+            </button>
+            <button onclick="showFullPlan(); toggleSidebarMobile();" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Full Plan
             </button>
         </nav>
 
@@ -304,21 +368,102 @@
             } catch (err) { handleError(err); }
         }
 
+        async function showPhases() {
+            updateUI('Periodization Phases', 'nav-phases', true);
+            try {
+                const md = await fetchFile();
+                const section = extractSection(md, "Periodization"); 
+                render(section || "*Phases section not found.*");
+            } catch (err) { handleError(err); }
+        }
+
+        async function showZones() {
+            updateUI('Training Zones', 'nav-zones', false);
+            try {
+                const md = await fetchFile();
+                const section = extractSection(md, "Training Parameters");
+                
+                if (!section) {
+                    render("*Training Parameters section not found.*");
+                    return;
+                }
+
+                // Split into lines for analysis
+                const lines = section.split('\n');
+                let html = '<div id="zone-grid">';
+                let currentCategory = '';
+                let categoryZones = [];
+
+                function flushCategory() {
+                    if (currentCategory && categoryZones.length > 0) {
+                        html += `
+                            <div class="zone-card">
+                                <div class="zone-card-title">${currentCategory}</div>
+                                ${categoryZones.join('')}
+                            </div>
+                        `;
+                        categoryZones = [];
+                    }
+                }
+
+                lines.forEach(line => {
+                    const trimmed = line.trim();
+                    
+                    // Detect sub-headers (### Category Name)
+                    if (trimmed.startsWith('###')) {
+                        flushCategory();
+                        currentCategory = trimmed.replace(/^###\s*/, '').trim();
+                    } 
+                    // Detect zone entries (Bullet points with "Zone X ... : ...")
+                    else if (trimmed.includes('Zone') && trimmed.includes(':')) {
+                        // Clean up markdown syntax (*, -)
+                        const cleanLine = trimmed.replace(/^[\s\*\-\+]+/, '').replace(/\*\*/g, '').trim();
+                        const sepIndex = cleanLine.indexOf(':');
+                        
+                        if (sepIndex !== -1) {
+                            const label = cleanLine.substring(0, sepIndex).trim();
+                            const range = cleanLine.substring(sepIndex + 1).trim();
+                            
+                            // Color Logic
+                            let colorClass = 'zone-z1'; // Default Grey
+                            if (label.toLowerCase().includes('zone 2')) colorClass = 'zone-z2'; // Green
+                            else if (label.toLowerCase().includes('zone 3')) colorClass = 'zone-z3'; // Yellow
+                            else if (label.toLowerCase().includes('zone 4')) colorClass = 'zone-z4'; // Orange
+                            else if (label.toLowerCase().includes('zone 5')) colorClass = 'zone-z5'; // Red
+
+                            categoryZones.push(`
+                                <div class="zone-row ${colorClass}">
+                                    <span class="zone-label">${label}</span>
+                                    <span class="zone-range">${range}</span>
+                                </div>
+                            `);
+                        }
+                    }
+                });
+
+                flushCategory(); // Capture the last category
+                html += '</div>';
+
+                const contentDiv = document.getElementById('markdown-content');
+                // Check if we actually found structured zones
+                if (html.includes('zone-row')) {
+                    contentDiv.innerHTML = html;
+                } else {
+                    // Fallback if parsing fails (no ### headers or Zone lines found)
+                    contentDiv.classList.add('markdown-body');
+                    contentDiv.innerHTML = marked.parse(section);
+                }
+                finalizeRendering();
+
+            } catch (err) { handleError(err); }
+        }
+
         async function showFullPlan() {
             updateUI('Endurance Master Plan', 'nav-full', true);
             try {
                 const md = await fetchFile();
                 const planOnly = excludeSection(md, "Appendix C");
                 render(planOnly);
-            } catch (err) { handleError(err); }
-        }
-
-        async function showPhases() {
-            updateUI('Periodization Phases', 'nav-phases', true);
-            try {
-                const md = await fetchFile();
-                const section = extractSection(md, "Periodization Phases");
-                render(section || "*Phases section not found.*");
             } catch (err) { handleError(err); }
         }
 
@@ -350,13 +495,19 @@
             let capturing = false;
             let section = [];
             for (let line of lines) {
-                const isHeader = line.trim().startsWith('##');
-                if (isHeader && line.toLowerCase().includes(title.toLowerCase())) {
+                const trimmed = line.trim();
+                // Check if this is a main Level 2 header (## but not ###)
+                const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
+                
+                if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) {
                     capturing = true;
                     section.push(line);
                     continue;
                 }
-                if (capturing && isHeader) break;
+                
+                // Stop if we hit the next main header
+                if (capturing && isMainHeader) break;
+                
                 if (capturing) {
                     const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
                     section.push(cleanLine);
@@ -370,12 +521,16 @@
             let result = [];
             let skipping = false;
             for (let line of lines) {
-                const isHeader = line.trim().startsWith('##');
-                if (isHeader && line.toLowerCase().includes(title.toLowerCase())) {
+                const trimmed = line.trim();
+                const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
+                
+                if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) {
                     skipping = true;
                     continue;
                 }
-                if (skipping && isHeader) skipping = false;
+                
+                if (skipping && isMainHeader) skipping = false;
+                
                 if (!skipping) {
                     const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
                     result.push(cleanLine);
@@ -394,8 +549,11 @@
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.classList.add('hidden', 'opacity-0');
             
-            if (isMarkdown) contentDiv.classList.add('markdown-body');
-            else contentDiv.classList.remove('markdown-body');
+            if (isMarkdown) {
+                contentDiv.classList.add('markdown-body');
+            } else {
+                contentDiv.classList.remove('markdown-body');
+            }
 
             document.getElementById('loader-container').classList.remove('hidden');
             document.getElementById('error-container').classList.add('hidden');
