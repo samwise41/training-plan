@@ -366,18 +366,21 @@
                 const section = extractSection(md, "Training Parameters");
                 
                 // --- W/KG CALCULATION ---
-                // Grabbing first 3 digits as requested
-                const ftpMatch = md.match(/\*\*FTP:\*\*\s*(\d{3})/i);
-                const weightMatch = md.match(/\*\*Weight:\*\*\s*(\d{3})/i);
+                // More robust matching for numbers/decimals
+                const ftpMatch = md.match(/\*\*FTP:\*\*\s*([\d.]+)/i);
+                const weightMatch = md.match(/\*\*Weight:\*\*\s*([\d.]+)/i);
                 
                 let wkgValue = 0;
+                let watts = 0;
+                let weightLbs = 0;
+                let weightKg = 0;
                 let categoryLabel = "Untrained";
                 let catColor = "#ef4444"; // Red
                 
                 if (ftpMatch && weightMatch) {
-                    const weightLbs = parseFloat(weightMatch[1]);
-                    const weightKg = weightLbs * 0.453592;
-                    const watts = parseFloat(ftpMatch[1]);
+                    weightLbs = parseFloat(weightMatch[1]);
+                    weightKg = weightLbs * 0.453592;
+                    watts = parseFloat(ftpMatch[1]);
                     wkgValue = watts / weightKg;
                     
                     const val = wkgValue;
@@ -462,7 +465,19 @@
                 if (cyclingKey) html += `<div class="zone-card"><div class="zone-card-title">${cyclingKey}</div>${foundCategories[cyclingKey].join('')}</div>`;
                 if (runningKey) html += `<div class="zone-card"><div class="zone-card-title">${runningKey}</div>${foundCategories[runningKey].join('')}</div>`;
                 
-                html += '</div>';
+                // --- CALCULATION DESCRIPTION ---
+                html += `
+                </div>
+                <div class="mt-12 pt-8 border-t border-slate-800 text-xs text-slate-500 leading-relaxed italic">
+                    <p class="font-black text-slate-400 uppercase tracking-[0.15em] mb-3 not-italic">Calculation Methodology</p>
+                    <p class="mb-2">Your <span class="text-blue-400 font-bold">W/kg profile</span> is dynamically derived from parameters in your master plan using the following steps:</p>
+                    <ul class="space-y-1 list-disc list-inside">
+                        <li><strong>Unit Conversion:</strong> Weight in pounds is converted to metric (kg) using the standard constant: <code class="bg-slate-800 px-1 rounded text-slate-300">${weightLbs} lbs &times; 0.453592 = ${weightKg.toFixed(2)} kg</code>.</li>
+                        <li><strong>Power-to-Weight Ratio:</strong> Your Functional Threshold Power is divided by your metric body mass: <code class="bg-slate-800 px-1 rounded text-slate-300">${watts} Watts &divide; ${weightKg.toFixed(2)} kg = ${displayWkg} W/kg</code>.</li>
+                        <li><strong>Gauge Mapping:</strong> The needle is mapped on a linear scale from <span class="text-slate-400">1.0 W/kg (-90&deg;)</span> to <span class="text-slate-400">6.0 W/kg (+90&deg;)</span>.</li>
+                    </ul>
+                </div>`;
+
                 document.getElementById('markdown-content').innerHTML = html;
                 finalizeRendering();
 
