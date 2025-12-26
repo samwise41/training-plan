@@ -274,6 +274,10 @@
 
         // DEFAULT TEMPLATE (Loads if endurance_plan.md is missing or in Preview Mode)
         const DEFAULT_PLAN_TEMPLATE = `
+## Biometrics and Fitness
+**FTP:** 280
+**Weight:** 165 lbs
+
 ## Weekly Schedule
 **Status:** Phase 1 - Week 1: Base Foundations
 | Day | Workout | Type | Duration |
@@ -290,8 +294,6 @@
 **Phase 1:** Base Building (Weeks 1-4)
 
 ## Training Parameters
-**FTP:** 280
-**Weight:** 165
 ### Cycling Power Zones (Watts)
 * **Zone 1 (Active Recovery):** < 154
 * **Zone 2 (Endurance):** 155 - 209
@@ -423,16 +425,18 @@
             try {
                 const md = await fetchFile();
                 
-                // --- RESTRICTED EXTRACTION AREA ---
-                // We ONLY search for the FTP and Weight values within a specific section header
-                const section = extractSection(md, "Biometrics and Fitness") || extractSection(md, "Training Parameters");
+                // --- SMART DATA EXTRACTION ---
+                // We scan headers for keywords like "Biometrics", "Fitness", "Metrics", or "Parameters"
+                const bioSection = findSectionByKeywords(md, ["biometrics", "fitness", "metrics", "parameters"]);
                 
-                const ftpRegex = /(?:FTP|Functional Threshold Power)[:\s*]+([\d.]+)/i;
-                const weightRegex = /(?:Weight|Mass)[:\s*]+([\d.]+)/i;
+                // Even more flexible regex: 
+                // Skip everything until the first number after the keyword.
+                // This handles: "**FTP:** 280", "FTP - 280 Watts", "Current FTP is 280", etc.
+                const ftpRegex = /(?:FTP|Functional Threshold Power)[^0-9]*([\d.]+)/i;
+                const weightRegex = /(?:Weight|Mass)[^0-9]*([\d.]+)/i;
                 
-                // If section is found, we run the regex on JUST that section's text
-                const ftpMatch = section ? section.match(ftpRegex) : null;
-                const weightMatch = section ? section.match(weightRegex) : null;
+                const ftpMatch = bioSection ? bioSection.match(ftpRegex) : null;
+                const weightMatch = bioSection ? bioSection.match(weightRegex) : null;
                 
                 let wkgValue = 0;
                 let watts = 0;
@@ -441,10 +445,16 @@
                 let categoryLabel = "Calculating...";
                 let catColor = "#64748b"; 
 
-                // Parsing results for debugging/methodology display
-                let debugWatts = "Not Found in Biometrics Section";
-                let debugWeight = "Not Found in Biometrics Section";
+                let debugWatts = "Not Found (Check Section Name)";
+                let debugWeight = "Not Found (Check Section Name)";
+                let debugSectionName = "None Found";
                 
+                if (bioSection) {
+                    // Try to grab the header name for debugging
+                    const headerMatch = bioSection.match(/^#{1,6}\s*(.*)/);
+                    debugSectionName = headerMatch ? headerMatch[1] : "Matched Section Content";
+                }
+
                 if (ftpMatch) {
                     watts = parseFloat(ftpMatch[1]);
                     debugWatts = `${watts} W`;
@@ -464,7 +474,7 @@
                     else if (val >= 3.0) { categoryLabel = "Good"; catColor = "#22c55e"; } 
                     else if (val >= 2.0) { categoryLabel = "Fair"; catColor = "#f97316"; } 
                     else { categoryLabel = "Untrained"; catColor = "#ef4444"; } 
-                } else if (watts === 0 || weightKg === 0) {
+                } else {
                     categoryLabel = "Data Missing";
                     catColor = "#ef4444";
                 }
@@ -495,8 +505,10 @@
                 </div>
                 <div id="zone-grid">`;
 
-                if (section) {
-                    const lines = section.split('\n');
+                // Render Power Zones (from Training Parameters)
+                const paramSection = extractSection(md, "Training Parameters") || bioSection;
+                if (paramSection) {
+                    const lines = paramSection.split('\n');
                     let foundCategories = {};
                     let currentCategory = '';
 
@@ -538,17 +550,17 @@
                 html += `
                 </div>
                 <div class="mt-12 pt-8 border-t border-slate-800 text-xs text-slate-500 leading-relaxed italic">
-                    <p class="font-black text-slate-400 uppercase tracking-[0.15em] mb-3 not-italic">Calculation Methodology</p>
-                    <p class="mb-2">Your <span class="text-blue-400 font-bold">W/kg profile</span> is derived EXCLUSIVELY from the <code class="bg-slate-800 px-1 rounded text-slate-300">Biometrics and Fitness</code> section:</p>
+                    <p class="font-black text-slate-400 uppercase tracking-[0.15em] mb-3 not-italic">Data Extraction Debug</p>
+                    <p class="mb-2">Your <span class="text-blue-400 font-bold">W/kg profile</span> is derived from the following detected context:</p>
                     <ul class="space-y-1 list-disc list-inside mb-4">
+                        <li><strong>Target Section:</strong> <span class="text-slate-300 font-mono">${debugSectionName}</span></li>
                         <li><strong>Detected FTP:</strong> <span class="${watts > 0 ? 'text-slate-300' : 'text-red-500'} font-mono">${debugWatts}</span></li>
                         <li><strong>Detected Weight:</strong> <span class="${weightLbs > 0 ? 'text-slate-300' : 'text-red-500'} font-mono">${debugWeight}</span></li>
                     </ul>
                     <p class="mb-2"><strong>The Formula:</strong></p>
                     <ul class="space-y-1 list-disc list-inside">
-                        <li><strong>Unit Conversion:</strong> Weight in pounds is converted to metric (kg) using: <code class="bg-slate-800 px-1 rounded text-slate-300">${weightLbs || 0} lbs &times; 0.453592 = ${weightKg.toFixed(2)} kg</code>.</li>
-                        <li><strong>Power-to-Weight Ratio:</strong> Your FTP is divided by metric mass: <code class="bg-slate-800 px-1 rounded text-slate-300">${watts || 0} Watts &divide; ${weightKg.toFixed(2) || 0} kg = ${displayWkg} W/kg</code>.</li>
-                        <li><strong>Gauge Mapping:</strong> The needle is mapped on a linear scale from <span class="text-slate-400">1.0 W/kg (-90&deg;)</span> to <span class="text-slate-400">6.0 W/kg (+90&deg;)</span>.</li>
+                        <li><strong>Conversion:</strong> <code class="bg-slate-800 px-1 rounded text-slate-300">${weightLbs || 0} lbs &times; 0.453592 = ${weightKg.toFixed(2)} kg</code>.</li>
+                        <li><strong>Ratio:</strong> <code class="bg-slate-800 px-1 rounded text-slate-300">${watts || 0} Watts &divide; ${weightKg.toFixed(2) || 1} kg = ${displayWkg} W/kg</code>.</li>
                     </ul>
                 </div>`;
 
@@ -567,6 +579,33 @@
         }
 
         // --- UTILS ---
+
+        /**
+         * Finds a section by checking headers against a list of keywords.
+         */
+        function findSectionByKeywords(md, keywords) {
+            const lines = md.split('\n');
+            let capturing = false, section = [];
+            for (let line of lines) {
+                const trimmed = line.trim();
+                const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
+                
+                if (isMainHeader) {
+                    const lowHeader = trimmed.toLowerCase();
+                    const matchesKeyword = keywords.some(k => lowHeader.includes(k.toLowerCase()));
+                    
+                    if (matchesKeyword) {
+                        capturing = true;
+                        section = [line]; // Include header
+                        continue;
+                    } else if (capturing) {
+                        break; // Stop at next main header
+                    }
+                }
+                if (capturing) section.push(line);
+            }
+            return section.join('\n').trim();
+        }
 
         function extractSection(md, title) {
             const lines = md.split('\n');
