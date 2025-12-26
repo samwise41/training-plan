@@ -365,46 +365,53 @@
                 const section = extractSection(md, "Training Parameters");
                 
                 // --- W/KG CALCULATION & PERFORMANCE CATEGORY ---
+                // Improved regex to handle weight in lbs
                 const ftpMatch = md.match(/\*\*FTP:\*\*\s*(\d+)/i);
                 const weightMatch = md.match(/\*\*Weight:\*\*\s*(\d+)/i);
-                let wkg = 0;
+                
+                let wkg = "0.00";
                 let category = "Untrained";
-                let catColor = "#94a3b8"; // Grey
+                let catColor = "#ef4444"; // Start with Red
                 
                 if (ftpMatch && weightMatch) {
-                    const weightKg = parseFloat(weightMatch[1]) * 0.453592;
-                    wkg = (parseFloat(ftpMatch[1]) / weightKg).toFixed(2);
+                    const weightLbs = parseFloat(weightMatch[1]);
+                    const weightKg = weightLbs * 0.453592;
+                    const watts = parseFloat(ftpMatch[1]);
+                    const calculatedWkg = watts / weightKg;
+                    wkg = calculatedWkg.toFixed(2);
                     
                     const val = parseFloat(wkg);
-                    if (val >= 4.5) { category = "Professional"; catColor = "#ef4444"; }
-                    else if (val >= 3.9) { category = "Excellent"; catColor = "#f97316"; }
-                    else if (val >= 3.2) { category = "Very Good"; catColor = "#eab308"; }
-                    else if (val >= 2.5) { category = "Good"; catColor = "#22c55e"; }
-                    else if (val >= 2.0) { category = "Fair"; catColor = "#94a3b8"; }
+                    // Updated standard categorization ranges
+                    if (val >= 5.0) { category = "Exceptional"; catColor = "#a855f7"; } // Purple
+                    else if (val >= 4.0) { category = "Very Good"; catColor = "#3b82f6"; } // Blue
+                    else if (val >= 3.0) { category = "Good"; catColor = "#22c55e"; } // Green
+                    else if (val >= 2.0) { category = "Fair"; catColor = "#f97316"; } // Orange
+                    else { category = "Untrained"; catColor = "#ef4444"; } // Red
                 }
 
-                // Needle Rotation (0 to 180 degrees) for range 1.0 to 5.0 W/kg
-                const minWkg = 1.0, maxWkg = 5.0;
-                const percent = Math.min(Math.max((wkg - minWkg) / (maxWkg - minWkg), 0), 1);
+                // Needle Rotation (0 to 180 degrees) for range 1.0 to 6.0 W/kg
+                const minWkg = 1.0, maxWkg = 6.0;
+                const percent = Math.min(Math.max((parseFloat(wkg) - minWkg) / (maxWkg - minWkg), 0), 1);
                 const rotation = -90 + (percent * 180);
 
                 let html = `
                 <div class="gauge-wrapper">
-                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">Performance Power Ratio</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">Watts per Kilogram Profile</h3>
                     <svg viewBox="0 0 300 180" class="gauge-svg">
                         <!-- Background Shadow Track -->
                         <path d="M 30 150 A 120 120 0 0 1 270 150" fill="none" stroke="#1e293b" stroke-width="24" stroke-linecap="round" />
                         
-                        <!-- Categorized Arc Segments -->
-                        <path d="M 30 150 A 120 120 0 0 1 90 46" fill="none" stroke="#94a3b8" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Untrained/Fair -->
-                        <path d="M 90 46 A 120 120 0 0 1 150 30" fill="none" stroke="#22c55e" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Good -->
-                        <path d="M 150 30 A 120 120 0 0 1 210 46" fill="none" stroke="#eab308" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- V.Good -->
-                        <path d="M 210 46 A 120 120 0 0 1 270 150" fill="none" stroke="#ef4444" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Excellent/Pro -->
+                        <!-- Categorized Arc Segments (5 segments) -->
+                        <path d="M 30 150 A 120 120 0 0 1 78 46" fill="none" stroke="#ef4444" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Red: Untrained -->
+                        <path d="M 78 46 A 120 120 0 0 1 126 31" fill="none" stroke="#f97316" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Orange: Fair -->
+                        <path d="M 126 31 A 120 120 0 0 1 174 31" fill="none" stroke="#22c55e" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Green: Good -->
+                        <path d="M 174 31 A 120 120 0 0 1 222 46" fill="none" stroke="#3b82f6" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Blue: Very Good -->
+                        <path d="M 222 46 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Purple: Exceptional -->
 
                         <!-- Centered Stats -->
                         <text x="150" y="130" text-anchor="middle" class="gauge-value-text">${wkg}</text>
                         <text x="150" y="155" text-anchor="middle" class="gauge-label-text" fill="${catColor}">${category}</text>
-                        <text x="150" y="175" text-anchor="middle" font-size="10" fill="#64748b" font-weight="700">WATTS PER KILOGRAM</text>
+                        <text x="150" y="175" text-anchor="middle" font-size="10" fill="#64748b" font-weight="700">W/KG</text>
 
                         <!-- Needle -->
                         <g class="gauge-needle" style="transform: rotate(${rotation}deg)">
