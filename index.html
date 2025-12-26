@@ -126,17 +126,20 @@
         
         <!-- DASHBOARD STATS -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
-                <p class="text-lg font-semibold text-blue-400" id="stat-focus">--</p>
-            </div>
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
-                <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
-            </div>
+            <!-- Box 1: Next Event Name -->
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
-                <div class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event">--</div>
+                <p class="text-lg font-semibold text-emerald-400" id="stat-event-name">--</p>
+            </div>
+            <!-- Box 2: Countdown -->
+            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Countdown</p>
+                <p class="text-lg font-semibold text-slate-300" id="stat-event-countdown">--</p>
+            </div>
+            <!-- Box 3: Phase & Week Consolidated -->
+            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Training Status</p>
+                <div class="text-lg font-semibold text-blue-400 leading-tight" id="stat-training-status">--</div>
             </div>
         </div>
 
@@ -180,17 +183,21 @@
         // --- STATS PARSING ---
 
         function updateHeaderStats(md) {
-            // 1. Current Phase (Looking for **Phase:** in the status section)
+            // 1. Current Phase
             const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
-            document.getElementById('stat-focus').innerText = phaseMatch ? phaseMatch[1].trim() : "TBD";
+            const phase = phaseMatch ? phaseMatch[1].trim() : "Phase TBD";
 
-            // 2. Current Week (Looking for **Week:** in the status section)
+            // 2. Current Week
             const weekMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
-            document.getElementById('stat-week').innerText = weekMatch ? weekMatch[1].trim() : "TBD";
+            const week = weekMatch ? weekMatch[1].trim() : "Week TBD";
 
-            // 3. Next Event (Looking for ## Event Schedule table)
+            // Update Consolidated Box 3
+            document.getElementById('stat-training-status').innerHTML = `<div>${phase}</div><div class="text-sm font-normal text-slate-400">${week}</div>`;
+
+            // 3. Next Event Logic
             const eventSection = extractSection(md, "Event Schedule");
-            const eventElement = document.getElementById('stat-event');
+            const nameElement = document.getElementById('stat-event-name');
+            const countdownElement = document.getElementById('stat-event-countdown');
 
             if (eventSection) {
                 const lines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
@@ -199,6 +206,8 @@
                     if (parts.length >= 2) {
                         const eventDate = new Date(parts[0]);
                         const eventName = parts[1];
+                        nameElement.innerText = eventName;
+
                         if (!isNaN(eventDate)) {
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
@@ -206,30 +215,33 @@
                             const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
                             
                             if (diffInDays < 0) {
-                                eventElement.innerHTML = `<div>${eventName}</div><div class="text-sm font-normal text-slate-500">Event Completed</div>`;
+                                countdownElement.innerText = "Completed";
                             } else if (diffInDays === 0) {
-                                eventElement.innerHTML = `<div>${eventName}</div><div class="text-sm font-normal text-emerald-500">Event Today</div>`;
+                                countdownElement.innerText = "Event Today";
+                                countdownElement.classList.add('text-emerald-500');
                             } else {
                                 const weeks = Math.floor(diffInDays / 7);
                                 const days = diffInDays % 7;
                                 let countdownStr = "";
-                                if (weeks > 0) countdownStr += `${weeks} week${weeks > 1 ? 's' : ''}`;
-                                if (weeks > 0 && days > 0) countdownStr += " and ";
-                                if (days > 0 || weeks === 0) countdownStr += `${days} day${days !== 1 ? 's' : ''}`;
-                                
-                                eventElement.innerHTML = `<div>${eventName}</div><div class="text-sm font-normal text-slate-400">${countdownStr} until event</div>`;
+                                if (weeks > 0) countdownStr += `${weeks}w`;
+                                if (weeks > 0 && days > 0) countdownStr += " ";
+                                if (days > 0 || weeks === 0) countdownStr += `${days}d`;
+                                countdownElement.innerText = `${countdownStr} to go`;
                             }
                         } else {
-                            eventElement.innerHTML = `<div>${eventName}</div><div class="text-sm font-normal text-slate-500">Date TBD</div>`;
+                            countdownElement.innerText = "Date TBD";
                         }
                     } else {
-                        eventElement.innerText = "None Scheduled";
+                        nameElement.innerText = "None Scheduled";
+                        countdownElement.innerText = "--";
                     }
                 } else {
-                    eventElement.innerText = "None Scheduled";
+                    nameElement.innerText = "None Scheduled";
+                    countdownElement.innerText = "--";
                 }
             } else {
-                eventElement.innerText = "TBD";
+                nameElement.innerText = "None Scheduled";
+                countdownElement.innerText = "--";
             }
         }
 
@@ -265,16 +277,16 @@
                     return;
                 }
 
-                // Check if Appendix C contains a code block with HTML or a raw HTML structure
+                // Detect HTML/SVG content
                 const htmlMatch = section.match(/```html([\s\S]*?)```/);
                 if (htmlMatch) {
-                    updateUI('Appendix C: Infographic', 'nav-appendix', false); // Disable markdown body for HTML
+                    updateUI('Appendix C: Infographic', 'nav-appendix', false);
                     renderRawHTML(htmlMatch[1].trim());
                 } else if (section.includes('<svg') || section.includes('<div')) {
-                    updateUI('Appendix C: Infographic', 'nav-appendix', false); // Disable markdown body for HTML
+                    updateUI('Appendix C: Infographic', 'nav-appendix', false);
                     renderRawHTML(section);
                 } else {
-                    updateUI('Appendix C: Infographic', 'nav-appendix', true); // Use markdown body
+                    updateUI('Appendix C: Infographic', 'nav-appendix', true);
                     render(section);
                 }
             } catch (err) { handleError(err); }
@@ -287,7 +299,6 @@
             let capturing = false;
             let section = [];
             for (let line of lines) {
-                // More resilient match for headers (ignoring emojis)
                 const isHeader = line.trim().startsWith('##');
                 if (isHeader && line.toLowerCase().includes(title.toLowerCase())) {
                     capturing = true;
@@ -296,7 +307,6 @@
                 }
                 if (capturing && isHeader) break;
                 if (capturing) {
-                    // Filter out any lingering error strings
                     const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
                     section.push(cleanLine);
                 }
@@ -316,7 +326,6 @@
                 }
                 if (skipping && isHeader) skipping = false;
                 if (!skipping) {
-                    // Filter out any lingering error strings
                     const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
                     result.push(cleanLine);
                 }
@@ -335,7 +344,6 @@
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.classList.add('hidden', 'opacity-0');
             
-            // Toggle markdown styling based on content type
             if (isMarkdown) {
                 contentDiv.classList.add('markdown-body');
             } else {
@@ -357,7 +365,7 @@
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.innerHTML = `<div id="infographic-container">${html}</div>`;
             
-            // Re-execute any scripts if found in the HTML
+            // Re-execute scripts
             const scripts = contentDiv.querySelectorAll("script");
             scripts.forEach(oldScript => {
                 const newScript = document.createElement("script");
