@@ -3,8 +3,6 @@ Last Updated: December 26, 2025
 Status: Phase 1 (Base/Prep) - Week 1 (Baseline Testing)
 1. Event Schedule
 The primary "A" races and secondary objectives for the 2026 season.
-
-
 Date
 	Event Type
 	Goal
@@ -83,7 +81,8 @@ Phase
 	Sustained Durability
 	70.3 Pacing, Half-Marathon Runs
 	5. Weekly Schedule & Logistics
-Current Phase: Phase 1 (Base/Prep) Current Week: Week 1 (Baseline Testing)
+Current Phase: Phase 1 (Base/Prep)
+Current Week: Week 1 (Baseline Testing)
 Status
 	Day
 	Workout Type
@@ -99,29 +98,21 @@ Status
 	
 
 	Wed
-	Recovery
-$$BIKE$$
-- Leg Openers
+	Recovery [BIKE] - Leg Openers
 	40 mins Z1 Spin with 3x30s high cadence bursts. Prehab: Leg Raises.
 	
 
 	Thu
-	Endurance
-$$BIKE$$
-- Christmas Z2
+	Endurance [BIKE] - Christmas Z2
 	60 mins Steady Z2 (134-180W). Focus on smooth pedal stroke.
 	DONE
 	Fri
-	Run Test
-$$RUN$$
-- LTHR Test
+	Run Test [RUN] - LTHR Test
 	45 mins total. 15m Warmup, 30m Time Trial. Result: 171 bpm LTHR.
 	
 
 	Sat
-	Long Ride
-$$BIKE$$
-- Fueling Test
+	Long Ride [BIKE] - Fueling Test
 	2.5 hours Z2 Steady. Test DIY Gel V2 (More water/citric acid).
 	
 
