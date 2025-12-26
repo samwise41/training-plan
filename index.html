@@ -197,8 +197,8 @@
 
         <div class="p-6 border-t border-slate-800">
             <div class="flex items-center space-x-2">
-                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Live Sync</span>
+                <div id="sync-status-dot" class="w-2 h-2 rounded-full bg-slate-600"></div>
+                <span id="sync-status-text" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">OFFLINE</span>
             </div>
         </div>
     </aside>
@@ -272,6 +272,39 @@
         const SOURCE_FILE = "endurance_plan.md";
         let cachedMarkdown = ""; 
 
+        // DEFAULT TEMPLATE (Loads if endurance_plan.md is missing or in Preview Mode)
+        const DEFAULT_PLAN_TEMPLATE = `
+## Weekly Schedule
+**Status:** Phase 1 - Week 1: Base Foundations
+| Day | Workout | Type | Duration |
+| :--- | :--- | :--- | :--- |
+| Monday | Active Recovery | Cycling | 45m |
+| Tuesday | Endurance Ride | Cycling | 90m |
+| Wednesday | Strength Training | Gym | 60m |
+| Thursday | Intervals | Cycling | 75m |
+| Friday | Rest Day | - | - |
+| Saturday | Long Ride | Cycling | 3h |
+| Sunday | Endurance Run | Running | 60m |
+
+## Periodization Phases
+**Phase 1:** Base Building (Weeks 1-4)
+
+## Training Parameters
+**FTP:** 280
+**Weight:** 165
+### Cycling Power Zones (Watts)
+* **Zone 1 (Active Recovery):** < 154
+* **Zone 2 (Endurance):** 155 - 209
+* **Zone 3 (Tempo):** 210 - 251
+* **Zone 4 (Threshold):** 252 - 294
+* **Zone 5 (VO2 Max):** > 295
+
+## Event Schedule
+| Date | Event | Location | Priority |
+| :--- | :--- | :--- | :--- |
+| 2026-06-15 | Summer Century | Alpine Trails | A |
+        `;
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -286,10 +319,36 @@
 
         async function fetchFile() {
             if (cachedMarkdown) return cachedMarkdown;
-            const cacheBuster = `t=${new Date().getTime()}`;
-            const response = await fetch(`./${SOURCE_FILE}?${cacheBuster}`);
-            if (!response.ok) throw new Error(`Could not load ${SOURCE_FILE}`);
-            cachedMarkdown = await response.text();
+            const statusDot = document.getElementById('sync-status-dot');
+            const statusText = document.getElementById('sync-status-text');
+
+            try {
+                const cacheBuster = `t=${new Date().getTime()}`;
+                const response = await fetch(`./${SOURCE_FILE}?${cacheBuster}`);
+                
+                if (!response.ok) throw new Error(`Not Found`);
+                
+                cachedMarkdown = await response.text();
+                
+                // Update status to Live
+                statusDot.classList.replace('bg-slate-600', 'bg-green-500');
+                statusDot.classList.add('animate-pulse');
+                statusText.innerText = "LIVE SYNC";
+                statusText.classList.replace('text-slate-500', 'text-green-400');
+
+            } catch (err) {
+                console.warn("Sync failed. Falling back to internal template for preview.");
+                cachedMarkdown = DEFAULT_PLAN_TEMPLATE;
+                
+                // Update status to Preview/Local
+                statusDot.classList.replace('bg-slate-600', 'bg-blue-500');
+                statusText.innerText = "PREVIEW MODE";
+                statusText.classList.replace('text-slate-500', 'text-blue-400');
+                
+                // Update subtitle to reflect it's a preview
+                document.getElementById('header-subtitle').innerHTML = `Viewing <span class="font-mono text-blue-400">demo data</span> (External file unreachable)`;
+            }
+
             updateHeaderStats(cachedMarkdown);
             return cachedMarkdown;
         }
@@ -363,38 +422,54 @@
             updateUI('Training Zones', 'nav-zones', false);
             try {
                 const md = await fetchFile();
-                const section = extractSection(md, "Training Parameters");
                 
-                // --- W/KG CALCULATION ---
-                // More robust matching for numbers/decimals
-                const ftpMatch = md.match(/\*\*FTP:\*\*\s*([\d.]+)/i);
-                const weightMatch = md.match(/\*\*Weight:\*\*\s*([\d.]+)/i);
+                // --- RESTRICTED EXTRACTION AREA ---
+                // We ONLY search for the FTP and Weight values within a specific section header
+                const section = extractSection(md, "Biometrics and Fitness") || extractSection(md, "Training Parameters");
+                
+                const ftpRegex = /(?:FTP|Functional Threshold Power)[:\s*]+([\d.]+)/i;
+                const weightRegex = /(?:Weight|Mass)[:\s*]+([\d.]+)/i;
+                
+                // If section is found, we run the regex on JUST that section's text
+                const ftpMatch = section ? section.match(ftpRegex) : null;
+                const weightMatch = section ? section.match(weightRegex) : null;
                 
                 let wkgValue = 0;
                 let watts = 0;
                 let weightLbs = 0;
                 let weightKg = 0;
-                let categoryLabel = "Untrained";
-                let catColor = "#ef4444"; // Red
+                let categoryLabel = "Calculating...";
+                let catColor = "#64748b"; 
+
+                // Parsing results for debugging/methodology display
+                let debugWatts = "Not Found in Biometrics Section";
+                let debugWeight = "Not Found in Biometrics Section";
                 
-                if (ftpMatch && weightMatch) {
-                    weightLbs = parseFloat(weightMatch[1]);
-                    weightKg = weightLbs * 0.453592;
+                if (ftpMatch) {
                     watts = parseFloat(ftpMatch[1]);
+                    debugWatts = `${watts} W`;
+                }
+                
+                if (weightMatch) {
+                    weightLbs = parseFloat(weightMatch[1]);
+                    debugWeight = `${weightLbs} lbs`;
+                    weightKg = weightLbs * 0.453592;
+                }
+                
+                if (watts > 0 && weightKg > 0) {
                     wkgValue = watts / weightKg;
-                    
                     const val = wkgValue;
-                    // Standard power-to-weight categories
-                    if (val >= 5.0) { categoryLabel = "Exceptional"; catColor = "#a855f7"; } // Purple
-                    else if (val >= 4.0) { categoryLabel = "Very Good"; catColor = "#3b82f6"; } // Blue
-                    else if (val >= 3.0) { categoryLabel = "Good"; catColor = "#22c55e"; } // Green
-                    else if (val >= 2.0) { categoryLabel = "Fair"; catColor = "#f97316"; } // Orange
-                    else { categoryLabel = "Untrained"; catColor = "#ef4444"; } // Red
+                    if (val >= 5.0) { categoryLabel = "Exceptional"; catColor = "#a855f7"; } 
+                    else if (val >= 4.0) { categoryLabel = "Very Good"; catColor = "#3b82f6"; } 
+                    else if (val >= 3.0) { categoryLabel = "Good"; catColor = "#22c55e"; } 
+                    else if (val >= 2.0) { categoryLabel = "Fair"; catColor = "#f97316"; } 
+                    else { categoryLabel = "Untrained"; catColor = "#ef4444"; } 
+                } else if (watts === 0 || weightKg === 0) {
+                    categoryLabel = "Data Missing";
+                    catColor = "#ef4444";
                 }
 
                 const displayWkg = wkgValue.toFixed(2);
-
-                // Needle Rotation Logic: 1.0 to 6.0 W/kg maps to -90 to +90 degrees
                 const minScale = 1.0;
                 const maxScale = 6.0;
                 const percent = Math.min(Math.max((wkgValue - minScale) / (maxScale - minScale), 0), 1);
@@ -404,76 +479,75 @@
                 <div class="gauge-wrapper">
                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">W/kg Profile</h3>
                     <svg viewBox="0 0 300 185" class="gauge-svg">
-                        <!-- Precise Semi-circle Arc Segments (R=120, Center=150,150) -->
-                        <path d="M 30 150 A 120 120 0 0 1 78.5 52.9" fill="none" stroke="#ef4444" stroke-width="24" stroke-linecap="butt" /> <!-- Red -->
-                        <path d="M 78.5 52.9 A 120 120 0 0 1 126.3 31.8" fill="none" stroke="#f97316" stroke-width="24" stroke-linecap="butt" /> <!-- Orange -->
-                        <path d="M 126.3 31.8 A 120 120 0 0 1 173.7 31.8" fill="none" stroke="#22c55e" stroke-width="24" stroke-linecap="butt" /> <!-- Green -->
-                        <path d="M 173.7 31.8 A 120 120 0 0 1 221.5 52.9" fill="none" stroke="#3b82f6" stroke-width="24" stroke-linecap="butt" /> <!-- Blue -->
-                        <path d="M 221.5 52.9 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" stroke-linecap="butt" /> <!-- Purple -->
-
-                        <!-- Stats Display -->
+                        <path d="M 30 150 A 120 120 0 0 1 78.5 52.9" fill="none" stroke="#ef4444" stroke-width="24" stroke-linecap="butt" />
+                        <path d="M 78.5 52.9 A 120 120 0 0 1 126.3 31.8" fill="none" stroke="#f97316" stroke-width="24" stroke-linecap="butt" />
+                        <path d="M 126.3 31.8 A 120 120 0 0 1 173.7 31.8" fill="none" stroke="#22c55e" stroke-width="24" stroke-linecap="butt" />
+                        <path d="M 173.7 31.8 A 120 120 0 0 1 221.5 52.9" fill="none" stroke="#3b82f6" stroke-width="24" stroke-linecap="butt" />
+                        <path d="M 221.5 52.9 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" stroke-linecap="butt" />
                         <text x="150" y="135" text-anchor="middle" class="gauge-value-text">${displayWkg}</text>
                         <text x="150" y="160" text-anchor="middle" class="gauge-label-text" fill="${catColor}">${categoryLabel}</text>
                         <text x="150" y="180" text-anchor="middle" font-size="10" fill="#64748b" font-weight="700">WATTS PER KILOGRAM</text>
-
-                        <!-- Needle -->
                         <g class="gauge-needle" style="transform: rotate(${rotation}deg)">
                             <path d="M 147 150 L 150 45 L 153 150 Z" fill="#f8fafc" />
                             <circle cx="150" cy="150" r="6" fill="#f8fafc" stroke="#0f172a" stroke-width="2" />
                         </g>
                     </svg>
                 </div>
-
                 <div id="zone-grid">`;
 
-                // --- ZONE PARSING ---
-                const lines = section.split('\n');
-                let foundCategories = {};
-                let currentCategory = '';
+                if (section) {
+                    const lines = section.split('\n');
+                    let foundCategories = {};
+                    let currentCategory = '';
 
-                lines.forEach(line => {
-                    const trimmed = line.trim();
-                    if (trimmed.startsWith('###')) {
-                        currentCategory = trimmed.replace(/^###\s*/, '').trim();
-                        foundCategories[currentCategory] = [];
-                    } else if (currentCategory && trimmed.includes('Zone') && trimmed.includes(':')) {
-                        const cleanLine = trimmed.replace(/^[\s\*\-\+]+/, '').replace(/\*\*/g, '').trim();
-                        const sepIndex = cleanLine.indexOf(':');
-                        if (sepIndex !== -1) {
-                            const label = cleanLine.substring(0, sepIndex).trim();
-                            const range = cleanLine.substring(sepIndex + 1).trim();
-                            let colorClass = 'zone-z1';
-                            const lowLabel = label.toLowerCase();
-                            if (lowLabel.includes('zone 2')) colorClass = 'zone-z2';
-                            else if (lowLabel.includes('zone 3')) colorClass = 'zone-z3';
-                            else if (lowLabel.includes('zone 4')) colorClass = 'zone-z4';
-                            else if (lowLabel.includes('zone 5')) colorClass = 'zone-z5';
+                    lines.forEach(line => {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith('###')) {
+                            currentCategory = trimmed.replace(/^###\s*/, '').trim();
+                            foundCategories[currentCategory] = [];
+                        } else if (currentCategory && trimmed.includes('Zone') && trimmed.includes(':')) {
+                            const cleanLine = trimmed.replace(/^[\s\*\-\+]+/, '').replace(/\*\*/g, '').trim();
+                            const sepIndex = cleanLine.indexOf(':');
+                            if (sepIndex !== -1) {
+                                const label = cleanLine.substring(0, sepIndex).trim();
+                                const range = cleanLine.substring(sepIndex + 1).trim();
+                                let colorClass = 'zone-z1';
+                                const lowLabel = label.toLowerCase();
+                                if (lowLabel.includes('zone 2')) colorClass = 'zone-z2';
+                                else if (lowLabel.includes('zone 3')) colorClass = 'zone-z3';
+                                else if (lowLabel.includes('zone 4')) colorClass = 'zone-z4';
+                                else if (lowLabel.includes('zone 5')) colorClass = 'zone-z5';
 
-                            foundCategories[currentCategory].push(`
-                                <div class="zone-row ${colorClass}">
-                                    <span class="zone-label">${label}</span>
-                                    <span class="zone-range">${range}</span>
-                                </div>
-                            `);
+                                foundCategories[currentCategory].push(`
+                                    <div class="zone-row ${colorClass}">
+                                        <span class="zone-label">${label}</span>
+                                        <span class="zone-range">${range}</span>
+                                    </div>
+                                `);
+                            }
                         }
-                    }
-                });
+                    });
 
-                const cyclingKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('cycling'));
-                const runningKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('running'));
+                    const cyclingKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('cycling'));
+                    const runningKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('running'));
 
-                if (cyclingKey) html += `<div class="zone-card"><div class="zone-card-title">${cyclingKey}</div>${foundCategories[cyclingKey].join('')}</div>`;
-                if (runningKey) html += `<div class="zone-card"><div class="zone-card-title">${runningKey}</div>${foundCategories[runningKey].join('')}</div>`;
+                    if (cyclingKey) html += `<div class="zone-card"><div class="zone-card-title">${cyclingKey}</div>${foundCategories[cyclingKey].join('')}</div>`;
+                    if (runningKey) html += `<div class="zone-card"><div class="zone-card-title">${runningKey}</div>${foundCategories[runningKey].join('')}</div>`;
+                }
                 
-                // --- CALCULATION DESCRIPTION ---
                 html += `
                 </div>
                 <div class="mt-12 pt-8 border-t border-slate-800 text-xs text-slate-500 leading-relaxed italic">
                     <p class="font-black text-slate-400 uppercase tracking-[0.15em] mb-3 not-italic">Calculation Methodology</p>
-                    <p class="mb-2">Your <span class="text-blue-400 font-bold">W/kg profile</span> is dynamically derived from parameters in your master plan using the following steps:</p>
+                    <p class="mb-2">Your <span class="text-blue-400 font-bold">W/kg profile</span> is derived EXCLUSIVELY from the <code class="bg-slate-800 px-1 rounded text-slate-300">Biometrics and Fitness</code> section:</p>
+                    <ul class="space-y-1 list-disc list-inside mb-4">
+                        <li><strong>Detected FTP:</strong> <span class="${watts > 0 ? 'text-slate-300' : 'text-red-500'} font-mono">${debugWatts}</span></li>
+                        <li><strong>Detected Weight:</strong> <span class="${weightLbs > 0 ? 'text-slate-300' : 'text-red-500'} font-mono">${debugWeight}</span></li>
+                    </ul>
+                    <p class="mb-2"><strong>The Formula:</strong></p>
                     <ul class="space-y-1 list-disc list-inside">
-                        <li><strong>Unit Conversion:</strong> Weight in pounds is converted to metric (kg) using the standard constant: <code class="bg-slate-800 px-1 rounded text-slate-300">${weightLbs} lbs &times; 0.453592 = ${weightKg.toFixed(2)} kg</code>.</li>
-                        <li><strong>Power-to-Weight Ratio:</strong> Your Functional Threshold Power is divided by your metric body mass: <code class="bg-slate-800 px-1 rounded text-slate-300">${watts} Watts &divide; ${weightKg.toFixed(2)} kg = ${displayWkg} W/kg</code>.</li>
+                        <li><strong>Unit Conversion:</strong> Weight in pounds is converted to metric (kg) using: <code class="bg-slate-800 px-1 rounded text-slate-300">${weightLbs || 0} lbs &times; 0.453592 = ${weightKg.toFixed(2)} kg</code>.</li>
+                        <li><strong>Power-to-Weight Ratio:</strong> Your FTP is divided by metric mass: <code class="bg-slate-800 px-1 rounded text-slate-300">${watts || 0} Watts &divide; ${weightKg.toFixed(2) || 0} kg = ${displayWkg} W/kg</code>.</li>
                         <li><strong>Gauge Mapping:</strong> The needle is mapped on a linear scale from <span class="text-slate-400">1.0 W/kg (-90&deg;)</span> to <span class="text-slate-400">6.0 W/kg (+90&deg;)</span>.</li>
                     </ul>
                 </div>`;
@@ -504,7 +578,7 @@
                 if (capturing && isMainHeader) break;
                 if (capturing) section.push(line);
             }
-            return section.join('\n').trim();
+            return section.length > 0 ? section.join('\n').trim() : "";
         }
 
         function excludeSection(md, title) {
@@ -550,7 +624,7 @@
             console.error(err);
             document.getElementById('loader-container').classList.add('hidden');
             document.getElementById('error-container').classList.remove('hidden');
-            document.getElementById('error-msg').innerText = err.message;
+            document.getElementById('error-msg').innerText = "Unable to load data. The file might be missing or the connection was blocked.";
         }
 
         window.onload = showSchedule; 
