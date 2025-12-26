@@ -1,4 +1,4 @@
-﻿Master Training Plan 2026
+Master Training Plan 2026
 Last Updated: December 26, 2025
 Status: Phase 1 (Base/Prep) - Week 1 (Baseline Testing)
 1. Event Schedule
