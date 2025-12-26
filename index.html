@@ -442,19 +442,13 @@
                 let weightKg = 0;
                 let categoryLabel = "Calculating...";
                 let catColor = "#64748b"; 
-
-                let debugWatts = "Not Found (Check Section '2. User Profile & Health')";
-                let debugWeight = "Not Found (Check Section '2. User Profile & Health')";
-                let debugSectionName = profileSection ? "2. User Profile & Health" : "Target Section Not Found";
                 
                 if (ftpMatch) {
                     watts = parseInt(ftpMatch[1], 10);
-                    debugWatts = `${watts} W`;
                 }
                 
                 if (weightMatch) {
                     weightLbs = parseInt(weightMatch[1], 10);
-                    debugWeight = `${weightLbs} lbs`;
                     weightKg = weightLbs * 0.453592;
                 }
                 
@@ -542,16 +536,12 @@
                 html += `
                 </div>
                 <div class="mt-12 pt-8 border-t border-slate-800 text-xs text-slate-500 leading-relaxed italic">
-                    <p class="font-black text-slate-400 uppercase tracking-[0.15em] mb-3 not-italic">Data Extraction Debug</p>
-                    <p class="mb-2">Values extracted exclusively from the <code class="bg-slate-800 px-1 rounded text-slate-300">${debugSectionName}</code> section:</p>
-                    <ul class="space-y-1 list-disc list-inside mb-4">
-                        <li><strong>Cycling FTP (First 3 digits found):</strong> <span class="${watts > 0 ? 'text-slate-300' : 'text-red-500'} font-mono">${debugWatts}</span></li>
-                        <li><strong>Weight (First 3 digits found):</strong> <span class="${weightLbs > 0 ? 'text-slate-300' : 'text-red-500'} font-mono">${debugWeight}</span></li>
-                    </ul>
-                    <p class="mb-2"><strong>The Formula:</strong></p>
+                    <p class="font-black text-slate-400 uppercase tracking-[0.15em] mb-3 not-italic">Calculation Methodology</p>
+                    <p class="mb-2">Your <span class="text-blue-400 font-bold">W/kg profile</span> is derived from your detected profile parameters using the following formula:</p>
                     <ul class="space-y-1 list-disc list-inside">
-                        <li><strong>Conversion:</strong> <code class="bg-slate-800 px-1 rounded text-slate-300">${weightLbs || 0} lbs &times; 0.453592 = ${weightKg.toFixed(2)} kg</code>.</li>
-                        <li><strong>Ratio:</strong> <code class="bg-slate-800 px-1 rounded text-slate-300">${watts || 0} Watts &divide; ${weightKg.toFixed(2) || 1} kg = ${displayWkg} W/kg</code>.</li>
+                        <li><strong>Unit Conversion:</strong> Weight in pounds is converted to metric (kg) using: <code class="bg-slate-800 px-1 rounded text-slate-300">${weightLbs || 0} lbs &times; 0.453592 = ${weightKg.toFixed(2)} kg</code>.</li>
+                        <li><strong>Power-to-Weight Ratio:</strong> Your FTP is divided by metric mass: <code class="bg-slate-800 px-1 rounded text-slate-300">${watts || 0} Watts &divide; ${weightKg.toFixed(2) || 1} kg = ${displayWkg} W/kg</code>.</li>
+                        <li><strong>Gauge Mapping:</strong> The needle is mapped on a linear scale from <span class="text-slate-400">1.0 W/kg (-90&deg;)</span> to <span class="text-slate-400">6.0 W/kg (+90&deg;)</span>.</li>
                     </ul>
                 </div>`;
 
