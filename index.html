@@ -56,25 +56,12 @@
             color: #f8fafc !important;
             margin-top: 2rem !important;
         }
-        .markdown-body a {
-            color: #3b82f6 !important;
-        }
         
         /* Nav highlighting */
         .nav-link.active {
             color: #3b82f6;
             background-color: #1e293b;
             border-right: 4px solid #3b82f6;
-        }
-
-        /* Loading animation */
-        .loader {
-            border-top-color: #3b82f6;
-            animation: spinner 1.5s linear infinite;
-        }
-        @keyframes spinner {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
 
         /* Sidebar transitions */
@@ -98,7 +85,7 @@
             }
         }
 
-        /* Zone List Styling */
+        /* Zone Grid Styling */
         #zone-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -131,43 +118,30 @@
             padding: 1rem;
             background: #0f172a;
             border-radius: 8px;
-            border-left: 6px solid #64748b; /* Default Grey */
+            border-left: 6px solid #64748b;
             display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            transition: transform 0.2s;
+            justify-content: space-between;
+            align-items: center;
         }
-        @media (min-width: 400px) {
-            .zone-row {
-                flex-direction: row;
-                justify-content: space-between;
-                align-items: center;
-            }
-        }
-        .zone-row:hover {
-            transform: translateX(4px);
-        }
-        /* Zone Colors */
-        .zone-z1 { border-left-color: #94a3b8 !important; } /* Grey */
-        .zone-z2 { border-left-color: #22c55e !important; } /* Green */
-        .zone-z3 { border-left-color: #eab308 !important; } /* Yellow */
-        .zone-z4 { border-left-color: #f97316 !important; } /* Orange */
-        .zone-z5 { border-left-color: #ef4444 !important; } /* Red */
+        .zone-z1 { border-left-color: #94a3b8 !important; }
+        .zone-z2 { border-left-color: #22c55e !important; }
+        .zone-z3 { border-left-color: #eab308 !important; }
+        .zone-z4 { border-left-color: #f97316 !important; }
+        .zone-z5 { border-left-color: #ef4444 !important; }
 
-        .zone-label {
-            font-weight: 700;
-            color: #e2e8f0;
-            font-size: 0.9rem;
-            margin-bottom: 0.25rem;
+        .zone-label { font-weight: 700; color: #e2e8f0; font-size: 0.9rem; }
+        .zone-range { font-family: ui-monospace; color: #94a3b8; font-size: 0.85rem; font-weight: 600; }
+
+        /* W/kg Gauge Styling */
+        .gauge-container {
+            position: relative;
+            width: 300px;
+            height: 150px;
+            margin: 0 auto 2rem auto;
         }
-        @media (min-width: 400px) {
-            .zone-label { margin-bottom: 0; }
-        }
-        .zone-range {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            color: #94a3b8;
-            font-size: 0.85rem;
-            font-weight: 600;
+        .gauge-needle {
+            transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: 150px 150px;
         }
     </style>
 </head>
@@ -284,21 +258,13 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
-            if (sidebar.classList.contains('sidebar-closed')) {
-                sidebar.classList.remove('sidebar-closed');
-                sidebar.classList.add('sidebar-open');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('sidebar-closed');
-                sidebar.classList.remove('sidebar-open');
-                overlay.classList.add('hidden');
-            }
+            sidebar.classList.toggle('sidebar-closed');
+            sidebar.classList.toggle('sidebar-open');
+            overlay.classList.toggle('hidden');
         }
 
         function toggleSidebarMobile() {
-            if (window.innerWidth < 1024) {
-                toggleSidebar();
-            }
+            if (window.innerWidth < 1024) toggleSidebar();
         }
 
         async function fetchFile() {
@@ -307,7 +273,6 @@
             const response = await fetch(`./${SOURCE_FILE}?${cacheBuster}`);
             if (!response.ok) throw new Error(`Could not load ${SOURCE_FILE}`);
             cachedMarkdown = await response.text();
-            
             updateHeaderStats(cachedMarkdown);
             return cachedMarkdown;
         }
@@ -359,12 +324,13 @@
             } else { nameElement.innerText = "None Scheduled"; countdownElement.innerText = "--"; }
         }
 
+        // --- DASHBOARD FUNCTIONS ---
+
         async function showSchedule() {
             updateUI('Weekly Schedule', 'nav-schedule', true);
             try {
                 const md = await fetchFile();
-                const section = extractSection(md, "Weekly Schedule");
-                render(section || "*Schedule section not found.*");
+                render(extractSection(md, "Weekly Schedule") || "*Schedule not found.*");
             } catch (err) { handleError(err); }
         }
 
@@ -372,8 +338,7 @@
             updateUI('Periodization Phases', 'nav-phases', true);
             try {
                 const md = await fetchFile();
-                const section = extractSection(md, "Periodization"); 
-                render(section || "*Phases section not found.*");
+                render(extractSection(md, "Periodization") || "*Phases not found.*");
             } catch (err) { handleError(err); }
         }
 
@@ -383,30 +348,65 @@
                 const md = await fetchFile();
                 const section = extractSection(md, "Training Parameters");
                 
-                if (!section) {
-                    render("*Training Parameters section not found.*");
-                    return;
+                // --- W/KG CALCULATION & GAUGE ---
+                const ftpMatch = md.match(/\*\*FTP:\*\*\s*(\d+)/i);
+                const weightMatch = md.match(/\*\*Weight:\*\*\s*(\d+)/i);
+                let wkg = 0;
+                
+                if (ftpMatch && weightMatch) {
+                    const weightKg = parseFloat(weightMatch[1]) * 0.453592;
+                    wkg = (parseFloat(ftpMatch[1]) / weightKg).toFixed(2);
                 }
 
+                // Calculate Needle Rotation (0 to 180 degrees)
+                // Range: 1.0 to 5.0 W/kg
+                const minWkg = 1.0, maxWkg = 5.0;
+                const percent = Math.min(Math.max((wkg - minWkg) / (maxWkg - minWkg), 0), 1);
+                const rotation = percent * 180;
+
+                let html = `
+                <div class="flex flex-col items-center mb-12">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Relative Performance (W/kg)</h3>
+                    <div class="gauge-container">
+                        <svg viewBox="0 0 300 150">
+                            <!-- Background Tracks -->
+                            <path d="M 20 150 A 130 130 0 0 1 280 150" fill="none" stroke="#1e293b" stroke-width="25" />
+                            <!-- Color Segments -->
+                            <path d="M 20 150 A 130 130 0 0 1 85 45" fill="none" stroke="#94a3b8" stroke-width="25" /> <!-- Untrained/Fair -->
+                            <path d="M 85 45 A 130 130 0 0 1 150 20" fill="none" stroke="#22c55e" stroke-width="25" /> <!-- Good -->
+                            <path d="M 150 20 A 130 130 0 0 1 215 45" fill="none" stroke="#eab308" stroke-width="25" /> <!-- V.Good -->
+                            <path d="M 215 45 A 130 130 0 0 1 280 150" fill="none" stroke="#ef4444" stroke-width="25" /> <!-- Excellent/Pro -->
+                            <!-- Needle -->
+                            <g class="gauge-needle" style="transform: rotate(${rotation}deg)">
+                                <line x1="150" y1="150" x2="40" y2="150" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" />
+                                <circle cx="150" cy="150" r="10" fill="#f8fafc" />
+                            </g>
+                        </svg>
+                        <div class="absolute bottom-0 left-0 right-0 text-center">
+                            <span class="text-4xl font-black text-white">${wkg}</span>
+                            <span class="text-xs font-bold text-slate-500 uppercase ml-1">W/kg</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="zone-grid">`;
+
+                // --- ZONE PARSING ---
                 const lines = section.split('\n');
                 let foundCategories = {};
                 let currentCategory = '';
 
                 lines.forEach(line => {
                     const trimmed = line.trim();
-                    
                     if (trimmed.startsWith('###')) {
                         currentCategory = trimmed.replace(/^###\s*/, '').trim();
-                        if (!foundCategories[currentCategory]) foundCategories[currentCategory] = [];
-                    } 
-                    else if (currentCategory && trimmed.includes('Zone') && trimmed.includes(':')) {
+                        foundCategories[currentCategory] = [];
+                    } else if (currentCategory && trimmed.includes('Zone') && trimmed.includes(':')) {
                         const cleanLine = trimmed.replace(/^[\s\*\-\+]+/, '').replace(/\*\*/g, '').trim();
                         const sepIndex = cleanLine.indexOf(':');
-                        
                         if (sepIndex !== -1) {
                             const label = cleanLine.substring(0, sepIndex).trim();
                             const range = cleanLine.substring(sepIndex + 1).trim();
-                            
                             let colorClass = 'zone-z1';
                             const lowLabel = label.toLowerCase();
                             if (lowLabel.includes('zone 2')) colorClass = 'zone-z2';
@@ -424,39 +424,14 @@
                     }
                 });
 
-                // Target specifically Cycling and Running categories
-                let cyclingKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('cycling'));
-                let runningKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('running'));
+                const cyclingKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('cycling'));
+                const runningKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('running'));
 
-                let html = '<div id="zone-grid">';
-                
-                if (cyclingKey && foundCategories[cyclingKey].length > 0) {
-                    html += `
-                        <div class="zone-card">
-                            <div class="zone-card-title">${cyclingKey}</div>
-                            ${foundCategories[cyclingKey].join('')}
-                        </div>
-                    `;
-                }
-
-                if (runningKey && foundCategories[runningKey].length > 0) {
-                    html += `
-                        <div class="zone-card">
-                            <div class="zone-card-title">${runningKey}</div>
-                            ${foundCategories[runningKey].join('')}
-                        </div>
-                    `;
-                }
+                if (cyclingKey) html += `<div class="zone-card"><div class="zone-card-title">${cyclingKey}</div>${foundCategories[cyclingKey].join('')}</div>`;
+                if (runningKey) html += `<div class="zone-card"><div class="zone-card-title">${runningKey}</div>${foundCategories[runningKey].join('')}</div>`;
                 
                 html += '</div>';
-
-                const contentDiv = document.getElementById('markdown-content');
-                if (cyclingKey || runningKey) {
-                    contentDiv.innerHTML = html;
-                } else {
-                    contentDiv.classList.add('markdown-body');
-                    contentDiv.innerHTML = marked.parse(section);
-                }
+                document.getElementById('markdown-content').innerHTML = html;
                 finalizeRendering();
 
             } catch (err) { handleError(err); }
@@ -466,54 +441,33 @@
             updateUI('Endurance Master Plan', 'nav-full', true);
             try {
                 const md = await fetchFile();
-                const planOnly = excludeSection(md, "Appendix C");
-                render(planOnly);
+                render(excludeSection(md, "Appendix C"));
             } catch (err) { handleError(err); }
         }
 
+        // --- UTILS ---
+
         function extractSection(md, title) {
             const lines = md.split('\n');
-            let capturing = false;
-            let section = [];
+            let capturing = false, section = [];
             for (let line of lines) {
                 const trimmed = line.trim();
                 const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
-                
-                if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) {
-                    capturing = true;
-                    section.push(line);
-                    continue;
-                }
-                
+                if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) { capturing = true; continue; }
                 if (capturing && isMainHeader) break;
-                
-                if (capturing) {
-                    const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
-                    section.push(cleanLine);
-                }
+                if (capturing) section.push(line);
             }
             return section.join('\n').trim();
         }
 
         function excludeSection(md, title) {
             const lines = md.split('\n');
-            let result = [];
-            let skipping = false;
+            let result = [], skipping = false;
             for (let line of lines) {
-                const trimmed = line.trim();
-                const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
-                
-                if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) {
-                    skipping = true;
-                    continue;
-                }
-                
+                const isMainHeader = line.trim().startsWith('##') && !line.trim().startsWith('###');
+                if (isMainHeader && line.toLowerCase().includes(title.toLowerCase())) { skipping = true; continue; }
                 if (skipping && isMainHeader) skipping = false;
-                
-                if (!skipping) {
-                    const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
-                    result.push(cleanLine);
-                }
+                if (!skipping) result.push(line);
             }
             return result.join('\n').trim();
         }
@@ -524,22 +478,15 @@
             document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
             const activeNav = document.getElementById(navId);
             if (activeNav) activeNav.classList.add('active');
-            
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.classList.add('hidden', 'opacity-0');
-            
-            if (isMarkdown) {
-                contentDiv.classList.add('markdown-body');
-            } else {
-                contentDiv.classList.remove('markdown-body');
-            }
-
+            if (isMarkdown) contentDiv.classList.add('markdown-body');
+            else contentDiv.classList.remove('markdown-body');
             document.getElementById('loader-container').classList.remove('hidden');
             document.getElementById('error-container').classList.add('hidden');
         }
 
         function render(md) {
-            marked.setOptions({ gfm: true, breaks: true });
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.innerHTML = marked.parse(md);
             finalizeRendering();
