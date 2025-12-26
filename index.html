@@ -83,16 +83,16 @@
         <div class="max-w-5xl mx-auto px-4">
             <div class="flex items-center justify-between h-16">
                 <!-- Brand -->
-                <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('endurance_plan.md')">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="showSchedule()">
                     <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white italic">S</div>
                     <span class="font-bold tracking-tight text-slate-100">ATHLETE<span class="text-blue-500">OS</span></span>
                 </div>
 
                 <!-- Desktop Nav -->
                 <div class="hidden md:flex items-center space-x-4 h-full">
-                    <button onclick="navigateTo('endurance_plan.md')" id="nav-endurance_plan.md" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Training Plan</button>
-                    <button onclick="navigateTo('nutrition.md')" id="nav-nutrition.md" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Nutrition</button>
-                    <button onclick="navigateTo('gear.md')" id="nav-gear.md" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Gear List</button>
+                    <button onclick="showSchedule()" id="nav-schedule" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Weekly Schedule</button>
+                    <button onclick="showFullPlan()" id="nav-full" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Full Plan</button>
+                    <button onclick="showAppendix()" id="nav-appendix" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Appendix C</button>
                 </div>
 
                 <!-- Status -->
@@ -105,9 +105,9 @@
     </nav>
 
     <!-- HEADER SECTION -->
-    <header class="max-w-5xl mx-auto px-4 pt-12 pb-8">
+    <header class="max-w-5xl mx-auto px-4 pt-12 pb-8 text-center sm:text-left">
         <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight" id="header-title">
-            Endurance Master Plan
+            Weekly Schedule
         </h1>
         <p class="mt-3 text-slate-400 text-lg" id="header-subtitle">
             Synchronized with <span class="font-mono text-blue-400">endurance_plan.md</span>
@@ -117,11 +117,11 @@
     <!-- MAIN CONTENT -->
     <main class="max-w-5xl mx-auto px-4 pb-20">
         
-        <!-- DASHBOARD STATS (Optional placeholders) -->
+        <!-- DASHBOARD STATS -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Focus</p>
-                <p class="text-lg font-semibold text-blue-400" id="stat-phase">Base Phase</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Source File</p>
+                <p class="text-lg font-semibold text-blue-400">endurance_plan.md</p>
             </div>
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Last Sync</p>
@@ -136,12 +136,12 @@
         <!-- LOADER -->
         <div id="loader-container" class="flex flex-col items-center justify-center py-20">
             <div class="loader ease-linear rounded-full border-2 border-t-2 border-slate-700 h-10 w-10 mb-4"></div>
-            <p class="text-slate-500 text-sm font-medium">Fetching Data...</p>
+            <p class="text-slate-500 text-sm font-medium">Parsing Athlete Data...</p>
         </div>
 
         <!-- CONTENT AREA -->
         <div id="markdown-content" class="markdown-body hidden transition-opacity duration-500 opacity-0">
-            <!-- Rendered Markdown goes here -->
+            <!-- Rendered Content -->
         </div>
 
         <!-- ERROR AREA -->
@@ -154,63 +154,109 @@
     </main>
 
     <script>
-        // Start with your endurance plan
-        const DEFAULT_FILE = "endurance_plan.md";
+        const SOURCE_FILE = "endurance_plan.md";
+        let cachedMarkdown = ""; 
 
-        async function navigateTo(fileName) {
-            const contentDiv = document.getElementById('markdown-content');
-            const loader = document.getElementById('loader-container');
-            const errorDiv = document.getElementById('error-container');
-            const syncLabel = document.getElementById('sync-time');
-            const headerTitle = document.getElementById('header-title');
-            const headerSub = document.getElementById('header-subtitle');
-
-            // Reset UI
-            contentDiv.classList.add('hidden', 'opacity-0');
-            loader.classList.remove('hidden');
-            errorDiv.classList.add('hidden');
-            
-            // Nav Highlighting
-            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-            const activeBtn = document.getElementById(`nav-${fileName}`);
-            if (activeBtn) activeBtn.classList.add('active');
-
-            try {
-                const cacheBuster = `t=${new Date().getTime()}`;
-                const response = await fetch(`./${fileName}?${cacheBuster}`);
-                
-                if (!response.ok) throw new Error(`Could not load ${fileName}`);
-
-                const text = await response.text();
-                
-                // Set Header based on file
-                const cleanName = fileName.replace('.md', '').replace(/_/g, ' ');
-                headerTitle.innerText = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-                headerSub.innerHTML = `Synchronized with <span class="font-mono text-blue-400">${fileName}</span>`;
-
-                // Render
-                marked.setOptions({ gfm: true, breaks: true });
-                contentDiv.innerHTML = marked.parse(text);
-
-                // Reveal
-                loader.classList.add('hidden');
-                contentDiv.classList.remove('hidden');
-                setTimeout(() => contentDiv.classList.remove('opacity-0'), 50);
-                
-                // Sync Time
-                const now = new Date();
-                syncLabel.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            } catch (err) {
-                console.error(err);
-                loader.classList.add('hidden');
-                errorDiv.classList.remove('hidden');
-                document.getElementById('error-msg').innerText = err.message;
-            }
+        async function fetchFile() {
+            if (cachedMarkdown) return cachedMarkdown;
+            const cacheBuster = `t=${new Date().getTime()}`;
+            const response = await fetch(`./${SOURCE_FILE}?${cacheBuster}`);
+            if (!response.ok) throw new Error(`Could not load ${SOURCE_FILE}`);
+            cachedMarkdown = await response.text();
+            const now = new Date();
+            document.getElementById('sync-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return cachedMarkdown;
         }
 
-        // Initialize
-        window.onload = () => navigateTo(DEFAULT_FILE);
+        // --- NAVIGATION FUNCTIONS ---
+
+        async function showSchedule() {
+            updateUI('Weekly Schedule', 'nav-schedule');
+            try {
+                const md = await fetchFile();
+                const section = extractSection(md, "Weekly Schedule");
+                render(section || "*Schedule section not found.*");
+            } catch (err) { handleError(err); }
+        }
+
+        async function showFullPlan() {
+            updateUI('Endurance Master Plan', 'nav-full');
+            try {
+                const md = await fetchFile();
+                // Show everything EXCEPT Appendix C
+                const planOnly = excludeSection(md, "Appendix C");
+                render(planOnly);
+            } catch (err) { handleError(err); }
+        }
+
+        async function showAppendix() {
+            updateUI('Appendix C: Infographic', 'nav-appendix');
+            try {
+                const md = await fetchFile();
+                const section = extractSection(md, "Appendix C");
+                render(section || "*Appendix C not found.*");
+            } catch (err) { handleError(err); }
+        }
+
+        // --- PARSING LOGIC ---
+
+        function extractSection(md, title) {
+            const lines = md.split('\n');
+            let capturing = false;
+            let section = [];
+            for (let line of lines) {
+                if (line.trim().startsWith('##') && line.toLowerCase().includes(title.toLowerCase())) {
+                    capturing = true;
+                    section.push(line);
+                    continue;
+                }
+                if (capturing && line.trim().startsWith('##')) break;
+                if (capturing) section.push(line);
+            }
+            return section.join('\n');
+        }
+
+        function excludeSection(md, title) {
+            const lines = md.split('\n');
+            let result = [];
+            let skipping = false;
+            for (let line of lines) {
+                if (line.trim().startsWith('##') && line.toLowerCase().includes(title.toLowerCase())) {
+                    skipping = true;
+                    continue;
+                }
+                if (skipping && line.trim().startsWith('##')) skipping = false;
+                if (!skipping) result.push(line);
+            }
+            return result.join('\n');
+        }
+
+        // --- UI UTILITIES ---
+
+        function updateUI(title, navId) {
+            document.getElementById('header-title').innerText = title;
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            document.getElementById(navId).classList.add('active');
+            document.getElementById('markdown-content').classList.add('hidden', 'opacity-0');
+            document.getElementById('loader-container').classList.remove('hidden');
+        }
+
+        function render(md) {
+            marked.setOptions({ gfm: true, breaks: true });
+            const contentDiv = document.getElementById('markdown-content');
+            contentDiv.innerHTML = marked.parse(md);
+            document.getElementById('loader-container').classList.add('hidden');
+            contentDiv.classList.remove('hidden');
+            setTimeout(() => contentDiv.classList.remove('opacity-0'), 50);
+        }
+
+        function handleError(err) {
+            document.getElementById('loader-container').classList.add('hidden');
+            document.getElementById('error-container').classList.remove('hidden');
+            document.getElementById('error-msg').innerText = err.message;
+        }
+
+        window.onload = showSchedule; // Start on Schedule as requested
     </script>
 </body>
 </html>
