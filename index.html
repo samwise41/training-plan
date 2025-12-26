@@ -133,15 +133,31 @@
         .zone-range { font-family: ui-monospace; color: #94a3b8; font-size: 0.85rem; font-weight: 600; }
 
         /* W/kg Gauge Styling */
-        .gauge-container {
+        .gauge-wrapper {
             position: relative;
-            width: 300px;
-            height: 150px;
-            margin: 0 auto 2rem auto;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 3rem auto;
+            text-align: center;
+        }
+        .gauge-svg {
+            width: 100%;
+            height: auto;
         }
         .gauge-needle {
-            transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-origin: 150px 150px;
+            transition: transform 2s cubic-bezier(0.17, 0.67, 0.38, 1);
+            transform-origin: 150px 145px;
+        }
+        .gauge-value-text {
+            font-size: 3rem;
+            font-weight: 900;
+            fill: #f8fafc;
+        }
+        .gauge-label-text {
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
         }
     </style>
 </head>
@@ -348,45 +364,54 @@
                 const md = await fetchFile();
                 const section = extractSection(md, "Training Parameters");
                 
-                // --- W/KG CALCULATION & GAUGE ---
+                // --- W/KG CALCULATION & PERFORMANCE CATEGORY ---
                 const ftpMatch = md.match(/\*\*FTP:\*\*\s*(\d+)/i);
                 const weightMatch = md.match(/\*\*Weight:\*\*\s*(\d+)/i);
                 let wkg = 0;
+                let category = "Untrained";
+                let catColor = "#94a3b8"; // Grey
                 
                 if (ftpMatch && weightMatch) {
                     const weightKg = parseFloat(weightMatch[1]) * 0.453592;
                     wkg = (parseFloat(ftpMatch[1]) / weightKg).toFixed(2);
+                    
+                    const val = parseFloat(wkg);
+                    if (val >= 4.5) { category = "Professional"; catColor = "#ef4444"; }
+                    else if (val >= 3.9) { category = "Excellent"; catColor = "#f97316"; }
+                    else if (val >= 3.2) { category = "Very Good"; catColor = "#eab308"; }
+                    else if (val >= 2.5) { category = "Good"; catColor = "#22c55e"; }
+                    else if (val >= 2.0) { category = "Fair"; catColor = "#94a3b8"; }
                 }
 
-                // Calculate Needle Rotation (0 to 180 degrees)
-                // Range: 1.0 to 5.0 W/kg
+                // Needle Rotation (0 to 180 degrees) for range 1.0 to 5.0 W/kg
                 const minWkg = 1.0, maxWkg = 5.0;
                 const percent = Math.min(Math.max((wkg - minWkg) / (maxWkg - minWkg), 0), 1);
-                const rotation = percent * 180;
+                const rotation = -90 + (percent * 180);
 
                 let html = `
-                <div class="flex flex-col items-center mb-12">
-                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Relative Performance (W/kg)</h3>
-                    <div class="gauge-container">
-                        <svg viewBox="0 0 300 150">
-                            <!-- Background Tracks -->
-                            <path d="M 20 150 A 130 130 0 0 1 280 150" fill="none" stroke="#1e293b" stroke-width="25" />
-                            <!-- Color Segments -->
-                            <path d="M 20 150 A 130 130 0 0 1 85 45" fill="none" stroke="#94a3b8" stroke-width="25" /> <!-- Untrained/Fair -->
-                            <path d="M 85 45 A 130 130 0 0 1 150 20" fill="none" stroke="#22c55e" stroke-width="25" /> <!-- Good -->
-                            <path d="M 150 20 A 130 130 0 0 1 215 45" fill="none" stroke="#eab308" stroke-width="25" /> <!-- V.Good -->
-                            <path d="M 215 45 A 130 130 0 0 1 280 150" fill="none" stroke="#ef4444" stroke-width="25" /> <!-- Excellent/Pro -->
-                            <!-- Needle -->
-                            <g class="gauge-needle" style="transform: rotate(${rotation}deg)">
-                                <line x1="150" y1="150" x2="40" y2="150" stroke="#f8fafc" stroke-width="4" stroke-linecap="round" />
-                                <circle cx="150" cy="150" r="10" fill="#f8fafc" />
-                            </g>
-                        </svg>
-                        <div class="absolute bottom-0 left-0 right-0 text-center">
-                            <span class="text-4xl font-black text-white">${wkg}</span>
-                            <span class="text-xs font-bold text-slate-500 uppercase ml-1">W/kg</span>
-                        </div>
-                    </div>
+                <div class="gauge-wrapper">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">Performance Power Ratio</h3>
+                    <svg viewBox="0 0 300 180" class="gauge-svg">
+                        <!-- Background Shadow Track -->
+                        <path d="M 30 150 A 120 120 0 0 1 270 150" fill="none" stroke="#1e293b" stroke-width="24" stroke-linecap="round" />
+                        
+                        <!-- Categorized Arc Segments -->
+                        <path d="M 30 150 A 120 120 0 0 1 90 46" fill="none" stroke="#94a3b8" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Untrained/Fair -->
+                        <path d="M 90 46 A 120 120 0 0 1 150 30" fill="none" stroke="#22c55e" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Good -->
+                        <path d="M 150 30 A 120 120 0 0 1 210 46" fill="none" stroke="#eab308" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- V.Good -->
+                        <path d="M 210 46 A 120 120 0 0 1 270 150" fill="none" stroke="#ef4444" stroke-width="20" stroke-linecap="round" opacity="0.8" /> <!-- Excellent/Pro -->
+
+                        <!-- Centered Stats -->
+                        <text x="150" y="130" text-anchor="middle" class="gauge-value-text">${wkg}</text>
+                        <text x="150" y="155" text-anchor="middle" class="gauge-label-text" fill="${catColor}">${category}</text>
+                        <text x="150" y="175" text-anchor="middle" font-size="10" fill="#64748b" font-weight="700">WATTS PER KILOGRAM</text>
+
+                        <!-- Needle -->
+                        <g class="gauge-needle" style="transform: rotate(${rotation}deg)">
+                            <path d="M 145 145 L 150 40 L 155 145 Z" fill="#f8fafc" />
+                            <circle cx="150" cy="145" r="8" fill="#f8fafc" stroke="#0f172a" stroke-width="2" />
+                        </g>
+                    </svg>
                 </div>
 
                 <div id="zone-grid">`;
