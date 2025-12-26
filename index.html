@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Athlete Dashboard | 2026 Training</title>
+    <title>Athlete OS | 2026 Training</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Marked.js to convert Markdown to HTML -->
@@ -15,12 +15,21 @@
         body {
             background-color: #020617; /* Very dark slate */
             color: #f8fafc;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
-        /* Custom overrides for the markdown container to match the dashboard theme */
+        
+        /* Premium Background Gradient */
+        .bg-mesh {
+            background: radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.15) 0, transparent 50%),
+                        radial-gradient(at 100% 100%, rgba(15, 118, 110, 0.1) 0, transparent 50%);
+        }
+
+        /* Custom overrides for the markdown container */
         .markdown-body {
             background-color: transparent !important;
             font-family: inherit;
             color: #cbd5e1 !important;
+            line-height: 1.6;
         }
         .markdown-body table {
             display: table;
@@ -28,38 +37,58 @@
             border-collapse: separate;
             border-spacing: 0;
             border: 1px solid #1e293b;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
             margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
         .markdown-body table th {
             background-color: #1e293b !important;
             color: #60a5fa !important;
             text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-            padding: 12px !important;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            padding: 16px !important;
+            border: none !important;
         }
         .markdown-body table td {
-            padding: 12px !important;
+            padding: 16px !important;
+            border-top: 1px solid #1e293b !important;
+            border-bottom: none !important;
         }
         .markdown-body table tr {
             background-color: #0f172a !important;
-            border-top: 1px solid #1e293b !important;
+            transition: background-color 0.2s;
         }
-        .markdown-body h1, .markdown-body h2 {
+        .markdown-body table tr:hover {
+            background-color: #1e293b !important;
+        }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 {
             border-bottom: 1px solid #1e293b !important;
             color: #f8fafc !important;
-            margin-top: 2rem !important;
+            margin-top: 2.5rem !important;
+            font-weight: 800;
         }
         .markdown-body a {
             color: #3b82f6 !important;
+            text-decoration: none;
+        }
+        .markdown-body a:hover {
+            text-decoration: underline;
         }
         
+        /* Tab Navigation styles */
+        .nav-link.active {
+            color: #3b82f6;
+            border-bottom: 2px solid #3b82f6;
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+
         /* Loading animation */
         .loader {
             border-top-color: #3b82f6;
-            animation: spinner 1.5s linear infinite;
+            animation: spinner 1s linear infinite;
         }
         @keyframes spinner {
             0% { transform: rotate(0deg); }
@@ -67,134 +96,163 @@
         }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen bg-mesh">
 
-    <!-- NAVIGATION / HEADER -->
-    <nav class="bg-slate-900/50 backdrop-blur-md sticky top-0 z-50 border-b border-slate-800">
-        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white italic">S</div>
-                <span class="font-bold tracking-tight text-slate-100">ATHLETE<span class="text-blue-500">OS</span></span>
-            </div>
-            <div class="flex items-center space-x-4">
-                <span class="text-xs font-medium text-slate-500 bg-slate-800 px-2 py-1 rounded">V 2.0.2</span>
-                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+    <!-- TOP NAVIGATION BAR -->
+    <nav class="bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50 border-b border-slate-800">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('endurance_training_plan.md')">
+                    <div class="w-9 h-9 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center font-black text-white italic shadow-lg shadow-blue-900/20">S</div>
+                    <span class="font-black tracking-tighter text-lg text-slate-100 uppercase">Athlete<span class="text-blue-500">OS</span></span>
+                </div>
+
+                <!-- Desktop Nav -->
+                <div class="hidden md:flex items-center space-x-1 h-full">
+                    <button onclick="navigateTo('endurance_training_plan.md')" id="nav-endurance_training_plan.md" class="nav-link px-4 h-16 text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        Training Plan
+                    </button>
+                    <button onclick="navigateTo('nutrition.md')" id="nav-nutrition.md" class="nav-link px-4 h-16 text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.66V3.34"/><path d="m21 12-9-9-9 9"/></svg>
+                        Nutrition
+                    </button>
+                    <button onclick="navigateTo('gear.md')" id="nav-gear.md" class="nav-link px-4 h-16 text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/></svg>
+                        Gear List
+                    </button>
+                </div>
+
+                <!-- Status Indicator -->
+                <div class="flex items-center space-x-4">
+                    <div class="hidden sm:flex flex-col items-end">
+                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">System Status</span>
+                        <span class="text-[10px] font-bold text-emerald-500 uppercase">Live Sync Active</span>
+                    </div>
+                    <div class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse"></div>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- HERO SECTION -->
-    <header class="max-w-5xl mx-auto px-4 pt-12 pb-6">
-        <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight">
-            Endurance <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Master Plan</span>
-        </h1>
-        <p class="mt-4 text-slate-400 max-w-2xl text-lg">
-            Real-time synchronization with your training database. All updates from Google Docs are automatically rendered below.
-        </p>
-    </header>
+    <!-- MOBILE NAVIGATION (Scrollable bar) -->
+    <div class="md:hidden bg-slate-900 border-b border-slate-800 overflow-x-auto no-scrollbar">
+        <div class="flex whitespace-nowrap px-4 py-3 space-x-6 text-xs font-bold uppercase tracking-widest text-slate-400">
+            <button onclick="navigateTo('endurance_training_plan.md')" class="hover:text-white">Plan</button>
+            <button onclick="navigateTo('nutrition.md')" class="hover:text-white">Nutrition</button>
+            <button onclick="navigateTo('gear.md')" class="hover:text-white">Gear</button>
+            <button onclick="window.location.reload()" class="text-blue-500">Refresh</button>
+        </div>
+    </div>
 
-    <!-- DASHBOARD CONTENT -->
-    <main class="max-w-5xl mx-auto px-4 pb-20">
+    <!-- MAIN DASHBOARD AREA -->
+    <main class="max-w-5xl mx-auto px-4 py-8 md:py-12">
         
-        <!-- STATUS CARDS -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Current Phase</p>
-                <p class="text-xl font-semibold text-blue-400">Base Phase (Build 2)</p>
+        <!-- HEADER / BREADCRUMB -->
+        <div class="mb-10">
+            <div class="flex items-center gap-2 text-xs font-bold text-blue-500 uppercase tracking-widest mb-3">
+                <span>Athlete Cloud</span>
+                <span>/</span>
+                <span class="text-slate-500" id="current-page-label">Training Plan</span>
             </div>
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Target Volume</p>
-                <p class="text-xl font-semibold text-emerald-400">8 - 12 Hours / Week</p>
-            </div>
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Sync Status</p>
-                <p class="text-xl font-semibold text-slate-200" id="sync-time">Checking...</p>
-            </div>
+            <h1 class="text-4xl md:text-5xl font-black text-white tracking-tighter" id="page-title">
+                2026 Season <span class="text-slate-500">Vault</span>
+            </h1>
         </div>
 
-        <!-- MAIN CONTENT AREA -->
-        <div id="loader-container" class="flex flex-col items-center justify-center py-20">
-            <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-800 h-12 w-12 mb-4"></div>
-            <p class="text-slate-500 font-medium">Fetching Training Plan...</p>
+        <!-- LOADER -->
+        <div id="loader-container" class="flex flex-col items-center justify-center py-32">
+            <div class="loader ease-linear rounded-full border-2 border-t-2 border-slate-800 h-10 w-10 mb-4"></div>
+            <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Initializing Data Stream...</p>
         </div>
 
-        <div id="error-container" class="hidden bg-red-900/20 border border-red-500/50 p-6 rounded-xl text-center">
-            <p class="text-red-400 font-bold mb-2 text-lg" id="error-title">404: File Not Found</p>
-            <p class="text-red-300/80 mb-4" id="error-msg">The file was not found.</p>
-            <div class="text-xs text-red-400/50 mb-4 font-mono break-all" id="error-url"></div>
-            <button onclick="window.location.reload()" class="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-400 transition-colors">Retry Sync</button>
+        <!-- ERROR STATE -->
+        <div id="error-container" class="hidden bg-red-500/10 border border-red-500/20 p-8 rounded-2xl text-center">
+            <div class="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <p class="text-red-400 font-bold mb-2">Sync Interrupted</p>
+            <p class="text-red-400/60 text-sm mb-6" id="error-msg">Target file not found in repository.</p>
+            <button onclick="navigateTo('endurance_training_plan.md')" class="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-all">Return to Dashboard</button>
         </div>
 
-        <div id="markdown-content" class="markdown-body hidden transition-opacity duration-500 opacity-0">
-            <!-- Content will be injected here -->
+        <!-- DYNAMIC CONTENT -->
+        <div id="markdown-content" class="markdown-body hidden transition-opacity duration-300 opacity-0 pb-20">
+            <!-- Content Injected Here -->
         </div>
 
     </main>
 
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800/50 py-12 bg-slate-900/20">
+        <div class="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="text-center md:text-left">
+                <p class="text-xs font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Data Source</p>
+                <p class="text-sm text-slate-400 font-mono">github.com/samwise41/training-plan</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="https://github.com/samwise41/training-plan" target="_blank" class="text-slate-500 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
     <script>
-        /**
-         * SETTINGS
-         * Check your GitHub repo: is the file name exactly "endurance_plan.md"?
-         */
-        const GITHUB_FILENAME = "endurance_plan.md"; 
+        // Set the primary file to load on start
+        let currentFile = "endurance_training_plan.md";
 
-        async function fetchAndRender() {
-            const contentDiv = document.getElementById('markdown-content');
-            const loader = document.getElementById('loader-container');
-            const errorDiv = document.getElementById('error-container');
-            const errorMsg = document.getElementById('error-msg');
-            const errorUrl = document.getElementById('error-url');
-            const syncLabel = document.getElementById('sync-time');
+        async function navigateTo(fileName) {
+            currentFile = fileName;
+            
+            // UI Updates
+            document.getElementById('markdown-content').classList.add('hidden', 'opacity-0');
+            document.getElementById('loader-container').classList.remove('hidden');
+            document.getElementById('error-container').classList.add('hidden');
+            
+            // Update Navigation Highlighting
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            const activeNav = document.getElementById(`nav-${fileName}`);
+            if (activeNav) activeNav.classList.add('active');
 
-            // Force browser to ignore cache by adding a unique timestamp
-            const cacheBuster = `?t=${new Date().getTime()}`;
-            const targetUrl = `./${GITHUB_FILENAME}${cacheBuster}`;
+            // Update Labels
+            const label = fileName.replace('.md', '').replace(/_/g, ' ');
+            document.getElementById('current-page-label').innerText = label;
 
             try {
-                const response = await fetch(targetUrl);
+                // Fetch from GitHub
+                const cacheBuster = `t=${new Date().getTime()}`;
+                const response = await fetch(`./${fileName}?${cacheBuster}`);
                 
-                if (!response.ok) {
-                    throw new Error(`Status ${response.status}: ${response.statusText}`);
+                if (!response.ok) throw new Error(`File "${fileName}" not found.`);
+
+                const text = await response.text();
+                
+                // Safety: Check if we got an HTML 404 page instead of raw MD
+                if (text.trim().toLowerCase().startsWith('<!doctype html>')) {
+                    throw new Error("Target file is missing or repository is private.");
                 }
 
-                const markdownText = await response.text();
-                
-                // Safety check: ensure we actually got text and not an HTML error page
-                if (markdownText.trim().startsWith('<!DOCTYPE html>')) {
-                    throw new Error("GitHub returned an HTML page instead of the Markdown file. Check visibility.");
-                }
+                // Render Markdown
+                marked.setOptions({ gfm: true, breaks: true });
+                document.getElementById('markdown-content').innerHTML = marked.parse(text);
 
-                // Use Marked.js to parse the markdown
-                marked.setOptions({
-                    gfm: true,
-                    breaks: true
-                });
+                // Reveal Content
+                document.getElementById('loader-container').classList.add('hidden');
+                document.getElementById('markdown-content').classList.remove('hidden');
+                setTimeout(() => document.getElementById('markdown-content').classList.remove('opacity-0'), 50);
 
-                const htmlContent = marked.parse(markdownText);
-                
-                // Inject content
-                contentDiv.innerHTML = htmlContent;
-
-                // Update UI
-                loader.classList.add('hidden');
-                contentDiv.classList.remove('hidden');
-                setTimeout(() => contentDiv.classList.add('opacity-100'), 50);
-                
-                // Set sync time
-                const now = new Date();
-                syncLabel.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            } catch (error) {
-                console.error("Fetch Error:", error);
-                loader.classList.add('hidden');
-                errorDiv.classList.remove('hidden');
-                errorMsg.innerText = error.message;
-                errorUrl.innerText = `Attempted URL: ${window.location.origin}${window.location.pathname}${GITHUB_FILENAME}`;
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loader-container').classList.add('hidden');
+                document.getElementById('error-container').classList.remove('hidden');
+                document.getElementById('error-msg').innerText = err.message;
             }
         }
 
-        // Start the process
-        window.onload = fetchAndRender;
+        // Initialize on load
+        window.onload = () => navigateTo(currentFile);
     </script>
 </body>
 </html>
