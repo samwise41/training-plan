@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Athlete Dashboard</title>
     <!-- Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
     <!-- Marked.js to convert Markdown to HTML -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="[https://cdn.jsdelivr.net/npm/marked/marked.min.js](https://cdn.jsdelivr.net/npm/marked/marked.min.js)"></script>
     <!-- GitHub Markdown CSS for professional formatting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css](https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css)">
     
     <style>
         body {
@@ -73,6 +73,13 @@
         @keyframes spinner {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        /* Container for raw HTML infographics */
+        #infographic-container {
+            width: 100%;
+            height: auto;
+            min-height: 300px;
         }
     </style>
 </head>
@@ -167,26 +174,23 @@
             // Populate Header Stats from the fetched Markdown
             updateHeaderStats(cachedMarkdown);
             
-            const now = new Date();
-            document.getElementById('sync-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             return cachedMarkdown;
         }
 
         // --- STATS PARSING ---
 
         function updateHeaderStats(md) {
-            // 1. Current Focus (Looking for **Phase:**)
+            // 1. Current Focus
             const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
             document.getElementById('stat-focus').innerText = phaseMatch ? phaseMatch[1].trim() : "TBD";
 
-            // 2. Current Week (Looking for ## Weekly Schedule title content)
+            // 2. Current Week
             const weekMatch = md.match(/##.*Weekly Schedule[:\s]*(.*)/i);
             document.getElementById('stat-week').innerText = weekMatch ? weekMatch[1].trim() : "Active Week";
 
-            // 3. Next Event (Looking for ## Event Schedule table)
+            // 3. Next Event
             const eventSection = extractSection(md, "Event Schedule");
             if (eventSection) {
-                // Find first table row that isn't a header or separator
                 const lines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
                 if (lines.length > 0) {
                     const parts = lines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
@@ -239,7 +243,24 @@
             try {
                 const md = await fetchFile();
                 const section = extractSection(md, "Appendix C");
-                render(section || "*Appendix C not found.*");
+                
+                if (!section) {
+                    render("*Appendix C not found.*");
+                    return;
+                }
+
+                // Check if Appendix C contains a code block with HTML or a raw HTML structure
+                const htmlMatch = section.match(/```html([\s\S]*?)```/);
+                if (htmlMatch) {
+                    // Extract and render as raw HTML
+                    renderRawHTML(htmlMatch[1].trim());
+                } else if (section.includes('<svg') || section.includes('<div')) {
+                    // If no code block but contains tags, render raw
+                    renderRawHTML(section);
+                } else {
+                    // Fallback to markdown
+                    render(section);
+                }
             } catch (err) { handleError(err); }
         }
 
@@ -250,15 +271,17 @@
             let capturing = false;
             let section = [];
             for (let line of lines) {
-                if (line.trim().startsWith('##') && line.toLowerCase().includes(title.toLowerCase())) {
+                // More resilient match for headers (ignoring emojis)
+                const isHeader = line.trim().startsWith('##');
+                if (isHeader && line.toLowerCase().includes(title.toLowerCase())) {
                     capturing = true;
                     section.push(line);
                     continue;
                 }
-                if (capturing && line.trim().startsWith('##')) break;
+                if (capturing && isHeader) break;
                 if (capturing) section.push(line);
             }
-            return section.join('\n');
+            return section.join('\n').trim();
         }
 
         function excludeSection(md, title) {
@@ -266,14 +289,15 @@
             let result = [];
             let skipping = false;
             for (let line of lines) {
-                if (line.trim().startsWith('##') && line.toLowerCase().includes(title.toLowerCase())) {
+                const isHeader = line.trim().startsWith('##');
+                if (isHeader && line.toLowerCase().includes(title.toLowerCase())) {
                     skipping = true;
                     continue;
                 }
-                if (skipping && line.trim().startsWith('##')) skipping = false;
+                if (skipping && isHeader) skipping = false;
                 if (!skipping) result.push(line);
             }
-            return result.join('\n');
+            return result.join('\n').trim();
         }
 
         // --- UI UTILITIES ---
@@ -281,27 +305,46 @@
         function updateUI(title, navId) {
             document.getElementById('header-title').innerText = title;
             document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-            document.getElementById(navId).classList.add('active');
+            const activeNav = document.getElementById(navId);
+            if (activeNav) activeNav.classList.add('active');
+            
             document.getElementById('markdown-content').classList.add('hidden', 'opacity-0');
             document.getElementById('loader-container').classList.remove('hidden');
+            document.getElementById('error-container').classList.add('hidden');
         }
 
         function render(md) {
+            // Safety: Remove accidental legacy error strings that might have been committed to the MD file
+            let cleanMd = md.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
+            
             marked.setOptions({ gfm: true, breaks: true });
             const contentDiv = document.getElementById('markdown-content');
-            contentDiv.innerHTML = marked.parse(md);
+            contentDiv.innerHTML = marked.parse(cleanMd);
+            
+            finalizeRendering();
+        }
+
+        function renderRawHTML(html) {
+            const contentDiv = document.getElementById('markdown-content');
+            contentDiv.innerHTML = `<div id="infographic-container">${html}</div>`;
+            finalizeRendering();
+        }
+
+        function finalizeRendering() {
             document.getElementById('loader-container').classList.add('hidden');
+            const contentDiv = document.getElementById('markdown-content');
             contentDiv.classList.remove('hidden');
             setTimeout(() => contentDiv.classList.remove('opacity-0'), 50);
         }
 
         function handleError(err) {
+            console.error(err);
             document.getElementById('loader-container').classList.add('hidden');
             document.getElementById('error-container').classList.remove('hidden');
             document.getElementById('error-msg').innerText = err.message;
         }
 
-        window.onload = showSchedule; // Start on Schedule as requested
+        window.onload = showSchedule; 
     </script>
 </body>
 </html>
