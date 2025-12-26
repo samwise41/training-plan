@@ -16,6 +16,7 @@
             background-color: #0f172a; /* Original Slate 900 */
             color: #f8fafc;
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            overflow-x: hidden;
         }
 
         /* Custom overrides for the markdown container */
@@ -62,7 +63,8 @@
         /* Nav highlighting */
         .nav-link.active {
             color: #3b82f6;
-            border-bottom: 2px solid #3b82f6;
+            background-color: #1e293b;
+            border-right: 4px solid #3b82f6;
         }
 
         /* Loading animation */
@@ -79,97 +81,161 @@
         #infographic-container {
             width: 100%;
             border: none;
-            min-height: 600px; /* Adjust height as needed */
+            min-height: 600px;
             background: transparent;
+        }
+
+        /* Sidebar transitions */
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+            z-index: 60;
+        }
+        .sidebar-open {
+            transform: translateX(0);
+        }
+        .sidebar-closed {
+            transform: translateX(-100%);
+        }
+
+        @media (min-width: 1024px) {
+            #sidebar {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 260px;
+            }
         }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- NAVIGATION BAR -->
-    <nav class="bg-slate-900 sticky top-0 z-50 border-b border-slate-800">
-        <div class="max-w-5xl mx-auto px-4">
-            <div class="flex items-center justify-between h-16">
-                <!-- Brand -->
-                <div class="flex items-center space-x-3 cursor-pointer" onclick="showSchedule()">
-                    <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white italic">S</div>
-                    <span class="font-bold tracking-tight text-slate-100">ATHLETE<span class="text-blue-500">OS</span></span>
-                </div>
+    <!-- MOBILE OVERLAY -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 hidden z-50"></div>
 
-                <!-- Desktop Nav -->
-                <div class="hidden md:flex items-center space-x-4 h-full">
-                    <button onclick="showSchedule()" id="nav-schedule" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Weekly Schedule</button>
-                    <button onclick="showFullPlan()" id="nav-full" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Full Plan</button>
-                    <button onclick="showAppendix()" id="nav-appendix" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Summary</button>
-                </div>
+    <!-- LEFT SIDEBAR -->
+    <aside id="sidebar" class="fixed top-0 left-0 h-full w-[260px] bg-slate-900 border-r border-slate-800 sidebar-closed lg:sidebar-open flex flex-col">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+            <span class="font-bold tracking-widest text-slate-400 text-xs uppercase">Navigation</span>
+            <button onclick="toggleSidebar()" class="lg:hidden text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <button onclick="showSchedule(); toggleSidebarMobile();" id="nav-schedule" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Weekly Schedule
+            </button>
+            <button onclick="showFullPlan(); toggleSidebarMobile();" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Full Plan
+            </button>
+            <button onclick="showPhases(); toggleSidebarMobile();" id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                Phases
+            </button>
+            <button onclick="showAppendix(); toggleSidebarMobile();" id="nav-appendix" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                Summary
+            </button>
+        </nav>
 
-                <!-- Status -->
-                <div class="flex items-center space-x-2">
-                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden sm:inline">Live Sync</span>
-                </div>
+        <div class="p-6 border-t border-slate-800">
+            <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Live Sync</span>
             </div>
         </div>
-    </nav>
+    </aside>
 
-    <!-- HEADER SECTION -->
-    <header class="max-w-5xl mx-auto px-4 pt-12 pb-8 text-center sm:text-left">
-        <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight" id="header-title">
-            Weekly Schedule
-        </h1>
-        <p class="mt-3 text-slate-400 text-lg" id="header-subtitle">
-            Synchronized with <span class="font-mono text-blue-400">endurance_plan.md</span>
-        </p>
+    <!-- TOP MOBILE BAR -->
+    <header class="lg:hidden bg-slate-900 border-b border-slate-800 sticky top-0 z-40 h-16 flex items-center px-4">
+        <button onclick="toggleSidebar()" class="p-2 text-slate-400 hover:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        <h1 class="ml-4 text-lg font-bold text-white tracking-tight" id="mobile-header-title">Weekly Schedule</h1>
     </header>
 
-    <!-- MAIN CONTENT -->
-    <main class="max-w-5xl mx-auto px-4 pb-20">
-        
-        <!-- DASHBOARD STATS -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-            <!-- Box 1: Current Phase -->
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
-                <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
-            </div>
-            <!-- Box 2: Current Week -->
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
-                <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
-            </div>
-            <!-- Box 3: Next Event (Name + Countdown) -->
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
-                <div id="stat-event">
-                    <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
-                    <p class="text-sm font-normal text-slate-400 mt-1" id="stat-event-countdown">--</p>
+    <div class="main-content">
+        <!-- HEADER SECTION -->
+        <header class="max-w-5xl mx-auto px-4 pt-12 pb-8 text-center sm:text-left hidden lg:block">
+            <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight" id="header-title">
+                Weekly Schedule
+            </h1>
+            <p class="mt-3 text-slate-400 text-lg" id="header-subtitle">
+                Synchronized with <span class="font-mono text-blue-400">endurance_plan.md</span>
+            </p>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="max-w-5xl mx-auto px-4 pb-20">
+            
+            <!-- DASHBOARD STATS -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+                <!-- Box 1: Current Phase -->
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
+                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
+                </div>
+                <!-- Box 2: Current Week -->
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
+                    <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
+                </div>
+                <!-- Box 3: Next Event -->
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
+                    <div id="stat-event">
+                        <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
+                        <p class="text-sm font-normal text-slate-400 mt-1" id="stat-event-countdown">--</p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- LOADER -->
-        <div id="loader-container" class="flex flex-col items-center justify-center py-20">
-            <div class="loader ease-linear rounded-full border-2 border-t-2 border-slate-700 h-10 w-10 mb-4"></div>
-            <p class="text-slate-500 text-sm font-medium">Parsing Athlete Data...</p>
-        </div>
+            <!-- LOADER -->
+            <div id="loader-container" class="flex flex-col items-center justify-center py-20">
+                <div class="loader ease-linear rounded-full border-2 border-t-2 border-slate-700 h-10 w-10 mb-4"></div>
+                <p class="text-slate-500 text-sm font-medium">Parsing Athlete Data...</p>
+            </div>
 
-        <!-- CONTENT AREA -->
-        <div id="markdown-content" class="markdown-body hidden transition-opacity duration-500 opacity-0">
-            <!-- Rendered Content -->
-        </div>
+            <!-- CONTENT AREA -->
+            <div id="markdown-content" class="markdown-body hidden transition-opacity duration-500 opacity-0">
+                <!-- Rendered Content -->
+            </div>
 
-        <!-- ERROR AREA -->
-        <div id="error-container" class="hidden bg-red-900/10 border border-red-500/50 p-6 rounded-lg text-center">
-            <p class="text-red-400 font-bold mb-2">Sync Error</p>
-            <p class="text-red-300 text-sm mb-4" id="error-msg">File not found.</p>
-            <button onclick="window.location.reload()" class="text-blue-400 text-sm font-bold hover:underline">Retry Connection</button>
-        </div>
+            <!-- ERROR AREA -->
+            <div id="error-container" class="hidden bg-red-900/10 border border-red-500/50 p-6 rounded-lg text-center">
+                <p class="text-red-400 font-bold mb-2">Sync Error</p>
+                <p class="text-red-300 text-sm mb-4" id="error-msg">File not found.</p>
+                <button onclick="window.location.reload()" class="text-blue-400 text-sm font-bold hover:underline">Retry Connection</button>
+            </div>
 
-    </main>
+        </main>
+    </div>
 
     <script>
         const SOURCE_FILE = "endurance_plan.md";
         let cachedMarkdown = ""; 
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('sidebar-closed')) {
+                sidebar.classList.remove('sidebar-closed');
+                sidebar.classList.add('sidebar-open');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('sidebar-closed');
+                sidebar.classList.remove('sidebar-open');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function toggleSidebarMobile() {
+            if (window.innerWidth < 1024) {
+                toggleSidebar();
+            }
+        }
 
         async function fetchFile() {
             if (cachedMarkdown) return cachedMarkdown;
@@ -178,35 +244,25 @@
             if (!response.ok) throw new Error(`Could not load ${SOURCE_FILE}`);
             cachedMarkdown = await response.text();
             
-            // Populate Header Stats from the fetched Markdown
             updateHeaderStats(cachedMarkdown);
-            
             return cachedMarkdown;
         }
 
-        // --- STATS PARSING ---
-
         function updateHeaderStats(md) {
-            // 1. & 2. Consolidated parsing for Phase and Week from "Status" line
             const statusMatch = md.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
-            
-            let phase = "--";
-            let week = "--";
-
+            let phase = "--", week = "--";
             if (statusMatch) {
                 phase = statusMatch[1].trim();
                 week = statusMatch[2].trim();
             } else {
-                const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
-                const weekMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
-                if (phaseMatch) phase = phaseMatch[1].trim();
-                if (weekMatch) week = weekMatch[1].trim();
+                const pMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
+                const wMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
+                if (pMatch) phase = pMatch[1].trim();
+                if (wMatch) week = wMatch[1].trim();
             }
-
             document.getElementById('stat-phase').innerText = phase;
             document.getElementById('stat-week').innerText = week;
 
-            // 3. Next Event Logic
             const eventSection = extractSection(md, "Event Schedule");
             const nameElement = document.getElementById('stat-event-name');
             const countdownElement = document.getElementById('stat-event-countdown');
@@ -219,44 +275,25 @@
                         const eventDate = new Date(parts[0]);
                         const eventName = parts[1];
                         nameElement.innerText = eventName;
-
                         if (!isNaN(eventDate)) {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0);
-                            const diffInMs = eventDate - today;
-                            const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
-                            
-                            if (diffInDays < 0) {
-                                countdownElement.innerText = "Completed";
-                            } else if (diffInDays === 0) {
-                                countdownElement.innerText = "Event Today";
-                            } else {
-                                const weeks = Math.floor(diffInDays / 7);
-                                const days = diffInDays % 7;
-                                let countdownStr = "";
-                                if (weeks > 0) countdownStr += `${weeks} week${weeks > 1 ? 's' : ''}`;
-                                if (weeks > 0 && days > 0) countdownStr += " and ";
-                                if (days > 0 || weeks === 0) countdownStr += `${days} day${days !== 1 ? 's' : ''}`;
-                                countdownElement.innerText = `${countdownStr} until event`;
+                            const today = new Date(); today.setHours(0,0,0,0);
+                            const diffInDays = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+                            if (diffInDays < 0) countdownElement.innerText = "Completed";
+                            else if (diffInDays === 0) countdownElement.innerText = "Event Today";
+                            else {
+                                const w = Math.floor(diffInDays / 7);
+                                const d = diffInDays % 7;
+                                let str = "";
+                                if (w > 0) str += `${w} week${w > 1 ? 's' : ''}`;
+                                if (w > 0 && d > 0) str += " and ";
+                                if (d > 0 || w === 0) str += `${d} day${d !== 1 ? 's' : ''}`;
+                                countdownElement.innerText = `${str} until event`;
                             }
-                        } else {
-                            countdownElement.innerText = "Date TBD";
-                        }
-                    } else {
-                        nameElement.innerText = "None Scheduled";
-                        countdownElement.innerText = "--";
-                    }
-                } else {
-                    nameElement.innerText = "None Scheduled";
-                    countdownElement.innerText = "--";
-                }
-            } else {
-                nameElement.innerText = "None Scheduled";
-                countdownElement.innerText = "--";
-            }
+                        } else countdownElement.innerText = "Date TBD";
+                    } else { nameElement.innerText = "None Scheduled"; countdownElement.innerText = "--"; }
+                } else { nameElement.innerText = "None Scheduled"; countdownElement.innerText = "--"; }
+            } else { nameElement.innerText = "None Scheduled"; countdownElement.innerText = "--"; }
         }
-
-        // --- NAVIGATION FUNCTIONS ---
 
         async function showSchedule() {
             updateUI('Weekly Schedule', 'nav-schedule', true);
@@ -276,18 +313,24 @@
             } catch (err) { handleError(err); }
         }
 
+        async function showPhases() {
+            updateUI('Periodization Phases', 'nav-phases', true);
+            try {
+                const md = await fetchFile();
+                const section = extractSection(md, "Periodization Phases");
+                render(section || "*Phases section not found.*");
+            } catch (err) { handleError(err); }
+        }
+
         async function showAppendix() {
             try {
                 const md = await fetchFile();
                 const section = extractSection(md, "Appendix C");
-                
                 if (!section) {
                     updateUI('Summary', 'nav-appendix', true);
                     render("*Appendix C not found.*");
                     return;
                 }
-
-                // Detect HTML/SVG content
                 const htmlMatch = section.match(/```html([\s\S]*?)```/);
                 if (htmlMatch) {
                     updateUI('Summary', 'nav-appendix', false);
@@ -301,8 +344,6 @@
                 }
             } catch (err) { handleError(err); }
         }
-
-        // --- PARSING LOGIC ---
 
         function extractSection(md, title) {
             const lines = md.split('\n');
@@ -343,10 +384,9 @@
             return result.join('\n').trim();
         }
 
-        // --- UI UTILITIES ---
-
         function updateUI(title, navId, isMarkdown) {
             document.getElementById('header-title').innerText = title;
+            document.getElementById('mobile-header-title').innerText = title;
             document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
             const activeNav = document.getElementById(navId);
             if (activeNav) activeNav.classList.add('active');
@@ -354,11 +394,8 @@
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.classList.add('hidden', 'opacity-0');
             
-            if (isMarkdown) {
-                contentDiv.classList.add('markdown-body');
-            } else {
-                contentDiv.classList.remove('markdown-body');
-            }
+            if (isMarkdown) contentDiv.classList.add('markdown-body');
+            else contentDiv.classList.remove('markdown-body');
 
             document.getElementById('loader-container').classList.remove('hidden');
             document.getElementById('error-container').classList.add('hidden');
@@ -373,37 +410,20 @@
 
         function renderRawHTML(html) {
             const contentDiv = document.getElementById('markdown-content');
-            // Using an iframe to isolate the infographic styles from the rest of the dashboard
             const iframe = document.createElement('iframe');
             iframe.id = 'infographic-container';
             contentDiv.innerHTML = '';
             contentDiv.appendChild(iframe);
-            
-            // Set basic reset styles in the iframe
-            const iframeDoc = `
-                <html>
-                    <head>
-                        <style>
-                            body { margin: 0; padding: 0; background: transparent; color: white; font-family: sans-serif; }
-                            * { box-sizing: border-box; }
-                        </style>
-                    </head>
-                    <body>${html}</body>
-                </html>
-            `;
-            
+            const iframeDoc = `<html><head><style>body { margin: 0; padding: 0; background: transparent; color: white; font-family: sans-serif; } * { box-sizing: border-box; }</style></head><body>${html}</body></html>`;
             iframe.srcdoc = iframeDoc;
-            
-            // Auto-resize iframe to content height
             iframe.onload = function() {
                 setTimeout(() => {
-                    const body = iframe.contentWindow.document.body;
-                    const html = iframe.contentWindow.document.documentElement;
-                    const height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+                    const b = iframe.contentWindow.document.body;
+                    const h = iframe.contentWindow.document.documentElement;
+                    const height = Math.max(b.scrollHeight, b.offsetHeight, h.clientHeight, h.scrollHeight, h.offsetHeight);
                     iframe.style.height = height + 'px';
                 }, 100);
             };
-
             finalizeRendering();
         }
 
