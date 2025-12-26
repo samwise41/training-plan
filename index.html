@@ -388,35 +388,18 @@
                     return;
                 }
 
-                // Split into lines for analysis
                 const lines = section.split('\n');
-                let html = '<div id="zone-grid">';
+                let foundCategories = {};
                 let currentCategory = '';
-                let categoryZones = [];
-
-                function flushCategory() {
-                    if (currentCategory && categoryZones.length > 0) {
-                        html += `
-                            <div class="zone-card">
-                                <div class="zone-card-title">${currentCategory}</div>
-                                ${categoryZones.join('')}
-                            </div>
-                        `;
-                        categoryZones = [];
-                    }
-                }
 
                 lines.forEach(line => {
                     const trimmed = line.trim();
                     
-                    // Detect sub-headers (### Category Name)
                     if (trimmed.startsWith('###')) {
-                        flushCategory();
                         currentCategory = trimmed.replace(/^###\s*/, '').trim();
+                        if (!foundCategories[currentCategory]) foundCategories[currentCategory] = [];
                     } 
-                    // Detect zone entries (Bullet points with "Zone X ... : ...")
-                    else if (trimmed.includes('Zone') && trimmed.includes(':')) {
-                        // Clean up markdown syntax (*, -)
+                    else if (currentCategory && trimmed.includes('Zone') && trimmed.includes(':')) {
                         const cleanLine = trimmed.replace(/^[\s\*\-\+]+/, '').replace(/\*\*/g, '').trim();
                         const sepIndex = cleanLine.indexOf(':');
                         
@@ -424,14 +407,14 @@
                             const label = cleanLine.substring(0, sepIndex).trim();
                             const range = cleanLine.substring(sepIndex + 1).trim();
                             
-                            // Color Logic
-                            let colorClass = 'zone-z1'; // Default Grey
-                            if (label.toLowerCase().includes('zone 2')) colorClass = 'zone-z2'; // Green
-                            else if (label.toLowerCase().includes('zone 3')) colorClass = 'zone-z3'; // Yellow
-                            else if (label.toLowerCase().includes('zone 4')) colorClass = 'zone-z4'; // Orange
-                            else if (label.toLowerCase().includes('zone 5')) colorClass = 'zone-z5'; // Red
+                            let colorClass = 'zone-z1';
+                            const lowLabel = label.toLowerCase();
+                            if (lowLabel.includes('zone 2')) colorClass = 'zone-z2';
+                            else if (lowLabel.includes('zone 3')) colorClass = 'zone-z3';
+                            else if (lowLabel.includes('zone 4')) colorClass = 'zone-z4';
+                            else if (lowLabel.includes('zone 5')) colorClass = 'zone-z5';
 
-                            categoryZones.push(`
+                            foundCategories[currentCategory].push(`
                                 <div class="zone-row ${colorClass}">
                                     <span class="zone-label">${label}</span>
                                     <span class="zone-range">${range}</span>
@@ -441,15 +424,36 @@
                     }
                 });
 
-                flushCategory(); // Capture the last category
+                // Target specifically Cycling and Running categories
+                let cyclingKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('cycling'));
+                let runningKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('running'));
+
+                let html = '<div id="zone-grid">';
+                
+                if (cyclingKey && foundCategories[cyclingKey].length > 0) {
+                    html += `
+                        <div class="zone-card">
+                            <div class="zone-card-title">${cyclingKey}</div>
+                            ${foundCategories[cyclingKey].join('')}
+                        </div>
+                    `;
+                }
+
+                if (runningKey && foundCategories[runningKey].length > 0) {
+                    html += `
+                        <div class="zone-card">
+                            <div class="zone-card-title">${runningKey}</div>
+                            ${foundCategories[runningKey].join('')}
+                        </div>
+                    `;
+                }
+                
                 html += '</div>';
 
                 const contentDiv = document.getElementById('markdown-content');
-                // Check if we actually found structured zones
-                if (html.includes('zone-row')) {
+                if (cyclingKey || runningKey) {
                     contentDiv.innerHTML = html;
                 } else {
-                    // Fallback if parsing fails (no ### headers or Zone lines found)
                     contentDiv.classList.add('markdown-body');
                     contentDiv.innerHTML = marked.parse(section);
                 }
@@ -467,36 +471,12 @@
             } catch (err) { handleError(err); }
         }
 
-        async function showAppendix() {
-            try {
-                const md = await fetchFile();
-                const section = extractSection(md, "Appendix C");
-                if (!section) {
-                    updateUI('Summary', 'nav-appendix', true);
-                    render("*Appendix C not found.*");
-                    return;
-                }
-                const htmlMatch = section.match(/```html([\s\S]*?)```/);
-                if (htmlMatch) {
-                    updateUI('Summary', 'nav-appendix', false);
-                    renderRawHTML(htmlMatch[1].trim());
-                } else if (section.includes('<svg') || section.includes('<div')) {
-                    updateUI('Summary', 'nav-appendix', false);
-                    renderRawHTML(section);
-                } else {
-                    updateUI('Summary', 'nav-appendix', true);
-                    render(section);
-                }
-            } catch (err) { handleError(err); }
-        }
-
         function extractSection(md, title) {
             const lines = md.split('\n');
             let capturing = false;
             let section = [];
             for (let line of lines) {
                 const trimmed = line.trim();
-                // Check if this is a main Level 2 header (## but not ###)
                 const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
                 
                 if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) {
@@ -505,7 +485,6 @@
                     continue;
                 }
                 
-                // Stop if we hit the next main header
                 if (capturing && isMainHeader) break;
                 
                 if (capturing) {
@@ -563,25 +542,6 @@
             marked.setOptions({ gfm: true, breaks: true });
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.innerHTML = marked.parse(md);
-            finalizeRendering();
-        }
-
-        function renderRawHTML(html) {
-            const contentDiv = document.getElementById('markdown-content');
-            const iframe = document.createElement('iframe');
-            iframe.id = 'infographic-container';
-            contentDiv.innerHTML = '';
-            contentDiv.appendChild(iframe);
-            const iframeDoc = `<html><head><style>body { margin: 0; padding: 0; background: transparent; color: white; font-family: sans-serif; } * { box-sizing: border-box; }</style></head><body>${html}</body></html>`;
-            iframe.srcdoc = iframeDoc;
-            iframe.onload = function() {
-                setTimeout(() => {
-                    const b = iframe.contentWindow.document.body;
-                    const h = iframe.contentWindow.document.documentElement;
-                    const height = Math.max(b.scrollHeight, b.offsetHeight, h.clientHeight, h.scrollHeight, h.offsetHeight);
-                    iframe.style.height = height + 'px';
-                }, 100);
-            };
             finalizeRendering();
         }
 
