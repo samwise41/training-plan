@@ -1,220 +1,245 @@
-Master Training Plan 2026
-Last Updated: December 26, 2025
-Status: Phase 1 (Base/Prep) - Week 1 (Baseline Testing)
-1. Event Schedule
+Export Instructions
+The content below is your raw Markdown source code. Because it is wrapped in a code block, the viewer will show the raw symbols (like #, **, and |) instead of formatting them.
+1. Copy the text inside the code block below.
+2. Paste it into a text editor (like Notepad) or GitHub.
+3. Save the file with a .md extension (e.g., Training_Plan.md).
+# Master Training Plan 2026
+
+**Last Updated:** December 26, 2025
+**Status:** Phase 1 (Base/Prep) - Week 1 (Baseline Testing)
+
+## 1. Event Schedule
+
 The primary "A" races and secondary objectives for the 2026 season.
-Date
-	Event Type
-	Goal
-	Priority
-	June 20, 2026
-	Olympic Distance Triathlon
-	Finish < 2:30:00
-	A-Race
-	Aug 16, 2026
-	Century Ride (100 Miles)
-	Finish < 5:30:00
-	A-Race
-	Sept 11, 2026
-	70.3 Ironman or Olympic
-	Finish Strong
-	B-Race
-	2. User Profile & Health
-Biometrics & Fitness
-* Weight Status: -25 lbs since April 2025.
-* Cycling FTP: 241 Watts (Validated Dec 23, 2025 via 60-min Alpe du Zwift).
-* Running Fitness:
-   * Lactate Threshold HR (LTHR): 171 bpm (Validated Dec 26, 2025).
-   * Functional Threshold Pace (FTP): 7:45 min/mile (Wind-adjusted estimate).
-   * Longest Run: 9 miles.
-   * 5K Prediction: ~23:42.
-* Swimming Fitness: Beginner. Focus on form/drills with coach.
-Health & Injury Management
-* IT Band: History of issues. Currently managed via "Prehab" (Banded Leg Raises) 2x/week.
-* General: No current limitations.
-Training Availability
-* Weekly Volume: 6 Days/Week.
-* Weekdays: Max 1.5 hours per session.
-* Saturdays: 3–4 hours (Long Sessions).
-* Sundays: Rest Day (Strict No-Exercise).
-3. Training Parameters
-Methodology: 80/20 Science-Based Periodization.
-* 80%: Zone 2 (Aerobic Endurance) - Builds mitochondrial density.
-* 20%: Zone 4/5 (Threshold/VO2) - Raises the performance ceiling.
-Cycling Power Zones (Based on 241W FTP)
-* Zone 1 (Active Recovery): < 133W
-* Zone 2 (Endurance): 134W – 180W (Primary Training Zone)
-* Zone 3 (Tempo/Sweet Spot): 181W – 216W (Sweet Spot: 212W–226W)
-* Zone 4 (Threshold): 217W – 253W
-* Zone 5 (VO2 Max): 254W – 289W
-Running Heart Rate Zones (Based on 171 bpm LTHR)
-* Zone 1 (Recovery): < 139 bpm
-* Zone 2 (Aerobic Base): 140 – 152 bpm (Primary Training Zone)
-* Zone 3 (Tempo): 153 – 161 bpm
-* Zone 4 (Sub-Threshold): 162 – 170 bpm
-* Zone 5a (Super-Threshold): 171 – 174 bpm
-* Zone 5b (Aerobic Capacity): 175 – 181 bpm
-* Zone 5c (Anaerobic): > 182 bpm
-4. Periodization Phases
-Phase
-	Dates
-	Focus
-	Key Workouts
-	1. Base/Prep
-	Now – Feb 28
-	Aerobic Engine & Swim Form
-	Z2 Rides, Drill Swims, IT Band Prehab
-	2. Tri-Build
-	Mar 1 – May 15
-	Threshold Power & Durability
-	Sweet Spot Intervals, Brick Runs
-	3. Peak/Taper
-	May 16 – June 20
-	Race Specificity
-	Race Simulations, High Intensity Taper
-	4. Century Pivot
-	June 21 – Aug 16
-	Aerobic Volume
-	Long Sat Rides (4-5h), Hydration/Fueling
-	5. 70.3 Final
-	Aug 17 – Sept 11
-	Sustained Durability
-	70.3 Pacing, Half-Marathon Runs
-	5. Weekly Schedule & Logistics
-Current Phase: Phase 1 (Base/Prep)
-Current Week: Week 1 (Baseline Testing)
-Status
-	Day
-	Workout Type
-	Description / Targets
-	MISSED
-	Mon
-	Swim
-	Rest / Light Mobility
-	DONE
-	Tue
-	FTP Test
-	Alpe du Zwift (60 min). Result: 241W.
-	
 
-	Wed
-	Recovery [BIKE] - Leg Openers
-	40 mins Z1 Spin with 3x30s high cadence bursts. Prehab: Leg Raises.
-	
+| **Date** | **Event Type** | **Goal** | **Priority** | 
+| :--- | :--- | :--- | :--- | 
+| June 20, 2026 | Olympic Distance Triathlon | Finish < 2:30:00 | **A-Race** | 
+| Aug 16, 2026 | Century Ride (100 Miles) | Finish < 5:30:00 | **A-Race** | 
+| Sept 11, 2026 | 70.3 Ironman or Olympic | Finish Strong | **B-Race** | 
 
-	Thu
-	Endurance [BIKE] - Christmas Z2
-	60 mins Steady Z2 (134-180W). Focus on smooth pedal stroke.
-	DONE
-	Fri
-	Run Test [RUN] - LTHR Test
-	45 mins total. 15m Warmup, 30m Time Trial. Result: 171 bpm LTHR.
-	
+## 2. User Profile & Health
 
-	Sat
-	Long Ride [BIKE] - Fueling Test
-	2.5 hours Z2 Steady. Test DIY Gel V2 (More water/citric acid).
-	
+### Biometrics & Fitness
 
-	Sun
-	Rest
-	No Exercise. Weekly Planning Check-in.
-	6. Fueling Strategy & Log
-Target: 60-90g Carbs/Hour for long events.
-Commercial Products
+* **Weight Status:** -25 lbs since April 2025.
+* **Cycling FTP:** 241 Watts (Validated Dec 23, 2025 via 60-min Alpe du Zwift).
+* **Running Fitness:**
+ * **Lactate Threshold HR (LTHR):** 171 bpm (Validated Dec 26, 2025).
+ * **Functional Threshold Pace (FTP):** 7:45 min/mile (Wind-adjusted estimate).
+ * **Longest Run:** 9 miles.
+ * **5K Prediction:** ~23:42.
+* **Swimming Fitness:** Beginner. Focus on form/drills with coach.
+
+### Health & Injury Management
+
+* **IT Band:** History of issues. Currently managed via "Prehab" (Banded Leg Raises) 2x/week.
+* **General:** No current limitations.
+
+### Training Availability
+
+* **Weekly Volume:** 6 Days/Week.
+* **Weekdays:** Max 1.5 hours per session.
+* **Saturdays:** 3–4 hours (Long Sessions).
+* **Sundays:** Rest Day (Strict No-Exercise).
+
+## 3. Training Parameters
+
+**Methodology:** 80/20 Science-Based Periodization.
+
+* **80%:** Zone 2 (Aerobic Endurance) - Builds mitochondrial density.
+* **20%:** Zone 4/5 (Threshold/VO2) - Raises the performance ceiling.
+
+### Cycling Power Zones (Based on 241W FTP)
+
+* **Zone 1 (Active Recovery):** < 133W
+* **Zone 2 (Endurance):** 134W – 180W (Primary Training Zone)
+* **Zone 3 (Tempo/Sweet Spot):** 181W – 216W (Sweet Spot: 212W–226W)
+* **Zone 4 (Threshold):** 217W – 253W
+* **Zone 5 (VO2 Max):** 254W – 289W
+
+### Running Heart Rate Zones (Based on 171 bpm LTHR)
+
+* **Zone 1 (Recovery):** < 139 bpm
+* **Zone 2 (Aerobic Base):** 140 – 152 bpm (Primary Training Zone)
+* **Zone 3 (Tempo):** 153 – 161 bpm
+* **Zone 4 (Sub-Threshold):** 162 – 170 bpm
+* **Zone 5a (Super-Threshold):** 171 – 174 bpm
+* **Zone 5b (Aerobic Capacity):** 175 – 181 bpm
+* **Zone 5c (Anaerobic):** > 182 bpm
+
+## 4. Periodization Phases
+
+| **Phase** | **Dates** | **Focus** | **Key Workouts** | 
+| :--- | :--- | :--- | :--- | 
+| **1. Base/Prep** | Now – Feb 28 | Aerobic Engine & Swim Form | Z2 Rides, Drill Swims, IT Band Prehab | 
+| **2. Tri-Build** | Mar 1 – May 15 | Threshold Power & Durability | Sweet Spot Intervals, Brick Runs | 
+| **3. Peak/Taper** | May 16 – June 20 | Race Specificity | Race Simulations, High Intensity Taper | 
+| **4. Century Pivot** | June 21 – Aug 16 | Aerobic Volume | Long Sat Rides (4-5h), Hydration/Fueling | 
+| **5. 70.3 Final** | Aug 17 – Sept 11 | Sustained Durability | 70.3 Pacing, Half-Marathon Runs | 
+
+## 5. Weekly Schedule & Logistics
+
+**Current Phase:** Phase 1 (Base/Prep)
+**Current Week:** Week 1 (Baseline Testing)
+
+| **Status** | **Day** | **Workout Type** | **Description / Targets** | 
+| :--- | :--- | :--- | :--- | 
+| MISSED | Mon | Swim | Rest / Light Mobility | 
+| DONE | Tue | FTP Test | Alpe du Zwift (60 min). Result: 241W. | 
+|  | Wed | Recovery [BIKE] - Leg Openers | 40 mins Z1 Spin with 3x30s high cadence bursts. Prehab: Leg Raises. | 
+|  | Thu | Endurance [BIKE] - Christmas Z2 | 60 mins Steady Z2 (134-180W). Focus on smooth pedal stroke. | 
+| DONE | Fri | Run Test [RUN] - LTHR Test | 45 mins total. 15m Warmup, 30m Time Trial. **Result: 171 bpm LTHR.** | 
+|  | Sat | Long Ride [BIKE] - Fueling Test | 2.5 hours Z2 Steady. Test DIY Gel V2 (More water/citric acid). | 
+|  | Sun | Rest | No Exercise. Weekly Planning Check-in. | 
+
+## 6. Fueling Strategy & Log
+
+**Target:** 60-90g Carbs/Hour for long events.
+
+**Commercial Products**
+
 * Pure Organic Fruit Bars: 15g Carbs per bar.
 * Rice Krispie Treat: 17g Carbs per bar
-Active Testing Recipes
+
+**Active Testing Recipes**
+
 * Recipe V1 (Retired): 180g Sugar, 100ml Water. Result: Too thick, too sweet.
 * Recipe V2 (Current Testing):
-   * 180g Table Sugar (Sucrose)
-   * 250ml Water
-   * 1/2 tsp Salt (~1200mg Sodium)
-   * 1/4 tsp Citric Acid (Flavor balance)
-Recipe Library (Reference)
-1. Standard Energy Gels (7oz Flask): Designed to deliver 160g-180g carbs per flask.
-2. Solid Fuel (Cereal Treats): Plain Rice Krispie Treats (~25g carbs) or Oreo variants.
-3. Post-Workout Recovery Smoothie: Rice-based glycogen replenishment (~84g carbs, 30g protein).
-Testing Log
+ * 180g Table Sugar (Sucrose)
+ * 250ml Water
+ * 1/2 tsp Salt (~1200mg Sodium)
+ * 1/4 tsp Citric Acid (Flavor balance)
+
+**Recipe Library (Reference)**
+
+1. **Standard Energy Gels (7oz Flask):** Designed to deliver 160g-180g carbs per flask.
+2. **Solid Fuel (Cereal Treats):** Plain Rice Krispie Treats (~25g carbs) or Oreo variants.
+3. **Post-Workout Recovery Smoothie:** Rice-based glycogen replenishment (~84g carbs, 30g protein).
+
+**Testing Log**
 | Date | Event | Recipe | Outcome / Notes |
 | :--- | :--- | :--- | :--- |
 | Dec 27 | 2.5h Indoor Ride | V2 | Pending Test... |
-7. Progress Tracker
-Key Milestones
-* Dec 23, 2025: Set new Cycling FTP Baseline: 241W (60-min power).
-* Dec 23, 2025: Validated "Finishing Kick" (Held >328W for final 5 mins of Alpe).
-* Dec 26, 2025: Set new Running LTHR Baseline: 171 bpm (30-min Time Trial).
-8. Documentation Workflow
+
+## 7. Progress Tracker
+
+**Key Milestones**
+
+* **Dec 23, 2025:** Set new Cycling FTP Baseline: 241W (60-min power).
+* **Dec 23, 2025:** Validated "Finishing Kick" (Held >328W for final 5 mins of Alpe).
+* **Dec 26, 2025:** Set new Running LTHR Baseline: 171 bpm (30-min Time Trial).
+
+## 8. Documentation Workflow
+
 This document serves as the active working plan. The "Source of Truth" is stored in Google Drive.
-Weekly Update Process:
-1. Import: At the start of a session (e.g., Sunday check-in), upload the latest Master_Training_Plan file from Google Drive to the canvas.
-2. Update: We will update the Canvas document with the previous week's results (Section 5 & 7), adjust zones if necessary (Section 3), and build the schedule for the new upcoming week (Section 5).
-3. Export: Copy the updated content from this Canvas.
-4. Save: Paste the content into the Google Drive file (or upload as a new version) to save the history.
-Appendix A: Naming Conventions (For Calendar Export)
-Calendar Event Title Format:
-[TYPE] - Workout Name - Distance/Time
-Description Format:
-[Distance/Time] at [Effort Level]. [Main Purpose].
-Default Start Time:
+
+**Weekly Update Process:**
+
+1. **Import:** At the start of a session (e.g., Sunday check-in), upload the latest `Master_Training_Plan` file from Google Drive to the canvas.
+2. **Update:** We will update the Canvas document with the previous week's results (Section 5 & 7), adjust zones if necessary (Section 3), and build the schedule for the new upcoming week (Section 5).
+3. **Export:** Copy the updated content from this Canvas.
+4. **Save:** Paste the content into the Google Drive file (or upload as a new version) to save the history.
+
+## Appendix A: Naming Conventions (For Calendar Export)
+
+**Calendar Event Title Format:**
+`[TYPE] - Workout Name - Distance/Time`
+
+**Description Format:**
+`[Distance/Time] at [Effort Level]. [Main Purpose].`
+
+**Default Start Time:**
+
 * 5:00 AM (Unless otherwise specified).
-Examples:
-* Title: [RUN] - Endurance Run - 6 miles
-* Description: Run 6 miles at a pace of 9:00-9:30. Focus on keeping the heart rate down.
-Appendix B: Fitness Test Reports
-1. 30-Min Run Field Test Analysis (Dec 26, 2025)
-Test Overview
-* Total Duration: 30 Minutes
-* Total Distance: 3.86 miles
-* Environmental Factor: Notable headwind during the final 20 minutes.
-* Subjective Factors: Heavy legs in the final 7 minutes; GI discomfort (needing the bathroom) toward the end.
-Key Segments Analysis
+
+**Examples:**
+
+* Title: `[RUN] - Endurance Run - 6 miles`
+* Description: `Run 6 miles at a pace of 9:00-9:30. Focus on keeping the heart rate down.`
+
+## Appendix B: Fitness Test Reports
+
+### 1. 30-Min Run Field Test Analysis (Dec 26, 2025)
+
+#### Test Overview
+
+* **Total Duration:** 30 Minutes
+* **Total Distance:** 3.86 miles
+* **Environmental Factor:** Notable headwind during the final 20 minutes.
+* **Subjective Factors:** Heavy legs in the final 7 minutes; GI discomfort (needing the bathroom) toward the end.
+
+#### Key Segments Analysis
+
 We focused on the stable segments of the test, excluding the mid-run technical issues (laps 6-10).
-Phase 1: First 10 Minutes (Initial Steady State)
-* Laps: 3, 4, 5
-* Distance Covered: 1.33 miles
-* Average Heart Rate: 160 bpm
-* Calculated Pace: 7:31 min/mile
-* Conditions: Relatively shielded or neutral.
-Phase 2: Final 20 Minutes (Threshold Assessment)
-* Laps: 11, 12, 13
-* Distance Covered: 2.53 miles
-* Average Heart Rate: 171 bpm
-* Calculated Pace: 7:54 min/mile
-* Conditions: Significant Headwind.
-Threshold Metrics
+
+**Phase 1: First 10 Minutes (Initial Steady State)**
+
+* **Laps:** 3, 4, 5
+* **Distance Covered:** 1.33 miles
+* **Average Heart Rate:** 160 bpm
+* **Calculated Pace:** 7:31 min/mile
+* **Conditions:** Relatively shielded or neutral.
+
+**Phase 2: Final 20 Minutes (Threshold Assessment)**
+
+* **Laps:** 11, 12, 13
+* **Distance Covered:** 2.53 miles
+* **Average Heart Rate:** 171 bpm
+* **Calculated Pace:** 7:54 min/mile
+* **Conditions:** **Significant Headwind.**
+
+#### Threshold Metrics
+
 While the wind and physical discomfort affected your pace, your heart rate provides a reliable physiological marker of your threshold effort.
-* LTHR (Lactate Threshold Heart Rate): 171 bpm
-* FTP (Adjusted Threshold Pace): ~7:40 – 7:45 min/mile (Estimated)
-   * Note: Your recorded pace was 7:54, but given the headwind and your 171 HR, your "flat-ground/no-wind" pace is likely 10–15 seconds faster.
-Observations & Recommendations
-* The "Heavy Legs" Indicator: Feeling heavy in the final 7 minutes suggests you were effectively "clearing the top" of your lactate threshold. This confirms that 171 bpm is a very accurate LTHR for you.
-* Stress and GI Impact: Needing the bathroom adds significant sympathetic nervous system stress, which can artificially inflate Heart Rate by 3–5 beats per minute (cardiac creep). This means your "resting" threshold heart rate in a relaxed, ideal state might actually be closer to 167-168 bpm.
-* The Wind Factor: Maintaining focus while dealing with heavy legs, a headwind, and GI issues shows high mental resilience.
-* Training Application:
-   * HR Calibration: When feeling fresh and on a calm day, your Threshold intervals should feel "comfortably hard" at 168-171 bpm.
-   * Pace Target: Aim for 7:45 min/mile on the track to see if that elicits the same 171 bpm heart rate without the external wind resistance.
-2. Alpe du Zwift FTP Test Analysis (Dec 23, 2025)
-Test Overview
-* Total Duration: 60 Minutes (Continuous Climb)
-* Environment: Indoor / Zwift (Alpe du Zwift)
-* Protocol: Full 60-minute steady-state effort.
-* Result: 241 Watts (New FTP Baseline)
-Key Segments Analysis
-Segment 1: The Sustain (First 55 Minutes)
-* Average Power: ~233 Watts (Calculated based on final avg)
-* Effort: Controlled threshold effort. Pacing was disciplined, leaving reserves for the final push.
-Segment 2: The "Finishing Kick" (Final 5 Minutes)
-* Average Power: >328 Watts
-* Significance: This massive surge (+36% over average) indicates a significant anaerobic battery. It suggests that while your aerobic threshold is solid, you have a high capacity for pain tolerance and power production when the aerobic system is tapped out.
-Observations & Recommendations
-* Pacing Strategy: The ability to surge to 328W+ after 55 minutes of threshold work is rare. It implies that your aerobic engine is very efficient (you weren't drowning in lactate at minute 55), or your pacing for the first 50 minutes was slightly conservative.
-* Future Testing: Next time, try starting slightly harder (e.g., 245-250W) to see if you can hold that line without the massive kick at the end. A "flatter" power curve might result in a higher overall average.
-* Training Application:
-   * Sweet Spot: Target 215-225W for long intervals (2x20m or 3x15m).
-   * VO2 Max: Your high finishing kick suggests you will respond well to high-power, short-duration intervals.
-Appendix C: Weekly Training Infographic (HTML Source)
-To view the visual dashboard, save the following code as an .html file (e.g., dashboard.html) and open it in your browser.
+
+* **LTHR (Lactate Threshold Heart Rate):** **171 bpm**
+* **FTP (Adjusted Threshold Pace):** **~7:40 – 7:45 min/mile (Estimated)**
+ * *Note: Your recorded pace was 7:54, but given the headwind and your 171 HR, your "flat-ground/no-wind" pace is likely 10–15 seconds faster.*
+
+#### Observations & Recommendations
+
+* **The "Heavy Legs" Indicator:** Feeling heavy in the final 7 minutes suggests you were effectively "clearing the top" of your lactate threshold. This confirms that 171 bpm is a very accurate LTHR for you.
+* **Stress and GI Impact:** Needing the bathroom adds significant sympathetic nervous system stress, which can artificially inflate Heart Rate by 3–5 beats per minute (cardiac creep). This means your "resting" threshold heart rate in a relaxed, ideal state might actually be closer to **167-168 bpm**.
+* **The Wind Factor:** Maintaining focus while dealing with heavy legs, a headwind, and GI issues shows high mental resilience.
+* **Training Application:**
+ * **HR Calibration:** When feeling fresh and on a calm day, your Threshold intervals should feel "comfortably hard" at **168-171 bpm**.
+ * **Pace Target:** Aim for **7:45 min/mile** on the track to see if that elicits the same 171 bpm heart rate without the external wind resistance.
+
+### 2. Alpe du Zwift FTP Test Analysis (Dec 23, 2025)
+
+#### Test Overview
+
+* **Total Duration:** 60 Minutes (Continuous Climb)
+* **Environment:** Indoor / Zwift (Alpe du Zwift)
+* **Protocol:** Full 60-minute steady-state effort.
+* **Result:** 241 Watts (New FTP Baseline)
+
+#### Key Segments Analysis
+
+**Segment 1: The Sustain (First 55 Minutes)**
+
+* **Average Power:** ~233 Watts (Calculated based on final avg)
+* **Effort:** Controlled threshold effort. Pacing was disciplined, leaving reserves for the final push.
+
+**Segment 2: The "Finishing Kick" (Final 5 Minutes)**
+
+* **Average Power:** **>328 Watts**
+* **Significance:** This massive surge (+36% over average) indicates a significant anaerobic battery. It suggests that while your aerobic threshold is solid, you have a high capacity for pain tolerance and power production when the aerobic system is tapped out.
+
+#### Observations & Recommendations
+
+* **Pacing Strategy:** The ability to surge to 328W+ after 55 minutes of threshold work is rare. It implies that your aerobic engine is very efficient (you weren't drowning in lactate at minute 55), or your pacing for the first 50 minutes was slightly conservative.
+* **Future Testing:** Next time, try starting slightly harder (e.g., 245-250W) to see if you can hold that line without the massive kick at the end. A "flatter" power curve might result in a higher overall average.
+* **Training Application:**
+ * **Sweet Spot:** Target **215-225W** for long intervals (2x20m or 3x15m).
+ * **VO2 Max:** Your high finishing kick suggests you will respond well to high-power, short-duration intervals.
+
+## Appendix C: Weekly Training Infographic (HTML Source)
+
+To view the visual dashboard, save the following code as an `.html` file (e.g., `dashboard.html`) and open it in your browser.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -709,3 +734,4 @@ To view the visual dashboard, save the following code as an .html file (e.g., da
 
 </body>
 </html>
+```
