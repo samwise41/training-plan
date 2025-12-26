@@ -120,16 +120,16 @@
         <!-- DASHBOARD STATS -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Source File</p>
-                <p class="text-lg font-semibold text-blue-400">endurance_plan.md</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Focus</p>
+                <p class="text-lg font-semibold text-blue-400" id="stat-focus">--</p>
             </div>
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Last Sync</p>
-                <p class="text-lg font-semibold text-slate-300" id="sync-time">--:--</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
+                <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
             </div>
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Status</p>
-                <p class="text-lg font-semibold text-emerald-400">Connected</p>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
+                <p class="text-lg font-semibold text-emerald-400" id="stat-event">--</p>
             </div>
         </div>
 
@@ -163,9 +163,54 @@
             const response = await fetch(`./${SOURCE_FILE}?${cacheBuster}`);
             if (!response.ok) throw new Error(`Could not load ${SOURCE_FILE}`);
             cachedMarkdown = await response.text();
+            
+            // Populate Header Stats from the fetched Markdown
+            updateHeaderStats(cachedMarkdown);
+            
             const now = new Date();
             document.getElementById('sync-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             return cachedMarkdown;
+        }
+
+        // --- STATS PARSING ---
+
+        function updateHeaderStats(md) {
+            // 1. Current Focus (Looking for **Phase:**)
+            const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
+            document.getElementById('stat-focus').innerText = phaseMatch ? phaseMatch[1].trim() : "TBD";
+
+            // 2. Current Week (Looking for ## Weekly Schedule title content)
+            const weekMatch = md.match(/##.*Weekly Schedule[:\s]*(.*)/i);
+            document.getElementById('stat-week').innerText = weekMatch ? weekMatch[1].trim() : "Active Week";
+
+            // 3. Next Event (Looking for ## Event Schedule table)
+            const eventSection = extractSection(md, "Event Schedule");
+            if (eventSection) {
+                // Find first table row that isn't a header or separator
+                const lines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
+                if (lines.length > 0) {
+                    const parts = lines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
+                    if (parts.length >= 2) {
+                        const eventDate = new Date(parts[0]);
+                        const eventName = parts[1];
+                        if (!isNaN(eventDate)) {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const diff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+                            const daysLabel = diff === 0 ? "Today" : (diff > 0 ? `${diff}d` : "Past");
+                            document.getElementById('stat-event').innerText = `${eventName} // ${daysLabel}`;
+                        } else {
+                            document.getElementById('stat-event').innerText = eventName;
+                        }
+                    } else {
+                        document.getElementById('stat-event').innerText = "None Scheduled";
+                    }
+                } else {
+                    document.getElementById('stat-event').innerText = "None Scheduled";
+                }
+            } else {
+                document.getElementById('stat-event').innerText = "TBD";
+            }
         }
 
         // --- NAVIGATION FUNCTIONS ---
