@@ -99,47 +99,64 @@
         }
 
         /* Zone List Styling */
+        #zone-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        @media (min-width: 768px) {
+            #zone-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
         .zone-card {
             background-color: rgba(30, 41, 59, 0.3);
             border: 1px solid #1e293b;
             border-radius: 12px;
             padding: 1.5rem;
-            margin-bottom: 2rem;
+            height: 100%;
         }
         .zone-card-title {
-            font-size: 1rem;
-            font-weight: 700;
+            font-size: 1.1rem;
+            font-weight: 800;
             color: #f8fafc;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #1e293b;
-            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
         .zone-row {
-            border-bottom: 1px solid #1e293b;
-            padding: 0.75rem 0;
+            margin-bottom: 0.75rem;
+            padding: 1rem;
+            background: #0f172a;
+            border-radius: 8px;
+            border-left: 6px solid #64748b; /* Default Grey */
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 1rem;
+            transition: transform 0.2s;
         }
-        .zone-row:last-child {
-            border-bottom: none;
+        .zone-row:hover {
+            transform: translateX(4px);
         }
+        /* Zone Colors */
+        .zone-z1 { border-left-color: #94a3b8 !important; } /* Grey */
+        .zone-z2 { border-left-color: #22c55e !important; } /* Green */
+        .zone-z3 { border-left-color: #eab308 !important; } /* Yellow */
+        .zone-z4 { border-left-color: #f97316 !important; } /* Orange */
+        .zone-z5 { border-left-color: #ef4444 !important; } /* Red */
+
         .zone-label {
-            font-weight: 600;
-            color: #cbd5e1;
-            font-size: 0.95rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            font-size: 0.9rem;
         }
         .zone-range {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            color: #60a5fa;
-            background: #1e293b;
-            padding: 0.25rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            white-space: nowrap;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -285,7 +302,6 @@
         }
 
         function updateHeaderStats(md) {
-            // Updated to be more flexible with header finding
             const statusMatch = md.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
             let phase = "--", week = "--";
             if (statusMatch) {
@@ -345,7 +361,7 @@
             updateUI('Periodization Phases', 'nav-phases', true);
             try {
                 const md = await fetchFile();
-                const section = extractSection(md, "Periodization"); // Search for "Periodization"
+                const section = extractSection(md, "Periodization"); 
                 render(section || "*Phases section not found.*");
             } catch (err) { handleError(err); }
         }
@@ -362,7 +378,7 @@
                 }
 
                 const lines = section.split('\n');
-                let html = '';
+                let html = '<div id="zone-grid">';
                 let currentCategory = '';
                 let categoryZones = [];
 
@@ -388,8 +404,6 @@
                     } 
                     // Detect zone bullet points or entries containing "Zone" and a colon
                     else if (trimmed.includes('Zone') && trimmed.includes(':')) {
-                        // Extract label (everything before the colon) and range (after)
-                        // Removes markdown markers like * and **
                         const cleanLine = trimmed.replace(/^[\s\*\-\+]+/, '').replace(/\*\*/g, '').trim();
                         const sepIndex = cleanLine.indexOf(':');
                         
@@ -397,8 +411,15 @@
                             const label = cleanLine.substring(0, sepIndex).trim();
                             const range = cleanLine.substring(sepIndex + 1).trim();
                             
+                            // Determine color class based on zone number
+                            let colorClass = 'zone-z1'; // default grey
+                            if (label.includes('2')) colorClass = 'zone-z2';
+                            else if (label.includes('3')) colorClass = 'zone-z3';
+                            else if (label.includes('4')) colorClass = 'zone-z4';
+                            else if (label.includes('5')) colorClass = 'zone-z5';
+
                             categoryZones.push(`
-                                <div class="zone-row">
+                                <div class="zone-row ${colorClass}">
                                     <span class="zone-label">${label}</span>
                                     <span class="zone-range">${range}</span>
                                 </div>
@@ -408,12 +429,12 @@
                 });
 
                 flushCategory(); // Catch the last grouping
+                html += '</div>';
 
                 const contentDiv = document.getElementById('markdown-content');
                 if (html) {
                     contentDiv.innerHTML = html;
                 } else {
-                    // Fallback to basic markdown if the specific pattern wasn't matched
                     contentDiv.classList.add('markdown-body');
                     contentDiv.innerHTML = marked.parse(section);
                 }
@@ -426,9 +447,31 @@
             updateUI('Endurance Master Plan', 'nav-full', true);
             try {
                 const md = await fetchFile();
-                // Exclude Appendix C logic to keep Full Plan clean
                 const planOnly = excludeSection(md, "Appendix C");
                 render(planOnly);
+            } catch (err) { handleError(err); }
+        }
+
+        async function showAppendix() {
+            try {
+                const md = await fetchFile();
+                const section = extractSection(md, "Appendix C");
+                if (!section) {
+                    updateUI('Summary', 'nav-appendix', true);
+                    render("*Appendix C not found.*");
+                    return;
+                }
+                const htmlMatch = section.match(/```html([\s\S]*?)```/);
+                if (htmlMatch) {
+                    updateUI('Summary', 'nav-appendix', false);
+                    renderRawHTML(htmlMatch[1].trim());
+                } else if (section.includes('<svg') || section.includes('<div')) {
+                    updateUI('Summary', 'nav-appendix', false);
+                    renderRawHTML(section);
+                } else {
+                    updateUI('Summary', 'nav-appendix', true);
+                    render(section);
+                }
             } catch (err) { handleError(err); }
         }
 
@@ -495,6 +538,25 @@
             marked.setOptions({ gfm: true, breaks: true });
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.innerHTML = marked.parse(md);
+            finalizeRendering();
+        }
+
+        function renderRawHTML(html) {
+            const contentDiv = document.getElementById('markdown-content');
+            const iframe = document.createElement('iframe');
+            iframe.id = 'infographic-container';
+            contentDiv.innerHTML = '';
+            contentDiv.appendChild(iframe);
+            const iframeDoc = `<html><head><style>body { margin: 0; padding: 0; background: transparent; color: white; font-family: sans-serif; } * { box-sizing: border-box; }</style></head><body>${html}</body></html>`;
+            iframe.srcdoc = iframeDoc;
+            iframe.onload = function() {
+                setTimeout(() => {
+                    const b = iframe.contentWindow.document.body;
+                    const h = iframe.contentWindow.document.documentElement;
+                    const height = Math.max(b.scrollHeight, b.offsetHeight, h.clientHeight, h.scrollHeight, h.offsetHeight);
+                    iframe.style.height = height + 'px';
+                }, 100);
+            };
             finalizeRendering();
         }
 
