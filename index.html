@@ -285,6 +285,7 @@
         }
 
         function updateHeaderStats(md) {
+            // Updated to be more flexible with header finding
             const statusMatch = md.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
             let phase = "--", week = "--";
             if (statusMatch) {
@@ -344,13 +345,13 @@
             updateUI('Periodization Phases', 'nav-phases', true);
             try {
                 const md = await fetchFile();
-                const section = extractSection(md, "Periodization Phases");
+                const section = extractSection(md, "Periodization"); // Search for "Periodization"
                 render(section || "*Phases section not found.*");
             } catch (err) { handleError(err); }
         }
 
         async function showZones() {
-            updateUI('Training Parameters & Zones', 'nav-zones', false);
+            updateUI('Training Zones', 'nav-zones', false);
             try {
                 const md = await fetchFile();
                 const section = extractSection(md, "Training Parameters");
@@ -360,7 +361,6 @@
                     return;
                 }
 
-                // Parser for grouping zones by sub-headers (###)
                 const lines = section.split('\n');
                 let html = '';
                 let currentCategory = '';
@@ -386,14 +386,16 @@
                         flushCategory();
                         currentCategory = trimmed.replace(/^###\s*/, '').trim();
                     } 
-                    // Detect zone bullet points like * **Zone 1 (Active Recovery):** < 133W
-                    else if (trimmed.startsWith('*') && trimmed.includes('Zone')) {
-                        const cleanLine = trimmed.replace(/^\*\s*/, '').replace(/\*\*/g, '').trim();
-                        const separatorIndex = cleanLine.indexOf(':');
+                    // Detect zone bullet points or entries containing "Zone" and a colon
+                    else if (trimmed.includes('Zone') && trimmed.includes(':')) {
+                        // Extract label (everything before the colon) and range (after)
+                        // Removes markdown markers like * and **
+                        const cleanLine = trimmed.replace(/^[\s\*\-\+]+/, '').replace(/\*\*/g, '').trim();
+                        const sepIndex = cleanLine.indexOf(':');
                         
-                        if (separatorIndex !== -1) {
-                            const label = cleanLine.substring(0, separatorIndex).trim();
-                            const range = cleanLine.substring(separatorIndex + 1).trim();
+                        if (sepIndex !== -1) {
+                            const label = cleanLine.substring(0, sepIndex).trim();
+                            const range = cleanLine.substring(sepIndex + 1).trim();
                             
                             categoryZones.push(`
                                 <div class="zone-row">
@@ -405,10 +407,16 @@
                     }
                 });
 
-                flushCategory(); // Catch the last one
+                flushCategory(); // Catch the last grouping
 
                 const contentDiv = document.getElementById('markdown-content');
-                contentDiv.innerHTML = html || `<div class="p-6 text-slate-500 italic">No structured zones found in Training Parameters.</div>`;
+                if (html) {
+                    contentDiv.innerHTML = html;
+                } else {
+                    // Fallback to basic markdown if the specific pattern wasn't matched
+                    contentDiv.classList.add('markdown-body');
+                    contentDiv.innerHTML = marked.parse(section);
+                }
                 finalizeRendering();
 
             } catch (err) { handleError(err); }
@@ -418,6 +426,7 @@
             updateUI('Endurance Master Plan', 'nav-full', true);
             try {
                 const md = await fetchFile();
+                // Exclude Appendix C logic to keep Full Plan clean
                 const planOnly = excludeSection(md, "Appendix C");
                 render(planOnly);
             } catch (err) { handleError(err); }
@@ -472,8 +481,11 @@
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.classList.add('hidden', 'opacity-0');
             
-            if (isMarkdown) contentDiv.classList.add('markdown-body');
-            else contentDiv.classList.remove('markdown-body');
+            if (isMarkdown) {
+                contentDiv.classList.add('markdown-body');
+            } else {
+                contentDiv.classList.remove('markdown-body');
+            }
 
             document.getElementById('loader-container').classList.remove('hidden');
             document.getElementById('error-container').classList.add('hidden');
