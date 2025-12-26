@@ -220,7 +220,7 @@
         // --- NAVIGATION FUNCTIONS ---
 
         async function showSchedule() {
-            updateUI('Weekly Schedule', 'nav-schedule');
+            updateUI('Weekly Schedule', 'nav-schedule', true);
             try {
                 const md = await fetchFile();
                 const section = extractSection(md, "Weekly Schedule");
@@ -229,7 +229,7 @@
         }
 
         async function showFullPlan() {
-            updateUI('Endurance Master Plan', 'nav-full');
+            updateUI('Endurance Master Plan', 'nav-full', true);
             try {
                 const md = await fetchFile();
                 // Show everything EXCEPT Appendix C
@@ -239,12 +239,12 @@
         }
 
         async function showAppendix() {
-            updateUI('Appendix C: Infographic', 'nav-appendix');
             try {
                 const md = await fetchFile();
                 const section = extractSection(md, "Appendix C");
                 
                 if (!section) {
+                    updateUI('Appendix C: Infographic', 'nav-appendix', true);
                     render("*Appendix C not found.*");
                     return;
                 }
@@ -252,13 +252,13 @@
                 // Check if Appendix C contains a code block with HTML or a raw HTML structure
                 const htmlMatch = section.match(/```html([\s\S]*?)```/);
                 if (htmlMatch) {
-                    // Extract and render as raw HTML
+                    updateUI('Appendix C: Infographic', 'nav-appendix', false); // Disable markdown body for HTML
                     renderRawHTML(htmlMatch[1].trim());
                 } else if (section.includes('<svg') || section.includes('<div')) {
-                    // If no code block but contains tags, render raw
+                    updateUI('Appendix C: Infographic', 'nav-appendix', false); // Disable markdown body for HTML
                     renderRawHTML(section);
                 } else {
-                    // Fallback to markdown
+                    updateUI('Appendix C: Infographic', 'nav-appendix', true); // Use markdown body
                     render(section);
                 }
             } catch (err) { handleError(err); }
@@ -279,7 +279,11 @@
                     continue;
                 }
                 if (capturing && isHeader) break;
-                if (capturing) section.push(line);
+                if (capturing) {
+                    // Filter out any lingering error strings
+                    const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
+                    section.push(cleanLine);
+                }
             }
             return section.join('\n').trim();
         }
@@ -295,38 +299,57 @@
                     continue;
                 }
                 if (skipping && isHeader) skipping = false;
-                if (!skipping) result.push(line);
+                if (!skipping) {
+                    // Filter out any lingering error strings
+                    const cleanLine = line.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
+                    result.push(cleanLine);
+                }
             }
             return result.join('\n').trim();
         }
 
         // --- UI UTILITIES ---
 
-        function updateUI(title, navId) {
+        function updateUI(title, navId, isMarkdown) {
             document.getElementById('header-title').innerText = title;
             document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
             const activeNav = document.getElementById(navId);
             if (activeNav) activeNav.classList.add('active');
             
-            document.getElementById('markdown-content').classList.add('hidden', 'opacity-0');
+            const contentDiv = document.getElementById('markdown-content');
+            contentDiv.classList.add('hidden', 'opacity-0');
+            
+            // Toggle markdown styling based on content type
+            if (isMarkdown) {
+                contentDiv.classList.add('markdown-body');
+            } else {
+                contentDiv.classList.remove('markdown-body');
+            }
+
             document.getElementById('loader-container').classList.remove('hidden');
             document.getElementById('error-container').classList.add('hidden');
         }
 
         function render(md) {
-            // Safety: Remove accidental legacy error strings that might have been committed to the MD file
-            let cleanMd = md.replace(/Error loading plan\. Please ensure the repository is Public and the filename is correct\./g, '');
-            
             marked.setOptions({ gfm: true, breaks: true });
             const contentDiv = document.getElementById('markdown-content');
-            contentDiv.innerHTML = marked.parse(cleanMd);
-            
+            contentDiv.innerHTML = marked.parse(md);
             finalizeRendering();
         }
 
         function renderRawHTML(html) {
             const contentDiv = document.getElementById('markdown-content');
             contentDiv.innerHTML = `<div id="infographic-container">${html}</div>`;
+            
+            // Re-execute any scripts if found in the HTML
+            const scripts = contentDiv.querySelectorAll("script");
+            scripts.forEach(oldScript => {
+                const newScript = document.createElement("script");
+                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            });
+
             finalizeRendering();
         }
 
