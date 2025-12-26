@@ -453,10 +453,11 @@
                 if (watts > 0 && weightKg > 0) {
                     wkgValue = watts / weightKg;
                     const val = wkgValue;
-                    if (val >= 5.0) { categoryLabel = "Exceptional"; catColor = "#a855f7"; } 
-                    else if (val >= 4.0) { categoryLabel = "Very Good"; catColor = "#3b82f6"; } 
-                    else if (val >= 3.0) { categoryLabel = "Good"; catColor = "#22c55e"; } 
-                    else if (val >= 2.0) { categoryLabel = "Fair"; catColor = "#f97316"; } 
+                    // Logic categories from Provided Reference Image
+                    if (val >= 5.05) { categoryLabel = "Exceptional"; catColor = "#a855f7"; } 
+                    else if (val >= 3.93) { categoryLabel = "Very Good"; catColor = "#3b82f6"; } 
+                    else if (val >= 2.79) { categoryLabel = "Good"; catColor = "#22c55e"; } 
+                    else if (val >= 2.23) { categoryLabel = "Fair"; catColor = "#f97316"; } 
                     else { categoryLabel = "Untrained"; catColor = "#ef4444"; } 
                 } else {
                     categoryLabel = "Data Missing";
@@ -473,11 +474,17 @@
                 <div class="gauge-wrapper">
                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">W/kg Profile</h3>
                     <svg viewBox="0 0 300 185" class="gauge-svg">
-                        <path d="M 30 150 A 120 120 0 0 1 78.5 52.9" fill="none" stroke="#ef4444" stroke-width="24" stroke-linecap="butt" />
-                        <path d="M 78.5 52.9 A 120 120 0 0 1 126.3 31.8" fill="none" stroke="#f97316" stroke-width="24" stroke-linecap="butt" />
-                        <path d="M 126.3 31.8 A 120 120 0 0 1 173.7 31.8" fill="none" stroke="#22c55e" stroke-width="24" stroke-linecap="butt" />
-                        <path d="M 173.7 31.8 A 120 120 0 0 1 221.5 52.9" fill="none" stroke="#3b82f6" stroke-width="24" stroke-linecap="butt" />
-                        <path d="M 221.5 52.9 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" stroke-linecap="butt" />
+                        <!-- Red (Untrained): 1.0 to 2.23 -->
+                        <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" stroke-linecap="butt" />
+                        <!-- Orange (Fair): 2.23 to 2.79 -->
+                        <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" stroke-linecap="butt" />
+                        <!-- Green (Good): 2.79 to 3.93 -->
+                        <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" stroke-linecap="butt" />
+                        <!-- Blue (Very Good): 3.93 to 5.05 -->
+                        <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" stroke-linecap="butt" />
+                        <!-- Purple (Exceptional): 5.05 to 6.0 -->
+                        <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" stroke-linecap="butt" />
+
                         <text x="150" y="135" text-anchor="middle" class="gauge-value-text">${displayWkg}</text>
                         <text x="150" y="160" text-anchor="middle" class="gauge-label-text" fill="${catColor}">${categoryLabel}</text>
                         <text x="150" y="180" text-anchor="middle" font-size="10" fill="#64748b" font-weight="700">WATTS PER KILOGRAM</text>
@@ -579,6 +586,7 @@
             for (let line of lines) {
                 const trimmed = line.trim();
                 const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
+                // Use a more relaxed title match to handle the numbering
                 if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) { capturing = true; continue; }
                 if (capturing && isMainHeader) break;
                 if (capturing) section.push(line);
