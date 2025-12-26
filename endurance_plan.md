@@ -1,8 +1,3 @@
-Export Instructions
-The content below is your raw Markdown source code. Because it is wrapped in a code block, the viewer will show the raw symbols (like #, **, and |) instead of formatting them.
-1. Copy the text inside the code block below.
-2. Paste it into a text editor (like Notepad) or GitHub.
-3. Save the file with a .md extension (e.g., Training_Plan.md).
 # Master Training Plan 2026
 
 **Last Updated:** December 26, 2025
