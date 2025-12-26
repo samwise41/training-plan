@@ -103,14 +103,14 @@
         <div class="max-w-6xl mx-auto px-4">
             <div class="flex items-center justify-between h-16">
                 <!-- Brand -->
-                <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('endurance_training_plan.md')">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('endurance_plan.md')">
                     <div class="w-9 h-9 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center font-black text-white italic shadow-lg shadow-blue-900/20">S</div>
                     <span class="font-black tracking-tighter text-lg text-slate-100 uppercase">Athlete<span class="text-blue-500">OS</span></span>
                 </div>
 
                 <!-- Desktop Nav -->
                 <div class="hidden md:flex items-center space-x-1 h-full">
-                    <button onclick="navigateTo('endurance_training_plan.md')" id="nav-endurance_training_plan.md" class="nav-link px-4 h-16 text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                    <button onclick="navigateTo('endurance_plan.md')" id="nav-endurance_plan.md" class="nav-link px-4 h-16 text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                         Training Plan
                     </button>
@@ -139,7 +139,7 @@
     <!-- MOBILE NAVIGATION (Scrollable bar) -->
     <div class="md:hidden bg-slate-900 border-b border-slate-800 overflow-x-auto no-scrollbar">
         <div class="flex whitespace-nowrap px-4 py-3 space-x-6 text-xs font-bold uppercase tracking-widest text-slate-400">
-            <button onclick="navigateTo('endurance_training_plan.md')" class="hover:text-white">Plan</button>
+            <button onclick="navigateTo('endurance_plan.md')" class="hover:text-white">Plan</button>
             <button onclick="navigateTo('nutrition.md')" class="hover:text-white">Nutrition</button>
             <button onclick="navigateTo('gear.md')" class="hover:text-white">Gear</button>
             <button onclick="window.location.reload()" class="text-blue-500">Refresh</button>
@@ -174,7 +174,7 @@
             </div>
             <p class="text-red-400 font-bold mb-2">Sync Interrupted</p>
             <p class="text-red-400/60 text-sm mb-6" id="error-msg">Target file not found in repository.</p>
-            <button onclick="navigateTo('endurance_training_plan.md')" class="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-all">Return to Dashboard</button>
+            <button onclick="navigateTo('endurance_plan.md')" class="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-all">Return to Dashboard</button>
         </div>
 
         <!-- DYNAMIC CONTENT -->
@@ -201,7 +201,7 @@
 
     <script>
         // Set the primary file to load on start
-        let currentFile = "endurance_training_plan.md";
+        let currentFile = "endurance_plan.md";
 
         async function navigateTo(fileName) {
             currentFile = fileName;
