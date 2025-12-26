@@ -136,7 +136,7 @@
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
                 <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
             </div>
-            <!-- Box 3: Next Event (Name + Weeks/Days Countdown) -->
+            <!-- Box 3: Next Event (Name + Countdown) -->
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
                 <div id="stat-event">
@@ -180,24 +180,34 @@
             // Populate Header Stats from the fetched Markdown
             updateHeaderStats(cachedMarkdown);
             
-            // Set sync time in logs (internal)
-            console.log("Last sync: " + new Date().toLocaleTimeString());
-            
             return cachedMarkdown;
         }
 
         // --- STATS PARSING ---
 
         function updateHeaderStats(md) {
-            // 1. Current Phase (Looking for **Phase:** in the status section)
-            const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
-            document.getElementById('stat-phase').innerText = phaseMatch ? phaseMatch[1].trim() : "Phase TBD";
+            // 1. & 2. Consolidated parsing for Phase and Week from "Status" line
+            // Example format: **Status:** Phase 1 (Base/Prep) - Week 1 (Baseline Testing)
+            const statusMatch = md.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
+            
+            let phase = "--";
+            let week = "--";
 
-            // 2. Current Week (Looking for **Week:** in the status section)
-            const weekMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
-            document.getElementById('stat-week').innerText = weekMatch ? weekMatch[1].trim() : "Week TBD";
+            if (statusMatch) {
+                phase = statusMatch[1].trim();
+                week = statusMatch[2].trim();
+            } else {
+                // Fallback to individual lines if consolidated format not found
+                const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
+                const weekMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
+                if (phaseMatch) phase = phaseMatch[1].trim();
+                if (weekMatch) week = weekMatch[1].trim();
+            }
 
-            // 3. Next Event Logic (Looking for ## Event Schedule table)
+            document.getElementById('stat-phase').innerText = phase;
+            document.getElementById('stat-week').innerText = week;
+
+            // 3. Next Event Logic
             const eventSection = extractSection(md, "Event Schedule");
             const nameElement = document.getElementById('stat-event-name');
             const countdownElement = document.getElementById('stat-event-countdown');
