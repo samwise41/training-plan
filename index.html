@@ -99,19 +99,38 @@
         }
 
         /* Zone List Styling */
+        .zone-card {
+            background-color: rgba(30, 41, 59, 0.3);
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .zone-card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
         .zone-row {
             border-bottom: 1px solid #1e293b;
-            padding: 1rem 0;
+            padding: 0.75rem 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 1rem;
         }
         .zone-row:last-child {
             border-bottom: none;
         }
         .zone-label {
             font-weight: 600;
-            color: #f8fafc;
+            color: #cbd5e1;
+            font-size: 0.95rem;
         }
         .zone-range {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -120,6 +139,7 @@
             padding: 0.25rem 0.75rem;
             border-radius: 6px;
             font-size: 0.875rem;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -340,35 +360,55 @@
                     return;
                 }
 
-                // Parse the section for lines like "Zone X (Name): Range"
+                // Parser for grouping zones by sub-headers (###)
                 const lines = section.split('\n');
-                const zoneLines = lines.filter(line => /Zone\s*[\d\w]+\s*\(.*\)\s*:/.test(line));
-                
-                if (zoneLines.length === 0) {
-                    render(section); // Fallback to raw markdown if no zones found
-                    return;
-                }
+                let html = '';
+                let currentCategory = '';
+                let categoryZones = [];
 
-                let html = '<div class="bg-slate-800/30 border border-slate-800 rounded-xl p-6 shadow-sm">';
-                zoneLines.forEach(line => {
-                    // Clean up markdown bolding if present
-                    const cleanLine = line.replace(/\*\*/g, '').trim();
-                    const parts = cleanLine.split(':');
-                    if (parts.length >= 2) {
-                        const label = parts[0].trim();
-                        const range = parts.slice(1).join(':').trim();
+                function flushCategory() {
+                    if (currentCategory && categoryZones.length > 0) {
                         html += `
-                            <div class="zone-row">
-                                <span class="zone-label">${label}</span>
-                                <span class="zone-range">${range}</span>
+                            <div class="zone-card">
+                                <div class="zone-card-title">${currentCategory}</div>
+                                ${categoryZones.join('')}
                             </div>
                         `;
+                        categoryZones = [];
+                    }
+                }
+
+                lines.forEach(line => {
+                    const trimmed = line.trim();
+                    
+                    // Detect sub-headers like ### Cycling Power Zones
+                    if (trimmed.startsWith('###')) {
+                        flushCategory();
+                        currentCategory = trimmed.replace(/^###\s*/, '').trim();
+                    } 
+                    // Detect zone bullet points like * **Zone 1 (Active Recovery):** < 133W
+                    else if (trimmed.startsWith('*') && trimmed.includes('Zone')) {
+                        const cleanLine = trimmed.replace(/^\*\s*/, '').replace(/\*\*/g, '').trim();
+                        const separatorIndex = cleanLine.indexOf(':');
+                        
+                        if (separatorIndex !== -1) {
+                            const label = cleanLine.substring(0, separatorIndex).trim();
+                            const range = cleanLine.substring(separatorIndex + 1).trim();
+                            
+                            categoryZones.push(`
+                                <div class="zone-row">
+                                    <span class="zone-label">${label}</span>
+                                    <span class="zone-range">${range}</span>
+                                </div>
+                            `);
+                        }
                     }
                 });
-                html += '</div>';
+
+                flushCategory(); // Catch the last one
 
                 const contentDiv = document.getElementById('markdown-content');
-                contentDiv.innerHTML = html;
+                contentDiv.innerHTML = html || `<div class="p-6 text-slate-500 italic">No structured zones found in Training Parameters.</div>`;
                 finalizeRendering();
 
             } catch (err) { handleError(err); }
