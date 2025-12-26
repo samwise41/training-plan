@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Athlete Dashboard | 2026 Training</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js to convert Markdown to HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- GitHub Markdown CSS for professional formatting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
+    
+    <style>
+        body {
+            background-color: #020617; /* Very dark slate */
+            color: #f8fafc;
+        }
+        /* Custom overrides for the markdown container to match the dashboard theme */
+        .markdown-body {
+            background-color: transparent !important;
+            font-family: inherit;
+            color: #cbd5e1 !important;
+        }
+        .markdown-body table {
+            display: table;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .markdown-body table th {
+            background-color: #1e293b !important;
+            color: #60a5fa !important;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+        .markdown-body table tr {
+            background-color: #0f172a !important;
+            border-top: 1px solid #1e293b !important;
+        }
+        .markdown-body h1, .markdown-body h2 {
+            border-bottom: 1px solid #1e293b !important;
+            color: #f8fafc !important;
+        }
+        .markdown-body a {
+            color: #3b82f6 !important;
+        }
+        
+        /* Loading animation */
+        .loader {
+            border-top-color: #3b82f6;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- NAVIGATION / HEADER -->
+    <nav class="bg-slate-900/50 backdrop-blur-md sticky top-0 z-50 border-b border-slate-800">
+        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white italic">S</div>
+                <span class="font-bold tracking-tight text-slate-100">ATHLETE<span class="text-blue-500">OS</span></span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-xs font-medium text-slate-500 bg-slate-800 px-2 py-1 rounded">V 2.0.1</span>
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <header class="max-w-5xl mx-auto px-4 pt-12 pb-6">
+        <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight">
+            Endurance <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Master Plan</span>
+        </h1>
+        <p class="mt-4 text-slate-400 max-w-2xl text-lg">
+            Real-time synchronization with your training database. All updates from Google Docs are automatically rendered below.
+        </p>
+    </header>
+
+    <!-- DASHBOARD CONTENT -->
+    <main class="max-w-5xl mx-auto px-4 pb-20">
+        
+        <!-- STATUS CARDS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Current Phase</p>
+                <p class="text-xl font-semibold text-blue-400">Base Phase (Build 2)</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Target Volume</p>
+                <p class="text-xl font-semibold text-emerald-400">8 - 12 Hours / Week</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Sync Status</p>
+                <p class="text-xl font-semibold text-slate-200" id="sync-time">Checking...</p>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT AREA -->
+        <div id="loader-container" class="flex flex-col items-center justify-center py-20">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-800 h-12 w-12 mb-4"></div>
+            <p class="text-slate-500 font-medium">Fetching Training Plan...</p>
+        </div>
+
+        <div id="error-container" class="hidden bg-red-900/20 border border-red-500/50 p-6 rounded-xl text-center">
+            <p class="text-red-400 font-bold mb-2 text-lg">404: File Not Found</p>
+            <p class="text-red-300/80 mb-4">The file <code class="bg-red-900/40 px-1 rounded">endurance_plan.md</code> was not found in this repository.</p>
+            <button onclick="window.location.reload()" class="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-400 transition-colors">Retry Sync</button>
+        </div>
+
+        <div id="markdown-content" class="markdown-body hidden transition-opacity duration-500 opacity-0">
+            <!-- Content will be injected here -->
+        </div>
+
+    </main>
+
+    <script>
+        /**
+         * SETTINGS
+         * If your file name is different on GitHub, change it here.
+         */
+        const GITHUB_FILENAME = "endurance_plan.md"; 
+
+        async function fetchAndRender() {
+            const contentDiv = document.getElementById('markdown-content');
+            const loader = document.getElementById('loader-container');
+            const errorDiv = document.getElementById('error-container');
+            const syncLabel = document.getElementById('sync-time');
+
+            try {
+                // Fetch the relative file from the same GitHub Pages directory
+                const response = await fetch(`./${GITHUB_FILENAME}`);
+                
+                if (!response.ok) {
+                    throw new Error('Could not find the markdown file.');
+                }
+
+                const markdownText = await response.text();
+                
+                // Use Marked.js to parse the markdown
+                // Set options for better table support
+                marked.setOptions({
+                    gfm: true,
+                    breaks: true
+                });
+
+                const htmlContent = marked.parse(markdownText);
+                
+                // Inject content
+                contentDiv.innerHTML = htmlContent;
+
+                // Update UI
+                loader.classList.add('hidden');
+                contentDiv.classList.remove('hidden');
+                setTimeout(() => contentDiv.classList.add('opacity-100'), 50);
+                
+                // Set sync time
+                const now = new Date();
+                syncLabel.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            } catch (error) {
+                console.error(error);
+                loader.classList.add('hidden');
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        // Start the process
+        window.onload = fetchAndRender;
+    </script>
+</body>
+</html>
