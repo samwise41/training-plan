@@ -78,8 +78,9 @@
         /* Container for raw HTML infographics */
         #infographic-container {
             width: 100%;
-            height: auto;
-            min-height: 300px;
+            border: none;
+            min-height: 600px; /* Adjust height as needed */
+            background: transparent;
         }
     </style>
 </head>
@@ -99,7 +100,7 @@
                 <div class="hidden md:flex items-center space-x-4 h-full">
                     <button onclick="showSchedule()" id="nav-schedule" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Weekly Schedule</button>
                     <button onclick="showFullPlan()" id="nav-full" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Full Plan</button>
-                    <button onclick="showAppendix()" id="nav-appendix" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Appendix C</button>
+                    <button onclick="showAppendix()" id="nav-appendix" class="nav-link px-2 h-16 text-sm font-medium text-slate-400 hover:text-white transition-colors">Summary</button>
                 </div>
 
                 <!-- Status -->
@@ -187,7 +188,6 @@
 
         function updateHeaderStats(md) {
             // 1. & 2. Consolidated parsing for Phase and Week from "Status" line
-            // Example format: **Status:** Phase 1 (Base/Prep) - Week 1 (Baseline Testing)
             const statusMatch = md.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
             
             let phase = "--";
@@ -197,7 +197,6 @@
                 phase = statusMatch[1].trim();
                 week = statusMatch[2].trim();
             } else {
-                // Fallback to individual lines if consolidated format not found
                 const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
                 const weekMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
                 if (phaseMatch) phase = phaseMatch[1].trim();
@@ -272,7 +271,6 @@
             updateUI('Endurance Master Plan', 'nav-full', true);
             try {
                 const md = await fetchFile();
-                // Show everything EXCEPT Appendix C
                 const planOnly = excludeSection(md, "Appendix C");
                 render(planOnly);
             } catch (err) { handleError(err); }
@@ -284,7 +282,7 @@
                 const section = extractSection(md, "Appendix C");
                 
                 if (!section) {
-                    updateUI('Appendix C: Infographic', 'nav-appendix', true);
+                    updateUI('Summary', 'nav-appendix', true);
                     render("*Appendix C not found.*");
                     return;
                 }
@@ -292,13 +290,13 @@
                 // Detect HTML/SVG content
                 const htmlMatch = section.match(/```html([\s\S]*?)```/);
                 if (htmlMatch) {
-                    updateUI('Appendix C: Infographic', 'nav-appendix', false);
+                    updateUI('Summary', 'nav-appendix', false);
                     renderRawHTML(htmlMatch[1].trim());
                 } else if (section.includes('<svg') || section.includes('<div')) {
-                    updateUI('Appendix C: Infographic', 'nav-appendix', false);
+                    updateUI('Summary', 'nav-appendix', false);
                     renderRawHTML(section);
                 } else {
-                    updateUI('Appendix C: Infographic', 'nav-appendix', true);
+                    updateUI('Summary', 'nav-appendix', true);
                     render(section);
                 }
             } catch (err) { handleError(err); }
@@ -375,16 +373,36 @@
 
         function renderRawHTML(html) {
             const contentDiv = document.getElementById('markdown-content');
-            contentDiv.innerHTML = `<div id="infographic-container">${html}</div>`;
+            // Using an iframe to isolate the infographic styles from the rest of the dashboard
+            const iframe = document.createElement('iframe');
+            iframe.id = 'infographic-container';
+            contentDiv.innerHTML = '';
+            contentDiv.appendChild(iframe);
             
-            // Re-execute scripts
-            const scripts = contentDiv.querySelectorAll("script");
-            scripts.forEach(oldScript => {
-                const newScript = document.createElement("script");
-                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                oldScript.parentNode.replaceChild(newScript, oldScript);
-            });
+            // Set basic reset styles in the iframe
+            const iframeDoc = `
+                <html>
+                    <head>
+                        <style>
+                            body { margin: 0; padding: 0; background: transparent; color: white; font-family: sans-serif; }
+                            * { box-sizing: border-box; }
+                        </style>
+                    </head>
+                    <body>${html}</body>
+                </html>
+            `;
+            
+            iframe.srcdoc = iframeDoc;
+            
+            // Auto-resize iframe to content height
+            iframe.onload = function() {
+                setTimeout(() => {
+                    const body = iframe.contentWindow.document.body;
+                    const html = iframe.contentWindow.document.documentElement;
+                    const height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+                    iframe.style.height = height + 'px';
+                }, 100);
+            };
 
             finalizeRendering();
         }
