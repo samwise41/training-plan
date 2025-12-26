@@ -30,6 +30,7 @@
             border: 1px solid #1e293b;
             border-radius: 8px;
             overflow: hidden;
+            margin-bottom: 2rem;
         }
         .markdown-body table th {
             background-color: #1e293b !important;
@@ -37,6 +38,10 @@
             text-transform: uppercase;
             font-size: 0.75rem;
             letter-spacing: 0.05em;
+            padding: 12px !important;
+        }
+        .markdown-body table td {
+            padding: 12px !important;
         }
         .markdown-body table tr {
             background-color: #0f172a !important;
@@ -45,6 +50,7 @@
         .markdown-body h1, .markdown-body h2 {
             border-bottom: 1px solid #1e293b !important;
             color: #f8fafc !important;
+            margin-top: 2rem !important;
         }
         .markdown-body a {
             color: #3b82f6 !important;
@@ -71,7 +77,7 @@
                 <span class="font-bold tracking-tight text-slate-100">ATHLETE<span class="text-blue-500">OS</span></span>
             </div>
             <div class="flex items-center space-x-4">
-                <span class="text-xs font-medium text-slate-500 bg-slate-800 px-2 py-1 rounded">V 2.0.1</span>
+                <span class="text-xs font-medium text-slate-500 bg-slate-800 px-2 py-1 rounded">V 2.0.2</span>
                 <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             </div>
         </div>
@@ -113,8 +119,9 @@
         </div>
 
         <div id="error-container" class="hidden bg-red-900/20 border border-red-500/50 p-6 rounded-xl text-center">
-            <p class="text-red-400 font-bold mb-2 text-lg">404: File Not Found</p>
-            <p class="text-red-300/80 mb-4">The file <code class="bg-red-900/40 px-1 rounded">endurance_training_plan.md</code> was not found in this repository.</p>
+            <p class="text-red-400 font-bold mb-2 text-lg" id="error-title">404: File Not Found</p>
+            <p class="text-red-300/80 mb-4" id="error-msg">The file was not found.</p>
+            <div class="text-xs text-red-400/50 mb-4 font-mono break-all" id="error-url"></div>
             <button onclick="window.location.reload()" class="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-400 transition-colors">Retry Sync</button>
         </div>
 
@@ -127,7 +134,7 @@
     <script>
         /**
          * SETTINGS
-         * Updated to match your exact repository filename.
+         * Check your GitHub repo: is the file name exactly "endurance_training_plan.md"?
          */
         const GITHUB_FILENAME = "endurance_training_plan.md"; 
 
@@ -135,20 +142,29 @@
             const contentDiv = document.getElementById('markdown-content');
             const loader = document.getElementById('loader-container');
             const errorDiv = document.getElementById('error-container');
+            const errorMsg = document.getElementById('error-msg');
+            const errorUrl = document.getElementById('error-url');
             const syncLabel = document.getElementById('sync-time');
 
+            // Force browser to ignore cache by adding a unique timestamp
+            const cacheBuster = `?t=${new Date().getTime()}`;
+            const targetUrl = `./${GITHUB_FILENAME}${cacheBuster}`;
+
             try {
-                // Fetch the relative file from the same GitHub Pages directory
-                const response = await fetch(`./${GITHUB_FILENAME}`);
+                const response = await fetch(targetUrl);
                 
                 if (!response.ok) {
-                    throw new Error('Could not find the markdown file.');
+                    throw new Error(`Status ${response.status}: ${response.statusText}`);
                 }
 
                 const markdownText = await response.text();
                 
+                // Safety check: ensure we actually got text and not an HTML error page
+                if (markdownText.trim().startsWith('<!DOCTYPE html>')) {
+                    throw new Error("GitHub returned an HTML page instead of the Markdown file. Check visibility.");
+                }
+
                 // Use Marked.js to parse the markdown
-                // Set options for better table support
                 marked.setOptions({
                     gfm: true,
                     breaks: true
@@ -169,9 +185,11 @@
                 syncLabel.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             } catch (error) {
-                console.error(error);
+                console.error("Fetch Error:", error);
                 loader.classList.add('hidden');
                 errorDiv.classList.remove('hidden');
+                errorMsg.innerText = error.message;
+                errorUrl.innerText = `Attempted URL: ${window.location.origin}${window.location.pathname}${GITHUB_FILENAME}`;
             }
         }
 
