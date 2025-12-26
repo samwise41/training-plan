@@ -126,28 +126,22 @@
         
         <!-- DASHBOARD STATS -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-            <!-- Box 1: Next Event (Name + Countdown) -->
+            <!-- Box 1: Current Phase -->
+            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
+                <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
+            </div>
+            <!-- Box 2: Current Week -->
+            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
+                <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
+            </div>
+            <!-- Box 3: Next Event (Name + Weeks/Days Countdown) -->
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
                 <div id="stat-event">
-                    <p class="text-lg font-semibold text-emerald-400" id="stat-event-name">--</p>
-                    <p class="text-sm font-normal text-slate-400" id="stat-event-countdown">--</p>
-                </div>
-            </div>
-            <!-- Box 2: Training Status (Phase + Week) -->
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Training Status</p>
-                <div id="stat-training">
-                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
-                    <p class="text-sm font-normal text-slate-400" id="stat-week">--</p>
-                </div>
-            </div>
-            <!-- Box 3: Last Sync / System Info -->
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Last Sync</p>
-                <div id="stat-sync-info">
-                    <p class="text-lg font-semibold text-slate-300" id="sync-time">--:--</p>
-                    <p class="text-sm font-normal text-emerald-500 uppercase tracking-tighter">Connection Live</p>
+                    <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
+                    <p class="text-sm font-normal text-slate-400 mt-1" id="stat-event-countdown">--</p>
                 </div>
             </div>
         </div>
@@ -186,9 +180,8 @@
             // Populate Header Stats from the fetched Markdown
             updateHeaderStats(cachedMarkdown);
             
-            // Set sync time
-            const now = new Date();
-            document.getElementById('sync-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Set sync time in logs (internal)
+            console.log("Last sync: " + new Date().toLocaleTimeString());
             
             return cachedMarkdown;
         }
@@ -196,15 +189,15 @@
         // --- STATS PARSING ---
 
         function updateHeaderStats(md) {
-            // 1. Current Phase
+            // 1. Current Phase (Looking for **Phase:** in the status section)
             const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
             document.getElementById('stat-phase').innerText = phaseMatch ? phaseMatch[1].trim() : "Phase TBD";
 
-            // 2. Current Week
+            // 2. Current Week (Looking for **Week:** in the status section)
             const weekMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
             document.getElementById('stat-week').innerText = weekMatch ? weekMatch[1].trim() : "Week TBD";
 
-            // 3. Next Event Logic
+            // 3. Next Event Logic (Looking for ## Event Schedule table)
             const eventSection = extractSection(md, "Event Schedule");
             const nameElement = document.getElementById('stat-event-name');
             const countdownElement = document.getElementById('stat-event-countdown');
@@ -232,10 +225,10 @@
                                 const weeks = Math.floor(diffInDays / 7);
                                 const days = diffInDays % 7;
                                 let countdownStr = "";
-                                if (weeks > 0) countdownStr += `${weeks}w`;
-                                if (weeks > 0 && days > 0) countdownStr += " ";
-                                if (days > 0 || weeks === 0) countdownStr += `${days}d`;
-                                countdownElement.innerText = `${countdownStr} to go`;
+                                if (weeks > 0) countdownStr += `${weeks} week${weeks > 1 ? 's' : ''}`;
+                                if (weeks > 0 && days > 0) countdownStr += " and ";
+                                if (days > 0 || weeks === 0) countdownStr += `${days} day${days !== 1 ? 's' : ''}`;
+                                countdownElement.innerText = `${countdownStr} until event`;
                             }
                         } else {
                             countdownElement.innerText = "Date TBD";
