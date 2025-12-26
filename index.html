@@ -126,20 +126,29 @@
         
         <!-- DASHBOARD STATS -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-            <!-- Box 1: Next Event Name -->
+            <!-- Box 1: Next Event (Name + Countdown) -->
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
-                <p class="text-lg font-semibold text-emerald-400" id="stat-event-name">--</p>
+                <div id="stat-event">
+                    <p class="text-lg font-semibold text-emerald-400" id="stat-event-name">--</p>
+                    <p class="text-sm font-normal text-slate-400" id="stat-event-countdown">--</p>
+                </div>
             </div>
-            <!-- Box 2: Countdown -->
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Countdown</p>
-                <p class="text-lg font-semibold text-slate-300" id="stat-event-countdown">--</p>
-            </div>
-            <!-- Box 3: Phase & Week Consolidated -->
+            <!-- Box 2: Training Status (Phase + Week) -->
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Training Status</p>
-                <div class="text-lg font-semibold text-blue-400 leading-tight" id="stat-training-status">--</div>
+                <div id="stat-training">
+                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
+                    <p class="text-sm font-normal text-slate-400" id="stat-week">--</p>
+                </div>
+            </div>
+            <!-- Box 3: Last Sync / System Info -->
+            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Last Sync</p>
+                <div id="stat-sync-info">
+                    <p class="text-lg font-semibold text-slate-300" id="sync-time">--:--</p>
+                    <p class="text-sm font-normal text-emerald-500 uppercase tracking-tighter">Connection Live</p>
+                </div>
             </div>
         </div>
 
@@ -177,6 +186,10 @@
             // Populate Header Stats from the fetched Markdown
             updateHeaderStats(cachedMarkdown);
             
+            // Set sync time
+            const now = new Date();
+            document.getElementById('sync-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
             return cachedMarkdown;
         }
 
@@ -185,14 +198,11 @@
         function updateHeaderStats(md) {
             // 1. Current Phase
             const phaseMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
-            const phase = phaseMatch ? phaseMatch[1].trim() : "Phase TBD";
+            document.getElementById('stat-phase').innerText = phaseMatch ? phaseMatch[1].trim() : "Phase TBD";
 
             // 2. Current Week
             const weekMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
-            const week = weekMatch ? weekMatch[1].trim() : "Week TBD";
-
-            // Update Consolidated Box 3
-            document.getElementById('stat-training-status').innerHTML = `<div>${phase}</div><div class="text-sm font-normal text-slate-400">${week}</div>`;
+            document.getElementById('stat-week').innerText = weekMatch ? weekMatch[1].trim() : "Week TBD";
 
             // 3. Next Event Logic
             const eventSection = extractSection(md, "Event Schedule");
@@ -218,7 +228,6 @@
                                 countdownElement.innerText = "Completed";
                             } else if (diffInDays === 0) {
                                 countdownElement.innerText = "Event Today";
-                                countdownElement.classList.add('text-emerald-500');
                             } else {
                                 const weeks = Math.floor(diffInDays / 7);
                                 const days = diffInDays % 7;
