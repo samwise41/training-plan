@@ -65,7 +65,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 * **Zone 1 (Active Recovery):** < 133W
 * **Zone 2 (Endurance):** 134W – 180W
-* **Zone 3 (Tempo/Sweet Spot):** 181W
+* **Zone 3 (Tempo/Sweet Spot):** 181W – 216W
 * **Zone 4 (Threshold):** 217W – 253W
 * **Zone 5 (VO2 Max):** 254W – 289W
 
