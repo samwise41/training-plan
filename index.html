@@ -4,59 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Athlete Dashboard</title>
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Marked.js to convert Markdown to HTML -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- GitHub Markdown CSS for professional formatting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
     
     <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.3);
+            --border-slate: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
         body {
-            background-color: #0f172a; /* Original Slate 900 */
-            color: #f8fafc;
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
             overflow-x: hidden;
         }
 
-        /* Custom overrides for the markdown container */
-        .markdown-body {
-            background-color: transparent !important;
-            font-family: inherit;
-            color: #cbd5e1 !important;
-            line-height: 1.6;
-        }
-        .markdown-body table {
-            display: table;
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-        .markdown-body table th {
-            background-color: #1e293b !important;
-            color: #3b82f6 !important;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 12px !important;
-        }
-        .markdown-body table td {
-            padding: 12px !important;
-            border-top: 1px solid #334155 !important;
-        }
-        .markdown-body table tr {
-            background-color: #0f172a !important;
-        }
-        .markdown-body h1, .markdown-body h2 {
-            border-bottom: 1px solid #334155 !important;
-            color: #f8fafc !important;
-            margin-top: 2rem !important;
-        }
-        
         /* Nav highlighting */
         .nav-link.active {
             color: #3b82f6;
@@ -65,131 +32,104 @@
         }
 
         /* Sidebar transitions */
-        #sidebar {
-            transition: transform 0.3s ease-in-out;
-            z-index: 60;
-        }
-        .sidebar-open {
-            transform: translateX(0);
-        }
-        .sidebar-closed {
-            transform: translateX(-100%);
-        }
+        #sidebar { transition: transform 0.3s ease-in-out; z-index: 60; }
+        .sidebar-open { transform: translateX(0); }
+        .sidebar-closed { transform: translateX(-100%); }
 
         @media (min-width: 1024px) {
-            #sidebar {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 260px;
-            }
+            #sidebar { transform: translateX(0); }
+            .main-content { margin-left: 260px; }
         }
 
-        /* Zone Grid Styling */
-        #zone-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 2rem;
+        /* Markdown Styling Overrides */
+        .markdown-body {
+            background-color: transparent !important;
+            color: #cbd5e1 !important;
         }
-        @media (min-width: 768px) {
-            #zone-grid {
-                grid-template-columns: 1fr 1fr;
-            }
+        .markdown-body table {
+            display: table !important;
+            width: 100% !important; 
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border: 1px solid #334155 !important; 
+            border-radius: 8px !important; 
+            overflow: hidden !important;
+            margin-bottom: 2rem !important;
         }
-        .zone-card {
-            background-color: rgba(30, 41, 59, 0.3);
-            border: 1px solid #1e293b;
-            border-radius: 12px;
-            padding: 1.5rem;
-            height: 100%;
+        .markdown-body table th { 
+            background-color: #1e293b !important; 
+            color: #3b82f6 !important; 
+            padding: 12px !important; 
+            text-align: left !important;
+            text-transform: uppercase !important; /* All caps headers */
+            font-size: 0.75rem !important;
+            letter-spacing: 0.05em !important;
         }
+        .markdown-body table td {
+            padding: 12px !important;
+            border-top: 1px solid #334155 !important;
+        }
+        .markdown-body table tr { background-color: var(--bg-dark) !important; }
+
+        /* Gauge Components */
+        .gauge-wrapper { width: 100%; max-width: 400px; margin: 0 auto 3rem; text-align: center; }
+        .gauge-needle { transition: transform 2s cubic-bezier(0.17, 0.67, 0.38, 1); transform-origin: 150px 150px; }
+
+        /* Zone Layout */
+        #zone-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+        @media (min-width: 768px) { #zone-grid { grid-template-columns: 1fr 1fr; } }
+        
+        .zone-card { background-color: var(--bg-card); border: 1px solid var(--border-slate); border-radius: 12px; padding: 1.5rem; }
+        
         .zone-card-title {
             font-size: 1.1rem;
             font-weight: 800;
-            color: #f8fafc;
+            color: var(--text-main);
             margin-bottom: 1.5rem;
-            border-bottom: 2px solid #334155;
+            border-bottom: 1px solid var(--border-slate);
             padding-bottom: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
+
         .zone-row {
-            margin-bottom: 0.75rem;
-            padding: 1rem;
-            background: #0f172a;
-            border-radius: 8px;
-            border-left: 6px solid #64748b;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            margin-bottom: 0.75rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #64748b;
         }
-        .zone-z1 { border-left-color: #94a3b8 !important; }
-        .zone-z2 { border-left-color: #22c55e !important; }
-        .zone-z3 { border-left-color: #eab308 !important; }
-        .zone-z4 { border-left-color: #f97316 !important; }
-        .zone-z5 { border-left-color: #ef4444 !important; }
-
-        .zone-label { font-weight: 700; color: #e2e8f0; font-size: 0.9rem; }
-        .zone-range { font-family: ui-monospace; color: #94a3b8; font-size: 0.85rem; font-weight: 600; }
-
-        /* W/kg Gauge Styling */
-        .gauge-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            margin: 0 auto 3rem auto;
-            text-align: center;
-        }
-        .gauge-svg {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .gauge-needle {
-            transition: transform 2s cubic-bezier(0.17, 0.67, 0.38, 1);
-            transform-origin: 150px 150px;
-        }
-        .gauge-value-text {
-            font-size: 3.5rem;
-            font-weight: 900;
-            fill: #f8fafc;
-        }
-        .gauge-label-text {
-            font-size: 0.95rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
+        .z-1 { border-left-color: #94a3b8; }
+        .z-2 { border-left-color: #22c55e; }
+        .z-3 { border-left-color: #eab308; }
+        .z-4 { border-left-color: #f97316; }
+        .z-5 { border-left-color: #ef4444; }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- MOBILE OVERLAY -->
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 hidden z-50"></div>
+    <div id="sidebar-overlay" onclick="App.toggleSidebar()" class="fixed inset-0 bg-black/50 hidden z-50"></div>
 
-    <!-- LEFT SIDEBAR -->
+    <!-- SIDEBAR -->
     <aside id="sidebar" class="fixed top-0 left-0 h-full w-[260px] bg-slate-900 border-r border-slate-800 sidebar-closed lg:sidebar-open flex flex-col">
         <div class="p-6 border-b border-slate-800 flex justify-between items-center">
             <span class="font-bold tracking-widest text-slate-400 text-xs uppercase">Navigation</span>
-            <button onclick="toggleSidebar()" class="lg:hidden text-slate-400">
+            <button onclick="App.toggleSidebar()" class="lg:hidden text-slate-400">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
         
-        <nav class="flex-1 py-4 overflow-y-auto">
-            <button onclick="showSchedule(); toggleSidebarMobile();" id="nav-schedule" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+        <nav class="flex-1 py-4">
+            <button onclick="App.navigate('schedule')" id="nav-schedule" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3 active">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 Weekly Schedule
             </button>
-            <button onclick="showPhases(); toggleSidebarMobile();" id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+            <button onclick="App.navigate('phases')" id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                 Phases
             </button>
-            <button onclick="showZones(); toggleSidebarMobile();" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+            <button onclick="App.navigate('zones')" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
                 Zones
             </button>
-            <button onclick="showFullPlan(); toggleSidebarMobile();" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+            <button onclick="App.navigate('full')" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 Full Plan
             </button>
@@ -203,397 +143,238 @@
         </div>
     </aside>
 
-    <!-- TOP MOBILE BAR -->
-    <header class="lg:hidden bg-slate-900 border-b border-slate-800 sticky top-0 z-40 h-16 flex items-center px-4">
-        <button onclick="toggleSidebar()" class="p-2 text-slate-400 hover:text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </button>
-        <h1 class="ml-4 text-lg font-bold text-white tracking-tight" id="mobile-header-title">Weekly Schedule</h1>
-    </header>
-
     <div class="main-content">
-        <!-- HEADER SECTION -->
-        <header class="max-w-5xl mx-auto px-4 pt-12 pb-8 text-center sm:text-left hidden lg:block">
-            <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight" id="header-title">
-                Weekly Schedule
-            </h1>
-            <p class="mt-3 text-slate-400 text-lg" id="header-subtitle">
-                Synchronized with <span class="font-mono text-blue-400">endurance_plan.md</span>
-            </p>
+        <header class="max-w-5xl mx-auto px-4 pt-12 pb-8">
+            <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight" id="header-title">Weekly Schedule</h1>
+            <p class="mt-3 text-slate-400 text-lg">Synchronized with <span class="font-mono text-blue-400">endurance_plan.md</span></p>
         </header>
 
-        <!-- MAIN CONTENT -->
         <main class="max-w-5xl mx-auto px-4 pb-20">
-            
-            <!-- DASHBOARD STATS -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-                <!-- Box 1: Current Phase -->
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
                     <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
                 </div>
-                <!-- Box 2: Current Week -->
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
                     <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
                 </div>
-                <!-- Box 3: Next Event -->
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
                     <div id="stat-event">
                         <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
-                        <p class="text-sm font-normal text-slate-400 mt-1" id="stat-event-countdown">--</p>
+                        <p class="text-xs font-normal text-slate-400 mt-1" id="stat-event-countdown">--</p>
                     </div>
                 </div>
             </div>
 
-            <!-- LOADER -->
-            <div id="loader-container" class="flex flex-col items-center justify-center py-20">
-                <div class="loader ease-linear rounded-full border-2 border-t-2 border-slate-700 h-10 w-10 mb-4"></div>
-                <p class="text-slate-500 text-sm font-medium">Parsing Athlete Data...</p>
+            <div id="loader" class="flex flex-col items-center py-20 hidden">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
             </div>
 
-            <!-- CONTENT AREA -->
-            <div id="markdown-content" class="markdown-body hidden transition-opacity duration-500 opacity-0">
-                <!-- Rendered Content -->
-            </div>
-
-            <!-- ERROR AREA -->
-            <div id="error-container" class="hidden bg-red-900/10 border border-red-500/50 p-6 rounded-lg text-center">
-                <p class="text-red-400 font-bold mb-2">Sync Error</p>
-                <p class="text-red-300 text-sm mb-4" id="error-msg">File not found.</p>
-                <button onclick="window.location.reload()" class="text-blue-400 text-sm font-bold hover:underline">Retry Connection</button>
-            </div>
-
+            <div id="content" class="markdown-body opacity-0 transition-opacity duration-500"></div>
         </main>
     </div>
 
     <script>
-        const SOURCE_FILE = "endurance_plan.md";
-        let cachedMarkdown = ""; 
+        /**
+         * CONFIGURATION
+         */
+        const CONFIG = {
+            SOURCE_FILE: "endurance_plan.md",
+            WKG_SCALE: { min: 1.0, max: 6.0 },
+            CATEGORIES: [
+                { threshold: 5.05, label: "Exceptional", color: "#a855f7" },
+                { threshold: 3.93, label: "Very Good",   color: "#3b82f6" },
+                { threshold: 2.79, label: "Good",        color: "#22c55e" },
+                { threshold: 2.23, label: "Fair",        color: "#f97316" },
+                { threshold: 0.00, label: "Untrained",   color: "#ef4444" }
+            ]
+        };
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            sidebar.classList.toggle('sidebar-closed');
-            sidebar.classList.toggle('sidebar-open');
-            overlay.classList.toggle('hidden');
-        }
+        /**
+         * ATHLETE DATA PARSER
+         */
+        const Parser = {
+            getSection(md, title) {
+                const lines = md.split('\n');
+                let capturing = false, section = [];
+                for (let line of lines) {
+                    const trimmed = line.trim();
+                    const isHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
+                    if (isHeader && trimmed.toLowerCase().includes(title.toLowerCase())) { capturing = true; continue; }
+                    if (capturing && isHeader) break;
+                    if (capturing) section.push(line);
+                }
+                return section.join('\n').trim();
+            },
 
-        function toggleSidebarMobile() {
-            if (window.innerWidth < 1024) toggleSidebar();
-        }
-
-        async function fetchFile() {
-            if (cachedMarkdown) return cachedMarkdown;
-            const statusDot = document.getElementById('sync-status-dot');
-            const statusText = document.getElementById('sync-status-text');
-
-            const cacheBuster = `t=${new Date().getTime()}`;
-            const response = await fetch(`./${SOURCE_FILE}?${cacheBuster}`);
-            
-            if (!response.ok) {
-                throw new Error(`Could not load ${SOURCE_FILE}. Check if the file exists in the directory.`);
+            getBiometrics(md) {
+                const profileSection = this.getSection(md, "2. User Profile & Health") || this.getSection(md, "Biometrics");
+                const ftp = profileSection.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
+                const weight = profileSection.match(/Weight[^0-9]*(\d{1,3})/i);
+                return {
+                    watts: ftp ? parseInt(ftp[1]) : 0,
+                    weight: weight ? parseInt(weight[1]) : 0
+                };
             }
+        };
+
+        /**
+         * CORE APP LOGIC
+         */
+        const App = {
+            cachedMd: "",
             
-            cachedMarkdown = await response.text();
-            
-            // Update status to Live
-            if (statusDot && statusText) {
-                statusDot.classList.replace('bg-slate-600', 'bg-green-500');
-                statusDot.classList.add('animate-pulse');
-                statusText.innerText = "LIVE SYNC";
-                statusText.classList.replace('text-slate-500', 'text-green-400');
-            }
+            async init() {
+                try {
+                    const response = await fetch(`./${CONFIG.SOURCE_FILE}?t=${Date.now()}`);
+                    if (!response.ok) throw new Error("Sync Failed");
+                    this.cachedMd = await response.text();
+                    this.updateStats();
+                    this.navigate('schedule');
+                    this.updateSyncStatus(true);
+                } catch (e) {
+                    this.updateSyncStatus(false);
+                    document.getElementById('content').innerHTML = `<p class='text-red-400'>Error loading ${CONFIG.SOURCE_FILE}</p>`;
+                }
+            },
 
-            updateHeaderStats(cachedMarkdown);
-            return cachedMarkdown;
-        }
+            updateSyncStatus(isLive) {
+                const dot = document.getElementById('sync-status-dot');
+                const text = document.getElementById('sync-status-text');
+                if (dot && text) {
+                    dot.className = `w-2 h-2 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`;
+                    text.innerText = isLive ? "LIVE SYNC" : "OFFLINE";
+                    text.className = `text-[10px] font-bold uppercase tracking-widest ${isLive ? 'text-green-400' : 'text-red-400'}`;
+                }
+            },
 
-        function updateHeaderStats(md) {
-            const statusMatch = md.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
-            let phase = "--", week = "--";
-            if (statusMatch) {
-                phase = statusMatch[1].trim();
-                week = statusMatch[2].trim();
-            } else {
-                const pMatch = md.match(/\*\*Phase:\*\*\s*(.*)/);
-                const wMatch = md.match(/\*\*Week:\*\*\s*(.*)/);
-                if (pMatch) phase = pMatch[1].trim();
-                if (wMatch) week = wMatch[1].trim();
-            }
-            document.getElementById('stat-phase').innerText = phase;
-            document.getElementById('stat-week').innerText = week;
+            updateStats() {
+                // Phase and Week stats
+                const status = this.cachedMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
+                document.getElementById('stat-phase').innerText = status ? status[1].trim() : "--";
+                document.getElementById('stat-week').innerText = status ? status[2].trim() : "--";
+                
+                // Event logic with countdown
+                const eventSection = Parser.getSection(this.cachedMd, "Event Schedule");
+                const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
+                
+                const nameEl = document.getElementById('stat-event-name');
+                const countdownEl = document.getElementById('stat-event-countdown');
 
-            const eventSection = extractSection(md, "Event Schedule");
-            const nameElement = document.getElementById('stat-event-name');
-            const countdownElement = document.getElementById('stat-event-countdown');
-
-            if (eventSection) {
-                const lines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
-                if (lines.length > 0) {
-                    const parts = lines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
+                if (eventLines.length > 0) {
+                    const parts = eventLines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
                     if (parts.length >= 2) {
                         const eventDate = new Date(parts[0]);
                         const eventName = parts[1];
-                        nameElement.innerText = eventName;
+                        nameEl.innerText = eventName;
+                        
                         if (!isNaN(eventDate)) {
                             const today = new Date(); today.setHours(0,0,0,0);
-                            const diffInDays = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-                            if (diffInDays < 0) countdownElement.innerText = "Completed";
-                            else if (diffInDays === 0) countdownElement.innerText = "Event Today";
+                            const diff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+                            if (diff < 0) countdownEl.innerText = "Completed";
+                            else if (diff === 0) countdownEl.innerText = "Event Today!";
                             else {
-                                const w = Math.floor(diffInDays / 7);
-                                const d = diffInDays % 7;
+                                const w = Math.floor(diff / 7);
+                                const d = diff % 7;
                                 let str = "";
                                 if (w > 0) str += `${w} week${w > 1 ? 's' : ''}`;
                                 if (w > 0 && d > 0) str += " and ";
                                 if (d > 0 || w === 0) str += `${d} day${d !== 1 ? 's' : ''}`;
-                                countdownElement.innerText = `${str} until event`;
+                                countdownEl.innerText = `${str} to go`;
                             }
-                        } else countdownElement.innerText = "Date TBD";
-                    } else { nameElement.innerText = "None Scheduled"; countdownElement.innerText = "--"; }
-                } else { nameElement.innerText = "None Scheduled"; countdownElement.innerText = "--"; }
-            } else { nameElement.innerText = "None Scheduled"; countdownElement.innerText = "--"; }
-        }
+                        } else countdownEl.innerText = "Date TBD";
+                    } else { nameEl.innerText = "No Event"; countdownEl.innerText = "--"; }
+                } else { nameEl.innerText = "No Event"; countdownEl.innerText = "--"; }
+            },
 
-        // --- DASHBOARD FUNCTIONS ---
+            navigate(view) {
+                const content = document.getElementById('content');
+                const titles = { schedule: 'Weekly Schedule', phases: 'Periodization', zones: 'Training Zones', full: 'Master Plan' };
+                
+                document.getElementById('header-title').innerText = titles[view];
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                document.getElementById(`nav-${view}`).classList.add('active');
+                
+                content.classList.add('opacity-0');
+                
+                setTimeout(() => {
+                    if (view === 'zones') this.renderZones();
+                    else this.renderMarkdown(view);
+                    content.classList.remove('opacity-0');
+                }, 200);
+            },
 
-        async function showSchedule() {
-            updateUI('Weekly Schedule', 'nav-schedule', true);
-            try {
-                const md = await fetchFile();
-                render(extractSection(md, "Weekly Schedule") || "*Schedule not found.*");
-            } catch (err) { handleError(err); }
-        }
+            renderMarkdown(view) {
+                const mdMap = {
+                    schedule: Parser.getSection(this.cachedMd, "Weekly Schedule"),
+                    phases: Parser.getSection(this.cachedMd, "Periodization"),
+                    full: this.cachedMd
+                };
+                document.getElementById('content').innerHTML = marked.parse(mdMap[view]);
+            },
 
-        async function showPhases() {
-            updateUI('Periodization Phases', 'nav-phases', true);
-            try {
-                const md = await fetchFile();
-                render(extractSection(md, "Periodization") || "*Phases not found.*");
-            } catch (err) { handleError(err); }
-        }
-
-        async function showZones() {
-            updateUI('Training Zones', 'nav-zones', false);
-            try {
-                const md = await fetchFile();
+            renderZones() {
+                const { watts, weight } = Parser.getBiometrics(this.cachedMd);
+                const weightKg = weight * 0.453592;
+                const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
+                const wkgDisp = wkgNum.toFixed(2);
                 
-                // --- TARGETED DATA EXTRACTION ---
-                const profileSection = extractSection(md, "2. User Profile & Health") || extractSection(md, "Biometrics and Fitness");
-                
-                const ftpRegex = /Cycling FTP[^0-9]*(\d{1,3})/i;
-                const weightRegex = /Weight[^0-9]*(\d{1,3})/i;
-                
-                const ftpMatch = profileSection ? profileSection.match(ftpRegex) : null;
-                const weightMatch = profileSection ? profileSection.match(weightRegex) : null;
-                
-                let wkgValue = 0;
-                let watts = 0;
-                let weightLbs = 0;
-                let weightKg = 0;
-                let categoryLabel = "Calculating...";
-                let catColor = "#64748b"; 
-                
-                if (ftpMatch) {
-                    watts = parseInt(ftpMatch[1], 10);
-                }
-                
-                if (weightMatch) {
-                    weightLbs = parseInt(weightMatch[1], 10);
-                    weightKg = weightLbs * 0.453592;
-                }
-                
-                if (watts > 0 && weightKg > 0) {
-                    wkgValue = watts / weightKg;
-                    const val = wkgValue;
-                    if (val >= 5.05) { categoryLabel = "Exceptional"; catColor = "#a855f7"; } 
-                    else if (val >= 3.93) { categoryLabel = "Very Good"; catColor = "#3b82f6"; } 
-                    else if (val >= 2.79) { categoryLabel = "Good"; catColor = "#22c55e"; } 
-                    else if (val >= 2.23) { categoryLabel = "Fair"; catColor = "#f97316"; } 
-                    else { categoryLabel = "Untrained"; catColor = "#ef4444"; } 
-                } else {
-                    categoryLabel = "Data Missing";
-                    catColor = "#ef4444";
-                }
-
-                const displayWkg = wkgValue.toFixed(2);
-                const minScale = 1.0;
-                const maxScale = 6.0;
-                const percent = Math.min(Math.max((wkgValue - minScale) / (maxScale - minScale), 0), 1);
+                const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
+                const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
                 const rotation = -90 + (percent * 180);
 
-                let html = `
-                <div class="gauge-wrapper">
-                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">W/kg Profile</h3>
-                    <svg viewBox="0 0 300 185" class="gauge-svg">
-                        <!-- Red (Untrained): 1.0 to 2.23 -->
-                        <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" stroke-linecap="butt" />
-                        <!-- Orange (Fair): 2.23 to 2.79 -->
-                        <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" stroke-linecap="butt" />
-                        <!-- Green (Good): 2.79 to 3.93 -->
-                        <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" stroke-linecap="butt" />
-                        <!-- Blue (Very Good): 3.93 to 5.05 -->
-                        <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" stroke-linecap="butt" />
-                        <!-- Purple (Exceptional): 5.05 to 6.0 -->
-                        <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" stroke-linecap="butt" />
+                const html = `
+                    <div class="gauge-wrapper">
+                        <svg viewBox="0 0 300 185" class="gauge-svg">
+                            <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" />
+                            <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" />
+                            <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
+                            <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" />
+                            <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" />
+                            <text x="150" y="135" text-anchor="middle" class="text-4xl font-black fill-white">${wkgDisp}</text>
+                            <text x="150" y="160" text-anchor="middle" font-weight="800" fill="${cat.color}">${cat.label.toUpperCase()}</text>
+                            <g class="gauge-needle" style="transform: rotate(${rotation}deg)">
+                                <path d="M 147 150 L 150 45 L 153 150 Z" fill="white" />
+                                <circle cx="150" cy="150" r="6" fill="white" />
+                            </g>
+                        </svg>
+                    </div>
+                    <div id="zone-grid">${this.parseZoneTables()}</div>
+                `;
+                document.getElementById('content').innerHTML = html;
+            },
 
-                        <text x="150" y="135" text-anchor="middle" class="gauge-value-text">${displayWkg}</text>
-                        <text x="150" y="160" text-anchor="middle" class="gauge-label-text" fill="${catColor}">${categoryLabel}</text>
-                        <text x="150" y="180" text-anchor="middle" font-size="10" fill="#64748b" font-weight="700">WATTS PER KILOGRAM</text>
-                        <g class="gauge-needle" style="transform: rotate(${rotation}deg)">
-                            <path d="M 147 150 L 150 45 L 153 150 Z" fill="#f8fafc" />
-                            <circle cx="150" cy="150" r="6" fill="#f8fafc" stroke="#0f172a" stroke-width="2" />
-                        </g>
-                    </svg>
-                </div>
-                <div id="zone-grid">`;
-
-                // Render Power Zones
-                const paramSection = extractSection(md, "Training Parameters") || profileSection;
-                if (paramSection) {
-                    const lines = paramSection.split('\n');
-                    let foundCategories = {};
-                    let currentCategory = '';
-
-                    lines.forEach(line => {
-                        const trimmed = line.trim();
-                        if (trimmed.startsWith('###')) {
-                            currentCategory = trimmed.replace(/^###\s*/, '').trim();
-                            foundCategories[currentCategory] = [];
-                        } else if (currentCategory && trimmed.includes('Zone') && trimmed.includes(':')) {
-                            const cleanLine = trimmed.replace(/^[\s\*\-\+]+/, '').replace(/\*\*/g, '').trim();
-                            const sepIndex = cleanLine.indexOf(':');
-                            if (sepIndex !== -1) {
-                                const label = cleanLine.substring(0, sepIndex).trim();
-                                const range = cleanLine.substring(sepIndex + 1).trim();
-                                let colorClass = 'zone-z1';
-                                const lowLabel = label.toLowerCase();
-                                if (lowLabel.includes('zone 2')) colorClass = 'zone-z2';
-                                else if (lowLabel.includes('zone 3')) colorClass = 'zone-z3';
-                                else if (lowLabel.includes('zone 4')) colorClass = 'zone-z4';
-                                else if (lowLabel.includes('zone 5')) colorClass = 'zone-z5';
-
-                                foundCategories[currentCategory].push(`
-                                    <div class="zone-row ${colorClass}">
-                                        <span class="zone-label">${label}</span>
-                                        <span class="zone-range">${range}</span>
-                                    </div>
-                                `);
-                            }
-                        }
-                    });
-
-                    const cyclingKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('cycling'));
-                    const runningKey = Object.keys(foundCategories).find(k => k.toLowerCase().includes('running'));
-
-                    if (cyclingKey) html += `<div class="zone-card"><div class="zone-card-title">${cyclingKey}</div>${foundCategories[cyclingKey].join('')}</div>`;
-                    if (runningKey) html += `<div class="zone-card"><div class="zone-card-title">${runningKey}</div>${foundCategories[runningKey].join('')}</div>`;
-                }
+            parseZoneTables() {
+                const section = Parser.getSection(this.cachedMd, "Training Parameters");
+                let current = '', html = '', categories = {};
                 
-                html += `</div>`; // Close zone-grid
-
-                document.getElementById('markdown-content').innerHTML = html;
-                finalizeRendering();
-
-            } catch (err) { handleError(err); }
-        }
-
-        async function showFullPlan() {
-            updateUI('Endurance Master Plan', 'nav-full', true);
-            try {
-                const md = await fetchFile();
-                render(excludeSection(md, "Appendix C"));
-            } catch (err) { handleError(err); }
-        }
-
-        // --- UTILS ---
-
-        function findSectionByKeywords(md, keywords) {
-            const lines = md.split('\n');
-            let capturing = false, section = [];
-            for (let line of lines) {
-                const trimmed = line.trim();
-                const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
-                
-                if (isMainHeader) {
-                    const lowHeader = trimmed.toLowerCase();
-                    const matchesKeyword = keywords.some(k => lowHeader.includes(k.toLowerCase()));
-                    
-                    if (matchesKeyword) {
-                        capturing = true;
-                        section = [line];
-                        continue;
-                    } else if (capturing) {
-                        break;
+                section.split('\n').forEach(line => {
+                    if (line.trim().startsWith('###')) {
+                        // Clean titles to remove everything in parentheses
+                        current = line.replace(/###/g, '').split('(')[0].trim();
+                        categories[current] = [];
+                    } else if (current && line.includes(':')) {
+                        const [label, range] = line.replace(/[\*\-\+]/g, '').split(':');
+                        const zClass = label.toLowerCase().match(/zone (\d)/);
+                        categories[current].push(`<div class="zone-row z-${zClass ? zClass[1] : '1'}"><span class="font-bold">${label.trim()}</span><span class="font-mono text-slate-400">${range.trim()}</span></div>`);
                     }
-                }
-                if (capturing) section.push(line);
+                });
+
+                Object.keys(categories).forEach(k => {
+                    html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`;
+                });
+                return html;
+            },
+
+            toggleSidebar() {
+                document.getElementById('sidebar').classList.toggle('sidebar-closed');
+                document.getElementById('sidebar-overlay').classList.toggle('hidden');
             }
-            return section.join('\n').trim();
-        }
+        };
 
-        function extractSection(md, title) {
-            const lines = md.split('\n');
-            let capturing = false, section = [];
-            for (let line of lines) {
-                const trimmed = line.trim();
-                const isMainHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
-                if (isMainHeader && trimmed.toLowerCase().includes(title.toLowerCase())) { capturing = true; continue; }
-                if (capturing && isMainHeader) break;
-                if (capturing) section.push(line);
-            }
-            return section.length > 0 ? section.join('\n').trim() : "";
-        }
-
-        function excludeSection(md, title) {
-            const lines = md.split('\n');
-            let result = [], skipping = false;
-            for (let line of lines) {
-                const isMainHeader = line.trim().startsWith('##') && !line.trim().startsWith('###');
-                if (isMainHeader && line.toLowerCase().includes(title.toLowerCase())) { skipping = true; continue; }
-                if (skipping && isMainHeader) skipping = false;
-                if (!skipping) result.push(line);
-            }
-            return result.join('\n').trim();
-        }
-
-        function updateUI(title, navId, isMarkdown) {
-            document.getElementById('header-title').innerText = title;
-            document.getElementById('mobile-header-title').innerText = title;
-            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-            const activeNav = document.getElementById(navId);
-            if (activeNav) activeNav.classList.add('active');
-            const contentDiv = document.getElementById('markdown-content');
-            contentDiv.classList.add('hidden', 'opacity-0');
-            if (isMarkdown) contentDiv.classList.add('markdown-body');
-            else contentDiv.classList.remove('markdown-body');
-            document.getElementById('loader-container').classList.remove('hidden');
-            document.getElementById('error-container').classList.add('hidden');
-        }
-
-        function render(md) {
-            const contentDiv = document.getElementById('markdown-content');
-            contentDiv.innerHTML = marked.parse(md);
-            finalizeRendering();
-        }
-
-        function finalizeRendering() {
-            document.getElementById('loader-container').classList.add('hidden');
-            const contentDiv = document.getElementById('markdown-content');
-            contentDiv.classList.remove('hidden');
-            setTimeout(() => contentDiv.classList.remove('opacity-0'), 50);
-        }
-
-        function handleError(err) {
-            console.error(err);
-            document.getElementById('loader-container').classList.add('hidden');
-            document.getElementById('error-container').classList.remove('hidden');
-            document.getElementById('error-msg').innerText = "Unable to load data. The file might be missing or the connection was blocked.";
-        }
-
-        window.onload = showSchedule; 
+        window.onload = () => App.init();
     </script>
 </body>
 </html>
