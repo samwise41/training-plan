@@ -143,13 +143,22 @@
         </div>
     </aside>
 
+    <!-- TOP MOBILE BAR -->
+    <header class="lg:hidden bg-slate-900 border-b border-slate-800 sticky top-0 z-40 h-16 flex items-center px-4">
+        <button onclick="App.toggleSidebar()" class="p-2 text-slate-400 hover:text-white focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        <h1 class="ml-4 text-lg font-bold text-white tracking-tight" id="mobile-header-title">Weekly Schedule</h1>
+    </header>
+
     <div class="main-content">
-        <header class="max-w-5xl mx-auto px-4 pt-12 pb-8">
+        <!-- HEADER SECTION (DESKTOP) -->
+        <header class="max-w-5xl mx-auto px-4 pt-12 pb-8 hidden lg:block">
             <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight" id="header-title">Weekly Schedule</h1>
             <p class="mt-3 text-slate-400 text-lg">Synchronized with <span class="font-mono text-blue-400">endurance_plan.md</span></p>
         </header>
 
-        <main class="max-w-5xl mx-auto px-4 pb-20">
+        <main class="max-w-5xl mx-auto px-4 pt-8 lg:pt-0 pb-20">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
@@ -291,9 +300,12 @@
 
             navigate(view) {
                 const content = document.getElementById('content');
-                const titles = { schedule: 'Weekly Schedule', phases: 'Periodization', zones: 'Training Zones', full: 'Master Plan' };
+                const titles = { schedule: 'Weekly Schedule', phases: 'Periodization Phases', zones: 'Training Zones', full: 'Endurance Master Plan' };
                 
-                document.getElementById('header-title').innerText = titles[view];
+                // Update Desktop and Mobile titles
+                if (document.getElementById('header-title')) document.getElementById('header-title').innerText = titles[view];
+                if (document.getElementById('mobile-header-title')) document.getElementById('mobile-header-title').innerText = titles[view];
+
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                 document.getElementById(`nav-${view}`).classList.add('active');
                 
@@ -303,6 +315,14 @@
                     if (view === 'zones') this.renderZones();
                     else this.renderMarkdown(view);
                     content.classList.remove('opacity-0');
+                    
+                    // Close sidebar on mobile after selection
+                    if (window.innerWidth < 1024) {
+                        const sidebar = document.getElementById('sidebar');
+                        if (sidebar && sidebar.classList.contains('sidebar-open')) {
+                            this.toggleSidebar();
+                        }
+                    }
                 }, 200);
             },
 
@@ -369,8 +389,13 @@
             },
 
             toggleSidebar() {
-                document.getElementById('sidebar').classList.toggle('sidebar-closed');
-                document.getElementById('sidebar-overlay').classList.toggle('hidden');
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                if (sidebar) {
+                    sidebar.classList.toggle('sidebar-closed');
+                    sidebar.classList.toggle('sidebar-open');
+                }
+                if (overlay) overlay.classList.toggle('hidden');
             }
         };
 
