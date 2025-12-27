@@ -1,405 +1,233 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Athlete Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
-    
-    <style>
-        :root {
-            --bg-dark: #0f172a;
-            --bg-card: rgba(30, 41, 59, 0.3);
-            --border-slate: #1e293b;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-        }
+# **Master Training Plan 2026**
 
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-            overflow-x: hidden;
-        }
+**Last Updated:** December 27, 2025 **Status:** Phase 1 (Base/Prep) - Week 2 (Aerobic Base Building)
 
-        /* Nav highlighting */
-        .nav-link.active {
-            color: #3b82f6;
-            background-color: #1e293b;
-            border-right: 4px solid #3b82f6;
-        }
+## **1. Event Schedule**
 
-        /* Sidebar transitions */
-        #sidebar { transition: transform 0.3s ease-in-out; z-index: 60; }
-        .sidebar-open { transform: translateX(0); }
-        .sidebar-closed { transform: translateX(-100%); }
+The Master Training Plan is to provide structured training for the athlete over a long term. The events that are scheduled are listed below, but that will be dynamic as new events are signed up for.
 
-        @media (min-width: 1024px) {
-            #sidebar { transform: translateX(0); }
-            .main-content { margin-left: 260px; }
-        }
+The primary "A" races and secondary objectives for the 2026 season.
 
-        /* Markdown Styling Overrides */
-        .markdown-body {
-            background-color: transparent !important;
-            color: #cbd5e1 !important;
-        }
-        .markdown-body table {
-            display: table !important;
-            width: 100% !important; 
-            border-collapse: separate !important;
-            border-spacing: 0 !important;
-            border: 1px solid #334155 !important; 
-            border-radius: 8px !important; 
-            overflow: hidden !important;
-            margin-bottom: 2rem !important;
-        }
-        .markdown-body table th { 
-            background-color: #1e293b !important; 
-            color: #3b82f6 !important; 
-            padding: 12px !important; 
-            text-align: left !important;
-            text-transform: uppercase !important; /* All caps headers */
-            font-size: 0.75rem !important;
-            letter-spacing: 0.05em !important;
-        }
-        .markdown-body table td {
-            padding: 12px !important;
-            border-top: 1px solid #334155 !important;
-        }
-        .markdown-body table tr { background-color: var(--bg-dark) !important; }
+## **2. User Profile & Health**
 
-        /* Gauge Components */
-        .gauge-wrapper { width: 100%; max-width: 400px; margin: 0 auto 3rem; text-align: center; }
-        .gauge-needle { transition: transform 2s cubic-bezier(0.17, 0.67, 0.38, 1); transform-origin: 150px 150px; }
+### **Biometrics & Fitness**
 
-        /* Zone Layout */
-        #zone-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; }
-        @media (min-width: 768px) { #zone-grid { grid-template-columns: 1fr 1fr; } }
-        
-        .zone-card { background-color: var(--bg-card); border: 1px solid var(--border-slate); border-radius: 12px; padding: 1.5rem; }
-        
-        .zone-card-title {
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: var(--text-main);
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border-slate);
-            padding-bottom: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
+* **Weight:** 179 lbs.
 
-        .zone-row {
-            margin-bottom: 0.75rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px;
-            display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #64748b;
-        }
-        .z-1 { border-left-color: #94a3b8; }
-        .z-2 { border-left-color: #22c55e; }
-        .z-3 { border-left-color: #eab308; }
-        .z-4 { border-left-color: #f97316; }
-        .z-5 { border-left-color: #ef4444; }
-    </style>
-</head>
-<body class="min-h-screen">
+* **Cycling FTP:** 241 Watts (Validated Dec 23, 2025 via 60-min Alpe du Zwift).
 
-    <div id="sidebar-overlay" onclick="App.toggleSidebar()" class="fixed inset-0 bg-black/50 hidden z-50"></div>
+* **Running Fitness:**
 
-    <!-- SIDEBAR -->
-    <aside id="sidebar" class="fixed top-0 left-0 h-full w-[260px] bg-slate-900 border-r border-slate-800 sidebar-closed lg:sidebar-open flex flex-col">
-        <div class="p-6 border-b border-slate-800 flex justify-between items-center">
-            <span class="font-bold tracking-widest text-slate-400 text-xs uppercase">Navigation</span>
-            <button onclick="App.toggleSidebar()" class="lg:hidden text-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-        </div>
-        
-        <nav class="flex-1 py-4">
-            <button onclick="App.navigate('schedule')" id="nav-schedule" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3 active">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                Weekly Schedule
-            </button>
-            <button onclick="App.navigate('phases')" id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                Phases
-            </button>
-            <button onclick="App.navigate('zones')" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
-                Zones
-            </button>
-            <button onclick="App.navigate('full')" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Full Plan
-            </button>
-        </nav>
+  * **Lactate Threshold HR (LTHR):** 171 bpm (Validated Dec 26, 2025).
 
-        <div class="p-6 border-t border-slate-800">
-            <div class="flex items-center space-x-2">
-                <div id="sync-status-dot" class="w-2 h-2 rounded-full bg-slate-600"></div>
-                <span id="sync-status-text" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">OFFLINE</span>
-            </div>
-        </div>
-    </aside>
+  * **Functional Threshold Pace (FTP):** 7:45 min/mile (Wind-adjusted estimate).
 
-    <!-- TOP MOBILE BAR -->
-    <header class="lg:hidden bg-slate-900 border-b border-slate-800 sticky top-0 z-40 h-16 flex items-center px-4">
-        <button onclick="App.toggleSidebar()" class="p-2 text-slate-400 hover:text-white focus:outline-none">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </button>
-        <h1 class="ml-4 text-lg font-bold text-white tracking-tight" id="mobile-header-title">Weekly Schedule</h1>
-    </header>
+  * **Longest Run:** 9 miles.
 
-    <div class="main-content">
-        <!-- HEADER SECTION (DESKTOP) -->
-        <header class="max-w-5xl mx-auto px-4 pt-12 pb-8 hidden lg:block">
-            <h1 class="text-4xl font-extrabold text-white sm:text-5xl tracking-tight" id="header-title">Weekly Schedule</h1>
-            <p class="mt-3 text-slate-400 text-lg">Synchronized with <span class="font-mono text-blue-400">endurance_plan.md</span></p>
-        </header>
+  * **5K Prediction:** \~23:42.
 
-        <main class="max-w-5xl mx-auto px-4 pt-8 lg:pt-0 pb-20">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
-                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
-                </div>
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
-                    <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
-                </div>
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
-                    <div id="stat-event">
-                        <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
-                        <p class="text-xs font-normal text-slate-400 mt-1" id="stat-event-countdown">--</p>
-                    </div>
-                </div>
-            </div>
+* **Swimming Fitness:** Beginner. Focus on form/drills with coach.
 
-            <div id="loader" class="flex flex-col items-center py-20 hidden">
-                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
-            </div>
+### **Health & Injury Management**
 
-            <div id="content" class="markdown-body opacity-0 transition-opacity duration-500"></div>
-        </main>
-    </div>
+* **History:** Prior IT Band tightness (currently asymptomatic/non-issue).
 
-    <script>
-        /**
-         * CONFIGURATION
-         */
-        const CONFIG = {
-            SOURCE_FILE: "endurance_plan.md",
-            WKG_SCALE: { min: 1.0, max: 6.0 },
-            CATEGORIES: [
-                { threshold: 5.05, label: "Exceptional", color: "#a855f7" },
-                { threshold: 3.93, label: "Very Good",   color: "#3b82f6" },
-                { threshold: 2.79, label: "Good",        color: "#22c55e" },
-                { threshold: 2.23, label: "Fair",        color: "#f97316" },
-                { threshold: 0.00, label: "Untrained",   color: "#ef4444" }
-            ]
-        };
+* **Current Status:** No active limitations. Full training volume approved.
 
-        /**
-         * ATHLETE DATA PARSER
-         */
-        const Parser = {
-            getSection(md, title) {
-                const lines = md.split('\n');
-                let capturing = false, section = [];
-                for (let line of lines) {
-                    const trimmed = line.trim();
-                    const isHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
-                    if (isHeader && trimmed.toLowerCase().includes(title.toLowerCase())) { capturing = true; continue; }
-                    if (capturing && isHeader) break;
-                    if (capturing) section.push(line);
-                }
-                return section.join('\n').trim();
-            },
+### **Training Availability**
 
-            getBiometrics(md) {
-                const profileSection = this.getSection(md, "2. User Profile & Health") || this.getSection(md, "Biometrics");
-                const ftp = profileSection.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
-                const weight = profileSection.match(/Weight[^0-9]*(\d{1,3})/i);
-                return {
-                    watts: ftp ? parseInt(ftp[1]) : 0,
-                    weight: weight ? parseInt(weight[1]) : 0
-                };
-            }
-        };
+* **Weekly Volume:** 6 Days/Week.
 
-        /**
-         * CORE APP LOGIC
-         */
-        const App = {
-            cachedMd: "",
-            
-            async init() {
-                try {
-                    const response = await fetch(`./${CONFIG.SOURCE_FILE}?t=${Date.now()}`);
-                    if (!response.ok) throw new Error("Sync Failed");
-                    this.cachedMd = await response.text();
-                    this.updateStats();
-                    this.navigate('schedule');
-                    this.updateSyncStatus(true);
-                } catch (e) {
-                    this.updateSyncStatus(false);
-                    document.getElementById('content').innerHTML = `<p class='text-red-400'>Error loading ${CONFIG.SOURCE_FILE}</p>`;
-                }
-            },
+* **Weekdays:** Max 1.5 hours per session.
 
-            updateSyncStatus(isLive) {
-                const dot = document.getElementById('sync-status-dot');
-                const text = document.getElementById('sync-status-text');
-                if (dot && text) {
-                    dot.className = `w-2 h-2 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`;
-                    text.innerText = isLive ? "LIVE SYNC" : "OFFLINE";
-                    text.className = `text-[10px] font-bold uppercase tracking-widest ${isLive ? 'text-green-400' : 'text-red-400'}`;
-                }
-            },
+* **Saturdays:** 3–4 hours (Long Sessions).
 
-            updateStats() {
-                // Phase and Week stats
-                const status = this.cachedMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
-                document.getElementById('stat-phase').innerText = status ? status[1].trim() : "--";
-                document.getElementById('stat-week').innerText = status ? status[2].trim() : "--";
-                
-                // Event logic with countdown
-                const eventSection = Parser.getSection(this.cachedMd, "Event Schedule");
-                const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
-                
-                const nameEl = document.getElementById('stat-event-name');
-                const countdownEl = document.getElementById('stat-event-countdown');
+* **Sundays:** Rest Day (Strict No-Exercise).
 
-                if (eventLines.length > 0) {
-                    const parts = eventLines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
-                    if (parts.length >= 2) {
-                        const eventDate = new Date(parts[0]);
-                        const eventName = parts[1];
-                        nameEl.innerText = eventName;
-                        
-                        if (!isNaN(eventDate)) {
-                            const today = new Date(); today.setHours(0,0,0,0);
-                            const diff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-                            if (diff < 0) countdownEl.innerText = "Completed";
-                            else if (diff === 0) countdownEl.innerText = "Event Today!";
-                            else {
-                                const w = Math.floor(diff / 7);
-                                const d = diff % 7;
-                                let str = "";
-                                if (w > 0) str += `${w} week${w > 1 ? 's' : ''}`;
-                                if (w > 0 && d > 0) str += " and ";
-                                if (d > 0 || w === 0) str += `${d} day${d !== 1 ? 's' : ''}`;
-                                countdownEl.innerText = `${str} to go`;
-                            }
-                        } else countdownEl.innerText = "Date TBD";
-                    } else { nameEl.innerText = "No Event"; countdownEl.innerText = "--"; }
-                } else { nameEl.innerText = "No Event"; countdownEl.innerText = "--"; }
-            },
+## **3. Training Parameters**
 
-            navigate(view) {
-                const content = document.getElementById('content');
-                const titles = { schedule: 'Weekly Schedule', phases: 'Periodization Phases', zones: 'Training Zones', full: 'Endurance Master Plan' };
-                
-                // Update Desktop and Mobile titles
-                if (document.getElementById('header-title')) document.getElementById('header-title').innerText = titles[view];
-                if (document.getElementById('mobile-header-title')) document.getElementById('mobile-header-title').innerText = titles[view];
+**Methodology:** 80/20 Science-Based Periodization.
 
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                document.getElementById(`nav-${view}`).classList.add('active');
-                
-                content.classList.add('opacity-0');
-                
-                setTimeout(() => {
-                    if (view === 'zones') this.renderZones();
-                    else this.renderMarkdown(view);
-                    content.classList.remove('opacity-0');
-                    
-                    // Close sidebar on mobile after selection
-                    if (window.innerWidth < 1024) {
-                        const sidebar = document.getElementById('sidebar');
-                        if (sidebar && sidebar.classList.contains('sidebar-open')) {
-                            this.toggleSidebar();
-                        }
-                    }
-                }, 200);
-            },
+* **80%:** Zone 2 - Builds mitochondrial density.
 
-            renderMarkdown(view) {
-                const mdMap = {
-                    schedule: Parser.getSection(this.cachedMd, "Weekly Schedule"),
-                    phases: Parser.getSection(this.cachedMd, "Periodization"),
-                    full: this.cachedMd
-                };
-                document.getElementById('content').innerHTML = marked.parse(mdMap[view]);
-            },
+* **20%:** Zone 4/5 - Raises the performance ceiling.
 
-            renderZones() {
-                const { watts, weight } = Parser.getBiometrics(this.cachedMd);
-                const weightKg = weight * 0.453592;
-                const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
-                const wkgDisp = wkgNum.toFixed(2);
-                
-                const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
-                const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
-                const rotation = -90 + (percent * 180);
+### **Cycling Power Zones (Based on 241W FTP)**
 
-                const html = `
-                    <div class="gauge-wrapper">
-                        <svg viewBox="0 0 300 185" class="gauge-svg">
-                            <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" />
-                            <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" />
-                            <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
-                            <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" />
-                            <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" />
-                            <text x="150" y="135" text-anchor="middle" class="text-4xl font-black fill-white">${wkgDisp}</text>
-                            <text x="150" y="160" text-anchor="middle" font-weight="800" fill="${cat.color}">${cat.label.toUpperCase()}</text>
-                            <g class="gauge-needle" style="transform: rotate(${rotation}deg)">
-                                <path d="M 147 150 L 150 45 L 153 150 Z" fill="white" />
-                                <circle cx="150" cy="150" r="6" fill="white" />
-                            </g>
-                        </svg>
-                    </div>
-                    <div id="zone-grid">${this.parseZoneTables()}</div>
-                `;
-                document.getElementById('content').innerHTML = html;
-            },
+* **Zone 1:** < 133W
 
-            parseZoneTables() {
-                const section = Parser.getSection(this.cachedMd, "Training Parameters");
-                let current = '', html = '', categories = {};
-                
-                section.split('\n').forEach(line => {
-                    if (line.trim().startsWith('###')) {
-                        // Clean titles to remove everything in parentheses
-                        current = line.replace(/###/g, '').split('(')[0].trim();
-                        categories[current] = [];
-                    } else if (current && line.includes(':')) {
-                        const [label, range] = line.replace(/[\*\-\+]/g, '').split(':');
-                        const zClass = label.toLowerCase().match(/zone (\d)/);
-                        categories[current].push(`<div class="zone-row z-${zClass ? zClass[1] : '1'}"><span class="font-bold">${label.trim()}</span><span class="font-mono text-slate-400">${range.trim()}</span></div>`);
-                    }
-                });
+* **Zone 2:** 134W – 180W
 
-                Object.keys(categories).forEach(k => {
-                    html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`;
-                });
-                return html;
-            },
+* **Zone 3:** 181W – 216W
 
-            toggleSidebar() {
-                const sidebar = document.getElementById('sidebar');
-                const overlay = document.getElementById('sidebar-overlay');
-                if (sidebar) {
-                    sidebar.classList.toggle('sidebar-closed');
-                    sidebar.classList.toggle('sidebar-open');
-                }
-                if (overlay) overlay.classList.toggle('hidden');
-            }
-        };
+* **Zone 4:** 217W – 253W
 
-        window.onload = () => App.init();
-    </script>
-</body>
-</html>
+* **Zone 5:** 254W – 289W
+
+### **Running Heart Rate Zones (Based on 171 bpm LTHR)**
+
+* **Zone 1:** < 139 bpm
+
+* **Zone 2:** 140 – 152 bpm
+
+* **Zone 3:** 153 – 161 bpm
+
+* **Zone 4:** 162 – 170 bpm
+
+* **Zone 5a:** 171 – 174 bpm
+
+* **Zone 5b:** 175 – 181 bpm
+
+* **Zone 5c:** > 182 bpm
+
+## **4. Periodization Phases**
+
+## **5. Weekly Schedule & Logistics**
+
+**Current Phase:** Phase 1 (Base/Prep) **Current Week:** Week 2 (Aerobic Base Building)
+
+| Day | Activity | Duration / Distance | Zone / Intensity | Focus / Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **Monday** | **Swim** | ~500m - 800m | Zone 1 (RPE 3-4) | **Technique:** Catch & Pull drills. Ignore the clock. Focus on breathing rhythm. |
+| **Tuesday** | **Run** | 45 mins | Zone 2 (HR: 140-152) | **Aerobic Base:** Flat terrain. Keep cadence high (170+ spm). |
+| **Wednesday** | **Bike** | 60 mins | Zone 2 (134W - 180W) | **Steady State:** Remain seated. Focus on smooth pedal strokes. |
+| **Thursday** | **Prehab** | 30 mins | Recovery | **Strength:** Banded Leg Raises (2x15), Planks (3x1m). **No Impact.** |
+| **Friday** | **Run** | 40 mins | Zone 2 (HR: 140-152) | **Volume:** Easy aerobic miles. Focus on maintaining posture in final 10 mins. |
+| **Saturday** | **Long Bike** | 3.0 Hours | Zone 2 (134W - 160W) | **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. |
+| **Sunday** | **Rest** | - | - | **Total Recovery.** Optional "Flush" protocol (Appendix D) if stiffness is high. |
+
+## **6. Fueling Strategy & Log**
+
+**Target:** 60-90g Carbs/Hour for long events.
+
+**Commercial Products**
+
+* Pure Organic Fruit Bars: 15g Carbs per bar.
+
+* Rice Krispie Treat: 17g Carbs per bar
+
+**Active Testing Recipes**
+
+* Recipe V2 (Current Testing):
+
+  * 180g Table Sugar (Sucrose)
+
+  * 250ml Water
+
+  * 1/2 tsp Salt (\~1200mg Sodium)
+
+  * 1/4 tsp Citric Acid
+
+**Testing Log**
+
+## **7. Progress Tracker**
+
+**Key Milestones**
+
+* **Dec 23, 2025:** Set new Cycling FTP Baseline: 241W.
+
+* **Dec 23, 2025:** Validated "Finishing Kick" (Held >328W for final 5 mins).
+
+* **Dec 26, 2025:** Set new Running LTHR Baseline: 171 bpm.
+
+## **8. Documentation Workflow**
+
+> **CRITICAL:** Maintain all header naming conventions exactly as written. These specific headers drive the automated dashboard logic. Do not rename or remove headers during updates.
+
+**Source of Truth:** [endurance_plan.md](https://github.com/samwise41/training-plan/blob/main/endurance_plan.md)
+
+1. **Import:** pull the latest Markdown source from the GitHub repository above.
+
+2. **Update:** Log results in Section 5 (Planned vs. Actual). Ensure section headers remain unchanged.
+
+3. **Export:** Copy raw Markdown from the "Raw Source View" in this chat.
+
+4. **Save:** Commit and push the updated Markdown to your GitHub repository.
+
+## **Appendix A: Naming Conventions (For Calendar Export)**
+
+**Format:** `[TYPE] - Workout Name - Distance/Time` **Example:** `[RUN] - Endurance Run - 6 miles`
+
+## **Appendix B: Fitness Test Reports**
+
+### **1. 30-Min Run Field Test Analysis (Dec 26, 2025)**
+
+* **LTHR:** 171 bpm
+
+* **Adjusted FTP:** \~7:40 – 7:45 min/mile
+
+### **2. Alpe du Zwift FTP Test Analysis (Dec 23, 2025)**
+
+* **Result:** 241 Watts
+
+* **Finishing Kick:** >328 Watts (Final 5 mins)
+
+## **Appendix C: Training History Log**
+
+| **Status** | **Day** | **Planned Workout** | **Actual Workout** | **Notes / Targets** |
+| :--- | :--- | :--- | :--- | :--- |
+| MISSED | 12/22/25 - Mon | Swim | N/A | Rest / Light Mobility |
+| COMPLETED | 12/23/25 - Tue | FTP Test (Bike) | Alpe du Zwift | Result: 241W. |
+| COMPLETED | 12/24/25 - Wed | Recovery [BIKE] | Recovery [BIKE] | 40 mins Z1 Spin. |
+| COMPLETED | 12/25/25 - Thu | Endurance [BIKE] | Endurance [BIKE] | 60 mins Steady Z2. |
+| COMPLETED | 12/26/25 - Fri | Run Test [RUN] | LTHR Test | 30m TT. Result: 171 bpm. |
+| COMPLETED | 12/27/25 - Sat | Long Ride [BIKE] | 1h Bike + 40m Swim | Swapped Long Ride for Brick. |
+| PLANNED | 12/28/25 - Sun | Rest | TBD | Weekly Planning Check-in. |
+
+# **Appendix D: Athlete Handover & Training Overview**
+
+## **Project Overview**
+
+This document serves as a high-level handover for a transition between coaches or for initiating a new AI session. It outlines the specific training architecture we have developed, the athlete's non-negotiable requirements for documentation, and a guide on how to utilize the Master Training Plan effectively.
+
+## **1. Summary of Document Sections**
+
+### **Section 1: Athlete Profile & Baseline Metrics**
+
+* **Focus:** The "Starting Point."
+
+* **Content:** This section contains current physiological data, injury history, and specific performance goals. It defines the "North Star" for the entire program.
+
+* **Coaching Note:** Use this to ensure every prescribed session aligns with the athlete's long-term objectives and physical constraints.
+
+### **Section 2: The Master Training Plan (MTP)**
+
+* **Focus:** The "Roadmap."
+
+* **Content:** A periodized calendar detailing mesocycles (phases) and microcycles (weeks). It includes specific endurance protocols, interval structures, and recovery sessions.
+
+* **Coaching Note:** This is the primary living document. It should be updated weekly based on the athlete's subjective feedback and actual output data.
+
+## **2. Requirements for the Master Plan**
+
+The athlete has established specific requirements for how the training must be documented and managed:
+
+1. **Transparency:** All training intensity must be clearly defined and based on the athlete's established **cycling power zones** and **heart rate zones**. Prescriptions should refer to specific percentages of FTP (Functional Threshold Power) or Max HR to ensure objective scaling.
+
+2. **Flexibility:** The plan must include "audible" options for days when recovery is low or external stress is high. This ensures the athlete remains consistent without overtraining.
+
+3. **Data-Driven:** Every 4th week is a mandatory deload/testing week. During this time, data from the previous block must be analyzed to adjust the zones and targets for the following block.
+
+## **3. How to Use the Master Plan**
+
+To ensure a seamless transition and continuity of training, the incoming coach should follow these steps:
+
+1. **Review the Baseline:** Start with Section 1 to understand the "Why" behind the current focus and movement selections.
+
+2. **Identify Current Placement in the MTP:**
+
+   * **Review the Periodization Phase Table:** Locate the high-level table that breaks the year/season into specific blocks.
+
+   * **Determine Current Phase:** Identify which phase we are currently in (e.g., Base 1, Build, or Peak). This is found at the beginning of the document under the first headers.
+
+   * **Determine Current Week:** Analyze where the athlete is within that phase (e.g., Week 2 of a 4-week Build block). This is found at the beginning of the document under the first headers.
+
+   * **Confirm that you determined the correct week:** Confirm with the athlete that you identified the correct week of the plan.
+
+3. **Review the Training history:** Review the training history in Appendix C in addition to the current week schedule to identify overall progress and identify best days for certain training sessions.
+
+4. **Establish the Next Microcycle:** Once the current position is identified, establish the specific schedule for the next week. This involves aligning the intensity and volume with the goals of that specific phase to maximize training adaptations while respecting the progressive overload logic built into the plan.
+
+5. **Verify the Zones:** Ensure that the power and heart rate zones used in the upcoming week's prescriptions match the most recent testing data found in the baseline metrics.
+
+6. **Iterative Adjustments:** At the end of each microcycle, review the athlete's notes in the MTP to determine if the volume or intensity for the following week needs to be modulated.</textarea>
