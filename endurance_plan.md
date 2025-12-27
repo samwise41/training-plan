@@ -152,3 +152,58 @@ The primary "A" races and secondary objectives for the 2026 season.
 | :--- | :--- | :--- | :--- | 
 | 2025-12-28 | TBD | TBD | Baseline testing week complete. | 
 
+# Appendix D: Athlete Handover & Training Overview
+
+## Project Overview
+
+This document serves as a high-level handover for a transition between coaches or for initiating a new AI session. It outlines the specific training architecture we have developed, the athlete's non-negotiable requirements for documentation, and a guide on how to utilize the Master Training Plan effectively.
+
+## 1. Summary of Document Sections
+
+### Section 1: Athlete Profile & Baseline Metrics
+
+* **Focus:** The "Starting Point."
+
+* **Content:** This section contains current physiological data, injury history, and specific performance goals. It defines the "North Star" for the entire program.
+
+* **Coaching Note:** Use this to ensure every prescribed session aligns with the athlete's long-term objectives and physical constraints.
+
+### Section 2: The Master Training Plan (MTP)
+
+* **Focus:** The "Roadmap."
+
+* **Content:** A periodized calendar detailing mesocycles (phases) and microcycles (weeks). It includes specific endurance protocols, interval structures, and recovery sessions.
+
+* **Coaching Note:** This is the primary living document. It should be updated weekly based on the athlete's subjective feedback and actual output data.
+
+## 2. Requirements for the Master Plan
+
+The athlete has established specific requirements for how the training must be documented and managed:
+
+1. **Transparency:** All training intensity must be clearly defined and based on the athlete's established **cycling power zones** and **heart rate zones**. Prescriptions should refer to specific percentages of FTP (Functional Threshold Power) or Max HR to ensure objective scaling.
+
+2. **Flexibility:** The plan must include "audible" options for days when recovery is low or external stress is high. This ensures the athlete remains consistent without overtraining.
+
+3. **Data-Driven:** Every 4th week is a mandatory deload/testing week. During this time, data from the previous block must be analyzed to adjust the zones and targets for the following block.
+
+## 3. How to Use the Master Plan
+
+To ensure a seamless transition and continuity of training, the incoming coach should follow these steps:
+
+1. **Review the Baseline:** Start with Section 1 to understand the "Why" behind the current focus and movement selections.
+
+2. **Identify Current Placement in the MTP:**
+
+   * **Review the Periodization Phase Table:** Locate the high-level table that breaks the year/season into specific blocks.
+
+   * **Determine Current Phase:** Identify which phase we are currently in (e.g., Base 1, Build, or Peak).
+
+   * **Determine Current Week:** Analyze where the athlete is within that phase (e.g., Week 2 of a 4-week Build block).
+
+3. **Establish the Next Microcycle:** Once the current position is identified, establish the specific schedule for the next week. This involves aligning the intensity and volume with the goals of that specific phase to maximize training adaptations while respecting the progressive overload logic built into the plan.
+
+4. **Verify the Zones:** Ensure that the power and heart rate zones used in the upcoming week's prescriptions match the most recent testing data found in the baseline metrics.
+
+5. **Iterative Adjustments:** At the end of each microcycle, review the athlete's notes in the MTP to determine if the volume or intensity for the following week needs to be modulated.
+
+
