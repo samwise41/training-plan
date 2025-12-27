@@ -1,6 +1,6 @@
 # Master Training Plan 2026
 
-**Last Updated:** December 26, 2025
+**Last Updated:** December 27, 2025
 **Status:** Phase 1 (Base/Prep) - Week 1 (Baseline Testing)
 
 ## 1. Event Schedule
@@ -78,15 +78,15 @@ The primary "A" races and secondary objectives for the 2026 season.
 **Current Phase:** Phase 1 (Base/Prep)
 **Current Week:** Week 1 (Baseline Testing)
 
-| **Status** | **Day** | **Workout Type** | **Description / Targets** | 
-| :--- | :--- | :--- | :--- | 
-| MISSED | Mon | Swim | Rest / Light Mobility | 
-| COMPLETED | Tue | FTP Test | Alpe du Zwift (60 min). Result: 241W. | 
-| COMPLETED | Wed | Recovery [BIKE] - Leg Openers | 40 mins Z1 Spin. Prehab: Leg Raises. | 
-| COMPLETED | Thu | Endurance [BIKE] - Z2 | 60 mins Steady Z2 (134-180W). | 
-| COMPLETED | Fri | Run Test [RUN] - LTHR Test | 45 mins total. 30m TT. **Result: 171 bpm.** | 
-|  | Sat | Long Ride [BIKE] - Fueling | 2.5 hours Z2 Steady. Test DIY Gel V2. | 
-|  | Sun | Rest | No Exercise. Weekly Planning Check-in. | 
+| **Status** | **Day** | **Planned Workout** | **Actual Workout** | **Notes / Targets** | 
+| :--- | :--- | :--- | :--- | :--- | 
+| MISSED | Mon | Swim | N/A | Rest / Light Mobility | 
+| COMPLETED | Tue | FTP Test (Bike) | Alpe du Zwift | Result: 241W. | 
+| COMPLETED | Wed | Recovery [BIKE] | Recovery [BIKE] | 40 mins Z1 Spin. | 
+| COMPLETED | Thu | Endurance [BIKE] | Endurance [BIKE] | 60 mins Steady Z2. | 
+| COMPLETED | Fri | Run Test [RUN] | LTHR Test | 30m TT. Result: 171 bpm. | 
+| COMPLETED | Sat | Long Ride [BIKE] | 1h Bike + 40m Swim | Swapped Long Ride for Brick. | 
+| PLANNED | Sun | Rest | TBD | Weekly Planning Check-in. | 
 
 ## 6. Fueling Strategy & Log
 
@@ -108,7 +108,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 **Testing Log**
 | Date | Event | Recipe | Outcome / Notes |
 | :--- | :--- | :--- | :--- |
-| Dec 27 | 2.5h Indoor Ride | V2 | Pending Test... |
+| Dec 27 | 2.5h Indoor Ride | V2 | Planned long ride replaced by bike/swim. |
 
 ## 7. Progress Tracker
 
@@ -120,10 +120,12 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 ## 8. Documentation Workflow
 
+> **CRITICAL:** Maintain all header naming conventions exactly as written. These specific headers drive the automated dashboard logic. Do not rename or remove headers during updates.
+
 **Source of Truth:** [endurance_plan.md](https://github.com/samwise41/training-plan/blob/main/endurance_plan.md)
 
 1. **Import:** pull the latest Markdown source from the GitHub repository above.
-2. **Update:** Log results and adjust schedule. Ensure section headers remain unchanged.
+2. **Update:** Log results in Section 5 (Planned vs. Actual). Ensure section headers remain unchanged.
 3. **Export:** Copy raw Markdown from the "Raw Source View" in this chat.
 4. **Save:** Commit and push the updated Markdown to your GitHub repository.
 
@@ -143,3 +145,10 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 * **Result:** 241 Watts
 * **Finishing Kick:** >328 Watts (Final 5 mins)
+
+## Appendix C: Training History Log
+
+| **Week Ending** | **Total Volume** | **Compliance %** | **Notes** | 
+| :--- | :--- | :--- | :--- | 
+| 2025-12-28 | TBD | TBD | Baseline testing week complete. | 
+
