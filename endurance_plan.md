@@ -5,6 +5,8 @@
 
 ## 1. Event Schedule
 
+The Master Training Plan is to provide structured training for the athlete over a long term. The events that are scheduled are listed below, but that will be dynamic as new events are signed up for. 
+
 The primary "A" races and secondary objectives for the 2026 season.
 
 | **Date** | **Event Type** | **Goal** | **Priority** | 
@@ -196,9 +198,11 @@ To ensure a seamless transition and continuity of training, the incoming coach s
 
    * **Review the Periodization Phase Table:** Locate the high-level table that breaks the year/season into specific blocks.
 
-   * **Determine Current Phase:** Identify which phase we are currently in (e.g., Base 1, Build, or Peak).
+   * **Determine Current Phase:** Identify which phase we are currently in (e.g., Base 1, Build, or Peak). This is found at the beginning of the document under the first headers.
 
-   * **Determine Current Week:** Analyze where the athlete is within that phase (e.g., Week 2 of a 4-week Build block).
+   * **Determine Current Week:** Analyze where the athlete is within that phase (e.g., Week 2 of a 4-week Build block). This is found at the beginning of the document under the first headers.
+  
+   * **Confirm that you determined the correct week:** Confirm with the athlete that you identified the correct week of the plan.
 
 3. **Establish the Next Microcycle:** Once the current position is identified, establish the specific schedule for the next week. This involves aligning the intensity and volume with the goals of that specific phase to maximize training adaptations while respecting the progressive overload logic built into the plan.
 
