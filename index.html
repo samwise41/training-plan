@@ -61,6 +61,9 @@
             color: #3b82f6 !important; 
             padding: 12px !important; 
             text-align: left !important;
+            text-transform: uppercase !important; /* All caps headers */
+            font-size: 0.75rem !important;
+            letter-spacing: 0.05em !important;
         }
         .markdown-body table td {
             padding: 12px !important;
@@ -349,7 +352,8 @@
                 
                 section.split('\n').forEach(line => {
                     if (line.trim().startsWith('###')) {
-                        current = line.replace(/###/g, '').trim();
+                        // Clean titles to remove everything in parentheses
+                        current = line.replace(/###/g, '').split('(')[0].trim();
                         categories[current] = [];
                     } else if (current && line.includes(':')) {
                         const [label, range] = line.replace(/[\*\-\+]/g, '').split(':');
