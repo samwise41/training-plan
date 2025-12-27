@@ -81,14 +81,14 @@ The primary "A" races and secondary objectives for the 2026 season.
 **Current Week:** Week 1 (Baseline Testing)
 
 | **Status** | **Day** | **Planned Workout** | **Actual Workout** | **Notes / Targets** | 
-| :--- | :--- | :--- | :--- | :--- | 
-| MISSED | Mon | Swim | N/A | Rest / Light Mobility | 
-| COMPLETED | Tue | FTP Test (Bike) | Alpe du Zwift | Result: 241W. | 
-| COMPLETED | Wed | Recovery [BIKE] | Recovery [BIKE] | 40 mins Z1 Spin. | 
-| COMPLETED | Thu | Endurance [BIKE] | Endurance [BIKE] | 60 mins Steady Z2. | 
-| COMPLETED | Fri | Run Test [RUN] | LTHR Test | 30m TT. Result: 171 bpm. | 
-| COMPLETED | Sat | Long Ride [BIKE] | 1h Bike + 40m Swim | Swapped Long Ride for Brick. | 
-| PLANNED | Sun | Rest | TBD | Weekly Planning Check-in. | 
+| :--- | :--- | :--- | :--- | :--- |
+| MISSED | 12/22/25 - Mon | Swim | N/A | Rest / Light Mobility | 
+| COMPLETED | 12/23/25 - Tue | FTP Test (Bike) | Alpe du Zwift | Result: 241W. | 
+| COMPLETED | 12/24/25 - Wed | Recovery [BIKE] | Recovery [BIKE] | 40 mins Z1 Spin. | 
+| COMPLETED | 12/25/25 - Thu | Endurance [BIKE] | Endurance [BIKE] | 60 mins Steady Z2. | 
+| COMPLETED | 12/26/25 - Fri | Run Test [RUN] | LTHR Test | 30m TT. Result: 171 bpm. | 
+| COMPLETED | 12/27/25 - Sat | Long Ride [BIKE] | 1h Bike + 40m Swim | Swapped Long Ride for Brick. | 
+| PLANNED | 12/28/25 - Sun | Rest | TBD | Weekly Planning Check-in. | 
 
 ## 6. Fueling Strategy & Log
 
@@ -150,9 +150,15 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 ## Appendix C: Training History Log
 
-| **Week Ending** | **Total Volume** | **Compliance %** | **Notes** | 
-| :--- | :--- | :--- | :--- | 
-| 2025-12-28 | TBD | TBD | Baseline testing week complete. | 
+| **Status** | **Day** | **Planned Workout** | **Actual Workout** | **Notes / Targets** | 
+| :--- | :--- | :--- | :--- | :--- |
+| MISSED | 12/22/25 - Mon | Swim | N/A | Rest / Light Mobility | 
+| COMPLETED | 12/23/25 - Tue | FTP Test (Bike) | Alpe du Zwift | Result: 241W. | 
+| COMPLETED | 12/24/25 - Wed | Recovery [BIKE] | Recovery [BIKE] | 40 mins Z1 Spin. | 
+| COMPLETED | 12/25/25 - Thu | Endurance [BIKE] | Endurance [BIKE] | 60 mins Steady Z2. | 
+| COMPLETED | 12/26/25 - Fri | Run Test [RUN] | LTHR Test | 30m TT. Result: 171 bpm. | 
+| COMPLETED | 12/27/25 - Sat | Long Ride [BIKE] | 1h Bike + 40m Swim | Swapped Long Ride for Brick. | 
+| PLANNED | 12/28/25 - Sun | Rest | TBD | Weekly Planning Check-in. | 
 
 # Appendix D: Athlete Handover & Training Overview
 
@@ -204,10 +210,12 @@ To ensure a seamless transition and continuity of training, the incoming coach s
   
    * **Confirm that you determined the correct week:** Confirm with the athlete that you identified the correct week of the plan.
 
-3. **Establish the Next Microcycle:** Once the current position is identified, establish the specific schedule for the next week. This involves aligning the intensity and volume with the goals of that specific phase to maximize training adaptations while respecting the progressive overload logic built into the plan.
+3. **Review the Training history:** Review the training history in Appendix C in addition to the current week schedule to identify overall progress and identify best days for certain training sessions.
 
-4. **Verify the Zones:** Ensure that the power and heart rate zones used in the upcoming week's prescriptions match the most recent testing data found in the baseline metrics.
+4. **Establish the Next Microcycle:** Once the current position is identified, establish the specific schedule for the next week. This involves aligning the intensity and volume with the goals of that specific phase to maximize training adaptations while respecting the progressive overload logic built into the plan.
 
-5. **Iterative Adjustments:** At the end of each microcycle, review the athlete's notes in the MTP to determine if the volume or intensity for the following week needs to be modulated.
+5. **Verify the Zones:** Ensure that the power and heart rate zones used in the upcoming week's prescriptions match the most recent testing data found in the baseline metrics.
+
+6. **Iterative Adjustments:** At the end of each microcycle, review the athlete's notes in the MTP to determine if the volume or intensity for the following week needs to be modulated.
 
 
