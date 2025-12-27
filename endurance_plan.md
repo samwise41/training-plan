@@ -120,10 +120,12 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 ## 8. Documentation Workflow
 
-1. **Import:** At start of session, upload latest plan from Google Drive.
-2. **Update:** Log results and adjust schedule.
-3. **Export:** Copy raw Markdown from the "Raw Source View".
-4. **Save:** Paste into Google Drive source file.
+**Source of Truth:** [endurance_plan.md](https://github.com/samwise41/training-plan/blob/main/endurance_plan.md)
+
+1. **Import:** pull the latest Markdown source from the GitHub repository above.
+2. **Update:** Log results and adjust schedule. Ensure section headers remain unchanged.
+3. **Export:** Copy raw Markdown from the "Raw Source View" in this chat.
+4. **Save:** Commit and push the updated Markdown to your GitHub repository.
 
 ## Appendix A: Naming Conventions (For Calendar Export)
 
