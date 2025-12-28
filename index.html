@@ -111,8 +111,8 @@
             border-radius: 0.75rem;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-            min-height: 5rem;
+            gap: 0.4rem;
+            min-height: 4.5rem;
         }
 
         /* Debug Styles */
@@ -261,73 +261,68 @@
 
             parseGearMatrix(md) {
                 const results = { bike: [], run: [] };
-                
-                // Segment Markdown by headers more reliably
-                const sections = md.split(/^#+/m).map(s => s.trim());
-                
-                ['Cycling', 'Running'].forEach(type => {
-                    const key = type === 'Cycling' ? 'bike' : 'run';
-                    
-                    // Look for the section heading specifically
-                    const targetSection = sections.find(s => {
-                        const firstLine = s.split('\n')[0].toLowerCase();
-                        return firstLine.includes(type.toLowerCase()) && !firstLine.includes('gear');
-                    });
-                    
-                    if (!targetSection) return;
+                const lines = md.split('\n');
+                let currentType = null;
+                let inTable = false;
 
-                    const lines = targetSection.split('\n');
-                    let inTable = false;
+                for (let line of lines) {
+                    const trimmed = line.trim();
                     
-                    for (let line of lines) {
-                        const trimmed = line.trim();
-                        if (trimmed.startsWith('|')) {
-                            // Check for header/separator
-                            if (trimmed.toLowerCase().includes('range') || trimmed.toLowerCase().includes('temp') || trimmed.includes('---')) {
-                                inTable = true;
-                                continue;
-                            }
-                            
-                            if (inTable) {
-                                const parts = trimmed.split('|').map(p => p.trim());
-                                // Clean array: remove empty elements from starting/ending pipes
-                                if (parts[0] === "") parts.shift();
-                                if (parts[parts.length - 1] === "") parts.pop();
-
-                                if (parts.length >= 2) {
-                                    const rangeStr = parts[0];
-                                    let min = -999, max = 999;
-                                    
-                                    if (rangeStr.includes('<')) {
-                                        min = -999; 
-                                        max = parseInt(rangeStr.replace('<', '').trim()) || 30;
-                                    } else if (rangeStr.includes('+')) {
-                                        min = parseInt(rangeStr.replace('+', '').trim()) || 70; 
-                                        max = 999;
-                                    } else {
-                                        // Handle all dash types
-                                        const nums = rangeStr.split(/\s*[-–—]\s*/).map(n => parseInt(n.trim()));
-                                        if (nums.length === 2) {
-                                            [min, max] = nums;
-                                        } else if (nums.length === 1 && !isNaN(nums[0])) {
-                                            [min, max] = [nums[0], nums[0]];
-                                        }
-                                    }
-                                    
-                                    results[key].push({ 
-                                        min, max,
-                                        upper: parts[1] || "—",
-                                        lower: parts[2] || "—",
-                                        extremities: parts[3] || "—"
-                                    });
-                                }
-                            }
-                        } else if (inTable && trimmed !== "") {
-                            // Break if we hit content that isn't a table row
-                            break;
-                        }
+                    // Identify Sections
+                    if (trimmed.startsWith('#')) {
+                        const low = trimmed.toLowerCase();
+                        if (low.includes('cycling') || low.includes('bike')) currentType = 'bike';
+                        else if (low.includes('running') || low.includes('run')) currentType = 'run';
+                        else currentType = null;
+                        inTable = false;
+                        continue;
                     }
-                });
+
+                    // Identify Table within Section
+                    if (currentType && trimmed.startsWith('|')) {
+                        if (trimmed.includes('---') || trimmed.toLowerCase().includes('range') || trimmed.toLowerCase().includes('temp')) {
+                            inTable = true;
+                            continue;
+                        }
+                        
+                        if (inTable) {
+                            const parts = trimmed.split('|').map(p => p.trim());
+                            // Standard MD split causes empty strings at start/end if table has outer pipes
+                            if (trimmed.startsWith('|')) parts.shift();
+                            if (trimmed.endsWith('|')) parts.pop();
+
+                            if (parts.length >= 2) {
+                                const rangeStr = parts[0];
+                                let min = -999, max = 999;
+                                
+                                if (rangeStr.includes('<')) {
+                                    min = -999; 
+                                    max = parseInt(rangeStr.replace('<', '').trim()) || 30;
+                                } else if (rangeStr.includes('+')) {
+                                    min = parseInt(rangeStr.replace('+', '').trim()) || 70; 
+                                    max = 999;
+                                } else {
+                                    const nums = rangeStr.split(/[-–—]/).map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+                                    if (nums.length === 2) {
+                                        [min, max] = nums;
+                                    } else if (nums.length === 1) {
+                                        [min, max] = [nums[0], nums[0]];
+                                    }
+                                }
+                                
+                                results[currentType].push({ 
+                                    min, max,
+                                    upper: parts[1] || "—",
+                                    lower: parts[2] || "—",
+                                    extremities: parts[3] || "—"
+                                });
+                            }
+                        }
+                    } else if (inTable && trimmed !== "") {
+                        // End of table marker: any non-empty line that doesn't start with pipe
+                        inTable = false;
+                    }
+                }
                 return results;
             }
         };
@@ -361,7 +356,7 @@
                 } catch (e) {
                     console.error("Init Error:", e);
                     this.updateSyncStatus(false);
-                    document.getElementById('content').innerHTML = `<p class='text-red-400'>Error loading required files.</p>`;
+                    document.getElementById('content').innerHTML = `<p class='text-red-400 text-center py-10'>Error loading required files.</p>`;
                 }
             },
 
@@ -408,7 +403,8 @@
                 document.getElementById('mobile-header-title').innerText = titles[view];
 
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                document.getElementById(`nav-${view}`).classList.add('active');
+                const navBtn = document.getElementById(`nav-${view}`);
+                if (navBtn) navBtn.classList.add('active');
                 
                 const content = document.getElementById('content');
                 content.classList.add('opacity-0');
@@ -479,20 +475,19 @@
 
                         <div class="flex flex-col gap-8">
                             ${generateResultBox('standard', 'Standard Conditions', 'bg-blue-500')}
-                            ${generateResultBox('weather', 'Windy & Rainy (+10° Perceived Penalty)', 'bg-orange-500')}
+                            ${generateResultBox('weather', 'Windy & Rainy (-10° Offset)', 'bg-orange-500')}
                         </div>
                     </div>
 
-                    <!-- Technical Debug Console -->
                     <div class="mt-8 border-t border-slate-800 pt-8">
                         <div class="flex items-center gap-2 mb-4">
-                            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Technical Diagnosis</span>
+                            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Technical Diagnosis (Parsed Data)</span>
                         </div>
                         <div id="debug-panel">
-                            <p class="text-slate-500 italic mb-2">// System Initialization Logs</p>
+                            <p class="text-slate-500 italic mb-2">// Logic Stream</p>
                             <pre id="debug-console" class="whitespace-pre-wrap">${this.debugLogs.join('\n')}</pre>
                             
-                            <p class="text-slate-500 italic mt-6 mb-2">// Current Parsed Gear Data State</p>
+                            <p class="text-slate-500 italic mt-6 mb-2">// In-Memory Gear Brain</p>
                             <pre id="debug-data-state" class="whitespace-pre-wrap bg-slate-900 p-4 rounded"></pre>
                         </div>
                     </div>
@@ -503,16 +498,15 @@
 
             updateGearResult() {
                 if (!this.gearData) {
-                    this.log("Error: No Gear data available.");
+                    this.log("Error: Gear matrix not initialized.");
                     return;
                 }
                 
                 const activity = document.getElementById('gear-activity').value;
                 const temp = parseInt(document.getElementById('gear-temp').value);
                 
-                this.log(`Selection Change: ${activity.toUpperCase()} at ${temp}°F`);
+                this.log(`INPUT: ${activity.toUpperCase()} @ ${temp}°F`);
 
-                // Update data state display
                 const dataStateEl = document.getElementById('debug-data-state');
                 if (dataStateEl) {
                     dataStateEl.innerText = JSON.stringify(this.gearData, null, 2);
@@ -520,18 +514,18 @@
 
                 const findMatch = (t) => {
                     const list = this.gearData[activity] || [];
-                    this.log(`Searching ${activity} matrix for ${t}°F...`);
-
+                    
                     const match = list.find(r => {
+                        // Inclusive matching
                         if (r.max === 999) return t >= r.min;
-                        if (r.min === -999) return t < r.max;
-                        return t >= r.min && t < r.max;
+                        if (r.min === -999) return t <= r.max;
+                        return t >= r.min && t <= r.max;
                     });
 
                     if (match) {
-                        this.log(`Found match: Range ${match.min}-${match.max}`);
+                        this.log(`MATCH SUCCESS: ${match.min}-${match.max}`);
                     } else {
-                        this.log(`Warning: No range found in ${activity} for ${t}°F`);
+                        this.log(`MATCH FAILED for ${t}°F`);
                     }
 
                     return match || { upper: "—", lower: "—", extremities: "—" };
