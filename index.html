@@ -255,7 +255,6 @@
                 for (let line of lines) {
                     const trimmed = line.trim();
                     
-                    // Identify Sections
                     if (trimmed.startsWith('#')) {
                         const low = trimmed.toLowerCase();
                         if (low.includes('cycling') || low.includes('bike')) currentType = 'bike';
@@ -265,7 +264,6 @@
                         continue;
                     }
 
-                    // Identify Table within Section
                     if (currentType && trimmed.startsWith('|')) {
                         if (trimmed.includes('---') || trimmed.toLowerCase().includes('range') || trimmed.toLowerCase().includes('temp')) {
                             inTable = true;
@@ -274,7 +272,6 @@
                         
                         if (inTable) {
                             const parts = trimmed.split('|').map(p => p.trim());
-                            // Standard MD split causes empty strings at start/end if table has outer pipes
                             if (trimmed.startsWith('|')) parts.shift();
                             if (trimmed.endsWith('|')) parts.pop();
 
@@ -287,7 +284,6 @@
 
                                 const lowRangeStr = rangeStr.toLowerCase();
                                 
-                                // Detect descriptive boundaries (below 30, above 70, etc.)
                                 if (lowRangeStr.match(/below|under|<|less/)) {
                                     min = -999; 
                                     max = parseInt(numMatch[0]);
@@ -295,11 +291,9 @@
                                     min = parseInt(numMatch[0]); 
                                     max = 999;
                                 } else if (numMatch.length >= 2) {
-                                    // Standard hyphenated range
                                     min = parseInt(numMatch[0]);
                                     max = parseInt(numMatch[1]);
                                 } else {
-                                    // Single number fallback
                                     min = parseInt(numMatch[0]);
                                     max = parseInt(numMatch[0]);
                                 }
@@ -313,7 +307,6 @@
                             }
                         }
                     } else if (inTable && trimmed !== "") {
-                        // End of table marker
                         inTable = false;
                     }
                 }
@@ -409,7 +402,14 @@
                     else if (view === 'zones') this.renderZones();
                     else this.renderMarkdown(view);
                     content.classList.remove('opacity-0');
-                    if (window.innerWidth < 1024) this.toggleSidebar();
+                    
+                    // On mobile, automatically close the sidebar only if it's currently open
+                    if (window.innerWidth < 1024) {
+                        const sidebar = document.getElementById('sidebar');
+                        if (sidebar.classList.contains('sidebar-open')) {
+                            this.toggleSidebar();
+                        }
+                    }
                 }, 200);
             },
 
