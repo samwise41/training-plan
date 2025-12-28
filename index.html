@@ -252,7 +252,13 @@
                     const rows = section.split('\n').filter(l => l.includes('|') && !l.includes('---') && !l.toLowerCase().includes('temp'));
                     
                     rows.forEach(row => {
-                        const parts = row.split('|').map(p => p.trim()).filter(p => p !== "");
+                        // Split by pipe and trim each cell, but don't filter out empty strings yet
+                        const parts = row.split('|').map(p => p.trim());
+                        
+                        // Remove leading and trailing empty elements caused by the starting and ending pipes
+                        if (parts[0] === "") parts.shift();
+                        if (parts[parts.length - 1] === "") parts.pop();
+
                         if (parts.length >= 2) {
                             const rangeStr = parts[0];
                             let min = -999, max = 999;
@@ -272,6 +278,7 @@
                                 }
                             }
                             
+                            // Map to indices: 0=Range, 1=Upper, 2=Lower, 3=Extremities
                             results[type === 'Cycling' ? 'bike' : 'run'].push({ 
                                 min, 
                                 max,
@@ -455,13 +462,18 @@
                 
                 const findMatch = (t) => {
                     const list = this.gearData[activity] || [];
-                    const match = list.find(r => t >= r.min && t <= r.max);
-                    if (match) return match;
                     
-                    if (t < 30) return list.find(r => r.min === -999) || { upper: "--", lower: "--", extremities: "--" };
-                    if (t >= 70) return list.find(r => r.max === 999) || { upper: "--", lower: "--", extremities: "--" };
-                    
-                    return { upper: "N/A", lower: "N/A", extremities: "N/A" };
+                    // Boundary logic to prevent range overlap (e.g., if range is 35-40, it handles 35 but 40 is handled by the next range)
+                    const match = list.find(r => {
+                        // For the max ranges (70+), check min only
+                        if (r.max === 999) return t >= r.min;
+                        // For the min ranges (<30), check max only
+                        if (r.min === -999) return t < r.max;
+                        // Standard range: inclusive of min, exclusive of max
+                        return t >= r.min && t < r.max;
+                    });
+
+                    return match || { upper: "--", lower: "--", extremities: "--" };
                 };
 
                 const standard = findMatch(temp);
