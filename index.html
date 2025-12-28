@@ -114,6 +114,19 @@
             gap: 0.5rem;
             min-height: 5rem;
         }
+
+        /* Debug Styles */
+        #debug-panel {
+            background-color: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 11px;
+            color: #94a3b8;
+            max-height: 400px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -249,31 +262,35 @@
             parseGearMatrix(md) {
                 const results = { bike: [], run: [] };
                 
-                // Segment the Markdown by top-level headers to isolate sections
-                const sections = md.split(/^#+/m);
+                // Segment Markdown by headers more reliably
+                const sections = md.split(/^#+/m).map(s => s.trim());
                 
                 ['Cycling', 'Running'].forEach(type => {
                     const key = type === 'Cycling' ? 'bike' : 'run';
-                    // Find the section string that mentions the activity type
-                    const targetSection = sections.find(s => s.trim().split('\n')[0].toLowerCase().includes(type.toLowerCase()));
+                    
+                    // Look for the section heading specifically
+                    const targetSection = sections.find(s => {
+                        const firstLine = s.split('\n')[0].toLowerCase();
+                        return firstLine.includes(type.toLowerCase()) && !firstLine.includes('gear');
+                    });
                     
                     if (!targetSection) return;
 
                     const lines = targetSection.split('\n');
-                    let foundTableStart = false;
+                    let inTable = false;
                     
                     for (let line of lines) {
                         const trimmed = line.trim();
                         if (trimmed.startsWith('|')) {
-                            // Skip header and separator
+                            // Check for header/separator
                             if (trimmed.toLowerCase().includes('range') || trimmed.toLowerCase().includes('temp') || trimmed.includes('---')) {
-                                foundTableStart = true;
+                                inTable = true;
                                 continue;
                             }
                             
-                            if (foundTableStart) {
+                            if (inTable) {
                                 const parts = trimmed.split('|').map(p => p.trim());
-                                // Remove empty lead/trail parts
+                                // Clean array: remove empty elements from starting/ending pipes
                                 if (parts[0] === "") parts.shift();
                                 if (parts[parts.length - 1] === "") parts.pop();
 
@@ -288,8 +305,8 @@
                                         min = parseInt(rangeStr.replace('+', '').trim()) || 70; 
                                         max = 999;
                                     } else {
-                                        // Supports diverse dash/hyphen characters
-                                        const nums = rangeStr.split(/[-–—]/).map(n => parseInt(n.trim()));
+                                        // Handle all dash types
+                                        const nums = rangeStr.split(/\s*[-–—]\s*/).map(n => parseInt(n.trim()));
                                         if (nums.length === 2) {
                                             [min, max] = nums;
                                         } else if (nums.length === 1 && !isNaN(nums[0])) {
@@ -299,14 +316,14 @@
                                     
                                     results[key].push({ 
                                         min, max,
-                                        upper: parts[1] || "--",
-                                        lower: parts[2] || "--",
-                                        extremities: parts[3] || "--"
+                                        upper: parts[1] || "—",
+                                        lower: parts[2] || "—",
+                                        extremities: parts[3] || "—"
                                     });
                                 }
                             }
-                        } else if (foundTableStart && trimmed !== "") {
-                            // If we hit non-table text after finding a table, section is done
+                        } else if (inTable && trimmed !== "") {
+                            // Break if we hit content that isn't a table row
                             break;
                         }
                     }
@@ -319,7 +336,14 @@
             planMd: "",
             gearMd: "",
             gearData: null,
+            debugLogs: [],
             
+            log(msg) {
+                this.debugLogs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+                const el = document.getElementById('debug-console');
+                if (el) el.innerText = this.debugLogs.join('\n');
+            },
+
             async init() {
                 try {
                     const [planRes, gearRes] = await Promise.all([
@@ -455,20 +479,21 @@
 
                         <div class="flex flex-col gap-8">
                             ${generateResultBox('standard', 'Standard Conditions', 'bg-blue-500')}
-                            ${generateResultBox('weather', 'Windy & Rainy (+10° Penalty)', 'bg-orange-500')}
+                            ${generateResultBox('weather', 'Windy & Rainy (+10° Perceived Penalty)', 'bg-orange-500')}
                         </div>
-                        <p class="text-[10px] text-slate-500 mt-8 italic font-semibold text-center uppercase tracking-wider">
-                            Weather mode simulates gear needed for a 10°F drop in perceived temperature.
-                        </p>
                     </div>
 
+                    <!-- Technical Debug Console -->
                     <div class="mt-8 border-t border-slate-800 pt-8">
-                        <div class="flex items-center gap-2 mb-6">
-                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Parsed Documentation (Reference)</h3>
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Technical Diagnosis</span>
                         </div>
-                        <div class="markdown-body">
-                            ${marked.parse(this.gearMd || "*No gear data found in Gear.md.*")}
+                        <div id="debug-panel">
+                            <p class="text-slate-500 italic mb-2">// System Initialization Logs</p>
+                            <pre id="debug-console" class="whitespace-pre-wrap">${this.debugLogs.join('\n')}</pre>
+                            
+                            <p class="text-slate-500 italic mt-6 mb-2">// Current Parsed Gear Data State</p>
+                            <pre id="debug-data-state" class="whitespace-pre-wrap bg-slate-900 p-4 rounded"></pre>
                         </div>
                     </div>
                 `;
@@ -477,30 +502,51 @@
             },
 
             updateGearResult() {
-                if (!this.gearData) return;
+                if (!this.gearData) {
+                    this.log("Error: No Gear data available.");
+                    return;
+                }
                 
                 const activity = document.getElementById('gear-activity').value;
                 const temp = parseInt(document.getElementById('gear-temp').value);
                 
+                this.log(`Selection Change: ${activity.toUpperCase()} at ${temp}°F`);
+
+                // Update data state display
+                const dataStateEl = document.getElementById('debug-data-state');
+                if (dataStateEl) {
+                    dataStateEl.innerText = JSON.stringify(this.gearData, null, 2);
+                }
+
                 const findMatch = (t) => {
                     const list = this.gearData[activity] || [];
-                    
+                    this.log(`Searching ${activity} matrix for ${t}°F...`);
+
                     const match = list.find(r => {
                         if (r.max === 999) return t >= r.min;
                         if (r.min === -999) return t < r.max;
                         return t >= r.min && t < r.max;
                     });
 
-                    return match || { upper: "--", lower: "--", extremities: "--" };
+                    if (match) {
+                        this.log(`Found match: Range ${match.min}-${match.max}`);
+                    } else {
+                        this.log(`Warning: No range found in ${activity} for ${t}°F`);
+                    }
+
+                    return match || { upper: "—", lower: "—", extremities: "—" };
                 };
 
                 const standard = findMatch(temp);
                 const weather = findMatch(temp - 10);
 
                 const updateUI = (prefix, data) => {
-                    document.getElementById(`${prefix}-upper`).innerText = data.upper;
-                    document.getElementById(`${prefix}-lower`).innerText = data.lower;
-                    document.getElementById(`${prefix}-extremities`).innerText = data.extremities;
+                    const u = document.getElementById(`${prefix}-upper`);
+                    const l = document.getElementById(`${prefix}-lower`);
+                    const e = document.getElementById(`${prefix}-extremities`);
+                    if (u) u.innerText = data.upper;
+                    if (l) l.innerText = data.lower;
+                    if (e) e.innerText = data.extremities;
                 };
 
                 updateUI('standard', standard);
