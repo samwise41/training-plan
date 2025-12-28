@@ -77,18 +77,19 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 ## 5. Weekly Schedule & Logistics
 
-**Current Phase:** Phase 1 (Base/Prep)
-**Current Week:** Week 1 (Baseline Testing)
+**Current Phase:** Phase 1 (Base/Prep) **Current Week:** Week 2 (Aerobic Base Building)
 
-| **Status** | **Day** | **Planned Workout** | **Actual Workout** | **Notes / Targets** | 
+| Day | Activity | Duration / Distance | Zone / Intensity | Focus / Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| MISSED | 12/22/25 - Mon | Swim | N/A | Rest / Light Mobility | 
-| COMPLETED | 12/23/25 - Tue | FTP Test (Bike) | Alpe du Zwift | Result: 241W. | 
-| COMPLETED | 12/24/25 - Wed | Recovery [BIKE] | Recovery [BIKE] | 40 mins Z1 Spin. | 
-| COMPLETED | 12/25/25 - Thu | Endurance [BIKE] | Endurance [BIKE] | 60 mins Steady Z2. | 
-| COMPLETED | 12/26/25 - Fri | Run Test [RUN] | LTHR Test | 30m TT. Result: 171 bpm. | 
-| COMPLETED | 12/27/25 - Sat | Long Ride [BIKE] | 1h Bike + 40m Swim | Swapped Long Ride for Brick. | 
-| PLANNED | 12/28/25 - Sun | Rest | TBD | Weekly Planning Check-in. | 
+| **Monday** | **Swim** | ~500m - 800m | Zone 1 (RPE 3-4) | **Technique:** Catch & Pull drills. Ignore the clock. Focus on breathing rhythm. |
+| **Tuesday** | **Run** | 45 mins | Zone 2 (HR: 140-152) | **Aerobic Base:** Flat terrain. Keep cadence high (170+ spm). |
+| **Wednesday** | **Bike** | 60 mins | Zone 2 (134W - 180W) | **Steady State:** Remain seated. Focus on smooth pedal strokes. |
+| **Thursday** | **Prehab** | 30 mins | Recovery | **Strength:** Banded Leg Raises (2x15), Planks (3x1m). **No Impact.** |
+| **Friday** | **Run** | 40 mins | Zone 2 (HR: 140-152) | **Volume:** Easy aerobic miles. Focus on maintaining posture in final 10 mins. |
+| **Saturday** | **Long Bike** | 3.0 Hours | Zone 2 (134W - 160W) | **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. |
+| **Sunday** | **Rest** | - | - | **Total Recovery.** Optional "Flush" protocol (Appendix D) if stiffness is high. |
+
+| **Status** | **Day** | **Planned Workout** | 
 
 ## 6. Fueling Strategy & Log
 
