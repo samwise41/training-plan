@@ -107,11 +107,12 @@
         .gear-item-card {
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid #1e293b;
-            padding: 1rem;
+            padding: 1.25rem;
             border-radius: 0.75rem;
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
+            min-height: 5rem;
         }
     </style>
 </head>
@@ -247,15 +248,37 @@
 
             parseGearMatrix(md) {
                 const results = { bike: [], run: [] };
+                
+                // More robust section identifying: finds keywords anywhere and then captures the first table
                 ['Cycling', 'Running'].forEach(type => {
-                    const section = this.getSection(md, type);
-                    const rows = section.split('\n').filter(l => l.includes('|') && !l.includes('---') && !l.toLowerCase().includes('temp'));
+                    const typeIdx = md.toLowerCase().indexOf(type.toLowerCase());
+                    if (typeIdx === -1) return;
                     
-                    rows.forEach(row => {
-                        // Split by pipe and trim each cell, but don't filter out empty strings yet
+                    const afterType = md.substring(typeIdx);
+                    const lines = afterType.split('\n');
+                    let tableLines = [];
+                    let foundTableStart = false;
+                    
+                    for (let line of lines) {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith('|')) {
+                            if (trimmed.toLowerCase().includes('range') || trimmed.toLowerCase().includes('temp')) {
+                                foundTableStart = true;
+                                continue;
+                            }
+                            if (foundTableStart) {
+                                if (trimmed.includes('---')) continue;
+                                tableLines.push(trimmed);
+                            }
+                        } else if (foundTableStart && trimmed !== "") {
+                            // Table is over
+                            break;
+                        }
+                    }
+
+                    const key = type === 'Cycling' ? 'bike' : 'run';
+                    tableLines.forEach(row => {
                         const parts = row.split('|').map(p => p.trim());
-                        
-                        // Remove leading and trailing empty elements caused by the starting and ending pipes
                         if (parts[0] === "") parts.shift();
                         if (parts[parts.length - 1] === "") parts.pop();
 
@@ -264,24 +287,17 @@
                             let min = -999, max = 999;
                             
                             if (rangeStr.includes('<')) {
-                                min = -999;
-                                max = parseInt(rangeStr.replace('<', '').trim()) || 30;
+                                min = -999; max = parseInt(rangeStr.replace('<', '').trim()) || 30;
                             } else if (rangeStr.includes('+')) {
-                                min = parseInt(rangeStr.replace('+', '').trim()) || 70;
-                                max = 999;
+                                min = parseInt(rangeStr.replace('+', '').trim()) || 70; max = 999;
                             } else {
-                                const nums = rangeStr.split(/[-–]/).map(n => parseInt(n.trim()));
-                                if (nums.length === 2) {
-                                    [min, max] = nums;
-                                } else if (nums.length === 1 && !isNaN(nums[0])) {
-                                    [min, max] = [nums[0], nums[0]];
-                                }
+                                const nums = rangeStr.split(/\s*[-–]\s*/).map(n => parseInt(n.trim()));
+                                if (nums.length === 2) [min, max] = nums;
+                                else if (nums.length === 1 && !isNaN(nums[0])) [min, max] = [nums[0], nums[0]];
                             }
                             
-                            // Map to indices: 0=Range, 1=Upper, 2=Lower, 3=Extremities
-                            results[type === 'Cycling' ? 'bike' : 'run'].push({ 
-                                min, 
-                                max,
+                            results[key].push({ 
+                                min, max,
                                 upper: parts[1] || "--",
                                 lower: parts[2] || "--",
                                 extremities: parts[3] || "--"
@@ -398,15 +414,15 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="gear-item-card">
-                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Upper Body</span>
+                                <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Upper Body</span>
                                 <p id="${idPrefix}-upper" class="text-slate-100 text-sm font-medium italic">--</p>
                             </div>
                             <div class="gear-item-card">
-                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Lower Body</span>
+                                <span class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Lower Body</span>
                                 <p id="${idPrefix}-lower" class="text-slate-100 text-sm font-medium italic">--</p>
                             </div>
                             <div class="gear-item-card">
-                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Extremities</span>
+                                <span class="text-[10px] font-bold text-purple-500 uppercase tracking-widest">Extremities</span>
                                 <p id="${idPrefix}-extremities" class="text-slate-100 text-sm font-medium italic">--</p>
                             </div>
                         </div>
@@ -417,33 +433,33 @@
                     <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-8 mb-8">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                             <div class="flex flex-col gap-2">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Activity</label>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Activity Type</label>
                                 <select id="gear-activity" onchange="App.updateGearResult()" class="gear-select">
                                     <option value="bike">Cycling</option>
                                     <option value="run" selected>Running</option>
                                 </select>
                             </div>
                             <div class="flex flex-col gap-2">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Temperature</label>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Target Temperature</label>
                                 <select id="gear-temp" onchange="App.updateGearResult()" class="gear-select">
                                     ${tempOptions}
                                 </select>
                             </div>
                         </div>
 
-                        <div class="flex flex-col gap-6">
+                        <div class="flex flex-col gap-8">
                             ${generateResultBox('standard', 'Standard Conditions', 'bg-blue-500')}
-                            ${generateResultBox('weather', 'Windy & Rainy', 'bg-orange-500')}
+                            ${generateResultBox('weather', 'Windy & Rainy (+10° Penalty)', 'bg-orange-500')}
                         </div>
-                        <p class="text-[10px] text-slate-500 mt-6 italic font-semibold text-center uppercase tracking-wider">
-                            Weather mode reflects gear for -10°F perceived temperature adjustment.
+                        <p class="text-[10px] text-slate-500 mt-8 italic font-semibold text-center uppercase tracking-wider">
+                            Weather mode simulates gear needed for a 10°F drop in perceived temperature.
                         </p>
                     </div>
 
                     <div class="mt-8 border-t border-slate-800 pt-8">
                         <div class="flex items-center gap-2 mb-6">
                             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Full Matrix Documentation</h3>
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Parsed Documentation (Reference)</h3>
                         </div>
                         <div class="markdown-body">
                             ${marked.parse(this.gearMd || "*No gear data found in Gear.md.*")}
@@ -463,13 +479,9 @@
                 const findMatch = (t) => {
                     const list = this.gearData[activity] || [];
                     
-                    // Boundary logic to prevent range overlap (e.g., if range is 35-40, it handles 35 but 40 is handled by the next range)
                     const match = list.find(r => {
-                        // For the max ranges (70+), check min only
                         if (r.max === 999) return t >= r.min;
-                        // For the min ranges (<30), check max only
                         if (r.min === -999) return t < r.max;
-                        // Standard range: inclusive of min, exclusive of max
                         return t >= r.min && t < r.max;
                     });
 
