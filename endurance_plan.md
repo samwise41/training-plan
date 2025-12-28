@@ -79,7 +79,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 **Current Phase:** Phase 1 (Base/Prep) **Current Week:** Week 2 (Aerobic Base Building)
 
-| Day | Activity | Duration / Distance | Zone / Intensity | Focus / Notes |
+| Status | Day | Activity | Duration / Distance | Zone / Intensity | Focus / Notes |
 | :--- | :--- | :--- | :--- | :--- |
 | **Monday** | **Swim** | ~500m - 800m | Zone 1 (RPE 3-4) | **Technique:** Catch & Pull drills. Ignore the clock. Focus on breathing rhythm. |
 | **Tuesday** | **Run** | 45 mins | Zone 2 (HR: 140-152) | **Aerobic Base:** Flat terrain. Keep cadence high (170+ spm). |
