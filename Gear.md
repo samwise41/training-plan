@@ -12,7 +12,7 @@ This master reference guide is built from your personal logs and gear kit.
 * **Accessories:** Hat, Gloves, Neck Wrap
 
 ### **Cycling Gear**
-* **Upper Body:** Outer Jacket, Wind Breaker, Sleeveless Vest, Regular Jersey, Sleeveless Jersey, Thermal Sleeves
+* **Upper Body:** Regular Jersey, Thermal Sleeves, Sleeveless Vest, Wind Breaker, Outer Jacket
 * **Lower Body:** Thermal Leggings, Shorts
 * **Accessories:** Balaclava, Handlebar Mitts, Foot Booties, Hat, Gloves, Neck Wrap
 
@@ -21,11 +21,11 @@ This master reference guide is built from your personal logs and gear kit.
 ## 🌡️ Cycling Matrix
 | Temp Range | Upper Body | Lower Body | Extremities |
 | :--- | :--- | :--- | :--- |
-| **Below 40°F** | Outer Jacket<br>Thermal Sleeves | Thermal Leggings | Balaclava<br>Handlebar Mitts<br>Foot Booties |
-| **40°F – 45°F** | Regular Jersey<br>Thermal Sleeves<br>Wind Breaker<br>Sleeveless Vest | Thermal Leggings | Balaclava<br>Gloves |
-| **45°F – 55°F** | Sleeveless Vest<br>Thermal Sleeves | Thermal Leggings | Gloves<br>Neck Wrap |
-| **55°F – 65°F** | Short Sleeved Jersey<br>Thermal Sleeves | Thermal Leggings | None |
-| **65°F – 70°F** | Short Sleeved Jersey | Shorts or Leggings | None |
+| **Below 40°F** | Regular Jersey<br>Thermal Sleeves<br>Outer Jacket | Thermal Leggings | Balaclava<br>Handlebar Mitts<br>Foot Booties |
+| **40°F – 45°F** | Regular Jersey<br>Thermal Sleeves<br>Sleeveless Vest<br>Wind Breaker | Thermal Leggings | Balaclava<br>Gloves |
+| **45°F – 55°F** | Regular Jersey<br>Thermal Sleeves<br>Sleeveless Vest | Thermal Leggings | Gloves<br>Neck Wrap |
+| **55°F – 65°F** | Regular Jersey<br>Thermal Sleeves | Thermal Leggings | None |
+| **65°F – 70°F** | Regular Jersey | Shorts or Leggings | None |
 | **Above 70°F** | Sleeveless Jersey (Tank Top) | Shorts | None |
 
 ---
