@@ -249,61 +249,67 @@
             parseGearMatrix(md) {
                 const results = { bike: [], run: [] };
                 
-                // More robust section identifying: finds keywords anywhere and then captures the first table
+                // Segment the Markdown by top-level headers to isolate sections
+                const sections = md.split(/^#+/m);
+                
                 ['Cycling', 'Running'].forEach(type => {
-                    const typeIdx = md.toLowerCase().indexOf(type.toLowerCase());
-                    if (typeIdx === -1) return;
+                    const key = type === 'Cycling' ? 'bike' : 'run';
+                    // Find the section string that mentions the activity type
+                    const targetSection = sections.find(s => s.trim().split('\n')[0].toLowerCase().includes(type.toLowerCase()));
                     
-                    const afterType = md.substring(typeIdx);
-                    const lines = afterType.split('\n');
-                    let tableLines = [];
+                    if (!targetSection) return;
+
+                    const lines = targetSection.split('\n');
                     let foundTableStart = false;
                     
                     for (let line of lines) {
                         const trimmed = line.trim();
                         if (trimmed.startsWith('|')) {
-                            if (trimmed.toLowerCase().includes('range') || trimmed.toLowerCase().includes('temp')) {
+                            // Skip header and separator
+                            if (trimmed.toLowerCase().includes('range') || trimmed.toLowerCase().includes('temp') || trimmed.includes('---')) {
                                 foundTableStart = true;
                                 continue;
                             }
+                            
                             if (foundTableStart) {
-                                if (trimmed.includes('---')) continue;
-                                tableLines.push(trimmed);
+                                const parts = trimmed.split('|').map(p => p.trim());
+                                // Remove empty lead/trail parts
+                                if (parts[0] === "") parts.shift();
+                                if (parts[parts.length - 1] === "") parts.pop();
+
+                                if (parts.length >= 2) {
+                                    const rangeStr = parts[0];
+                                    let min = -999, max = 999;
+                                    
+                                    if (rangeStr.includes('<')) {
+                                        min = -999; 
+                                        max = parseInt(rangeStr.replace('<', '').trim()) || 30;
+                                    } else if (rangeStr.includes('+')) {
+                                        min = parseInt(rangeStr.replace('+', '').trim()) || 70; 
+                                        max = 999;
+                                    } else {
+                                        // Supports diverse dash/hyphen characters
+                                        const nums = rangeStr.split(/[-–—]/).map(n => parseInt(n.trim()));
+                                        if (nums.length === 2) {
+                                            [min, max] = nums;
+                                        } else if (nums.length === 1 && !isNaN(nums[0])) {
+                                            [min, max] = [nums[0], nums[0]];
+                                        }
+                                    }
+                                    
+                                    results[key].push({ 
+                                        min, max,
+                                        upper: parts[1] || "--",
+                                        lower: parts[2] || "--",
+                                        extremities: parts[3] || "--"
+                                    });
+                                }
                             }
                         } else if (foundTableStart && trimmed !== "") {
-                            // Table is over
+                            // If we hit non-table text after finding a table, section is done
                             break;
                         }
                     }
-
-                    const key = type === 'Cycling' ? 'bike' : 'run';
-                    tableLines.forEach(row => {
-                        const parts = row.split('|').map(p => p.trim());
-                        if (parts[0] === "") parts.shift();
-                        if (parts[parts.length - 1] === "") parts.pop();
-
-                        if (parts.length >= 2) {
-                            const rangeStr = parts[0];
-                            let min = -999, max = 999;
-                            
-                            if (rangeStr.includes('<')) {
-                                min = -999; max = parseInt(rangeStr.replace('<', '').trim()) || 30;
-                            } else if (rangeStr.includes('+')) {
-                                min = parseInt(rangeStr.replace('+', '').trim()) || 70; max = 999;
-                            } else {
-                                const nums = rangeStr.split(/\s*[-–]\s*/).map(n => parseInt(n.trim()));
-                                if (nums.length === 2) [min, max] = nums;
-                                else if (nums.length === 1 && !isNaN(nums[0])) [min, max] = [nums[0], nums[0]];
-                            }
-                            
-                            results[key].push({ 
-                                min, max,
-                                upper: parts[1] || "--",
-                                lower: parts[2] || "--",
-                                extremities: parts[3] || "--"
-                            });
-                        }
-                    });
                 });
                 return results;
             }
