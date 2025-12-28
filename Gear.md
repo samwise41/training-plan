@@ -62,8 +62,10 @@ This guide summarizes your personal gear preferences and comfort logs for variou
 
 ---
 
-## 💡 Key Personal Rules
-* **The "Warm-Up" Rule:** You prefer to be slightly cold at the start rather than overheating later, especially on long runs.
-* **Cycling vs. Running:** Cycling requires more head and hand protection due to wind chill.
-* **The Balaclava:** Your primary tool for preventing face pain and cold head issues while cycling under 45°F.
-* **Under Armour Efficiency:** The Cold Gear thermal top is very warm; avoid heavy layers over it unless it is well below freezing.
+## ⛈️ Weather Exceptions & Rules
+* **Rainy/Windy Rule:** Dress for **10 degrees colder** than the forecast. 
+  - *Example: For 50°F + Rain, wear your 40°F Running Kit (Thermal Top & Leggings).*
+* **The "Darkness" Rule:** Dress for **5 degrees colder** than the forecast if running/riding before sunrise.
+* **The "Warm-Up" Rule:** You prefer to be slightly cold for the first mile or two rather than overheating on longer efforts.
+* **Cycling Face Protection:** The Balaclava is essential for all cycling under 45°F to prevent wind chill on the face.
+* **UA Cold Gear:** This base layer is highly efficient; avoid heavy outer layers over it unless it is well below 30°F.
