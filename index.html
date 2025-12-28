@@ -106,7 +106,43 @@
             width: 100%;
         }
 
-        .gear-item-card {
+        /* Gear Tab Specific Styles */
+        .gear-row-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        @media (min-width: 1024px) {
+            .gear-row-container {
+                flex-direction: row;
+                align-items: stretch;
+            }
+        }
+        
+        .activity-header {
+            min-width: 140px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.4);
+            border-radius: 0.5rem;
+            border: 1px solid #1e293b;
+        }
+
+        .gear-bubbles-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+            flex: 1;
+        }
+        @media (min-width: 640px) {
+            .gear-bubbles-row {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .gear-bubble {
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid #1e293b;
             padding: 1rem;
