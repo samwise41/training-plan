@@ -103,6 +103,53 @@
             background-repeat: no-repeat;
             background-position: right 0.5rem center;
             background-size: 1rem;
+            width: 100%;
+        }
+
+        .gear-row-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        @media (min-width: 1024px) {
+            .gear-row-container {
+                flex-direction: row;
+                align-items: stretch;
+            }
+        }
+        
+        .activity-header {
+            min-width: 140px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.4);
+            border-radius: 0.5rem;
+            border: 1px solid #1e293b;
+        }
+
+        .gear-bubbles-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+            flex: 1;
+        }
+        @media (min-width: 640px) {
+            .gear-bubbles-row {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .gear-bubble {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid #1e293b;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            height: 100%;
         }
     </style>
 </head>
@@ -454,57 +501,57 @@
                 }
                 tempOptions += `<option value="75" ${defaultVal === 75 ? 'selected' : ''}>70°F+</option>`;
 
-                const generateCompactCard = (idPrefix, iconClass, label) => `
-                    <div class="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3">
-                        <div class="flex items-center gap-2 mb-3 border-b border-slate-700/50 pb-2">
-                            <i class="${iconClass} text-slate-400 text-xs"></i>
-                            <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">${label}</span>
+                const generateRow = (idPrefix, iconClass, label) => `
+                    <div class="gear-row-container">
+                        <div class="activity-header">
+                            <i class="${iconClass} text-slate-400 text-lg"></i>
+                            <span class="text-xs font-bold text-slate-200 uppercase tracking-widest">${label}</span>
                         </div>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div>
-                                <span class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Upper</span>
-                                <p id="${idPrefix}-upper" class="text-xs text-slate-200 font-medium leading-snug">--</p>
+                        <div class="gear-bubbles-row">
+                            <div class="gear-bubble">
+                                <span class="text-[9px] font-bold text-blue-500 uppercase tracking-widest mb-1">Upper Body</span>
+                                <p id="${idPrefix}-upper" class="text-xs text-slate-100 font-medium italic leading-relaxed">--</p>
                             </div>
-                            <div class="border-l border-slate-700/50 pl-2">
-                                <span class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Lower</span>
-                                <p id="${idPrefix}-lower" class="text-xs text-slate-200 font-medium leading-snug">--</p>
+                            <div class="gear-bubble">
+                                <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Lower Body</span>
+                                <p id="${idPrefix}-lower" class="text-xs text-slate-100 font-medium italic leading-relaxed">--</p>
                             </div>
-                            <div class="border-l border-slate-700/50 pl-2">
-                                <span class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Extrem.</span>
-                                <p id="${idPrefix}-extremities" class="text-xs text-slate-200 font-medium leading-snug">--</p>
+                            <div class="gear-bubble">
+                                <span class="text-[9px] font-bold text-purple-500 uppercase tracking-widest mb-1">Extremities</span>
+                                <p id="${idPrefix}-extremities" class="text-xs text-slate-100 font-medium italic leading-relaxed">--</p>
                             </div>
                         </div>
                     </div>
                 `;
 
                 const html = `
-                    <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-5 mb-6">
-                        <div class="flex items-center justify-center gap-3 mb-6">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Temperature:</label>
-                            <select id="gear-temp" onchange="App.updateGearResult()" class="gear-select w-auto py-1 px-3 text-sm font-bold bg-slate-900 text-blue-400 border-slate-700 focus:outline-none focus:border-blue-500">
+                    <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-6 mb-8">
+                        <div class="flex flex-col gap-2 mb-8 max-w-md mx-auto">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Select Temperature</label>
+                            <select id="gear-temp" onchange="App.updateGearResult()" class="gear-select text-center text-lg py-3">
                                 ${tempOptions}
                             </select>
                         </div>
 
                         <!-- SECTION: STANDARD CONDITIONS -->
-                        <div class="mb-6">
-                            <h3 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <div class="mb-10">
+                            <h3 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Standard Conditions
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${generateCompactCard('bike-standard', 'fa-solid fa-bicycle', 'Cycling')}
-                                ${generateCompactCard('run-standard', 'fa-solid fa-person-running', 'Running')}
+                            <div class="flex flex-col gap-4">
+                                ${generateRow('bike-standard', 'fa-solid fa-bicycle', 'Cycling')}
+                                ${generateRow('run-standard', 'fa-solid fa-person-running', 'Running')}
                             </div>
                         </div>
 
                         <!-- SECTION: WINDY & RAINY CONDITIONS -->
                         <div>
-                            <h3 class="text-xs font-bold text-orange-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <h3 class="text-xs font-bold text-orange-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Windy & Rainy (-10°F)
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${generateCompactCard('bike-weather', 'fa-solid fa-bicycle', 'Cycling')}
-                                ${generateCompactCard('run-weather', 'fa-solid fa-person-running', 'Running')}
+                            <div class="flex flex-col gap-4">
+                                ${generateRow('bike-weather', 'fa-solid fa-bicycle', 'Cycling')}
+                                ${generateRow('run-weather', 'fa-solid fa-person-running', 'Running')}
                             </div>
                         </div>
                     </div>
