@@ -102,6 +102,7 @@
             background-repeat: no-repeat;
             background-position: right 0.75rem center;
             background-size: 1rem;
+            width: 100%;
         }
     </style>
 </head>
@@ -211,8 +212,14 @@
                 let capturing = false, section = [];
                 for (let line of lines) {
                     const trimmed = line.trim();
-                    const isHeader = trimmed.startsWith('##') && !trimmed.startsWith('###');
-                    if (isHeader && trimmed.toLowerCase().includes(title.toLowerCase())) { capturing = true; continue; }
+                    const isHeader = (trimmed.startsWith('#') || (trimmed.startsWith('**') && trimmed.endsWith('**')));
+                    const lowTitle = title.toLowerCase();
+                    const lowLine = trimmed.toLowerCase();
+                    
+                    if (isHeader && lowLine.includes(lowTitle)) { 
+                        capturing = true; 
+                        continue; 
+                    }
                     if (capturing && isHeader) break;
                     if (capturing) section.push(line);
                 }
@@ -220,7 +227,7 @@
             },
 
             getBiometrics(md) {
-                const profileSection = this.getSection(md, "2. User Profile & Health") || this.getSection(md, "Biometrics");
+                const profileSection = this.getSection(md, "Profile") || this.getSection(md, "Biometrics");
                 const ftp = profileSection.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
                 const weight = profileSection.match(/Weight[^0-9]*(\d{1,3})/i);
                 return {
@@ -239,13 +246,24 @@
                         if (parts.length >= 2) {
                             const rangeStr = parts[0];
                             let min = -999, max = 999;
-                            if (rangeStr.includes('<')) min = -999, max = parseInt(rangeStr.replace('<', '')) || 30;
-                            else if (rangeStr.includes('+')) min = parseInt(rangeStr.replace('+', '')) || 70, max = 999;
-                            else {
+                            
+                            if (rangeStr.includes('<')) {
+                                min = -999;
+                                max = parseInt(rangeStr.replace('<', '').trim()) || 30;
+                            } else if (rangeStr.includes('+')) {
+                                min = parseInt(rangeStr.replace('+', '').trim()) || 70;
+                                max = 999;
+                            } else {
                                 const nums = rangeStr.split(/[-–]/).map(n => parseInt(n.trim()));
                                 if (nums.length === 2) [min, max] = nums;
+                                else if (nums.length === 1) [min, max] = [nums[0], nums[0]];
                             }
-                            results[type === 'Cycling' ? 'bike' : 'run'].push({ min, max, gear: parts.slice(1).join(' / ') });
+                            
+                            results[type === 'Cycling' ? 'bike' : 'run'].push({ 
+                                min, 
+                                max, 
+                                gear: parts.slice(1).join(' / ') 
+                            });
                         }
                     });
                 });
@@ -273,8 +291,9 @@
                     this.navigate('schedule');
                     this.updateSyncStatus(planRes.ok && gearRes.ok);
                 } catch (e) {
+                    console.error("Init Error:", e);
                     this.updateSyncStatus(false);
-                    document.getElementById('content').innerHTML = `<p class='text-red-400'>Error loading required files.</p>`;
+                    document.getElementById('content').innerHTML = `<p class='text-red-400'>Error loading required files. Ensure endurance_plan.md and Gear.md are available.</p>`;
                 }
             },
 
@@ -290,8 +309,8 @@
 
             updateStats() {
                 const status = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
-                document.getElementById('stat-phase').innerText = status ? status[1].trim() : "--";
-                document.getElementById('stat-week').innerText = status ? status[2].trim() : "--";
+                document.getElementById('stat-phase').innerText = status ? status[1].trim() : "Plan Active";
+                document.getElementById('stat-week').innerText = status ? status[2].trim() : "N/A";
                 
                 const eventSection = Parser.getSection(this.planMd, "Event Schedule");
                 const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
@@ -316,7 +335,7 @@
             },
 
             navigate(view) {
-                const titles = { schedule: 'Weekly Schedule', phases: 'Phases', zones: 'Zones', gear: 'Gear Choice', full: 'Master Plan' };
+                const titles = { schedule: 'Weekly Schedule', phases: 'Phases', zones: 'Zones', gear: 'Gear Selection', full: 'Master Plan' };
                 document.getElementById('header-title').innerText = titles[view];
                 document.getElementById('mobile-header-title').innerText = titles[view];
 
@@ -345,49 +364,56 @@
             },
 
             renderGear() {
-                let tempOptions = '<option value="25">&lt;30</option>';
-                for(let i=30; i<=70; i++) tempOptions += `<option value="${i}">${i}°F</option>`;
-                tempOptions += '<option value="75">70+</option>';
+                let tempOptions = '<option value="25">&lt;30°F</option>';
+                for(let i=30; i<=70; i++) tempOptions += `<option value="${i}" ${i === 50 ? 'selected' : ''}>${i}°F</option>`;
+                tempOptions += '<option value="75">70°F+</option>';
 
                 const html = `
                     <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-8 mb-8">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                             <div class="flex flex-col gap-2">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Activity Type</label>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Activity</label>
                                 <select id="gear-activity" onchange="App.updateGearResult()" class="gear-select">
                                     <option value="bike">Cycling</option>
                                     <option value="run">Running</option>
                                 </select>
                             </div>
                             <div class="flex flex-col gap-2">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Temperature</label>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Temperature</label>
                                 <select id="gear-temp" onchange="App.updateGearResult()" class="gear-select">
                                     ${tempOptions}
                                 </select>
                             </div>
                         </div>
 
-                        <div class="space-y-6">
-                            <div class="p-6 bg-slate-900/80 rounded-lg border border-slate-700">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="p-6 bg-slate-900/80 rounded-lg border border-slate-700 h-full flex flex-col">
                                 <div class="flex items-center gap-2 mb-3">
                                     <div class="w-2 h-2 rounded-full bg-blue-500"></div>
                                     <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Standard Conditions</h4>
                                 </div>
-                                <p id="gear-result-standard" class="text-slate-200 text-lg font-medium italic">Select parameters to see gear...</p>
+                                <p id="gear-result-standard" class="text-slate-100 text-lg font-medium italic flex-grow">--</p>
                             </div>
 
-                            <div class="p-6 bg-slate-900/80 rounded-lg border border-slate-700">
+                            <div class="p-6 bg-slate-900/80 rounded-lg border border-slate-700 h-full flex flex-col">
                                 <div class="flex items-center gap-2 mb-3">
                                     <div class="w-2 h-2 rounded-full bg-orange-500"></div>
-                                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Windy & Rainy Conditions</h4>
+                                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Windy & Rainy</h4>
                                 </div>
-                                <p id="gear-result-weather" class="text-slate-200 text-lg font-medium italic">Adjusted for perceived temperature (-10°)</p>
+                                <p id="gear-result-weather" class="text-slate-100 text-lg font-medium italic flex-grow">--</p>
+                                <p class="text-[10px] text-slate-500 mt-2 italic font-semibold">Automatic -10°F perceived temp adjustment</p>
                             </div>
                         </div>
                     </div>
+
                     <div class="mt-8 border-t border-slate-800 pt-8">
-                        <h3 class="text-sm font-bold text-slate-500 uppercase mb-4 tracking-widest">Full Matrix Documentation</h3>
-                        ${marked.parse(this.gearMd || "")}
+                        <div class="flex items-center gap-2 mb-6">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Full Matrix Documentation</h3>
+                        </div>
+                        <div class="markdown-body">
+                            ${marked.parse(this.gearMd || "*No gear data loaded.*")}
+                        </div>
                     </div>
                 `;
                 document.getElementById('content').innerHTML = html;
@@ -395,19 +421,31 @@
             },
 
             updateGearResult() {
+                if (!this.gearData) return;
+                
                 const activity = document.getElementById('gear-activity').value;
                 const temp = parseInt(document.getElementById('gear-temp').value);
                 
                 const findMatch = (t) => {
-                    const list = this.gearData[activity];
-                    return list.find(r => t >= r.min && t < r.max) || { gear: "No match found for this temperature." };
+                    const list = this.gearData[activity] || [];
+                    // Handle special edge cases for dropdown values 25 and 75
+                    let effectiveTemp = t;
+                    
+                    const match = list.find(r => effectiveTemp >= r.min && effectiveTemp <= r.max);
+                    if (match) return match.gear;
+                    
+                    // Fallback to nearest range if no direct match
+                    if (effectiveTemp < 30) return list.find(r => r.min === -999)?.gear || "No data for cold weather.";
+                    if (effectiveTemp >= 70) return list.find(r => r.max === 999)?.gear || "No data for hot weather.";
+                    
+                    return "Gear data unavailable for this specific temperature.";
                 };
 
-                const standard = findMatch(temp);
-                const weather = findMatch(temp - 10);
+                const standardGear = findMatch(temp);
+                const weatherGear = findMatch(temp - 10);
 
-                document.getElementById('gear-result-standard').innerText = standard.gear;
-                document.getElementById('gear-result-weather').innerText = weather.gear;
+                document.getElementById('gear-result-standard').innerText = standardGear;
+                document.getElementById('gear-result-weather').innerText = weatherGear;
             },
 
             renderZones() {
@@ -439,19 +477,25 @@
             },
 
             parseZoneTables() {
-                const section = Parser.getSection(this.planMd, "Training Parameters");
+                const section = Parser.getSection(this.planMd, "Training Parameters") || Parser.getSection(this.planMd, "Zones");
                 let current = '', html = '', categories = {};
                 section.split('\n').forEach(line => {
-                    if (line.trim().startsWith('###')) {
-                        current = line.replace(/###/g, '').split('(')[0].trim();
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('###')) {
+                        current = trimmed.replace(/###/g, '').split('(')[0].trim();
                         categories[current] = [];
-                    } else if (current && line.includes(':')) {
-                        const [label, range] = line.replace(/[\*\-\+]/g, '').split(':');
-                        const zClass = label.toLowerCase().match(/zone (\d)/);
-                        categories[current].push(`<div class="zone-row z-${zClass ? zClass[1] : '1'}"><span class="font-bold">${label.trim()}</span><span class="font-mono text-slate-400">${range.trim()}</span></div>`);
+                    } else if (current && trimmed.includes(':')) {
+                        const [label, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
+                        const zMatch = label.toLowerCase().match(/zone (\d)/);
+                        const zNum = zMatch ? zMatch[1] : '1';
+                        categories[current].push(`<div class="zone-row z-${zNum}"><span class="font-bold">${label.trim()}</span><span class="font-mono text-slate-400">${range ? range.trim() : '--'}</span></div>`);
                     }
                 });
-                Object.keys(categories).forEach(k => html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`);
+                
+                const keys = Object.keys(categories);
+                if (keys.length === 0) return `<p class="text-slate-500 text-center col-span-2">No zone data found in training plan.</p>`;
+                
+                keys.forEach(k => html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`);
                 return html;
             },
 
