@@ -550,9 +550,10 @@
                     const u = document.getElementById(`${prefix}-upper`);
                     const l = document.getElementById(`${prefix}-lower`);
                     const e = document.getElementById(`${prefix}-extremities`);
-                    if (u) u.innerText = data.upper;
-                    if (l) l.innerText = data.lower;
-                    if (e) e.innerText = data.extremities;
+                    // Use innerHTML to allow <br> tags from cells to render correctly
+                    if (u) u.innerHTML = data.upper;
+                    if (l) l.innerHTML = data.lower;
+                    if (e) e.innerHTML = data.extremities;
                 };
 
                 updateUI('standard', standard);
