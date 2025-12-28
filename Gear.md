@@ -1,5 +1,23 @@
 # 🏃 Biking & Running Gear Master Matrix
 
+This master reference guide is built from your personal logs and gear kit.
+
+---
+
+## 🎒 Master Gear Inventory
+
+### **Running Gear**
+* **Upper Body:** Thermal L/S Top (UA Cold Gear), L/S Shirt, S/S T-Shirt, Tank Top
+* **Lower Body:** Thermal Leggings (UA Cold Gear), Shorts
+* **Accessories:** Hat, Gloves, Neck Wrap
+
+### **Cycling Gear**
+* **Upper Body:** Outer Jacket, Wind Breaker, Sleeveless Vest, Regular Jersey, Sleeveless Jersey, Thermal Sleeves
+* **Lower Body:** Thermal Leggings, Shorts
+* **Accessories:** Balaclava, Handlebar Mitts, Foot Booties, Hat, Gloves, Neck Wrap
+
+---
+
 ## 🌡️ Cycling Matrix
 | Temp Range | Upper Body | Lower Body | Extremities |
 | :--- | :--- | :--- | :--- |
@@ -9,6 +27,8 @@
 | **55°F – 65°F** | S/S Jersey + Thermal Sleeves | Thermal Leggings | None |
 | **65°F – 70°F** | S/S Jersey | Shorts or Leggings | None |
 | **Above 70°F** | Sleeveless Jersey (Tank) | Shorts | None |
+
+---
 
 ## 🌡️ Running Matrix
 | Temp Range | Upper Body | Lower Body | Extremities |
@@ -20,7 +40,10 @@
 | **50°F – 60°F** | Short Sleeved Shirt | Shorts | None |
 | **Above 60°F** | Tank Top Shirt | Shorts | None |
 
+---
+
 ## ⛈️ Rules & Exceptions
-* **Rainy/Windy:** Dress for **10 degrees colder** than forecast.
-* **Darkness:** Dress for **5 degrees colder** than forecast.
-* **The "Warm-Up" Rule:** Better to be chilly for the first mile than hot for the last five.
+* **Rainy/Windy Rule:** Dress for **10 degrees colder** than forecast.
+* **The "Darkness" Rule:** Dress for **5 degrees colder** than forecast if before sunrise.
+* **The "Warm-Up" Rule:** Better to be chilly for the first 1-2 miles than hot for the rest of the activity.
+* **Face Protection:** Use Balaclava for all cycling under 45°F to prevent face pain.
