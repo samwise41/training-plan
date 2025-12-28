@@ -89,7 +89,6 @@ The primary "A" races and secondary objectives for the 2026 season.
 | **Saturday** | **Long Bike** | 3.0 Hours | Zone 2 (134W - 160W) | **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. |
 | **Sunday** | **Rest** | - | - | **Total Recovery.** Optional "Flush" protocol (Appendix D) if stiffness is high. |
 
-| **Status** | **Day** | **Planned Workout** | 
 
 ## 6. Fueling Strategy & Log
 
