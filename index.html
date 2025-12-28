@@ -295,19 +295,26 @@
                                 const rangeStr = parts[0];
                                 let min = -999, max = 999;
                                 
-                                if (rangeStr.includes('<')) {
+                                const numMatch = rangeStr.match(/\d+/g);
+                                if (!numMatch) continue;
+
+                                const lowRangeStr = rangeStr.toLowerCase();
+                                
+                                // Detect descriptive boundaries (below 30, above 70, etc.)
+                                if (lowRangeStr.match(/below|under|<|less/)) {
                                     min = -999; 
-                                    max = parseInt(rangeStr.replace('<', '').trim()) || 30;
-                                } else if (rangeStr.includes('+')) {
-                                    min = parseInt(rangeStr.replace('+', '').trim()) || 70; 
+                                    max = parseInt(numMatch[0]);
+                                } else if (lowRangeStr.match(/above|over|up|\+|more/)) {
+                                    min = parseInt(numMatch[0]); 
                                     max = 999;
+                                } else if (numMatch.length >= 2) {
+                                    // Standard hyphenated range
+                                    min = parseInt(numMatch[0]);
+                                    max = parseInt(numMatch[1]);
                                 } else {
-                                    const nums = rangeStr.split(/[-–—]/).map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-                                    if (nums.length === 2) {
-                                        [min, max] = nums;
-                                    } else if (nums.length === 1) {
-                                        [min, max] = [nums[0], nums[0]];
-                                    }
+                                    // Single number fallback
+                                    min = parseInt(numMatch[0]);
+                                    max = parseInt(numMatch[0]);
                                 }
                                 
                                 results[currentType].push({ 
@@ -319,7 +326,7 @@
                             }
                         }
                     } else if (inTable && trimmed !== "") {
-                        // End of table marker: any non-empty line that doesn't start with pipe
+                        // End of table marker
                         inTable = false;
                     }
                 }
@@ -516,15 +523,21 @@
                     const list = this.gearData[activity] || [];
                     
                     const match = list.find(r => {
-                        // Inclusive matching
+                        // Inclusive min, exclusive max (mostly)
+                        // If it's a 'below' range, handle anything up to the max
+                        if (r.min === -999) return t < r.max;
+                        // If it's an 'above' range, handle anything above the min
                         if (r.max === 999) return t >= r.min;
-                        if (r.min === -999) return t <= r.max;
-                        return t >= r.min && t <= r.max;
+                        // Standard range
+                        return t >= r.min && t < r.max;
                     });
 
                     if (match) {
-                        this.log(`MATCH SUCCESS: ${match.min}-${match.max}`);
+                        this.log(`MATCH SUCCESS: Range ${match.min}-${match.max}`);
                     } else {
+                        // Fallback for exactly on boundary if exclusive logic misses
+                        const boundaryMatch = list.find(r => t === r.max);
+                        if (boundaryMatch) return boundaryMatch;
                         this.log(`MATCH FAILED for ${t}°F`);
                     }
 
