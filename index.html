@@ -114,19 +114,6 @@
             gap: 0.4rem;
             min-height: 4.5rem;
         }
-
-        /* Debug Styles */
-        #debug-panel {
-            background-color: #020617;
-            border: 1px solid #1e293b;
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 11px;
-            color: #94a3b8;
-            max-height: 400px;
-            overflow-y: auto;
-        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -338,14 +325,7 @@
             planMd: "",
             gearMd: "",
             gearData: null,
-            debugLogs: [],
             
-            log(msg) {
-                this.debugLogs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
-                const el = document.getElementById('debug-console');
-                if (el) el.innerText = this.debugLogs.join('\n');
-            },
-
             async init() {
                 try {
                     const [planRes, gearRes] = await Promise.all([
@@ -398,7 +378,15 @@
                             const diff = Math.ceil((eventDate - today) / 86400000);
                             if (diff < 0) countdownEl.innerText = "Completed";
                             else if (diff === 0) countdownEl.innerText = "Event Today!";
-                            else countdownEl.innerText = `${diff} days to go`;
+                            else {
+                                const w = Math.floor(diff / 7);
+                                const d = diff % 7;
+                                let str = "";
+                                if (w > 0) str += `${w} week${w > 1 ? 's' : ''}`;
+                                if (w > 0 && d > 0) str += " and ";
+                                if (d > 0 || w === 0) str += `${d} day${d !== 1 ? 's' : ''}`;
+                                countdownEl.innerText = `${str} to go`;
+                            }
                         } else countdownEl.innerText = "Date TBD";
                     }
                 }
@@ -487,15 +475,12 @@
                     </div>
 
                     <div class="mt-8 border-t border-slate-800 pt-8">
-                        <div class="flex items-center gap-2 mb-4">
-                            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Technical Diagnosis (Parsed Data)</span>
+                        <div class="flex items-center gap-2 mb-6">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Full Documentation</h3>
                         </div>
-                        <div id="debug-panel">
-                            <p class="text-slate-500 italic mb-2">// Logic Stream</p>
-                            <pre id="debug-console" class="whitespace-pre-wrap">${this.debugLogs.join('\n')}</pre>
-                            
-                            <p class="text-slate-500 italic mt-6 mb-2">// In-Memory Gear Brain</p>
-                            <pre id="debug-data-state" class="whitespace-pre-wrap bg-slate-900 p-4 rounded"></pre>
+                        <div class="markdown-body">
+                            ${marked.parse(this.gearMd || "*No gear data found in Gear.md.*")}
                         </div>
                     </div>
                 `;
@@ -504,42 +489,19 @@
             },
 
             updateGearResult() {
-                if (!this.gearData) {
-                    this.log("Error: Gear matrix not initialized.");
-                    return;
-                }
+                if (!this.gearData) return;
                 
                 const activity = document.getElementById('gear-activity').value;
                 const temp = parseInt(document.getElementById('gear-temp').value);
                 
-                this.log(`INPUT: ${activity.toUpperCase()} @ ${temp}°F`);
-
-                const dataStateEl = document.getElementById('debug-data-state');
-                if (dataStateEl) {
-                    dataStateEl.innerText = JSON.stringify(this.gearData, null, 2);
-                }
-
                 const findMatch = (t) => {
                     const list = this.gearData[activity] || [];
                     
                     const match = list.find(r => {
-                        // Inclusive min, exclusive max (mostly)
-                        // If it's a 'below' range, handle anything up to the max
                         if (r.min === -999) return t < r.max;
-                        // If it's an 'above' range, handle anything above the min
                         if (r.max === 999) return t >= r.min;
-                        // Standard range
                         return t >= r.min && t < r.max;
                     });
-
-                    if (match) {
-                        this.log(`MATCH SUCCESS: Range ${match.min}-${match.max}`);
-                    } else {
-                        // Fallback for exactly on boundary if exclusive logic misses
-                        const boundaryMatch = list.find(r => t === r.max);
-                        if (boundaryMatch) return boundaryMatch;
-                        this.log(`MATCH FAILED for ${t}°F`);
-                    }
 
                     return match || { upper: "—", lower: "—", extremities: "—" };
                 };
