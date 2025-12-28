@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
@@ -99,20 +101,8 @@
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 0.75rem center;
+            background-position: right 0.5rem center;
             background-size: 1rem;
-            width: 100%;
-        }
-
-        .gear-item-card {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid #1e293b;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            min-height: 4rem;
         }
     </style>
 </head>
@@ -464,65 +454,57 @@
                 }
                 tempOptions += `<option value="75" ${defaultVal === 75 ? 'selected' : ''}>70°F+</option>`;
 
-                const generateResultBox = (idPrefix, title, colorClass) => `
-                    <div class="p-5 bg-slate-900/80 rounded-lg border border-slate-700 flex flex-col shadow-lg h-full">
-                        <div class="flex items-center gap-2 mb-4">
-                            <div class="w-2.5 h-2.5 rounded-full ${colorClass}"></div>
-                            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">${title}</h4>
+                const generateCompactCard = (idPrefix, iconClass, label) => `
+                    <div class="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3">
+                        <div class="flex items-center gap-2 mb-3 border-b border-slate-700/50 pb-2">
+                            <i class="${iconClass} text-slate-400 text-xs"></i>
+                            <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">${label}</span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
-                            <div class="gear-item-card p-3 min-h-[4rem]">
-                                <span class="text-[9px] font-bold text-blue-500 uppercase tracking-widest">Upper Body</span>
-                                <p id="${idPrefix}-upper" class="text-slate-100 text-xs font-medium italic leading-relaxed">--</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <span class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Upper</span>
+                                <p id="${idPrefix}-upper" class="text-xs text-slate-200 font-medium leading-snug">--</p>
                             </div>
-                            <div class="gear-item-card p-3 min-h-[4rem]">
-                                <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Lower Body</span>
-                                <p id="${idPrefix}-lower" class="text-slate-100 text-xs font-medium italic leading-relaxed">--</p>
+                            <div class="border-l border-slate-700/50 pl-2">
+                                <span class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Lower</span>
+                                <p id="${idPrefix}-lower" class="text-xs text-slate-200 font-medium leading-snug">--</p>
                             </div>
-                            <div class="gear-item-card p-3 min-h-[4rem]">
-                                <span class="text-[9px] font-bold text-purple-500 uppercase tracking-widest">Extremities</span>
-                                <p id="${idPrefix}-extremities" class="text-slate-100 text-xs font-medium italic leading-relaxed">--</p>
+                            <div class="border-l border-slate-700/50 pl-2">
+                                <span class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Extrem.</span>
+                                <p id="${idPrefix}-extremities" class="text-xs text-slate-200 font-medium leading-snug">--</p>
                             </div>
                         </div>
                     </div>
                 `;
 
                 const html = `
-                    <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-6 mb-8">
-                        <div class="flex flex-col gap-2 mb-8 max-w-md mx-auto">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Select Temperature</label>
-                            <select id="gear-temp" onchange="App.updateGearResult()" class="gear-select text-center text-lg py-3">
+                    <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-5 mb-6">
+                        <div class="flex items-center justify-center gap-3 mb-6">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Temperature:</label>
+                            <select id="gear-temp" onchange="App.updateGearResult()" class="gear-select w-auto py-1 px-3 text-sm font-bold bg-slate-900 text-blue-400 border-slate-700 focus:outline-none focus:border-blue-500">
                                 ${tempOptions}
                             </select>
                         </div>
 
-                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                            <!-- CYCLING COLUMN -->
-                            <div>
-                                <div class="flex items-center gap-3 mb-4 justify-center xl:justify-start">
-                                    <div class="p-2 bg-slate-700/50 rounded-lg">
-                                        <svg class="w-6 h-6 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 19h-6V8h-2V5H8a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2v-3zM15 5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                    </div>
-                                    <h3 class="text-lg font-bold text-white tracking-tight">Cycling</h3>
-                                </div>
-                                <div class="flex flex-col gap-4 h-full">
-                                    ${generateResultBox('bike-standard', 'Standard Conditions', 'bg-blue-500')}
-                                    ${generateResultBox('bike-weather', 'Windy & Rainy (-10°)', 'bg-orange-500')}
-                                </div>
+                        <!-- SECTION: STANDARD CONDITIONS -->
+                        <div class="mb-6">
+                            <h3 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Standard Conditions
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${generateCompactCard('bike-standard', 'fa-solid fa-bicycle', 'Cycling')}
+                                ${generateCompactCard('run-standard', 'fa-solid fa-person-running', 'Running')}
                             </div>
+                        </div>
 
-                            <!-- RUNNING COLUMN -->
-                            <div>
-                                <div class="flex items-center gap-3 mb-4 justify-center xl:justify-start">
-                                    <div class="p-2 bg-slate-700/50 rounded-lg">
-                                        <svg class="w-6 h-6 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                                    </div>
-                                    <h3 class="text-lg font-bold text-white tracking-tight">Running</h3>
-                                </div>
-                                <div class="flex flex-col gap-4 h-full">
-                                    ${generateResultBox('run-standard', 'Standard Conditions', 'bg-blue-500')}
-                                    ${generateResultBox('run-weather', 'Windy & Rainy (-10°)', 'bg-orange-500')}
-                                </div>
+                        <!-- SECTION: WINDY & RAINY CONDITIONS -->
+                        <div>
+                            <h3 class="text-xs font-bold text-orange-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Windy & Rainy (-10°F)
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${generateCompactCard('bike-weather', 'fa-solid fa-bicycle', 'Cycling')}
+                                ${generateCompactCard('run-weather', 'fa-solid fa-person-running', 'Running')}
                             </div>
                         </div>
                     </div>
@@ -566,6 +548,7 @@
                         const u = document.getElementById(`${prefix}-upper`);
                         const l = document.getElementById(`${prefix}-lower`);
                         const e = document.getElementById(`${prefix}-extremities`);
+                        // Use innerHTML to allow <br> tags from cells to render correctly
                         if (u) u.innerHTML = data.upper;
                         if (l) l.innerHTML = data.lower;
                         if (e) e.innerHTML = data.extremities;
