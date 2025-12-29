@@ -3,451 +3,704 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Family Goals</title>
+    <title>Athlete Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --accent-color: #3498db;
-            --text-color: #333;
-            --bg-color: #f4f4f9;
-            --sidebar-width: 250px;
-            --card-bg: #fff;
+            --bg-dark: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.3);
+            --border-slate: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
-            color: var(--text-color);
-            background-color: var(--bg-color);
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
         }
 
-        /* --- Sidebar Navigation --- */
-        .sidebar {
-            width: var(--sidebar-width);
-            background-color: var(--primary-color);
-            color: white;
+        .nav-link.active {
+            color: #3b82f6;
+            background-color: #1e293b;
+            border-right: 4px solid #3b82f6;
+        }
+
+        #sidebar { transition: transform 0.3s ease-in-out; z-index: 60; }
+        .sidebar-open { transform: translateX(0); }
+        .sidebar-closed { transform: translateX(-100%); }
+
+        @media (min-width: 1024px) {
+            #sidebar { transform: translateX(0); }
+            .main-content { margin-left: 260px; }
+        }
+
+        .markdown-body {
+            background-color: transparent !important;
+            color: #cbd5e1 !important;
+        }
+        .markdown-body table {
+            display: table !important;
+            width: 100% !important; 
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border: 1px solid #334155 !important; 
+            border-radius: 8px !important; 
+            overflow: hidden !important;
+            margin-bottom: 2rem !important;
+        }
+        .markdown-body table th { 
+            background-color: #1e293b !important; 
+            color: #3b82f6 !important; 
+            padding: 12px !important; 
+            text-align: left !important;
+            text-transform: uppercase !important;
+            font-size: 0.75rem !important;
+            letter-spacing: 0.05em !important;
+        }
+        .markdown-body table td {
+            padding: 12px !important;
+            border-top: 1px solid #334155 !important;
+        }
+        .markdown-body table tr { background-color: var(--bg-dark) !important; }
+
+        .gauge-wrapper { width: 100%; max-width: 400px; margin: 0 auto 1rem; text-align: center; }
+        .gauge-needle { transition: transform 2s cubic-bezier(0.17, 0.67, 0.38, 1); transform-origin: 150px 150px; }
+
+        #zone-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; }
+        @media (min-width: 768px) { #zone-grid { grid-template-columns: 1fr 1fr; } }
+        
+        .zone-card { background-color: var(--bg-card); border: 1px solid var(--border-slate); border-radius: 12px; padding: 1.5rem; }
+        .zone-card-title {
+            font-size: 1.1rem; font-weight: 800; color: var(--text-main);
+            margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-slate);
+            padding-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .zone-row {
+            margin-bottom: 0.75rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #64748b;
+        }
+        .z-1 { border-left-color: #94a3b8; }
+        .z-2 { border-left-color: #22c55e; }
+        .z-3 { border-left-color: #eab308; }
+        .z-4 { border-left-color: #f97316; }
+        .z-5 { border-left-color: #ef4444; }
+
+        .gear-select {
+            background-color: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #334155;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1rem;
+            width: 100%;
+        }
+
+        /* Gear Tab Specific Styles */
+        .gear-row-container {
             display: flex;
             flex-direction: column;
-            padding-top: 20px;
-            position: fixed;
-            height: 100%;
-            transition: transform 0.3s ease;
-            z-index: 1000;
+            gap: 1rem;
         }
-
-        .sidebar h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 1.5rem;
+        @media (min-width: 1024px) {
+            .gear-row-container {
+                flex-direction: row;
+                align-items: stretch;
+            }
         }
-
-        .nav-btn {
-            background: none;
-            border: none;
-            color: white;
-            padding: 15px 20px;
-            text-align: left;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-            width: 100%;
-            text-decoration: none;
-            display: block;
-            box-sizing: border-box;
-        }
-
-        .nav-btn:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-btn.active {
-            background-color: var(--accent-color);
-            border-left: 5px solid white;
-        }
-
-        /* --- Main Content Area --- */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 40px;
-            width: 100%;
-            overflow-y: auto;
-        }
-
-        .tab-content {
-            display: none;
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s ease-in;
-        }
-
-        h1 { 
-            text-align: center;
-            margin-bottom: 30px;
-            color: var(--primary-color);
-        }
-
-        /* --- Home Tab Image Styling --- */
-        .hero-image-container {
+        
+        .activity-header {
+            min-width: 140px;
             display: flex;
-            justify-content: center;
             align-items: center;
-            margin-top: 20px;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.4);
+            border-radius: 0.5rem;
+            border: 1px solid #1e293b;
         }
 
-        .hero-image {
-            max-width: 100%;
-            height: auto;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        /* --- Quadrant Grid Layout --- */
-        .goals-grid {
+        .gear-bubbles-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+            flex: 1;
+        }
+        @media (min-width: 640px) {
+            .gear-bubbles-row {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
-        .quadrant {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border-top: 5px solid var(--accent-color);
-        }
-
-        .quadrant.social { border-top-color: #e74c3c; }      
-        .quadrant.spiritual { border-top-color: #f1c40f; }   
-        .quadrant.physical { border-top-color: #2ecc71; }    
-        .quadrant.intellectual { border-top-color: #9b59b6; }
-
-        .quadrant h3 {
-            margin-top: 0;
-            color: var(--primary-color);
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        
-        ul { list-style-type: none; padding: 0; }
-        li {
-            padding: 8px 0;
-            border-bottom: 1px solid #f9f9f9;
+        .gear-bubble {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid #1e293b;
+            padding: 1rem;
+            border-radius: 0.5rem;
             display: flex;
-            align-items: flex-start;
-            line-height: 1.4;
-        }
-        
-        input[type="checkbox"] {
-            margin-right: 12px;
-            margin-top: 3px;
-            transform: scale(1.1);
-            accent-color: var(--accent-color);
-            flex-shrink: 0;
-        }
-
-        /* --- Mobile Hamburger Menu --- */
-        .hamburger {
-            display: none;
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 2000;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 900;
-        }
-
-        /* --- Responsive Design --- */
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
-            .sidebar.open { transform: translateX(0); }
-            
-            .main-content {
-                margin-left: 0;
-                padding: 60px 20px 20px 20px;
-            }
-
-            .goals-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .hamburger { display: block; }
-            .overlay.active { display: block; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            flex-direction: column;
+            gap: 0.25rem;
+            height: 100%;
         }
     </style>
 </head>
-<body>
+<body class="min-h-screen">
 
-    <button class="hamburger" onclick="toggleMenu()">☰</button>
-    <div class="overlay" onclick="closeMenu()"></div>
+    <div id="sidebar-overlay" onclick="App.toggleSidebar()" class="fixed inset-0 bg-black/50 hidden z-50"></div>
 
-    <nav class="sidebar" id="sidebar">
-        <h2>Family Goals</h2>
-        <a href="#home" class="nav-btn" id="btn-home">Home</a>
-        <a href="#sam" class="nav-btn" id="btn-sam">Sam</a>
-        <a href="#nicole" class="nav-btn" id="btn-nicole">Nicole</a>
-        <a href="#millie" class="nav-btn" id="btn-millie">Millie</a>
-        <a href="#jules" class="nav-btn" id="btn-jules">Jules</a>
-        <a href="#eve" class="nav-btn" id="btn-eve">Eve</a>
-    </nav>
+    <aside id="sidebar" class="fixed top-0 left-0 h-full w-[260px] bg-slate-900 border-r border-slate-800 sidebar-closed lg:sidebar-open flex flex-col">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+            <span class="font-bold tracking-widest text-slate-400 text-xs uppercase">Navigation</span>
+            <button onclick="App.toggleSidebar()" class="lg:hidden text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        
+        <nav class="flex-1 py-4">
+            <button onclick="App.navigate('schedule')" id="nav-schedule" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Weekly Schedule
+            </button>
+            <button onclick="App.navigate('phases')" id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                Phases
+            </button>
+            <button onclick="App.navigate('zones')" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
+                Zones
+            </button>
+            <button onclick="App.navigate('gear')" id="nav-gear" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                Gear Choice
+            </button>
+            <button onclick="App.navigate('full')" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Full Plan
+            </button>
+        </nav>
+    </aside>
+
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 h-16 lg:h-20 flex items-center justify-between px-4 lg:px-8 lg:ml-[260px]">
+        <div class="flex items-center">
+            <button onclick="App.toggleSidebar()" class="lg:hidden p-2 text-slate-400 hover:text-white focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <div class="ml-2 lg:ml-0">
+                <h1 class="text-lg lg:text-xl font-bold text-white tracking-tight" id="header-title-dynamic">Weekly Schedule</h1>
+                <p class="hidden lg:block text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Athlete Performance Suite</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div id="weather-widget" class="flex items-center gap-3">
+                <div class="text-right block"> <p id="weather-location" class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1 hidden sm:block">Local Weather</p> <p id="weather-info" class="text-xs font-semibold text-slate-300 leading-none">Fetching...</p>
+                </div>
+                <div id="weather-icon-top" class="text-xl lg:text-2xl filter drop-shadow-sm">☁️</div>
+            </div>
+        </div>
+    </header>
 
     <div class="main-content">
-        
-        <div id="home" class="tab-content">
-            <h1>Blessed are the Peacemakers</h1>
-            <div class="hero-image-container">
-                <img src="https://github.com/samwise41/goals/blob/main/Blessed%20are%20the%20Peacemakers.png?raw=true" alt="Blessed are the Peacemakers" class="hero-image">
-            </div>
-        </div>
-
-        <div id="sam" class="tab-content">
-            <h1>Sam's Goals</h1>
-            <div class="goals-grid">
-                <div class="quadrant social">
-                    <h3>👥 Social</h3>
-                    <ul>
-                        <li><input type="checkbox"> Daddy daughter date every month</li>
-                    </ul>
+        <main class="max-w-5xl mx-auto px-4 py-8 lg:py-12 pb-20">
+            <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
+                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
                 </div>
-                <div class="quadrant spiritual">
-                    <h3>🙏 Spiritual</h3>
-                    <ul>
-                        <li><input type="checkbox"> Go to temple quarterly</li>
-                        <li><input type="checkbox"> Read New Testament and Book of Mormon</li>
-                    </ul>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
+                    <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
                 </div>
-                <div class="quadrant physical">
-                    <h3>🏃 Physical</h3>
-                    <ul>
-                        <li><input type="checkbox"> Jordanelle Olympic Triathlon</li>
-                        <li><input type="checkbox"> Century Ride</li>
-                        <li><input type="checkbox"> 70.3 (Half Ironman)</li>
-                    </ul>
-                </div>
-                <div class="quadrant intellectual">
-                    <h3>🧠 Intellectual</h3>
-                    <ul>
-                        <li><input type="checkbox"> Launch flow meter business with Jason</li>
-                        <li><input type="checkbox"> Finish RV escape room</li>
-                    </ul>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
+                    <div id="stat-event">
+                        <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
+                        <p class="text-[10px] font-normal text-slate-400 mt-1 uppercase" id="stat-event-countdown">--</p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div id="nicole" class="tab-content">
-            <h1>Nicole's Goals</h1>
-            <div class="goals-grid">
-                <div class="quadrant social">
-                    <h3>👥 Social</h3>
-                    <ul>
-                        <li><input type="checkbox"> Go on mommy-daughter date at least 1x/month</li>
-                        <li><input type="checkbox"> Take a trip to Colorado</li>
-                        <li><input type="checkbox"> Hold 1 new event @ Roy Elementary</li>
-                        <li><input type="checkbox"> Invite 5 new parents to join PTA</li>
-                    </ul>
-                </div>
-                <div class="quadrant spiritual">
-                    <h3>🙏 Spiritual</h3>
-                    <ul>
-                        <li><input type="checkbox"> Study the Old Testament 3x/week</li>
-                        <li><input type="checkbox"> Attend the temple quarterly</li>
-                        <li><input type="checkbox"> Ministering visits at least 6x</li>
-                    </ul>
-                </div>
-                <div class="quadrant physical">
-                    <h3>🏃 Physical</h3>
-                    <ul>
-                        <li><input type="checkbox"> Exercise 3 days per week</li>
-                        <li><input type="checkbox"> Join a pickleball or tennis league</li>
-                    </ul>
-                </div>
-                <div class="quadrant intellectual">
-                    <h3>🧠 Intellectual</h3>
-                    <ul>
-                        <li><input type="checkbox"> Meet with 2 different legislators</li>
-                        <li><input type="checkbox"> Practice piano 1x per week</li>
-                        <li><input type="checkbox"> Complete 15 CEUs for RD</li>
-                        <li><input type="checkbox"> Give 1 presentation or talk</li>
-                    </ul>
-                </div>
+            <div id="loader" class="flex flex-col items-center py-20 hidden">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
             </div>
-        </div>
 
-        <div id="millie" class="tab-content">
-            <h1>Millie's Goals</h1>
-            <div class="goals-grid">
-                <div class="quadrant social">
-                    <h3>👥 Social</h3>
-                    <ul>
-                        <li><input type="checkbox"> Go on at least one daddy daughter date or mommy daughter date once a month</li>
-                    </ul>
-                </div>
-                <div class="quadrant spiritual">
-                    <h3>🙏 Spiritual</h3>
-                    <ul>
-                        <li><input type="checkbox"> Pray every night</li>
-                    </ul>
-                </div>
-                <div class="quadrant physical">
-                    <h3>🏃 Physical</h3>
-                    <ul>
-                        <li><input type="checkbox"> Be outside for at least 1 hour for at least 3 days a week</li>
-                    </ul>
-                </div>
-                <div class="quadrant intellectual">
-                    <h3>🧠 Intellectual</h3>
-                    <ul>
-                        <li><input type="checkbox"> Read at least one chapter book</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div id="jules" class="tab-content">
-            <h1>Jules's Goals</h1>
-            <div class="goals-grid">
-                <div class="quadrant social">
-                    <h3>👥 Social</h3>
-                    <ul>
-                        <li><input type="checkbox"> Every week play with friend outside</li>
-                        <li><input type="checkbox"> Go on a mommy or daddy daughter date</li>
-                    </ul>
-                </div>
-                <div class="quadrant spiritual">
-                    <h3>🙏 Spiritual</h3>
-                    <ul>
-                        <li><input type="checkbox"> Finish the Book of Mormon</li>
-                    </ul>
-                </div>
-                <div class="quadrant physical">
-                    <h3>🏃 Physical</h3>
-                    <ul>
-                        <li><input type="checkbox"> Try a fifteen mile bike ride with dad</li>
-                    </ul>
-                </div>
-                <div class="quadrant intellectual">
-                    <h3>🧠 Intellectual</h3>
-                    <ul>
-                        <li><input type="checkbox"> Memorize the young women’s theme</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div id="eve" class="tab-content">
-            <h1>Eve's Goals</h1>
-            <div class="goals-grid">
-                <div class="quadrant social">
-                    <h3>👥 Social</h3>
-                    <ul><li>No goals listed yet</li></ul>
-                </div>
-                <div class="quadrant spiritual">
-                    <h3>🙏 Spiritual</h3>
-                    <ul><li>No goals listed yet</li></ul>
-                </div>
-                <div class="quadrant physical">
-                    <h3>🏃 Physical</h3>
-                    <ul>
-                        <li><input type="checkbox"> Soccer</li>
-                    </ul>
-                </div>
-                <div class="quadrant intellectual">
-                    <h3>🧠 Intellectual</h3>
-                    <ul>
-                        <li><input type="checkbox"> Finish upstart</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
+            <div id="content" class="markdown-body opacity-0 transition-opacity duration-500"></div>
+        </main>
     </div>
 
     <script>
-        function switchTab(personId) {
-            // 1. Hide all contents
-            var contents = document.getElementsByClassName("tab-content");
-            for (var i = 0; i < contents.length; i++) {
-                contents[i].style.display = "none";
-                contents[i].classList.remove("active");
+        const CONFIG = {
+            PLAN_FILE: "endurance_plan.md",
+            GEAR_FILE: "Gear.md",
+            WKG_SCALE: { min: 1.0, max: 6.0 },
+            CATEGORIES: [
+                { threshold: 5.05, label: "Exceptional", color: "#a855f7" },
+                { threshold: 3.93, label: "Very Good",   color: "#3b82f6" },
+                { threshold: 2.79, label: "Good",        color: "#22c55e" },
+                { threshold: 2.23, label: "Fair",        color: "#f97316" },
+                { threshold: 0.00, label: "Untrained",   color: "#ef4444" }
+            ]
+        };
+
+        const Parser = {
+            getSection(md, title) {
+                if (!md) return "";
+                const lines = md.split('\n');
+                let capturing = false, section = [];
+                for (let line of lines) {
+                    const trimmed = line.trim();
+                    const isHeader = trimmed.startsWith('#');
+                    
+                    if (isHeader) {
+                        if (trimmed.toLowerCase().includes(title.toLowerCase())) {
+                            capturing = true;
+                            continue;
+                        }
+                        if (capturing && !trimmed.startsWith('###')) {
+                            break;
+                        }
+                    }
+                    
+                    if (capturing) section.push(line);
+                }
+                return section.join('\n').trim();
+            },
+
+            getBiometrics(md) {
+                const profileSection = this.getSection(md, "Profile") || this.getSection(md, "Biometrics");
+                const ftp = profileSection.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
+                const weight = profileSection.match(/Weight[^0-9]*(\d{1,3})/i);
+                return {
+                    watts: ftp ? parseInt(ftp[1]) : 0,
+                    weight: weight ? parseInt(weight[1]) : 0
+                };
+            },
+
+            parseGearMatrix(md) {
+                const results = { bike: [], run: [] };
+                const lines = md.split('\n');
+                let currentType = null;
+                let inTable = false;
+
+                for (let line of lines) {
+                    const trimmed = line.trim();
+                    
+                    if (trimmed.startsWith('#')) {
+                        const low = trimmed.toLowerCase();
+                        if (low.includes('cycling') || low.includes('bike')) currentType = 'bike';
+                        else if (low.includes('running') || low.includes('run')) currentType = 'run';
+                        else currentType = null;
+                        inTable = false;
+                        continue;
+                    }
+
+                    if (currentType && trimmed.startsWith('|')) {
+                        if (trimmed.includes('---') || trimmed.toLowerCase().includes('range') || trimmed.toLowerCase().includes('temp')) {
+                            inTable = true;
+                            continue;
+                        }
+                        
+                        if (inTable) {
+                            const parts = trimmed.split('|').map(p => p.trim());
+                            if (trimmed.startsWith('|')) parts.shift();
+                            if (trimmed.endsWith('|')) parts.pop();
+
+                            if (parts.length >= 2) {
+                                const rangeStr = parts[0];
+                                let min = -999, max = 999;
+                                
+                                const numMatch = rangeStr.match(/\d+/g);
+                                if (!numMatch) continue;
+
+                                const lowRangeStr = rangeStr.toLowerCase();
+                                
+                                if (lowRangeStr.match(/below|under|<|less/)) {
+                                    min = -999; 
+                                    max = parseInt(numMatch[0]);
+                                } else if (lowRangeStr.match(/above|over|up|\+|more/)) {
+                                    min = parseInt(numMatch[0]); 
+                                    max = 999;
+                                } else if (numMatch.length >= 2) {
+                                    min = parseInt(numMatch[0]);
+                                    max = parseInt(numMatch[1]);
+                                } else {
+                                    min = parseInt(numMatch[0]);
+                                    max = parseInt(numMatch[0]);
+                                }
+                                
+                                results[currentType].push({ 
+                                    min, max,
+                                    upper: parts[1] || "—",
+                                    lower: parts[2] || "—",
+                                    extremities: parts[3] || "—"
+                                });
+                            }
+                        }
+                    } else if (inTable && trimmed !== "") {
+                        inTable = false;
+                    }
+                }
+                return results;
             }
+        };
 
-            // 2. Remove active class from buttons
-            var buttons = document.getElementsByClassName("nav-btn");
-            for (var i = 0; i < buttons.length; i++) {
-                buttons[i].classList.remove("active");
+        const App = {
+            planMd: "",
+            gearMd: "",
+            gearData: null,
+            currentTemp: null,
+            
+            async init() {
+                try {
+                    const [planRes, gearRes] = await Promise.all([
+                        fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
+                        fetch(`./${CONFIG.GEAR_FILE}?t=${Date.now()}`)
+                    ]);
+                    
+                    this.planMd = planRes.ok ? await planRes.text() : "";
+                    this.gearMd = gearRes.ok ? await gearRes.text() : "";
+                    this.gearData = Parser.parseGearMatrix(this.gearMd);
+
+                    this.updateStats();
+                    await this.fetchWeather();
+                    
+                    // --- CHANGED: HASH METHOD IMPLEMENTATION ---
+                    // Listen for hash changes (back button, forward button, or direct URL edits)
+                    window.addEventListener('hashchange', () => this.handleHashChange());
+                    
+                    // Handle the initial hash on page load (or default to 'schedule')
+                    this.handleHashChange();
+                    
+                } catch (e) {
+                    console.error("Init Error:", e);
+                }
+            },
+
+            async fetchWeather() {
+                try {
+                    const locRes = await fetch('https://ipapi.co/json/');
+                    const locData = await locRes.json();
+                    
+                    if (locData.city) {
+                        document.getElementById('weather-location').innerText = `${locData.city}, ${locData.region_code}`;
+                        
+                        const lat = locData.latitude;
+                        const lon = locData.longitude;
+                        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`);
+                        const weatherData = await weatherRes.json();
+                        
+                        const temp = Math.round(weatherData.current_weather.temperature);
+                        const code = weatherData.current_weather.weathercode;
+                        
+                        this.currentTemp = temp;
+                        document.getElementById('weather-info').innerText = `${temp}°F • Loading...`;
+                        
+                        const mapping = {
+                            0: ["Clear", "☀️"],
+                            1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Partly Cloudy", "🌤️"],
+                            45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"],
+                            51: ["Drizzle", "🌦️"], 53: ["Drizzle", "🌦️"], 55: ["Drizzle", "🌦️"],
+                            61: ["Rainy", "🌧️"], 63: ["Rainy", "🌧️"], 65: ["Rainy", "🌧️"],
+                            71: ["Snowing", "❄️"], 73: ["Snowing", "❄️"], 75: ["Snowing", "❄️"],
+                            95: ["Stormy", "⛈️"]
+                        };
+                        
+                        const condition = mapping[code] || ["Cloudy", "☁️"];
+                        document.getElementById('weather-info').innerText = `${temp}°F • ${condition[0]}`;
+                        document.getElementById('weather-icon-top').innerText = condition[1];
+                    }
+                } catch (e) {
+                    document.getElementById('weather-info').innerText = "Weather Unavailable";
+                }
+            },
+
+            updateStats() {
+                const status = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
+                document.getElementById('stat-phase').innerText = status ? status[1].trim() : "Plan Active";
+                document.getElementById('stat-week').innerText = status ? status[2].trim() : "N/A";
+                
+                const eventSection = Parser.getSection(this.planMd, "Event Schedule");
+                const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
+                
+                const nameEl = document.getElementById('stat-event-name');
+                const countdownEl = document.getElementById('stat-event-countdown');
+
+                if (eventLines.length > 0) {
+                    const parts = eventLines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
+                    if (parts.length >= 2) {
+                        const eventDate = new Date(parts[0]);
+                        nameEl.innerText = parts[1];
+                        if (!isNaN(eventDate)) {
+                            const today = new Date(); today.setHours(0,0,0,0);
+                            const diff = Math.ceil((eventDate - today) / 86400000);
+                            if (diff < 0) countdownEl.innerText = "Completed";
+                            else if (diff === 0) countdownEl.innerText = "Event Today!";
+                            else {
+                                const w = Math.floor(diff / 7);
+                                const d = diff % 7;
+                                let str = "";
+                                if (w > 0) str += `${w} week${w > 1 ? 's' : ''}`;
+                                if (w > 0 && d > 0) str += " and ";
+                                if (d > 0 || w === 0) str += `${d} day${d !== 1 ? 's' : ''}`;
+                                countdownEl.innerText = `${str} to go`;
+                            }
+                        } else countdownEl.innerText = "Date TBD";
+                    }
+                }
+            },
+
+            // --- NEW FUNCTION: Handles the routing based on the hash ---
+            handleHashChange() {
+                const hash = window.location.hash.substring(1); // remove '#'
+                const validViews = ['schedule', 'phases', 'zones', 'gear', 'full'];
+                
+                // Validate hash, default to 'schedule' if invalid or empty
+                const view = validViews.includes(hash) ? hash : 'schedule';
+                
+                this.renderView(view);
+            },
+
+            // --- REPLACED: Updated to only set the hash ---
+            navigate(view) {
+                // If we are already on this view (hash matches), manually call renderView
+                // to ensure the sidebar closes or the view refreshes.
+                if (window.location.hash === '#' + view) {
+                    this.renderView(view);
+                } else {
+                    // Update the hash, which triggers the 'hashchange' event
+                    // The event listener calls handleHashChange -> renderView
+                    window.location.hash = view;
+                }
+            },
+
+            // --- RENAMED: This used to be 'navigate' ---
+            renderView(view) {
+                const titles = { schedule: 'Weekly Schedule', phases: 'Phases', zones: 'Zones', gear: 'Gear Selection', full: 'Master Plan' };
+                document.getElementById('header-title-dynamic').innerText = titles[view];
+
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                const navBtn = document.getElementById(`nav-${view}`);
+                if (navBtn) navBtn.classList.add('active');
+                
+                const content = document.getElementById('content');
+                content.classList.add('opacity-0');
+                
+                setTimeout(() => {
+                    if (view === 'gear') this.renderGear();
+                    else if (view === 'zones') this.renderZones();
+                    else this.renderMarkdown(view);
+                    content.classList.remove('opacity-0');
+                    
+                    if (window.innerWidth < 1024) {
+                        const sidebar = document.getElementById('sidebar');
+                        if (sidebar.classList.contains('sidebar-open')) this.toggleSidebar();
+                    }
+                }, 200);
+            },
+
+            renderMarkdown(view) {
+                const mdMap = {
+                    schedule: Parser.getSection(this.planMd, "Weekly Schedule"),
+                    phases: Parser.getSection(this.planMd, "Periodization"),
+                    full: this.planMd
+                };
+                document.getElementById('content').innerHTML = marked.parse(mdMap[view] || "*Content not found.*");
+            },
+
+            renderGear() {
+                let defaultVal = 50;
+                if (this.currentTemp !== null) {
+                    if (this.currentTemp < 30) defaultVal = 25;
+                    else if (this.currentTemp > 70) defaultVal = 75;
+                    else defaultVal = this.currentTemp;
+                }
+
+                let tempOptions = `<option value="25" ${defaultVal === 25 ? 'selected' : ''}>&lt;30°F</option>`;
+                for(let i=30; i<=70; i++) {
+                    tempOptions += `<option value="${i}" ${i === defaultVal ? 'selected' : ''}>${i}°F</option>`;
+                }
+                tempOptions += `<option value="75" ${defaultVal === 75 ? 'selected' : ''}>70°F+</option>`;
+
+                const generateRow = (idPrefix, iconClass, label) => `
+                    <div class="gear-row-container">
+                        <div class="activity-header">
+                            <i class="${iconClass} text-slate-400 text-lg"></i>
+                            <span class="text-xs font-bold text-slate-200 uppercase tracking-widest">${label}</span>
+                        </div>
+                        <div class="gear-bubbles-row">
+                            <div class="gear-bubble">
+                                <span class="text-[9px] font-bold text-blue-500 uppercase tracking-widest mb-1">Upper Body</span>
+                                <p id="${idPrefix}-upper" class="text-xs text-slate-100 font-medium italic leading-relaxed">--</p>
+                            </div>
+                            <div class="gear-bubble">
+                                <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Lower Body</span>
+                                <p id="${idPrefix}-lower" class="text-xs text-slate-100 font-medium italic leading-relaxed">--</p>
+                            </div>
+                            <div class="gear-bubble">
+                                <span class="text-[9px] font-bold text-purple-500 uppercase tracking-widest mb-1">Extremities</span>
+                                <p id="${idPrefix}-extremities" class="text-xs text-slate-100 font-medium italic leading-relaxed">--</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                const html = `
+                    <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-6 mb-8">
+                        <div class="flex flex-col gap-2 mb-8 max-w-md mx-auto">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Select Temperature</label>
+                            <select id="gear-temp" onchange="App.updateGearResult()" class="gear-select text-center text-lg py-3">
+                                ${tempOptions}
+                            </select>
+                        </div>
+
+                        <div class="mb-10">
+                            <h3 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Standard Conditions
+                            </h3>
+                            <div class="flex flex-col gap-4">
+                                ${generateRow('bike-standard', 'fa-solid fa-bicycle', 'Cycling')}
+                                ${generateRow('run-standard', 'fa-solid fa-person-running', 'Running')}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xs font-bold text-orange-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Windy & Rainy (-10°F)
+                            </h3>
+                            <div class="flex flex-col gap-4">
+                                ${generateRow('bike-weather', 'fa-solid fa-bicycle', 'Cycling')}
+                                ${generateRow('run-weather', 'fa-solid fa-person-running', 'Running')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 border-t border-slate-800 pt-8">
+                        <div class="flex items-center gap-2 mb-6">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Full Documentation</h3>
+                        </div>
+                        <div class="markdown-body">
+                            ${marked.parse(this.gearMd || "*No gear data found in Gear.md.*")}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('content').innerHTML = html;
+                this.updateGearResult();
+            },
+
+            updateGearResult() {
+                if (!this.gearData) return;
+                
+                const tempSelect = document.getElementById('gear-temp');
+                if (!tempSelect) return;
+                const temp = parseInt(tempSelect.value);
+                
+                const processActivity = (activity, prefixBase) => {
+                    const list = this.gearData[activity] || [];
+                    const findMatch = (t) => {
+                        const match = list.find(r => {
+                            if (r.min === -999) return t < r.max;
+                            if (r.max === 999) return t >= r.min;
+                            return t >= r.min && t <= r.max;
+                        });
+                        return match || { upper: "—", lower: "—", extremities: "—" };
+                    };
+
+                    const standard = findMatch(temp);
+                    const weather = findMatch(temp - 10);
+
+                    const updateUI = (prefix, data) => {
+                        const u = document.getElementById(`${prefix}-upper`);
+                        const l = document.getElementById(`${prefix}-lower`);
+                        const e = document.getElementById(`${prefix}-extremities`);
+                        // Use innerHTML to allow <br> tags from cells to render correctly
+                        if (u) u.innerHTML = data.upper;
+                        if (l) l.innerHTML = data.lower;
+                        if (e) e.innerHTML = data.extremities;
+                    };
+
+                    updateUI(`${prefixBase}-standard`, standard);
+                    updateUI(`${prefixBase}-weather`, weather);
+                };
+
+                processActivity('bike', 'bike');
+                processActivity('run', 'run');
+            },
+
+            renderZones() {
+                const { watts, weight } = Parser.getBiometrics(this.planMd);
+                const weightKg = weight * 0.453592;
+                const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
+                const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
+                const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
+
+                const html = `
+                    <div class="gauge-wrapper">
+                        <svg viewBox="0 0 300 185" class="gauge-svg">
+                            <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" />
+                            <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" />
+                            <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
+                            <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" />
+                            <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" />
+                            <text x="150" y="135" text-anchor="middle" class="text-4xl font-black fill-white">${wkgNum.toFixed(2)}</text>
+                            <text x="150" y="160" text-anchor="middle" font-weight="800" fill="${cat.color}">${cat.label.toUpperCase()}</text>
+                            <g class="gauge-needle" style="transform: rotate(${-90 + (percent * 180)}deg)">
+                                <path d="M 147 150 L 150 45 L 153 150 Z" fill="white" />
+                                <circle cx="150" cy="150" r="6" fill="white" />
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="text-center mb-8">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-1">Cycling FTP</span>
+                        <span class="text-2xl font-bold text-white">${watts > 0 ? watts + ' W' : '--'}</span>
+                    </div>
+                    <div id="zone-grid">${this.parseZoneTables()}</div>
+                `;
+                document.getElementById('content').innerHTML = html;
+            },
+
+            parseZoneTables() {
+                const section = Parser.getSection(this.planMd, "Training Parameters") || Parser.getSection(this.planMd, "Zones");
+                let current = '', html = '', categories = {};
+                section.split('\n').forEach(line => {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('###')) {
+                        current = trimmed.replace(/###/g, '').split('(')[0].trim();
+                        categories[current] = [];
+                    } else if (current && trimmed.includes(':')) {
+                        const [label, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
+                        const zMatch = label.toLowerCase().match(/zone (\d)/);
+                        const zNum = zMatch ? zMatch[1] : '1';
+                        categories[current].push(`<div class="zone-row z-${zNum}"><span class="font-bold">${label.trim()}</span><span class="font-mono text-slate-400">${range ? range.trim() : '--'}</span></div>`);
+                    }
+                });
+                
+                const keys = Object.keys(categories);
+                if (keys.length === 0) return `<p class="text-slate-500 text-center col-span-2">No zone data found.</p>`;
+                
+                keys.forEach(k => html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`);
+                return html;
+            },
+
+            toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                sidebar.classList.toggle('sidebar-closed');
+                sidebar.classList.toggle('sidebar-open');
+                overlay.classList.toggle('hidden');
             }
+        };
 
-            // 3. Show the selected content
-            var selectedContent = document.getElementById(personId);
-            if (selectedContent) {
-                selectedContent.style.display = "block";
-                setTimeout(() => selectedContent.classList.add("active"), 10);
-            }
-
-            // 4. Highlight the selected button
-            var selectedBtn = document.getElementById("btn-" + personId);
-            if (selectedBtn) {
-                selectedBtn.classList.add("active");
-            }
-
-            if (window.innerWidth <= 768) {
-                closeMenu();
-            }
-        }
-
-        window.addEventListener('hashchange', function() {
-            var hash = window.location.hash.substring(1);
-            if (hash) {
-                switchTab(hash);
-            } else {
-                switchTab('home'); // Default to home
-            }
-        });
-
-        document.addEventListener("DOMContentLoaded", function() {
-            var hash = window.location.hash.substring(1);
-            if (hash) {
-                switchTab(hash);
-            } else {
-                // Set Default URL to #home
-                history.replaceState(null, null, '#home');
-                switchTab('home');
-            }
-        });
-
-        function toggleMenu() {
-            document.getElementById("sidebar").classList.toggle("open");
-            document.querySelector(".overlay").classList.toggle("active");
-        }
-
-        function closeMenu() {
-            document.getElementById("sidebar").classList.remove("open");
-            document.querySelector(".overlay").classList.remove("active");
-        }
+        window.onload = () => App.init();
     </script>
 </body>
 </html>
