@@ -368,4 +368,339 @@
                     
                     this.planMd = planRes.ok ? await planRes.text() : "";
                     this.gearMd = gearRes.ok ? await gearRes.text() : "";
-                    this.gearData = Parser.parseGearMatrix(
+                    this.gearData = Parser.parseGearMatrix(this.gearMd);
+
+                    this.updateStats();
+                    await this.fetchWeather();
+                    
+                    // --- CHANGED: HASH METHOD IMPLEMENTATION ---
+                    // Listen for hash changes (back button, forward button, or direct URL edits)
+                    window.addEventListener('hashchange', () => this.handleHashChange());
+                    
+                    // Handle the initial hash on page load (or default to 'schedule')
+                    this.handleHashChange();
+                    
+                } catch (e) {
+                    console.error("Init Error:", e);
+                }
+            },
+
+            async fetchWeather() {
+                try {
+                    const locRes = await fetch('https://ipapi.co/json/');
+                    const locData = await locRes.json();
+                    
+                    if (locData.city) {
+                        document.getElementById('weather-location').innerText = `${locData.city}, ${locData.region_code}`;
+                        
+                        const lat = locData.latitude;
+                        const lon = locData.longitude;
+                        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`);
+                        const weatherData = await weatherRes.json();
+                        
+                        const temp = Math.round(weatherData.current_weather.temperature);
+                        const code = weatherData.current_weather.weathercode;
+                        
+                        this.currentTemp = temp;
+                        document.getElementById('weather-info').innerText = `${temp}°F • Loading...`;
+                        
+                        const mapping = {
+                            0: ["Clear", "☀️"],
+                            1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Partly Cloudy", "🌤️"],
+                            45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"],
+                            51: ["Drizzle", "🌦️"], 53: ["Drizzle", "🌦️"], 55: ["Drizzle", "🌦️"],
+                            61: ["Rainy", "🌧️"], 63: ["Rainy", "🌧️"], 65: ["Rainy", "🌧️"],
+                            71: ["Snowing", "❄️"], 73: ["Snowing", "❄️"], 75: ["Snowing", "❄️"],
+                            95: ["Stormy", "⛈️"]
+                        };
+                        
+                        const condition = mapping[code] || ["Cloudy", "☁️"];
+                        document.getElementById('weather-info').innerText = `${temp}°F • ${condition[0]}`;
+                        document.getElementById('weather-icon-top').innerText = condition[1];
+                    }
+                } catch (e) {
+                    document.getElementById('weather-info').innerText = "Weather Unavailable";
+                }
+            },
+
+            updateStats() {
+                const status = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
+                document.getElementById('stat-phase').innerText = status ? status[1].trim() : "Plan Active";
+                document.getElementById('stat-week').innerText = status ? status[2].trim() : "N/A";
+                
+                const eventSection = Parser.getSection(this.planMd, "Event Schedule");
+                const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
+                
+                const nameEl = document.getElementById('stat-event-name');
+                const countdownEl = document.getElementById('stat-event-countdown');
+
+                if (eventLines.length > 0) {
+                    const parts = eventLines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
+                    if (parts.length >= 2) {
+                        const eventDate = new Date(parts[0]);
+                        nameEl.innerText = parts[1];
+                        if (!isNaN(eventDate)) {
+                            const today = new Date(); today.setHours(0,0,0,0);
+                            const diff = Math.ceil((eventDate - today) / 86400000);
+                            if (diff < 0) countdownEl.innerText = "Completed";
+                            else if (diff === 0) countdownEl.innerText = "Event Today!";
+                            else {
+                                const w = Math.floor(diff / 7);
+                                const d = diff % 7;
+                                let str = "";
+                                if (w > 0) str += `${w} week${w > 1 ? 's' : ''}`;
+                                if (w > 0 && d > 0) str += " and ";
+                                if (d > 0 || w === 0) str += `${d} day${d !== 1 ? 's' : ''}`;
+                                countdownEl.innerText = `${str} to go`;
+                            }
+                        } else countdownEl.innerText = "Date TBD";
+                    }
+                }
+            },
+
+            // --- NEW FUNCTION: Handles the routing based on the hash ---
+            handleHashChange() {
+                const hash = window.location.hash.substring(1); // remove '#'
+                const validViews = ['schedule', 'phases', 'zones', 'gear', 'full'];
+                
+                // Validate hash, default to 'schedule' if invalid or empty
+                const view = validViews.includes(hash) ? hash : 'schedule';
+                
+                this.renderView(view);
+            },
+
+            // --- REPLACED: Updated to only set the hash ---
+            navigate(view) {
+                // If we are already on this view (hash matches), manually call renderView
+                // to ensure the sidebar closes or the view refreshes.
+                if (window.location.hash === '#' + view) {
+                    this.renderView(view);
+                } else {
+                    // Update the hash, which triggers the 'hashchange' event
+                    // The event listener calls handleHashChange -> renderView
+                    window.location.hash = view;
+                }
+            },
+
+            // --- RENAMED: This used to be 'navigate' ---
+            renderView(view) {
+                const titles = { schedule: 'Weekly Schedule', phases: 'Phases', zones: 'Zones', gear: 'Gear Selection', full: 'Master Plan' };
+                document.getElementById('header-title-dynamic').innerText = titles[view];
+
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                const navBtn = document.getElementById(`nav-${view}`);
+                if (navBtn) navBtn.classList.add('active');
+                
+                const content = document.getElementById('content');
+                content.classList.add('opacity-0');
+                
+                setTimeout(() => {
+                    if (view === 'gear') this.renderGear();
+                    else if (view === 'zones') this.renderZones();
+                    else this.renderMarkdown(view);
+                    content.classList.remove('opacity-0');
+                    
+                    if (window.innerWidth < 1024) {
+                        const sidebar = document.getElementById('sidebar');
+                        if (sidebar.classList.contains('sidebar-open')) this.toggleSidebar();
+                    }
+                }, 200);
+            },
+
+            renderMarkdown(view) {
+                const mdMap = {
+                    schedule: Parser.getSection(this.planMd, "Weekly Schedule"),
+                    phases: Parser.getSection(this.planMd, "Periodization"),
+                    full: this.planMd
+                };
+                document.getElementById('content').innerHTML = marked.parse(mdMap[view] || "*Content not found.*");
+            },
+
+            renderGear() {
+                let defaultVal = 50;
+                if (this.currentTemp !== null) {
+                    if (this.currentTemp < 30) defaultVal = 25;
+                    else if (this.currentTemp > 70) defaultVal = 75;
+                    else defaultVal = this.currentTemp;
+                }
+
+                let tempOptions = `<option value="25" ${defaultVal === 25 ? 'selected' : ''}>&lt;30°F</option>`;
+                for(let i=30; i<=70; i++) {
+                    tempOptions += `<option value="${i}" ${i === defaultVal ? 'selected' : ''}>${i}°F</option>`;
+                }
+                tempOptions += `<option value="75" ${defaultVal === 75 ? 'selected' : ''}>70°F+</option>`;
+
+                const generateRow = (idPrefix, iconClass, label) => `
+                    <div class="gear-row-container">
+                        <div class="activity-header">
+                            <i class="${iconClass} text-slate-400 text-lg"></i>
+                            <span class="text-xs font-bold text-slate-200 uppercase tracking-widest">${label}</span>
+                        </div>
+                        <div class="gear-bubbles-row">
+                            <div class="gear-bubble">
+                                <span class="text-[9px] font-bold text-blue-500 uppercase tracking-widest mb-1">Upper Body</span>
+                                <p id="${idPrefix}-upper" class="text-sm text-slate-100 font-medium leading-relaxed">--</p>
+                            </div>
+                            <div class="gear-bubble">
+                                <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Lower Body</span>
+                                <p id="${idPrefix}-lower" class="text-sm text-slate-100 font-medium leading-relaxed">--</p>
+                            </div>
+                            <div class="gear-bubble">
+                                <span class="text-[9px] font-bold text-purple-500 uppercase tracking-widest mb-1">Extremities</span>
+                                <p id="${idPrefix}-extremities" class="text-sm text-slate-100 font-medium leading-relaxed">--</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                const html = `
+                    <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-6 mb-8">
+                        <div class="flex flex-col gap-2 mb-8 max-w-md mx-auto">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Select Temperature</label>
+                            <select id="gear-temp" onchange="App.updateGearResult()" class="gear-select text-center text-lg py-3">
+                                ${tempOptions}
+                            </select>
+                        </div>
+
+                        <div class="mb-10">
+                            <h3 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Standard Conditions
+                            </h3>
+                            <div class="flex flex-col gap-4">
+                                ${generateRow('bike-standard', 'fa-solid fa-bicycle', 'Cycling')}
+                                ${generateRow('run-standard', 'fa-solid fa-person-running', 'Running')}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xs font-bold text-orange-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Windy & Rainy (-10°F)
+                            </h3>
+                            <div class="flex flex-col gap-4">
+                                ${generateRow('bike-weather', 'fa-solid fa-bicycle', 'Cycling')}
+                                ${generateRow('run-weather', 'fa-solid fa-person-running', 'Running')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 border-t border-slate-800 pt-8">
+                        <div class="flex items-center gap-2 mb-6">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Full Documentation</h3>
+                        </div>
+                        <div class="markdown-body">
+                            ${marked.parse(this.gearMd || "*No gear data found in Gear.md.*")}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('content').innerHTML = html;
+                this.updateGearResult();
+            },
+
+            updateGearResult() {
+                if (!this.gearData) return;
+                
+                const tempSelect = document.getElementById('gear-temp');
+                if (!tempSelect) return;
+                const temp = parseInt(tempSelect.value);
+                
+                const processActivity = (activity, prefixBase) => {
+                    const list = this.gearData[activity] || [];
+                    const findMatch = (t) => {
+                        const match = list.find(r => {
+                            if (r.min === -999) return t < r.max;
+                            if (r.max === 999) return t >= r.min;
+                            return t >= r.min && t <= r.max;
+                        });
+                        return match || { upper: "—", lower: "—", extremities: "—" };
+                    };
+
+                    const standard = findMatch(temp);
+                    const weather = findMatch(temp - 10);
+
+                    const updateUI = (prefix, data) => {
+                        const u = document.getElementById(`${prefix}-upper`);
+                        const l = document.getElementById(`${prefix}-lower`);
+                        const e = document.getElementById(`${prefix}-extremities`);
+                        // Use innerHTML to allow <br> tags from cells to render correctly
+                        if (u) u.innerHTML = data.upper;
+                        if (l) l.innerHTML = data.lower;
+                        if (e) e.innerHTML = data.extremities;
+                    };
+
+                    updateUI(`${prefixBase}-standard`, standard);
+                    updateUI(`${prefixBase}-weather`, weather);
+                };
+
+                processActivity('bike', 'bike');
+                processActivity('run', 'run');
+            },
+
+            renderZones() {
+                const { watts, weight } = Parser.getBiometrics(this.planMd);
+                const weightKg = weight * 0.453592;
+                const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
+                const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
+                const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
+
+                const html = `
+                    <div class="gauge-wrapper">
+                        <svg viewBox="0 0 300 185" class="gauge-svg">
+                            <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" />
+                            <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" />
+                            <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
+                            <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" />
+                            <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" />
+                            <text x="150" y="135" text-anchor="middle" class="text-4xl font-black fill-white">${wkgNum.toFixed(2)}</text>
+                            <text x="150" y="160" text-anchor="middle" font-weight="800" fill="${cat.color}">${cat.label.toUpperCase()}</text>
+                            <g class="gauge-needle" style="transform: rotate(${-90 + (percent * 180)}deg)">
+                                <path d="M 147 150 L 150 45 L 153 150 Z" fill="white" />
+                                <circle cx="150" cy="150" r="6" fill="white" />
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="text-center mb-8">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-1">Cycling FTP</span>
+                        <span class="text-2xl font-bold text-white">${watts > 0 ? watts + ' W' : '--'}</span>
+                    </div>
+                    <div id="zone-grid">${this.parseZoneTables()}</div>
+                `;
+                document.getElementById('content').innerHTML = html;
+            },
+
+            parseZoneTables() {
+                const section = Parser.getSection(this.planMd, "Training Parameters") || Parser.getSection(this.planMd, "Zones");
+                let current = '', html = '', categories = {};
+                section.split('\n').forEach(line => {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('###')) {
+                        current = trimmed.replace(/###/g, '').split('(')[0].trim();
+                        categories[current] = [];
+                    } else if (current && trimmed.includes(':')) {
+                        const [label, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
+                        const zMatch = label.toLowerCase().match(/zone (\d)/);
+                        const zNum = zMatch ? zMatch[1] : '1';
+                        categories[current].push(`<div class="zone-row z-${zNum}"><span class="font-bold">${label.trim()}</span><span class="font-mono text-slate-400">${range ? range.trim() : '--'}</span></div>`);
+                    }
+                });
+                
+                const keys = Object.keys(categories);
+                if (keys.length === 0) return `<p class="text-slate-500 text-center col-span-2">No zone data found.</p>`;
+                
+                keys.forEach(k => html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`);
+                return html;
+            },
+
+            toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                sidebar.classList.toggle('sidebar-closed');
+                sidebar.classList.toggle('sidebar-open');
+                overlay.classList.toggle('hidden');
+            }
+        };
+
+        window.onload = () => App.init();
+    </script>
+</body>
+</html>
