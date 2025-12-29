@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Athlete Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚲</text></svg>">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
@@ -181,6 +183,10 @@
             <button onclick="App.navigate('gear')" id="nav-gear" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                 Gear Choice
+            </button>
+            <button onclick="App.navigate('history')" id="nav-history" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Training History
             </button>
             <button onclick="App.navigate('full')" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -373,11 +379,7 @@
                     this.updateStats();
                     await this.fetchWeather();
                     
-                    // --- CHANGED: HASH METHOD IMPLEMENTATION ---
-                    // Listen for hash changes (back button, forward button, or direct URL edits)
                     window.addEventListener('hashchange', () => this.handleHashChange());
-                    
-                    // Handle the initial hash on page load (or default to 'schedule')
                     this.handleHashChange();
                     
                 } catch (e) {
@@ -424,9 +426,42 @@
             },
 
             updateStats() {
-                const status = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
-                document.getElementById('stat-phase').innerText = status ? status[1].trim() : "Plan Active";
-                document.getElementById('stat-week').innerText = status ? status[2].trim() : "N/A";
+                // 1. Extract Basic Status Info
+                const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
+                const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
+                const currentWeek = statusMatch ? statusMatch[2].trim() : "N/A";
+
+                // 2. Extract Phase Number (e.g. "1") to find matching dates
+                let dateRange = "";
+                const phaseNumMatch = currentPhaseRaw.match(/Phase\s*(\d+)/i);
+                
+                if (phaseNumMatch) {
+                    const pNum = phaseNumMatch[1];
+                    const phasesSection = Parser.getSection(this.planMd, "Periodization Phases");
+                    
+                    if (phasesSection) {
+                        const lines = phasesSection.split('\n');
+                        for (let line of lines) {
+                            if (line.trim().startsWith('|') && line.includes(`**${pNum}.`)) {
+                                const cols = line.split('|');
+                                if (cols.length > 2) {
+                                    dateRange = cols[2].trim(); 
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Update DOM with Name + Date
+                const phaseEl = document.getElementById('stat-phase');
+                if (dateRange) {
+                    phaseEl.innerHTML = `${currentPhaseRaw}<span class="block text-xs text-slate-400 mt-1 font-normal">${dateRange}</span>`;
+                } else {
+                    phaseEl.innerText = currentPhaseRaw;
+                }
+
+                document.getElementById('stat-week').innerText = currentWeek;
                 
                 const eventSection = Parser.getSection(this.planMd, "Event Schedule");
                 const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
@@ -458,33 +493,32 @@
                 }
             },
 
-            // --- NEW FUNCTION: Handles the routing based on the hash ---
             handleHashChange() {
-                const hash = window.location.hash.substring(1); // remove '#'
-                const validViews = ['schedule', 'phases', 'zones', 'gear', 'full'];
-                
-                // Validate hash, default to 'schedule' if invalid or empty
+                const hash = window.location.hash.substring(1); 
+                // ADDED 'history' to valid views
+                const validViews = ['schedule', 'phases', 'zones', 'gear', 'full', 'history'];
                 const view = validViews.includes(hash) ? hash : 'schedule';
-                
                 this.renderView(view);
             },
 
-            // --- REPLACED: Updated to only set the hash ---
             navigate(view) {
-                // If we are already on this view (hash matches), manually call renderView
-                // to ensure the sidebar closes or the view refreshes.
                 if (window.location.hash === '#' + view) {
                     this.renderView(view);
                 } else {
-                    // Update the hash, which triggers the 'hashchange' event
-                    // The event listener calls handleHashChange -> renderView
                     window.location.hash = view;
                 }
             },
 
-            // --- RENAMED: This used to be 'navigate' ---
             renderView(view) {
-                const titles = { schedule: 'Weekly Schedule', phases: 'Phases', zones: 'Zones', gear: 'Gear Selection', full: 'Master Plan' };
+                // ADDED 'history' title
+                const titles = { 
+                    schedule: 'Weekly Schedule', 
+                    phases: 'Phases', 
+                    zones: 'Zones', 
+                    gear: 'Gear Selection', 
+                    full: 'Master Plan',
+                    history: 'Training History'
+                };
                 document.getElementById('header-title-dynamic').innerText = titles[view];
 
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
@@ -511,7 +545,9 @@
                 const mdMap = {
                     schedule: Parser.getSection(this.planMd, "Weekly Schedule"),
                     phases: Parser.getSection(this.planMd, "Periodization"),
-                    full: this.planMd
+                    full: this.planMd,
+                    // ADDED history content map
+                    history: Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History")
                 };
                 document.getElementById('content').innerHTML = marked.parse(mdMap[view] || "*Content not found.*");
             },
