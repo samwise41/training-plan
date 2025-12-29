@@ -373,11 +373,7 @@
                     this.updateStats();
                     await this.fetchWeather();
                     
-                    // --- CHANGED: HASH METHOD IMPLEMENTATION ---
-                    // Listen for hash changes (back button, forward button, or direct URL edits)
                     window.addEventListener('hashchange', () => this.handleHashChange());
-                    
-                    // Handle the initial hash on page load (or default to 'schedule')
                     this.handleHashChange();
                     
                 } catch (e) {
@@ -424,9 +420,46 @@
             },
 
             updateStats() {
-                const status = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
-                document.getElementById('stat-phase').innerText = status ? status[1].trim() : "Plan Active";
-                document.getElementById('stat-week').innerText = status ? status[2].trim() : "N/A";
+                // 1. Extract Basic Status Info
+                const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
+                const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
+                const currentWeek = statusMatch ? statusMatch[2].trim() : "N/A";
+
+                // 2. Extract Phase Number (e.g. "1") to find matching dates
+                let dateRange = "";
+                const phaseNumMatch = currentPhaseRaw.match(/Phase\s*(\d+)/i);
+                
+                if (phaseNumMatch) {
+                    const pNum = phaseNumMatch[1];
+                    // Fetch the "Periodization Phases" section to parse the table
+                    const phasesSection = Parser.getSection(this.planMd, "Periodization Phases");
+                    
+                    if (phasesSection) {
+                        const lines = phasesSection.split('\n');
+                        for (let line of lines) {
+                            // Find row starting with matching number (e.g. "| **1.")
+                            if (line.trim().startsWith('|') && line.includes(`**${pNum}.`)) {
+                                const cols = line.split('|');
+                                // Format: | Name | Dates | Focus |
+                                if (cols.length > 2) {
+                                    dateRange = cols[2].trim(); 
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Update DOM with Name + Date
+                const phaseEl = document.getElementById('stat-phase');
+                if (dateRange) {
+                    // Added a block span with smaller text for the dates
+                    phaseEl.innerHTML = `${currentPhaseRaw}<span class="block text-xs text-slate-400 mt-1 font-normal">${dateRange}</span>`;
+                } else {
+                    phaseEl.innerText = currentPhaseRaw;
+                }
+
+                document.getElementById('stat-week').innerText = currentWeek;
                 
                 const eventSection = Parser.getSection(this.planMd, "Event Schedule");
                 const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
@@ -458,31 +491,21 @@
                 }
             },
 
-            // --- NEW FUNCTION: Handles the routing based on the hash ---
             handleHashChange() {
-                const hash = window.location.hash.substring(1); // remove '#'
+                const hash = window.location.hash.substring(1); 
                 const validViews = ['schedule', 'phases', 'zones', 'gear', 'full'];
-                
-                // Validate hash, default to 'schedule' if invalid or empty
                 const view = validViews.includes(hash) ? hash : 'schedule';
-                
                 this.renderView(view);
             },
 
-            // --- REPLACED: Updated to only set the hash ---
             navigate(view) {
-                // If we are already on this view (hash matches), manually call renderView
-                // to ensure the sidebar closes or the view refreshes.
                 if (window.location.hash === '#' + view) {
                     this.renderView(view);
                 } else {
-                    // Update the hash, which triggers the 'hashchange' event
-                    // The event listener calls handleHashChange -> renderView
                     window.location.hash = view;
                 }
             },
 
-            // --- RENAMED: This used to be 'navigate' ---
             renderView(view) {
                 const titles = { schedule: 'Weekly Schedule', phases: 'Phases', zones: 'Zones', gear: 'Gear Selection', full: 'Master Plan' };
                 document.getElementById('header-title-dynamic').innerText = titles[view];
