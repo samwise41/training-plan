@@ -82,7 +82,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 |  Status | Day | Activity | Duration / Distance | Zone / Intensity | Focus / Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | PLANNED | 12-29-25 Monday | **Swim** | ~500m - 800m | Zone 1 (RPE 3-4) | **Technique:** Catch & Pull drills. Ignore the clock. Focus on breathing rhythm. |
-| PLANNED | 12-30-25 Tuesday | **Run** | 45 mins | Zone 2 (HR: 140-152) | **Aerobic Base:** Flat terrain. Keep cadence high (170+ spm). |
+| COMPLETED | 12-30-25 Tuesday | **Run** | 45 mins | Zone 2 (HR: 140-152) | **Aerobic Base:** Flat terrain. Keep cadence high (170+ spm). |
 | PLANNED | 12-31-25 Wednesday | **Bike** | 60 mins | Zone 2 (134W - 180W) | **Steady State:** Remain seated. Focus on smooth pedal strokes. |
 | PLANNED | 01-01-26 Thursday | **Prehab** | 30 mins | Recovery | **Strength:** Banded Leg Raises (2x15), Planks (3x1m). **No Impact.** |
 | PLANNED | 01-02-26 Friday | **Run** | 40 mins | Zone 2 (HR: 140-152) | **Volume:** Easy aerobic miles. Focus on maintaining posture in final 10 mins. |
