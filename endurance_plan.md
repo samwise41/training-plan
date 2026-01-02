@@ -155,259 +155,257 @@ The primary "A" races and secondary objectives for the 2026 season.
 ## Appendix C: Training History Log
 
 
-| **Status**    | **Day**   | **Planned Workout** | **Planned Duration**   | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** |
-|:----------|:------|:--------------------------------------------|-------------------:|:-----------------------------------------------------------------------|------------------:|:------------------------------------------------------------------------|:-----------|
-| COMPLETED | Fri   | [RUN] Volume Run                            |              40    | [RUN] Morning Run 51 Minutes                                           |           51      | Durat 40 mins. Zone 2 (HR: 140-152 bpm). Focus: Easy.                   | 2026-01-02 |
-| COMPLETED | Thu   | Rest                                        |                |                                                                    |            2      |                                                                     | 2026-01-01 |
-| COMPLETED | Wed   | [BIKE] Steady State                         |              60    | [BIKE] Zwift - Zone 2 - 71% on Lutscher CCW in Innsbruck 62 minutes    |           62      | Durat 60 mins. Zone 2 (134W - 180W). Focus: Smooth.                     | 2025-12-31 |
-| COMPLETED | Tue   | [RUN] Aerobic Base                          |              45    | [RUN] Morning Run 50:00                                                |           50      | Durat 45 mins. Zone 2 (HR: 140-152 bpm). Focus: Aerobic Base.           | 2025-12-30 |
-| MISSED    | Mon   | [SWIM] Technique Focus                      |                |                                                                    |               | ~500m - 800m. Zone 1 (RPE 3-4). Catch & Pull drills.                    | 2025-12-29 |
-| COMPLETED | Sun   | Rest                                        |                |                                                                    |               | Weekly Planning Check-in.                                               | 2025-12-28 |
-| COMPLETED | Sat   | Long Ride [BIKE]                            |             180    | [BIKE] 1h Bike + 40m Swim                                              |           60.5833 | Swapped Long Ride for Brick.                                            | 2025-12-27 |
-| COMPLETED | Fri   | Run Test [RUN]                              |              30    | [RUN] LTHR Test                                                        |           60.3    | 30m TT. Result: 171 bpm.                                                | 2025-12-26 |
-| COMPLETED | Thu   | Endurance [BIKE]                            |              60    | [BIKE] Endurance [BIKE]                                                |           61.2333 | 60 mins Steady Z2.                                                      | 2025-12-25 |
-| COMPLETED | Wed   | Recovery [BIKE]                             |              40    | [BIKE] Recovery [BIKE]                                                 |           43.2333 | 40 mins Z1 Spin.                                                        | 2025-12-24 |
-| COMPLETED | Tue   | FTP Test (Bike)                             |             120    | [BIKE] Alpe du Zwift                                                   |           10.4    | Result: 241W.                                                           | 2025-12-23 |
-| MISSED    | Mon   | Swim                                        |                |                                                                    |               | Rest / Light Mobility                                                   | 2025-12-22 |
-| COMPLETED | Sat   | [BIKE] Bike: Long Ride (Base)               |             150    | [BIKE] Afternoon Ride                                                  |          114.633  | 2.5-3.0 Hours. Power: 139W-189W (Zone 2). Practice race-day nutrition.  | 2025-12-20 |
-| COMPLETED | Fri   | [RUN] Run: Long Run                         |              76    | [RUN] Morning Run                                                      |           87.15   | 8-9 Miles. Pace: 9:00-9:45 min/mile (Zone 2). Key run durability.       | 2025-12-19 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance                     |              90    | [BIKE] Zwift - Zone 2 - 65% on Richmond 2015 Worlds Reverse            |           51.55   | Mid-week volume. 90 minutes @ 139W - 189W.                              | 2025-12-18 |
-| COMPLETED | Thu   | [RUN] Run: Easy/Base                        |              40    |                                                                        |           00.00   | 30-40 min. Pace: 9:00-9:45 min/mile (Zone 2). Leg flush.                | 2025-12-18 |
-| COMPLETED | Wed   | [SWIM] Swim: Active Recovery                |              30    |                                                                    |               | Very easy, drill focus. Flush the legs after the TT.                    | 2025-12-17 |
-| COMPLETED | Tue   | [BIKE] Bike: 25 Mile Threshold Trial (230W) |              90    | [BIKE] Zwift - Gentil 8 in France                                      |           86.05   | KEY SESSION! 25 miles sustained at 230 Watts (91% FTP).                 | 2025-12-16 |
-| COMPLETED | Mon   | [SWIM] Swim: Base Endurance                 |              45    |                                                                    |               | 45 min steady effort. Focus on form. Prep for Tuesday's intensity.      | 2025-12-15 |
-| COMPLETED | Sat   | [BIKE] Long Ride                            |             180    | [BIKE] Zwift - Zone 2 - 65%                                            |           51.8667 | Major volume session to make up for missed time. 3.0 Hours @ 139W-189W. | 2025-12-13 |
-| COMPLETED | Fri   | [RUN] Long Run                              |              64.75 | [RUN] Morning Run                                                      |           74.8667 | Push durability past the 10K distance. 7 - 8 Miles @ Z2.                | 2025-12-12 |
-| COMPLETED | Thu   | [SWIM] Endurance Focus                      |              45    |                                                                        |           0       | Consistency in lap count. 30 - 45 minutes @ Easy Effort.                | 2025-12-11 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance                     |              90    | [BIKE] Zwift - Zone 2 - 71% (90 min) on Libby Hill                     |           90.5833 | Mid-week volume restoration. 90 minutes @ 139W - 189W.                  | 2025-12-11 |
-| COMPLETED | Wed   | [RUN] Easy/Base Run                         |              30    | [RUN] Morning Run                                                      |           33.4167 | Maintain run durability. 30 min Easy Run.                               | 2025-12-10 |
-| COMPLETED | Tue   | [BIKE] Sweet Spot Intervals                 |              60    | [BIKE] Zwift - Sweet Spot - 2 x 15 on The Muckle Yin                   |           61      | High intensity, key fitness driver. 60 min (2x15 min @ 222W - 234W).    | 2025-12-09 |
-| COMPLETED | Mon   | [SWIM] Form Focus                           |              45    | [SWIM] Morning Swim                                                    |           39.1    | Drills: Continue Bubble Drill and rotation. 30 - 45 minutes @ Easy.     | 2025-12-08 |
-| COMPLETED | Sat   | [RUN] Long Run                              |              64.75 | [RUN] Morning Run                                                      |           67.4667 | 7 - 8 Miles @ Z2. Push past the 10K race distance.                      | 2025-12-06 |
-| COMPLETED | Fri   | [BIKE] Long Ride                            |             150    | [SWIM] Morning Swim                                                    |           44.6167 | 2.5 Hours @ 139W - 189W. Major volume session.                          | 2025-12-05 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance                     |              90    | [BIKE] Zwift - Zone 2 - 71% (90 min) on Greater London Flat            |           60.2833 | 90 minutes @ 139W - 189W. Solid aerobic base.                           | 2025-12-04 |
-| COMPLETED | Thu   | [SWIM] Endurance Focus                      |              45    |                                                                        |           0       | Focus on continuous swimming and lap count. 30 - 45 min @ Easy.         | 2025-12-04 |
-| COMPLETED | Wed   | [RUN] Speed/Tempo                           |              45    | [RUN] 6 x 3 Tempo Intervals                                            |           37.9333 | 4 x 3 min @ Zone 3. Add some quality running effort.                    | 2025-12-03 |
-| COMPLETED | Tue   | [BIKE] Sweet Spot Intervals                 |              70    | [BIKE] Zwift - Sweet Spot - 2 x 20 on Chain Chomper                    |           80.3833 | 2x15 min @ 222W - 234W. High-priority session using new FTP.            | 2025-12-02 |
-| COMPLETED | Mon   | [SWIM] Form Focus                           |              30    | [SWIM] Morning Swim                                                    |           34.7167 | Focus on the Bubble Drill. 30 - 45 minutes @ Easy Effort.               | 2025-12-01 |
-| EXTRA     | Fri   |                                         |                | [RUN] Morning Run                                                      |           49.5167 |                                                                     | 2025-11-28 |
-| EXTRA     | Thu   |                                         |                | [RUN] Thanksgiving Run                                                 |           58.4167 |                                                                     | 2025-11-27 |
-| EXTRA     | Wed   |                                         |                | [SWIM] Morning Swim                                                    |           33.5833 |                                                                     | 2025-11-26 |
-| EXTRA     | Tue   |                                         |                | [BIKE] Zwift - Zone 2 - 71% (90 min) on 2018 Worlds Short Lap          |           90.9667 |                                                                     | 2025-11-25 |
-| EXTRA     | Mon   |                                         |                | [SWIM] Morning Swim                                                    |           32.1    |                                                                     | 2025-11-24 |
-| EXTRA     | Sat   |                                         |                | [BIKE] Morning Ride                                                    |           65.9667 |                                                                     | 2025-11-22 |
-| EXTRA     | Fri   |                                         |                | [RUN] Morning Run                                                      |           54.3    |                                                                     | 2025-11-21 |
-| EXTRA     | Thu   |                                         |                | [BIKE] NEW FTP - Zwift - FTP Test [Standard]                           |           45.4667 |                                                                     | 2025-11-20 |
-| EXTRA     | Wed   |                                         |                | [SWIM] Morning Swim                                                    |           37.6833 |                                                                     | 2025-11-19 |
-| EXTRA     | Tue   |                                         |                | [RUN] 10k PR!!                                                         |           53.7167 |                                                                     | 2025-11-18 |
-| EXTRA     | Mon   |                                         |                | [SWIM] Evening Swim With Swim Coach                                    |           37.05   |                                                                     | 2025-11-17 |
-| COMPLETED | Sat   | [BIKE] Long Endurance                       |             180    | [BIKE] Zwift - Sugar Cookie in Watopia                                 |           60.15   | Major cycling push. 50 - 60 Miles @ Z2/low Tempo.                       | 2025-11-15 |
-| COMPLETED | Fri   | [SWIM] Technical Drill                      |              30    | [RUN] Lunch Run                                                        |           44.3333 | Short, third session. Focus on a specific coach-given drill.            | 2025-11-14 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance                     |              90    |                                                                    |               | Solid aerobic base. 75 - 90 min @ Z2.                                   | 2025-11-13 |
-| COMPLETED | Thu   | [RUN] Easy Run                              |              25    |                                                                    |               | Running durability. 20-25 min Easy Run.                                 | 2025-11-13 |
-| COMPLETED | Wed   | [SWIM] Endurance Focus                      |              45    |                                                                    |               | Consistency and extending continuous swim time. 30 - 45 min @ Easy.     | 2025-11-12 |
-| COMPLETED | Wed   | [BIKE] Zone 2 Endurance                     |              90    |                                                                    |               | Solid aerobic base. 75 - 90 min @ Z2.                                   | 2025-11-12 |
-| COMPLETED | Tue   | [BIKE] Sweet Spot Intervals                 |              60    | [SWIM] Morning Swim                                                    |           27.3833 | Keep legs sharp with high intensity. 60 min (2x15 min @ Sweet Spot).    | 2025-11-11 |
-| COMPLETED | Mon   | [SWIM] Form Focus                           |              30    |                                                                    |               | Drills: Bubble Drill (exhale fully) and rotation. 30 - 45 mins.         | 2025-11-10 |
-| COMPLETED | Sat   | [BIKE] Group Ride                           |              60    |                                                                    |           0       | Second back-to-back ride. 20 Miles @ Z2/low Tempo.                      | 2025-11-08 |
-| COMPLETED | Fri   | [BIKE] Group Ride                           |             120    | [BIKE] Arches National Park Ride                                       |          161.817  | First social ride. 18 - 36 Miles @ Z2/low Tempo.                        | 2025-11-07 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance                     |              75    |                                                                        |           0       | Solid aerobic base. 75 - 90 min @ Z2.                                   | 2025-11-06 |
-| COMPLETED | Thu   | [RUN] Easy Run                              |              25    | [RUN] Afternoon Run                                                    |           46.2167 | Running durability. 20-25 min Easy Run.                                 | 2025-11-06 |
-| COMPLETED | Wed   | [SWIM] Endurance Focus                      |              30    |                                                                        |                   | Consistency and extending continuous swim time. 30 - 45 min @ Easy.     | 2025-11-05 |
-| COMPLETED | Wed   | [BIKE] Zone 2 Endurance                     |              90    | [BIKE] Zwift - Pacer Group Ride: Flat Route                            |           60.2667 | Solid aerobic base. 75 - 90 min @ Z2.                                   | 2025-11-05 |
-| COMPLETED | Tue   | [BIKE] Sweet Spot Intervals                 |              60    |                                                                    |               | Keep legs sharp with high intensity. 60 min (2x15 min @ Sweet Spot).    | 2025-11-04 |
-| COMPLETED | Mon   | [SWIM] Form Focus                           |              30    | [SWIM] Lunch Swim                                                      |           47.2    | Drills: Bubble Drill (exhale fully) and rotation. 30 - 45 mins.         | 2025-11-03 |
-| COMPLETED | Sat   | [BIKE] Long Endurance                       |                | [BIKE] Zwift - Pacer Group Ride: Castle to Castle                      |           60.25   | Major cycling endurance effort. 40 - 50 Miles @ Z2/low Tempo.           | 2025-11-01 |
-| COMPLETED | Fri   | [SWIM] Endurance Focus                      |                | [BIKE] Zwift - Race: Foudre Friday Apero League Race                   |           62.1667 | Focus on drills from your coach.                                        | 2025-10-31 |
-| COMPLETED | Thu   | [SWIM] Drill Session                        |                |                                                                    |               | Focus on drills from your coach.                                        | 2025-10-30 |
-| COMPLETED | Thu   | [RUN] Easy Run                              |                |                                                                    |               | Restart running durability work. 20-25 min Easy Run.                    | 2025-10-30 |
-| COMPLETED | Wed   | [BIKE] Zone 2 Endurance                     |                |                                                                    |               | Solid aerobic bike volume. 75 - 90 minutes @ Z2.                        | 2025-10-29 |
-| COMPLETED | Tue   | [BIKE] Sweet Spot Intervals                 |                | [RUN] Afternoon Run                                                    |               | 60 minutes total (2x15 min @ Sweet Spot). Reintroduce intensity.        | 2025-10-28 |
-| COMPLETED | Mon   | [SWIM] Form Focus                           |                | [BIKE] Zwift - Race: SAZ speed race                                    |               | Your first official triathlon session! Focus on breathing.              | 2025-10-27 |
-| EXTRA     | Sat   |                                         |                | [BIKE] Zwift - Zone 2 - 71% (90 min) on Royal Pump Room 8              |               |                                                                     | 2025-10-25 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on Duchy Estate in Yorkshire               |               |                                                                     | 2025-10-24 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Tour Of Tewit Well               |               |                                                                     | 2025-10-23 |
-| COMPLETED | Sat   | [BIKE] Endurance Ride (40-50 Miles)         |                | [BIKE] Freezing Cold Morning Ride                                      |               |                                                                     | 2025-10-18 |
-| COMPLETED | Sat   | [BIKE] KEY RIDE: 40-50 Miles                |                | [BIKE] Freezing Cold Morning Ride                                      |               | Major endurance goal. 4 hours max @ Zone 2/low Tempo.                   | 2025-10-18 |
-| COMPLETED | Thu   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Durability work and run base. 30-45 min Strength; 20 min Easy.          | 2025-10-16 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 1 x 15 on 2018 Worlds Short Lap            |               |                                                                     | 2025-10-15 |
-| COMPLETED | Tue   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on Lutscher in Innsbruck                   |               | Re-establish aerobic endurance base. 60-75 min @ 144W-180W.             | 2025-10-14 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Very light, easy spin to start waking up the legs.                      | 2025-10-13 |
-| COMPLETED | Sat   | [BIKE] Post-Race Active Recovery Ride       |                |                                                                    |               |                                                                     | 2025-10-11 |
-| COMPLETED | Fri   | [RUN] Antelope Island Marathon              |                | [RUN] Antelope Island 10k                                              |               | 26.2 - 13.1 - 10K - 5K                                                  | 2025-10-10 |
-| COMPLETED | Wed   | [RUN] Easy Run Final Check (10 min)         |                |                                                                    |               |                                                                     | 2025-10-08 |
-| EXTRA     | Tue   |                                         |                | [BIKE] Zwift - New Workout on Innsbruckring in Innsbruck               |               |                                                                     | 2025-10-07 |
-| COMPLETED | Mon   | [RUN] Easy Run Opener (15 min)              |                | [RUN] Afternoon Run                                                    |               |                                                                     | 2025-10-06 |
-| EXTRA     | Sun   |                                         |                |                                                                    |               |                                                                     | 2025-10-05 |
-| COMPLETED | Sat   | [RUN] Short, Easy Run (2 miles)             |                | [RUN] Morning Run in the rain                                          |               | Final "Long" Run Check: A short, gentle run.                            | 2025-10-04 |
-| COMPLETED | Fri   | [BIKE] Short Zone 2 Ride (Tapered)          |                |                                                                    |               | Aerobic Maintenance: Keep blood flow up without adding fatigue.         | 2025-10-03 |
-| COMPLETED | Wed   | [RUN] Easy Run & Strength (Tapered)         |                | [RUN] Afternoon Run                                                    |               | Running Durability: Reduced 20 min Easy Run + 20 min light Core.        | 2025-10-01 |
-| EXTRA     | Tue   |                                         |                | [BIKE] Zwift - Sweet Spot - 1 x 15 on Mountain Mash                    |               |                                                                     | 2025-09-30 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride (Taper)         |                |                                                                    |               | Flush legs from your 7.5-mile run. Duration is heavily reduced.         | 2025-09-29 |
-| COMPLETED | Sat   | [RUN] Long Run (5 miles)                    |                | [RUN] Morning Run - 10k                                                |               | PRIMARY FOCUS: Your longest run (5 miles) before the 10K taper.         | 2025-09-27 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on R.G.V. in France                        |               | Aerobic Maintenance: 60 min @ 144W-180W (Zone 2).                       | 2025-09-26 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 25 on Knickerbocker                    |               |                                                                     | 2025-09-25 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30-45 min full-body strength session.              | 2025-09-24 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Cadence Pyramid on Tempus Fugit                         |               | Recovery: Light spin to flush legs after a big training week.           | 2025-09-22 |
-| COMPLETED | Sat   | [RUN] Long Run (4 miles)                    |                | [RUN] Morning Run - Felt Great                                         |               | Workout: Run for approximately 4 miles at an easy pace.                 | 2025-09-20 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 20 on The Fan Flats                    |               |                                                                     | 2025-09-19 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Highline in New York                |               |                                                                     | 2025-09-18 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30-45 min full-body strength session.              | 2025-09-17 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Greatest London Flat             |               | Recovery: Light spin to flush legs after a big training week.           | 2025-09-15 |
-| COMPLETED | Sat   | [RUN] Long Run (3.5 miles)                  |                | [RUN] Morning Run - Slow and Steady                                    |               | Workout: Run for approximately 3.5 miles at an easy pace.               | 2025-09-13 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on Tick Tock in Watopia                    |               | Aerobic Maintenance: 60 min @ 144W-180W (Zone 2).                       | 2025-09-12 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on Flat Route in Watopia                   |               |                                                                     | 2025-09-11 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30-45 min full-body strength session.              | 2025-09-10 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-09-08 |
-| COMPLETED | Sat   | [RUN] Long Run (3 miles)                    |                | [RUN] Morning Run                                                      |               | Workout: Run for approximately 3 miles at an easy pace.                 | 2025-09-06 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 60 min @ 144W-180W (Zone 2).                       | 2025-09-05 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-09-04 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30-45 min full-body strength session.              | 2025-09-03 |
-| EXTRA     | Tue   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on 2018 Worlds Short Lap            |               |                                                                     | 2025-09-02 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-09-01 |
-| EXTRA     | Sat   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-08-30 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on 2018 Worlds Short Lap in Innsbruck      |               |                                                                     | 2025-08-28 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-08-27 |
-| EXTRA     | Tue   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-08-26 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on Volcano Circuit in Watopia              |               |                                                                     | 2025-08-25 |
-| COMPLETED | Fri   | [RUN] Long Run (2.5 miles)                  |                | [RUN] Morning Run                                                      |               | Workout: Run for approximately 2.5 miles at an easy pace.               | 2025-08-22 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on Flat Route in Watopia                   |               | Aerobic Maintenance: 45-60 min @ 144W-180W (Zone 2).                    | 2025-08-21 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-08-20 |
-| COMPLETED | Tue   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30-45 min full-body strength session.              | 2025-08-19 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-08-18 |
-| COMPLETED | Fri   | [RUN] Long Run (2 miles)                    |                | [RUN] Morning Run                                                      |               | Workout: Run for approximately 2 miles at an easy pace.                 | 2025-08-15 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on Tempus Fugit in Watopia                 |               | Aerobic Maintenance: 45-60 min @ 144W-180W (Zone 2).                    | 2025-08-14 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on 2018 Worlds Short Lap            |               |                                                                     | 2025-08-13 |
-| COMPLETED | Tue   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30-45 min full-body strength session.              | 2025-08-12 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-08-11 |
-| EXTRA     | Sat   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-08-09 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-08-08 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-08-06 |
-| EXTRA     | Tue   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-08-05 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-08-04 |
-| COMPLETED | Fri   | [RUN] Long Run (1.5 miles)                  |                | [RUN] Morning Run                                                      |               | Workout: Run for approximately 1.5 miles at an easy pace.               | 2025-08-01 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on Flat Route in Watopia                   |               | Aerobic Maintenance: 45-60 min @ 144W-180W (Zone 2).                    | 2025-07-31 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-07-30 |
-| COMPLETED | Tue   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30-45 min full-body strength session.              | 2025-07-29 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-07-28 |
-| EXTRA     | Sat   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-07-26 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-07-25 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-07-23 |
-| EXTRA     | Tue   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-07-22 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-07-21 |
-| COMPLETED | Fri   | [RUN] Long Run (1 mile)                     |                | [RUN] Morning Run                                                      |               | Workout: Run for approximately 1 mile at an easy pace.                  | 2025-07-18 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45-60 min @ 144W-180W (Zone 2).                    | 2025-07-17 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-07-16 |
-| COMPLETED | Tue   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30-45 min full-body strength session.              | 2025-07-15 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-07-14 |
-| EXTRA     | Sat   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-07-12 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-07-11 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-07-09 |
-| EXTRA     | Tue   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-07-08 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-07-07 |
-| COMPLETED | Fri   | [RUN] Easy Run (Base)                       |                | [RUN] Morning Run                                                      |               | Base: 10-15 min very easy jog.                                          | 2025-07-04 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-07-03 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-07-02 |
-| COMPLETED | Tue   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-07-01 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-06-30 |
-| EXTRA     | Sat   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-06-28 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-06-27 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-06-25 |
-| EXTRA     | Tue   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-06-24 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-06-23 |
-| COMPLETED | Fri   | [RUN] Easy Run (Base)                       |                | [RUN] Morning Run                                                      |               | Base: 10 min very easy jog.                                             | 2025-06-20 |
-| COMPLETED | Thu   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-06-19 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-06-18 |
-| COMPLETED | Tue   | [RUN] Strength Training                     |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-06-17 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-06-16 |
-| EXTRA     | Sat   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-06-14 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-06-13 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-06-11 |
-| EXTRA     | Tue   |                                         |                | [RUN] Morning Run                                                      |               |                                                                     | 2025-06-10 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-06-09 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-06-06 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-06-05 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-06-04 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-06-02 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-05-30 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-05-28 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-05-26 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-05-23 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-05-22 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-05-21 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-05-19 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-05-16 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-05-14 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-05-12 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-05-09 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-05-08 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-05-07 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-05-05 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-05-02 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-04-30 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-04-28 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-04-25 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-04-24 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-04-23 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-04-21 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-04-18 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-04-16 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-04-14 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-04-11 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-04-10 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-04-09 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-04-07 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-04-04 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-04-02 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-03-31 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-03-28 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-03-27 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-03-26 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-03-24 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-03-21 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-03-19 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-03-17 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-03-14 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-03-13 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-03-12 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-03-10 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-03-07 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-03-05 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-03-03 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-02-28 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-02-27 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-02-26 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-02-24 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-02-21 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-02-19 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-02-17 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-02-14 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-02-13 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-02-12 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-02-10 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-02-07 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-02-05 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-02-03 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-01-31 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-01-30 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-01-29 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-01-27 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-01-24 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-01-22 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-01-20 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-01-17 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-01-16 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-01-15 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2025-01-13 |
-| EXTRA     | Fri   |                                         |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               |                                                                     | 2025-01-10 |
-| EXTRA     | Wed   |                                         |                | [BIKE] Zwift - Sweet Spot - 3 x 10 on Flat Route in Watopia            |               |                                                                     | 2025-01-08 |
-| EXTRA     | Mon   |                                         |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               |                                                                     | 2025-01-06 |
-| COMPLETED | Fri   | [BIKE] Zone 2 Endurance Ride                |                | [BIKE] Zwift - Zone 2 - 71% on The Fan Flats in Richmond               |               | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2).                       | 2025-01-03 |
-| EXTRA     | Thu   |                                         |                | [BIKE] Zwift - Sweet Spot - 2 x 15 on Tempus Fugit in Watopia          |               |                                                                     | 2025-01-02 |
-| COMPLETED | Wed   | [RUN] Strength Training & Easy Run          |                | [RUN] Morning Run                                                      |               | Concurrent Training: 30 min full-body strength session.                 | 2025-01-01 |
-| COMPLETED | Mon   | [BIKE] Active Recovery Ride                 |                | [BIKE] Zwift - Pacer Group Ride: Triple Flat Loops                     |               | Recovery: Light spin to flush legs after a big training week.           | 2024-12-30 |
-
-
+| **Status**    | **Day**   | **Planned Workout** | **Planned Duration**   | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** 
+|:---|:---|:---|:---|:---|:---|:---|:---|
+| COMPLETED | Fri | [RUN] Volume Run | 40 | [RUN] Morning Run 51 Minutes | 51 | Durat 40 mins. Zone 2 (HR: 140-152 bpm). Focus: Easy. | 2026-01-02 |
+| COMPLETED | Thu | Rest | | | 2 | | 2026-01-01 |
+| COMPLETED | Wed | [BIKE] Steady State | 60 | [BIKE] Zwift - Zone 2 - 71% on Lutscher CCW in Innsbruck 62 minutes | 62 | Durat 60 mins. Zone 2 (134W - 180W). Focus: Smooth. | 2025-12-31 |
+| COMPLETED | Tue | [RUN] Aerobic Base | 45 | [RUN] Morning Run 50:00 | 50 | Durat 45 mins. Zone 2 (HR: 140-152 bpm). Focus: Aerobic Base. | 2025-12-30 |
+| MISSED | Mon | [SWIM] Technique Focus | | | | ~500m - 800m. Zone 1 (RPE 3-4). Catch & Pull drills. | 2025-12-29 |
+| COMPLETED | Sun | Rest | | | | Weekly Planning Check-in. | 2025-12-28 |
+| COMPLETED | Sat | Long Ride [BIKE] | 180 | [BIKE] 1h Bike + 40m Swim | 60.5833 | Swapped Long Ride for Brick. | 2025-12-27 |
+| COMPLETED | Fri | Run Test [RUN] | 30 | [RUN] LTHR Test | 60.3 | 30m TT. Result: 171 bpm. | 2025-12-26 |
+| COMPLETED | Thu | Endurance [BIKE] | 60 | [BIKE] Endurance [BIKE] | 61.2333 | 60 mins Steady Z2. | 2025-12-25 |
+| COMPLETED | Wed | Recovery [BIKE] | 40 | [BIKE] Recovery [BIKE] | 43.2333 | 40 mins Z1 Spin. | 2025-12-24 |
+| COMPLETED | Tue | FTP Test (Bike) | 120 | [BIKE] Alpe du Zwift | 10.4 | Result: 241W. | 2025-12-23 |
+| MISSED | Mon | Swim | | | | Rest / Light Mobility | 2025-12-22 |
+| COMPLETED | Sat | [BIKE] Bike: Long Ride (Base) | 150 | [BIKE] Afternoon Ride | 114.633 | 2.5-3.0 Hours. Power: 139W-189W (Zone 2). Practice race-day nutrition. | 2025-12-20 |
+| COMPLETED | Fri | [RUN] Run: Long Run | 76 | [RUN] Morning Run | 87.15 | 8-9 Miles. Pace: 9:00-9:45 min/mile (Zone 2). Key run durability. | 2025-12-19 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance | 90 | [BIKE] Zwift - Zone 2 Richmond | 51.55 | Mid-week volume. 90 minutes @ 139W - 189W. | 2025-12-18 |
+| COMPLETED | Thu | [RUN] Run: Easy/Base | 40 | | 00.00 | 30-40 min. Pace: 9:00-9:45 min/mile (Zone 2). Leg flush. | 2025-12-18 |
+| COMPLETED | Wed | [SWIM] Swim: Active Recovery | 30 | | | Very easy, drill focus. Flush the legs after the TT. | 2025-12-17 |
+| COMPLETED | Tue | [BIKE] Bike: 25 Mile Threshold Trial (230W) | 90 | [BIKE] Zwift - Gentil 8 in France | 86.05 | KEY SESSION! 25 miles sustained at 230 Watts (91% FTP). | 2025-12-16 |
+| COMPLETED | Mon | [SWIM] Swim: Base Endurance | 45 | | | 45 min steady effort. Focus on form. Prep for Tuesday's intensity. | 2025-12-15 |
+| COMPLETED | Sat | [BIKE] Long Ride | 180 | [BIKE] Zwift - Zone 2 - 65% | 51.8667 | Major volume session to make up for missed time. 3.0 Hours @ 139W-189W. | 2025-12-13 |
+| COMPLETED | Fri | [RUN] Long Run | 64.75 | [RUN] Morning Run | 74.8667 | Push durability past the 10K distance. 7 - 8 Miles @ Z2. | 2025-12-12 |
+| COMPLETED | Thu | [SWIM] Endurance Focus | 45 | | 0 | Consistency in lap count. 30 - 45 minutes @ Easy Effort. | 2025-12-11 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance | 90 | [BIKE] Zwift - Zone 2 - 71% Libby Hill | 90.5833 | Mid-week volume restoration. 90 minutes @ 139W - 189W. | 2025-12-11 |
+| COMPLETED | Wed | [RUN] Easy/Base Run | 30 | [RUN] Morning Run | 33.4167 | Maintain run durability. 30 min Easy Run. | 2025-12-10 |
+| COMPLETED | Tue | [BIKE] Sweet Spot Intervals | 60 | [BIKE] Zwift - Sweet Spot - 2 x 15 | 61 | High intensity, key fitness driver. 60 min (2x15 min @ 222W - 234W). | 2025-12-09 |
+| COMPLETED | Mon | [SWIM] Form Focus | 45 | [SWIM] Morning Swim | 39.1 | Drills: Continue Bubble Drill and rotation. 30 - 45 minutes @ Easy. | 2025-12-08 |
+| COMPLETED | Sat | [RUN] Long Run | 64.75 | [RUN] Morning Run | 67.4667 | 7 - 8 Miles @ Z2. Push past the 10K race distance. | 2025-12-06 |
+| COMPLETED | Fri | [BIKE] Long Ride | 150 | [SWIM] Morning Swim | 44.6167 | 2.5 Hours @ 139W - 189W. Major volume session. | 2025-12-05 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance | 90 | [BIKE] Zwift - Zone 2 - 71% London | 60.2833 | 90 minutes @ 139W - 189W. Solid aerobic base. | 2025-12-04 |
+| COMPLETED | Thu | [SWIM] Endurance Focus | 45 | | 0 | Focus on continuous swimming and lap count. 30 - 45 min @ Easy. | 2025-12-04 |
+| COMPLETED | Wed | [RUN] Speed/Tempo | 45 | [RUN] 6 x 3 Tempo Intervals | 37.9333 | 4 x 3 min @ Zone 3. Add some quality running effort. | 2025-12-03 |
+| COMPLETED | Tue | [BIKE] Sweet Spot Intervals | 70 | [BIKE] Zwift - Sweet Spot - 2 x 20 | 80.3833 | 2x15 min @ 222W - 234W. High-priority session using new FTP. | 2025-12-02 |
+| COMPLETED | Mon | [SWIM] Form Focus | 30 | [SWIM] Morning Swim | 34.7167 | Focus on the Bubble Drill. 30 - 45 minutes @ Easy Effort. | 2025-12-01 |
+| EXTRA | Fri | | | [RUN] Morning Run | 49.5167 | | 2025-11-28 |
+| EXTRA | Thu | | | [RUN] Thanksgiving Run | 58.4167 | | 2025-11-27 |
+| EXTRA | Wed | | | [SWIM] Morning Swim | 33.5833 | | 2025-11-26 |
+| EXTRA | Tue | | | [BIKE] Zwift - Zone 2 - 71% (90 min) | 90.9667 | | 2025-11-25 |
+| EXTRA | Mon | | | [SWIM] Morning Swim | 32.1 | | 2025-11-24 |
+| EXTRA | Sat | | | [BIKE] Morning Ride | 65.9667 | | 2025-11-22 |
+| EXTRA | Fri | | | [RUN] Morning Run | 54.3 | | 2025-11-21 |
+| EXTRA | Thu | | | [BIKE] NEW FTP - Zwift Test | 45.4667 | | 2025-11-20 |
+| EXTRA | Wed | | | [SWIM] Morning Swim | 37.6833 | | 2025-11-19 |
+| EXTRA | Tue | | | [RUN] 10k PR!! | 53.7167 | | 2025-11-18 |
+| EXTRA | Mon | | | [SWIM] Evening Swim With Swim Coach | 37.05 | | 2025-11-17 |
+| COMPLETED | Sat | [BIKE] Long Endurance | 180 | [BIKE] Zwift - Sugar Cookie | 60.15 | Major cycling push. 50 - 60 Miles @ Z2/low Tempo. | 2025-11-15 |
+| COMPLETED | Fri | [SWIM] Technical Drill | 30 | [RUN] Lunch Run | 44.3333 | Short, third session. Focus on a specific coach-given drill. | 2025-11-14 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance | 90 | | | Solid aerobic base. 75 - 90 min @ Z2. | 2025-11-13 |
+| COMPLETED | Thu | [RUN] Easy Run | 25 | | | Running durability. 20-25 min Easy Run. | 2025-11-13 |
+| COMPLETED | Wed | [SWIM] Endurance Focus | 45 | | | Consistency and extending continuous swim time. 30 - 45 min @ Easy. | 2025-11-12 |
+| COMPLETED | Wed | [BIKE] Zone 2 Endurance | 90 | | | Solid aerobic base. 75 - 90 min @ Z2. | 2025-11-12 |
+| COMPLETED | Tue | [BIKE] Sweet Spot Intervals | 60 | [SWIM] Morning Swim | 27.3833 | Keep legs sharp with high intensity. 60 min (2x15 min @ Sweet Spot). | 2025-11-11 |
+| COMPLETED | Mon | [SWIM] Form Focus | 30 | | | Drills: Bubble Drill (exhale fully) and rotation. 30 - 45 mins. | 2025-11-10 |
+| COMPLETED | Sat | [BIKE] Group Ride | 60 | | 0 | Second back-to-back ride. 20 Miles @ Z2/low Tempo. | 2025-11-08 |
+| COMPLETED | Fri | [BIKE] Group Ride | 120 | [BIKE] Arches National Park Ride | 161.817 | First social ride. 18 - 36 Miles @ Z2/low Tempo. | 2025-11-07 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance | 75 | | 0 | Solid aerobic base. 75 - 90 min @ Z2. | 2025-11-06 |
+| COMPLETED | Thu | [RUN] Easy Run | 25 | [RUN] Afternoon Run | 46.2167 | Running durability. 20-25 min Easy Run. | 2025-11-06 |
+| COMPLETED | Wed | [SWIM] Endurance Focus | 30 | | | Consistency and extending continuous swim time. 30 - 45 min @ Easy. | 2025-11-05 |
+| COMPLETED | Wed | [BIKE] Zone 2 Endurance | 90 | [BIKE] Zwift - Pacer Group Ride | 60.2667 | Solid aerobic base. 75 - 90 min @ Z2. | 2025-11-05 |
+| COMPLETED | Tue | [BIKE] Sweet Spot Intervals | 60 | | | Keep legs sharp with high intensity. 60 min (2x15 min @ Sweet Spot). | 2025-11-04 |
+| COMPLETED | Mon | [SWIM] Form Focus | 30 | [SWIM] Lunch Swim | 47.2 | Drills: Bubble Drill (exhale fully) and rotation. 30 - 45 mins. | 2025-11-03 |
+| COMPLETED | Sat | [BIKE] Long Endurance | | [BIKE] Zwift - Castle to Castle | 60.25 | Major cycling endurance effort. 40 - 50 Miles @ Z2/low Tempo. | 2025-11-01 |
+| COMPLETED | Fri | [SWIM] Endurance Focus | | [BIKE] Zwift - Race | 62.1667 | Focus on drills from your coach. | 2025-10-31 |
+| COMPLETED | Thu | [SWIM] Drill Session | | | | Focus on drills from your coach. | 2025-10-30 |
+| COMPLETED | Thu | [RUN] Easy Run | | | | Restart running durability work. 20-25 min Easy Run. | 2025-10-30 |
+| COMPLETED | Wed | [BIKE] Zone 2 Endurance | | | | Solid aerobic bike volume. 75 - 90 minutes @ Z2. | 2025-10-29 |
+| COMPLETED | Tue | [BIKE] Sweet Spot Intervals | | [RUN] Afternoon Run | | 60 minutes total (2x15 min @ Sweet Spot). Reintroduce intensity. | 2025-10-28 |
+| COMPLETED | Mon | [SWIM] Form Focus | | [BIKE] Zwift - Race: SAZ | | Your first official triathlon session! Focus on breathing. | 2025-10-27 |
+| EXTRA | Sat | | | [BIKE] Zwift - Royal Pump Room 8 | | | 2025-10-25 |
+| EXTRA | Fri | | | [BIKE] Zwift - Duchy Estate | | | 2025-10-24 |
+| EXTRA | Thu | | | [BIKE] Zwift - Tour Of Tewit Well | | | 2025-10-23 |
+| COMPLETED | Sat | [BIKE] Endurance Ride (40-50 Miles) | | [BIKE] Freezing Cold Morning Ride | | | 2025-10-18 |
+| COMPLETED | Sat | [BIKE] KEY RIDE: 40-50 Miles | | [BIKE] Freezing Cold Morning Ride | | Major endurance goal. 4 hours max @ Zone 2/low Tempo. | 2025-10-18 |
+| COMPLETED | Thu | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Durability work and run base. 30-45 min Strength; 20 min Easy. | 2025-10-16 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 1 x 15 | | | 2025-10-15 |
+| COMPLETED | Tue | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Innsbruck | | Re-establish aerobic endurance base. 60-75 min @ 144W-180W. | 2025-10-14 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Pacer Group Ride | | Very light, easy spin to start waking up the legs. | 2025-10-13 |
+| COMPLETED | Sat | [BIKE] Post-Race Active Recovery Ride | | | | | 2025-10-11 |
+| COMPLETED | Fri | [RUN] Antelope Island Marathon | | [RUN] Antelope Island 10k | | 26.2 - 13.1 - 10K - 5K | 2025-10-10 |
+| COMPLETED | Wed | [RUN] Easy Run Final Check (10 min) | | | | | 2025-10-08 |
+| EXTRA | Tue | | | [BIKE] Zwift - Innsbruckring | | | 2025-10-07 |
+| COMPLETED | Mon | [RUN] Easy Run Opener (15 min) | | [RUN] Afternoon Run | | | 2025-10-06 |
+| EXTRA | Sun | | | | | | 2025-10-05 |
+| COMPLETED | Sat | [RUN] Short, Easy Run (2 miles) | | [RUN] Morning Run in the rain | | Final "Long" Run Check: A short, gentle run. | 2025-10-04 |
+| COMPLETED | Fri | [BIKE] Short Zone 2 Ride (Tapered) | | | | Aerobic Maintenance: Keep blood flow up without adding fatigue. | 2025-10-03 |
+| COMPLETED | Wed | [RUN] Easy Run & Strength (Tapered) | | [RUN] Afternoon Run | | Running Durability: Reduced 20 min Easy Run + 20 min light Core. | 2025-10-01 |
+| EXTRA | Tue | | | [BIKE] Zwift - Mountain Mash | | | 2025-09-30 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride (Taper) | | | | Flush legs from your 7.5-mile run. Duration is heavily reduced. | 2025-09-29 |
+| COMPLETED | Sat | [RUN] Long Run (5 miles) | | [RUN] Morning Run - 10k | | PRIMARY FOCUS: Your longest run (5 miles) before the 10K taper. | 2025-09-27 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 France | | Aerobic Maintenance: 60 min @ 144W-180W (Zone 2). | 2025-09-26 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 25 | | | 2025-09-25 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30-45 min full-body strength session. | 2025-09-24 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Cadence Pyramid | | Recovery: Light spin to flush legs after a big training week. | 2025-09-22 |
+| COMPLETED | Sat | [RUN] Long Run (4 miles) | | [RUN] Morning Run - Felt Great | | Workout: Run for approximately 4 miles at an easy pace. | 2025-09-20 |
+| EXTRA | Fri | | | [BIKE] Zwift - Sweet Spot 2 x 20 | | | 2025-09-19 |
+| EXTRA | Thu | | | [BIKE] Zwift - Zone 2 New York | | | 2025-09-18 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30-45 min full-body strength session. | 2025-09-17 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Sweet Spot 3 x 10 | | Recovery: Light spin to flush legs after a big training week. | 2025-09-15 |
+| COMPLETED | Sat | [RUN] Long Run (3.5 miles) | | [RUN] Morning Run - Slow | | Workout: Run for approximately 3.5 miles at an easy pace. | 2025-09-13 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Watopia | | Aerobic Maintenance: 60 min @ 144W-180W (Zone 2). | 2025-09-12 |
+| EXTRA | Thu | | | [BIKE] Zwift - Zone 2 Watopia | | | 2025-09-11 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30-45 min full-body strength session. | 2025-09-10 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-09-08 |
+| COMPLETED | Sat | [RUN] Long Run (3 miles) | | [RUN] Morning Run | | Workout: Run for approximately 3 miles at an easy pace. | 2025-09-06 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 60 min @ 144W-180W (Zone 2). | 2025-09-05 |
+| EXTRA | Thu | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-09-04 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30-45 min full-body strength session. | 2025-09-03 |
+| EXTRA | Tue | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-09-02 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-09-01 |
+| EXTRA | Sat | | | [RUN] Morning Run | | | 2025-08-30 |
+| EXTRA | Thu | | | [BIKE] Zwift - Zone 2 Innsbruck | | | 2025-08-28 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-08-27 |
+| EXTRA | Tue | | | [RUN] Morning Run | | | 2025-08-26 |
+| EXTRA | Mon | | | [BIKE] Zwift - Zone 2 Volcano | | | 2025-08-25 |
+| COMPLETED | Fri | [RUN] Long Run (2.5 miles) | | [RUN] Morning Run | | Workout: Run for approximately 2.5 miles at an easy pace. | 2025-08-22 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Watopia | | Aerobic Maintenance: 45-60 min @ 144W-180W (Zone 2). | 2025-08-21 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-08-20 |
+| COMPLETED | Tue | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30-45 min full-body strength session. | 2025-08-19 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-08-18 |
+| COMPLETED | Fri | [RUN] Long Run (2 miles) | | [RUN] Morning Run | | Workout: Run for approximately 2 miles at an easy pace. | 2025-08-15 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Watopia | | Aerobic Maintenance: 45-60 min @ 144W-180W (Zone 2). | 2025-08-14 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-08-13 |
+| COMPLETED | Tue | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30-45 min full-body strength session. | 2025-08-12 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-08-11 |
+| EXTRA | Sat | | | [RUN] Morning Run | | | 2025-08-09 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-08-08 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-08-06 |
+| EXTRA | Tue | | | [RUN] Morning Run | | | 2025-08-05 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-08-04 |
+| COMPLETED | Fri | [RUN] Long Run (1.5 miles) | | [RUN] Morning Run | | Workout: Run for approximately 1.5 miles at an easy pace. | 2025-08-01 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Watopia | | Aerobic Maintenance: 45-60 min @ 144W-180W (Zone 2). | 2025-07-31 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-07-30 |
+| COMPLETED | Tue | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30-45 min full-body strength session. | 2025-07-29 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-07-28 |
+| EXTRA | Sat | | | [RUN] Morning Run | | | 2025-07-26 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-07-25 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-07-23 |
+| EXTRA | Tue | | | [RUN] Morning Run | | | 2025-07-22 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-07-21 |
+| COMPLETED | Fri | [RUN] Long Run (1 mile) | | [RUN] Morning Run | | Workout: Run for approximately 1 mile at an easy pace. | 2025-07-18 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45-60 min @ 144W-180W (Zone 2). | 2025-07-17 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-07-16 |
+| COMPLETED | Tue | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30-45 min full-body strength session. | 2025-07-15 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-07-14 |
+| EXTRA | Sat | | | [RUN] Morning Run | | | 2025-07-12 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-07-11 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-07-09 |
+| EXTRA | Tue | | | [RUN] Morning Run | | | 2025-07-08 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-07-07 |
+| COMPLETED | Fri | [RUN] Easy Run (Base) | | [RUN] Morning Run | | Base: 10-15 min very easy jog. | 2025-07-04 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-07-03 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-07-02 |
+| COMPLETED | Tue | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-07-01 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-06-30 |
+| EXTRA | Sat | | | [RUN] Morning Run | | | 2025-06-28 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-06-27 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-06-25 |
+| EXTRA | Tue | | | [RUN] Morning Run | | | 2025-06-24 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-06-23 |
+| COMPLETED | Fri | [RUN] Easy Run (Base) | | [RUN] Morning Run | | Base: 10 min very easy jog. | 2025-06-20 |
+| COMPLETED | Thu | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-06-19 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-06-18 |
+| COMPLETED | Tue | [RUN] Strength Training | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-06-17 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-06-16 |
+| EXTRA | Sat | | | [RUN] Morning Run | | | 2025-06-14 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-06-13 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-06-11 |
+| EXTRA | Tue | | | [RUN] Morning Run | | | 2025-06-10 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-06-09 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-06-06 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-06-05 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-06-04 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-06-02 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-05-30 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-05-28 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-05-26 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-05-23 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-05-22 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-05-21 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-05-19 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-05-16 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-05-14 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-05-12 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-05-09 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-05-08 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-05-07 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-05-05 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-05-02 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-04-30 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-04-28 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-04-25 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-04-24 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-04-23 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-04-21 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-04-18 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-04-16 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-04-14 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-04-11 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-04-10 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-04-09 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-04-07 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-04-04 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-04-02 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-03-31 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-03-28 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-03-27 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-03-26 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-03-24 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-03-21 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-03-19 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-03-17 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-03-14 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-03-13 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-03-12 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-03-10 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-03-07 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-03-05 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-03-03 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-02-28 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-02-27 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-02-26 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-02-24 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-02-21 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-02-19 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-02-17 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-02-14 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-02-13 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-02-12 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-02-10 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-02-07 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-02-05 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-02-03 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-01-31 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-01-30 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-01-29 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-01-27 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-01-24 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-01-22 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-01-20 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-01-17 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-01-16 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-01-15 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2025-01-13 |
+| EXTRA | Fri | | | [BIKE] Zwift - Zone 2 Richmond | | | 2025-01-10 |
+| EXTRA | Wed | | | [BIKE] Zwift - Sweet Spot 3 x 10 | | | 2025-01-08 |
+| EXTRA | Mon | | | [BIKE] Zwift - Triple Flat Loops | | | 2025-01-06 |
+| COMPLETED | Fri | [BIKE] Zone 2 Endurance Ride | | [BIKE] Zwift - Zone 2 Richmond | | Aerobic Maintenance: 45 min @ 144W-180W (Zone 2). | 2025-01-03 |
+| EXTRA | Thu | | | [BIKE] Zwift - Sweet Spot 2 x 15 | | | 2025-01-02 |
+| COMPLETED | Wed | [RUN] Strength Training & Easy Run | | [RUN] Morning Run | | Concurrent Training: 30 min full-body strength session. | 2025-01-01 |
+| COMPLETED | Mon | [BIKE] Active Recovery Ride | | [BIKE] Zwift - Triple Flat Loops | | Recovery: Light spin to flush legs after a big training week. | 2024-12-30 |
 # Appendix D: Athlete Handover & Training Overview
 
 ## Project Overview
