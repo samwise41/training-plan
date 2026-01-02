@@ -422,20 +422,26 @@
                     const actualWorkoutStr = actWorkoutIdx > -1 ? cleanText(cols[actWorkoutIdx]) : "";
 
                     let date = null;
-                    // Attempt 1: Standard
-                    const d = new Date(dateStr);
-                    if (!isNaN(d.getTime())) date = d;
-
-                    // Attempt 2: Regex YYYY-MM-DD
-                    if (!date) {
-                         const match = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-                         if (match) date = new Date(match[1], match[2]-1, match[3]);
+                    
+                    // Regex YYYY-MM-DD - FIX: Force Noon to avoid UTC->Local shift
+                    // If parsing "2025-12-20", force "2025-12-20T12:00:00"
+                    const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                    if (ymdMatch) {
+                        const year = parseInt(ymdMatch[1]);
+                        const month = parseInt(ymdMatch[2]) - 1; // 0-indexed
+                        const day = parseInt(ymdMatch[3]);
+                        date = new Date(year, month, day, 12, 0, 0); // Noon Local Time
+                    } else {
+                        // Fallback
+                        const d = new Date(dateStr);
+                        if (!isNaN(d.getTime())) {
+                            date = d;
+                            date.setHours(12, 0, 0, 0); // Force Noon
+                        }
                     }
 
                     if (date && !isNaN(date.getTime())) {
-                        date.setHours(12, 0, 0, 0);
                         if (date <= now) {
-                            
                             const type = this._getType(planStr);
                             const actualType = this._getType(actualWorkoutStr);
 
