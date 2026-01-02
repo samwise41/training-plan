@@ -129,6 +129,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 > **CRITICAL:** Maintain all header naming conventions exactly as written. These specific headers drive the automated dashboard logic. Do not rename or remove headers during updates.
 
 **Source of Truth:** [endurance_plan.md](https://github.com/samwise41/training-plan/blob/main/endurance_plan.md)
+**Archived Historical Training Log** [history_archive.md](https://github.com/samwise41/training-plan/blob/main/history_archive.md)
 
 1. **Import:** pull the latest Markdown source from the GitHub repository above.
 2. **Update:** Log results in Section 5 (Planned vs. Actual). Ensure section headers remain unchanged.
@@ -153,7 +154,6 @@ The primary "A" races and secondary objectives for the 2026 season.
 * **Finishing Kick:** >328 Watts (Final 5 mins)
 
 ## Appendix C: Training History Log
-
 
 | **Status**    | **Day**   | **Planned Workout** | **Planned Duration**   | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** 
 |:---|:---|:---|:---|:---|:---|:---|:---|
@@ -273,7 +273,7 @@ To ensure a seamless transition and continuity of training, the incoming coach s
      
    * **Review Training Availability:** Review the Training Availability section to make sure that the workouts conform to those constraints..
 
-3. **Review the Training history:** Review the training history in Appendix C in addition to the current week schedule to identify overall progress and identify best days for certain training sessions.
+3. **Review the Training history:** Review the training history in Appendix C in addition to the current week schedule to identify overall progress and identify best days for certain training sessions. Also review the historical training log at https://github.com/samwise41/training-plan/blob/main/history_archive.md
 
 4. **Establish the Next Microcycle:** Once the current position is identified, establish the specific schedule for the next week. This involves aligning the intensity and volume with the goals of that specific phase to maximize training adaptations while respecting the progressive overload logic built into the plan.
 
