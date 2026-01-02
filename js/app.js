@@ -23,6 +23,7 @@ const App = {
 
     async init() {
         try {
+            // Fetch Data
             const [planRes, gearRes] = await Promise.all([
                 fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
                 fetch(`./${CONFIG.GEAR_FILE}?t=${Date.now()}`)
@@ -31,9 +32,11 @@ const App = {
             this.planMd = planRes.ok ? await planRes.text() : "";
             this.gearMd = gearRes.ok ? await gearRes.text() : "";
             
+            // Initial Setups
             this.updateStats();
             this.fetchWeather().catch(err => console.warn("Weather error:", err));
             
+            // Setup Navigation
             window.addEventListener('hashchange', () => this.handleHashChange());
             this.handleHashChange();
             
@@ -72,6 +75,8 @@ const App = {
 
     updateStats() {
         if (!this.planMd) return;
+        
+        // 1. Update Phase and Week
         const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
         const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
         const currentWeek = statusMatch ? statusMatch[2].trim() : "N/A";
@@ -93,14 +98,15 @@ const App = {
         }
 
         const phaseEl = document.getElementById('stat-phase');
-        if(phaseEl) {
+        if (phaseEl) {
             if (dateRange) phaseEl.innerHTML = `${currentPhaseRaw}<span class="block text-xs text-slate-400 mt-1 font-normal">${dateRange}</span>`;
             else phaseEl.innerText = currentPhaseRaw;
         }
 
         const weekEl = document.getElementById('stat-week');
-        if(weekEl) weekEl.innerText = currentWeek;
+        if (weekEl) weekEl.innerText = currentWeek;
         
+        // 2. Update Next Event
         const eventSection = Parser.getSection(this.planMd, "Event Schedule");
         const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
         
@@ -148,10 +154,12 @@ const App = {
         const titleEl = document.getElementById('header-title-dynamic');
         if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
 
+        // Update Nav Active State
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
         const navBtn = document.getElementById(`nav-${view}`);
         if (navBtn) navBtn.classList.add('active');
         
+        // Transition Content
         const content = document.getElementById('content');
         content.classList.add('opacity-0');
         
@@ -161,27 +169,35 @@ const App = {
                     const result = renderGear(this.gearMd, this.currentTemp, this.hourlyWeather);
                     content.innerHTML = result.html;
                     this.gearData = result.gearData;
-                    // Trigger update
-                    this.updateGearResult();
-                }
+                    // Trigger initial update for the default selection
+                    this.updateGearResult(); 
+                } 
                 else if (view === 'zones') {
                     content.innerHTML = renderZones(this.planMd);
-                }
+                } 
                 else if (view === 'kpi') {
                     const result = renderKPI(this.planMd);
                     content.innerHTML = result.html;
                     this.logData = result.logData;
-                    // Trigger update
                     this.updateDurationAnalysis();
-                }
+                } 
                 else {
-                    const mdMap = {
-                        schedule: Parser.getSection(this.planMd, "Weekly Schedule"),
-                        phases: Parser.getSection(this.planMd, "Periodization"),
-                        full: this.planMd,
-                        history: Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History")
-                    };
-                    content.innerHTML = marked.parse(mdMap[view] || "*Content not found.*");
+                    // Standard Markdown Views
+                    let sectionTitle = "Weekly Schedule"; // Default
+                    if (view === 'phases') sectionTitle = "Periodization";
+                    
+                    let mdContent = "";
+                    if (view === 'full') {
+                        mdContent = this.planMd;
+                    } 
+                    else if (view === 'history') {
+                        mdContent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
+                    }
+                    else {
+                        mdContent = Parser.getSection(this.planMd, sectionTitle);
+                    }
+                    
+                    content.innerHTML = marked.parse(mdContent || "*Content not found.*");
                 }
             } catch (err) {
                 console.error("Render error:", err);
@@ -189,6 +205,7 @@ const App = {
             }
             content.classList.remove('opacity-0');
             
+            // Auto-close sidebar on mobile
             if (window.innerWidth < 1024) {
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar.classList.contains('sidebar-open')) this.toggleSidebar();
@@ -196,7 +213,7 @@ const App = {
         }, 200);
     },
 
-    // Bridging functions for HTML event handlers
+    // Exposed Methods for HTML Event Handlers
     updateDurationAnalysis() {
         if (this.logData) updateDurationAnalysis(this.logData);
     },
@@ -214,5 +231,6 @@ const App = {
     }
 };
 
+// Expose App to window so HTML onchange/onclick events can find it
 window.App = App;
 window.onload = () => App.init();
