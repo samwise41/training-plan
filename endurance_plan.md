@@ -94,10 +94,10 @@ These templates define the "default" week structure.
 
 #### Phase 1: Base/Prep (Focus: Aerobic Capacity & Skill)
   * **Mon:** [SWIM] Technique Focus (30-45m)
-  * **Tue:** [RUN] Aerobic Maintenance (45-60m)
+  * **Tue:** [BIKE] Strength / Hill Focus (60m)
   * **Wed:** [BIKE] Mid-Week Aerobic Volume (60-90m)
-  * **Thu:** [RUN] Easy Shakeout (45m Total)
-  * **Fri:** [RUN] Volume / Long Run (45-60m)
+  * **Thu:** [RUN] Threshold / Tempo (45m)
+  * **Fri:** [RUN] Aerobic Maintenance (45-60m)
   * **Sat:** [BIKE] Long Steady Distance (2.5h - 4.0h)
   * **Sun:** Rest Day
 
@@ -125,6 +125,7 @@ Use these mathematical rules to generate the specific duration and intensity for
       * *Block 2:* 3.0h
       * *Block 3:* 3.5h
   * **Cap:** Cap at 5.5 hours (Century Ride prep).
+  * **Exception (Winter Strategy):** If "Winter Strategy" (Section 2) is active, CAP Saturday rides at 2.0 hours. Reallocate the missing volume to the Wednesday mid-week ride (up to 90 mins). And adding an additional easy ride on a swim day if needed.
 
 #### 3. Deload Protocol (Week 4)
   * **Logic:** Every 4th week must shed fatigue to allow adaptation.
