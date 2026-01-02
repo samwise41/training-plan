@@ -284,7 +284,7 @@ To ensure a seamless transition and continuity of training, the incoming coach s
 
 # Appendix D: AI Prompt
 
-I have a training plan location in this github location. can you review this and help me generate my training for the next week (keep in mind that I have not completed this weeks saturday workout, but i will). Please generate a raw markdown text of next week's schedule. 
+I have a training plan location in this github location. can you review this and help me generate my training for the next week (keep in mind that I have not completed this weeks saturday workout, but i will). Please generate a raw markdown text of next week's schedule. Do not include any non Run/Bike/Swim workouts in the plan (e.g. strength, stretching, yoga aetc.) The athlete will do this, but doesn't want to track planned to actuals for this. The schedule can be aggressive in terms of pushing the limits of increased volume/load each week. 
 
 GitHub rep
 https://github.com/samwise41/training-plan
