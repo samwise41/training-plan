@@ -313,7 +313,7 @@
                 };
             },
 
-            // --- UPDATED PARSER LOGIC FOR KPIS ---
+            // --- ROBUST PARSER LOGIC FOR SPLIT COLUMNS ---
             parseTrainingLog(md) {
                 this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, sample: [] };
 
@@ -335,22 +335,29 @@
                 this.lastDebugInfo.sectionName = sectionName;
 
                 const lines = section.split('\n');
-                let dayIdx = -1, planIdx = -1, statusIdx = -1;
+                let dateIdx = -1, planIdx = -1, statusIdx = -1;
                 let data = [];
 
                 // 1. Find Header Row and Indices
                 for (let line of lines) {
                     if (line.includes('|')) {
                         const lowLine = line.toLowerCase();
-                        if (lowLine.includes('day') || lowLine.includes('date')) {
-                            const headers = line.split('|').map(h => h.trim().toLowerCase());
+                        // Look for key columns
+                        if (lowLine.includes('date') || lowLine.includes('day') || lowLine.includes('planned')) {
+                            // Strip markdown stars for cleaner matching
+                            const cleanHeaders = line.split('|').map(h => h.trim().toLowerCase().replace(/\*\*/g, ''));
                             
                             let foundPlan = false;
-                            headers.forEach((h, index) => {
-                                // Find Day
-                                if (h.includes('day') || h.includes('date')) dayIdx = index;
+                            cleanHeaders.forEach((h, index) => {
+                                // Find DATE (Prioritize explicit 'date' over 'day')
+                                if (h === 'date' || h.includes('date')) {
+                                    dateIdx = index;
+                                } else if ((h === 'day' || h.includes('day')) && dateIdx === -1) {
+                                    // Fallback to 'day' only if we haven't found 'date' yet
+                                    dateIdx = index;
+                                }
                                 
-                                // Find Plan (Prioritize "Planned", avoid overwriting with "Actual")
+                                // Find Plan
                                 if (h.includes('planned')) {
                                     planIdx = index;
                                     foundPlan = true;
@@ -362,16 +369,16 @@
                                 if (h.includes('status') || h.includes('completion')) statusIdx = index;
                             });
                             
-                            if (dayIdx !== -1 && planIdx !== -1) { 
-                                this.lastDebugInfo.headersFound = { dayIdx, planIdx, statusIdx, headerRow: line };
+                            if (dateIdx !== -1 && planIdx !== -1) { 
+                                this.lastDebugInfo.headersFound = { dateIdx, planIdx, statusIdx, headerRow: line };
                                 break; 
                             }
                         }
                     }
                 }
 
-                if (dayIdx === -1) {
-                    this.lastDebugInfo.error = "Columns not found. Looked for 'Day/Date', 'Planned/Workout', 'Status'.";
+                if (dateIdx === -1) {
+                    this.lastDebugInfo.error = "Columns not found. Looked for 'Date' (or 'Day'), 'Planned/Workout', 'Status'.";
                     return [];
                 }
 
@@ -383,12 +390,12 @@
                     if (!line.includes('|') || line.includes('---')) continue; // Skip non-table lines
                     
                     const cols = line.split('|');
-                    if (cols.length <= Math.max(dayIdx, planIdx)) continue; // Malformed row
+                    if (cols.length <= Math.max(dateIdx, planIdx)) continue; // Malformed row
 
-                    // Extract Clean Text from Columns (Remove markdown like ** or links)
+                    // Helper to clean markdown
                     const cleanText = (str) => (str || "").trim().replace(/\*\*/g, '').replace(/__/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
 
-                    const rawDate = cols[dayIdx];
+                    const rawDate = cols[dateIdx];
                     const rawPlan = cols[planIdx];
                     const rawStatus = statusIdx > -1 ? cols[statusIdx] : "";
 
@@ -396,16 +403,14 @@
                     const planStr = cleanText(rawPlan).toLowerCase();
                     const statusStr = cleanText(rawStatus).toLowerCase();
 
-                    // Parse Date (Using Regex to find YYYY-MM-DD pattern inside the cell to avoid markdown noise)
+                    // Strict Date Validation (Must look like YYYY-MM-DD to accept)
+                    // This prevents us from trying to parse "Monday" or "Cycle Phase 1" as a date
                     let date = null;
-                    const dateMatch = rawDate.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                    const dateMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                    
                     if (dateMatch) {
                         date = new Date(dateMatch[1], dateMatch[2]-1, dateMatch[3]);
-                    } else {
-                        // Fallback attempt
-                        const d = new Date(dateStr);
-                        if (!isNaN(d.getTime())) date = d;
-                    }
+                    } 
 
                     if (date && !isNaN(date.getTime())) {
                          date.setHours(12, 0, 0, 0); // Avoid timezone shifts
