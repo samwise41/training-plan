@@ -135,6 +135,19 @@
         .progress-label { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.5rem; }
         .progress-bar-bg { width: 100%; height: 8px; background: #0f172a; border-radius: 4px; overflow: hidden; }
         .progress-bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease-out; }
+
+        /* Debug Box */
+        .debug-box {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            overflow-x: auto;
+        }
         
         /* Hourly Scroll */
         .hourly-scroll {
@@ -267,6 +280,8 @@
         };
 
         const Parser = {
+            lastDebugInfo: {}, // Store debug info
+
             getSection(md, title) {
                 if (!md) return "";
                 const lines = md.split('\n');
@@ -300,10 +315,24 @@
 
             // --- UPDATED PARSER LOGIC FOR KPIS ---
             parseTrainingLog(md) {
+                this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, sample: [] };
+
                 // Find the section that contains the log
-                let section = this.getSection(md, "Appendix C: Training History Log");
-                if (!section) section = this.getSection(md, "Training History");
-                if (!section) return [];
+                let sectionName = "Appendix C: Training History Log";
+                let section = this.getSection(md, sectionName);
+                
+                if (!section) {
+                     sectionName = "Training History";
+                     section = this.getSection(md, sectionName);
+                }
+                
+                if (!section) {
+                    this.lastDebugInfo.error = "Section not found (Tried: 'Appendix C' and 'Training History')";
+                    return [];
+                }
+
+                this.lastDebugInfo.sectionFound = true;
+                this.lastDebugInfo.sectionName = sectionName;
 
                 const lines = section.split('\n');
                 let dayIdx = -1, planIdx = -1, statusIdx = -1;
@@ -318,54 +347,67 @@
                             
                             headers.forEach((h, index) => {
                                 if (h.includes('day') || h.includes('date')) dayIdx = index;
-                                if (h.includes('planned') || h.includes('workout')) planIdx = index;
-                                if (h.includes('status')) statusIdx = index;
+                                if (h.includes('planned') || h.includes('workout') || h.includes('activity')) planIdx = index;
+                                if (h.includes('status') || h.includes('completion')) statusIdx = index;
                             });
                             
-                            if (dayIdx !== -1 && planIdx !== -1 && statusIdx !== -1) {
+                            if (dayIdx !== -1 && planIdx !== -1) { // We at least need Date and Type
+                                this.lastDebugInfo.headersFound = { dayIdx, planIdx, statusIdx, headerRow: line };
                                 break; 
                             }
                         }
                     }
                 }
 
-                if (dayIdx === -1) return [];
+                if (dayIdx === -1) {
+                    this.lastDebugInfo.error = "Columns not found. Looked for 'Day/Date', 'Planned/Workout', 'Status'.";
+                    return [];
+                }
 
                 // 2. Parse Rows
                 const now = new Date();
-                // Set hours to 0 to be strict about "future" (if a workout is later today, we count it as current/past for simplicity, or we can use strict current time)
-                // User said "not include any future days".
                 now.setHours(23, 59, 59, 999); 
 
                 for (let line of lines) {
                     if (!line.includes('|') || line.includes('---')) continue; // Skip non-table lines
                     
                     const cols = line.split('|');
-                    if (cols.length <= Math.max(dayIdx, planIdx, statusIdx)) continue; // Malformed row
+                    if (cols.length <= Math.max(dayIdx, planIdx)) continue; // Malformed row
 
                     const dateStr = cols[dayIdx].trim();
                     const planStr = cols[planIdx].trim().toLowerCase();
-                    const statusStr = cols[statusIdx].trim().toLowerCase();
+                    // Handle missing status column gracefully
+                    const statusStr = statusIdx > -1 && cols[statusIdx] ? cols[statusIdx].trim().toLowerCase() : "";
 
-                    // Parse Date (Assume YYYY-MM-DD)
-                    const dateMatch = dateStr.match(/\d{4}-\d{2}-\d{2}/);
-                    if (!dateMatch) continue;
-                    
-                    const date = new Date(dateMatch[0]);
-                    date.setHours(12, 0, 0, 0); // Avoid timezone shifts
+                    // Parse Date (Attempt standard formats)
+                    let date = new Date(dateStr);
+                    if (isNaN(date.getTime())) {
+                        // Try parsing manually if YYYY-MM-DD failed standard ctor in some envs, though standard new Date usually works
+                        const dateMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                        if (dateMatch) {
+                            date = new Date(dateMatch[1], dateMatch[2]-1, dateMatch[3]);
+                        }
+                    }
 
-                    // Ensure date is valid and in the past/today
-                    if (date <= now) {
-                        data.push({
-                            date: date,
-                            type: planStr.includes('bike') ? 'Bike' : 
-                                  planStr.includes('run') ? 'Run' : 
-                                  planStr.includes('swim') ? 'Swim' : 'Other',
-                            completed: statusStr.includes('completed')
-                        });
+                    if (!isNaN(date.getTime())) {
+                         date.setHours(12, 0, 0, 0); // Avoid timezone shifts
+
+                        // Ensure date is valid and in the past/today
+                        if (date <= now) {
+                            data.push({
+                                date: date,
+                                rawDate: dateStr,
+                                type: planStr.includes('bike') ? 'Bike' : 
+                                      planStr.includes('run') ? 'Run' : 
+                                      planStr.includes('swim') ? 'Swim' : 'Other',
+                                completed: statusStr.includes('completed') || statusStr.includes('done') || statusStr.includes('yes') || statusStr.includes('x')
+                            });
+                        }
                     }
                 }
                 
+                this.lastDebugInfo.rowsParsed = data.length;
+                this.lastDebugInfo.sample = data.slice(0, 3);
                 return data;
             },
 
@@ -601,10 +643,11 @@
                 return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
             },
 
-            // --- UPDATED RENDER KPI ---
+            // --- UPDATED RENDER KPI WITH DEBUG ---
             renderKPI() {
                 // Parse the log using the new Parser method
                 const logData = Parser.parseTrainingLog(this.planMd);
+                const debugInfo = Parser.lastDebugInfo;
 
                 const calculateStats = (targetType, days) => {
                     const cutoff = new Date();
@@ -661,6 +704,20 @@
                     `;
                 };
 
+                const debugHtml = `
+                    <div class="debug-box">
+                        <strong>DEBUG LOG:</strong><br>
+                        Parsing File Length: ${this.planMd.length} chars<br>
+                        Section Found: ${debugInfo.sectionFound ? `YES (${debugInfo.sectionName})` : "NO - Failed to find 'Training History' header"}<br>
+                        Headers Found: ${JSON.stringify(debugInfo.headersFound)}<br>
+                        Header Row: ${debugInfo.headersFound.headerRow || "N/A"}<br>
+                        Rows Parsed: ${debugInfo.rowsParsed}<br>
+                        Error: ${debugInfo.error || "None"}<br>
+                        First 2 Parsed Items:<br> 
+                        ${JSON.stringify(debugInfo.sample, null, 2).replace(/\n/g, '<br>').replace(/ /g, '&nbsp;')}
+                    </div>
+                `;
+
                 const html = `
                     <div class="kpi-grid">
                         ${buildMetric("All Workouts", "All")}
@@ -668,9 +725,7 @@
                         ${buildMetric("Running", "Run")}
                         ${buildMetric("Swimming", "Swim")}
                     </div>
-                    <div class="mt-8 text-center text-xs text-slate-500 italic">
-                        * Calculations based on the "Training History Log" table in the markdown file.
-                    </div>
+                    ${debugHtml}
                 `;
                 document.getElementById('content').innerHTML = html;
             },
@@ -786,44 +841,6 @@
                 `;
                 document.getElementById('content').innerHTML = html;
                 this.updateGearResult();
-            },
-
-            updateGearResult() {
-                if (!this.gearData) return;
-                
-                const tempSelect = document.getElementById('gear-temp');
-                if (!tempSelect) return;
-                const temp = parseInt(tempSelect.value);
-                
-                const processActivity = (activity, prefixBase) => {
-                    const list = this.gearData[activity] || [];
-                    const findMatch = (t) => {
-                        const match = list.find(r => {
-                            if (r.min === -999) return t < r.max;
-                            if (r.max === 999) return t >= r.min;
-                            return t >= r.min && t <= r.max;
-                        });
-                        return match || { upper: "—", lower: "—", extremities: "—" };
-                    };
-
-                    const standard = findMatch(temp);
-                    const weather = findMatch(temp - 10);
-
-                    const updateUI = (prefix, data) => {
-                        const u = document.getElementById(`${prefix}-upper`);
-                        const l = document.getElementById(`${prefix}-lower`);
-                        const e = document.getElementById(`${prefix}-extremities`);
-                        if (u) u.innerHTML = data.upper;
-                        if (l) l.innerHTML = data.lower;
-                        if (e) e.innerHTML = data.extremities;
-                    };
-
-                    updateUI(`${prefixBase}-standard`, standard);
-                    updateUI(`${prefixBase}-weather`, weather);
-                };
-
-                processActivity('bike', 'bike');
-                processActivity('run', 'run');
             },
 
             renderZones() {
