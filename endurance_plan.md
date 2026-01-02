@@ -336,7 +336,7 @@ The athlete has established specific requirements for how the training must be d
 I have a training plan location in this github location. Can you review this file thoroughly and help me generate my training for the next week. Please generate a raw markdown text of next week's schedule. If I forget to attach the GitHub repo, please remind me before spinning your wheels.
 
 **CRITICAL FORMATTING RULES:**
-1. Return the schedule **ONLY** as a Markdown table.
+1. Return the schedule **ONLY** as a raw text Markdown table.
 2. You **MUST** use these exact column headers: `| Status | Day | Planned Workout | Planned Duration | Actual Workout | Actual Duration | Notes / Targets | Date |`
 3. Do **NOT** change the header names or order, or the dashboard parser will break.
 4. Dates must be in `YYYY-MM-DD` format.
