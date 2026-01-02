@@ -94,10 +94,10 @@ These templates define the "default" week structure.
 * **Week 4 (Deload):** Reduce volume by 40%. Keep frequency but shorten sessions.
 
 #### Phase 1: Base/Prep (Focus: Aerobic Capacity & Skill)
-  * **Mon:** [SWIM] Technique Focus (30-45m)
-  * **Tue:** [BIKE] Strength / Hill Focus (60m)
-  * **Wed:** [BIKE] Mid-Week Aerobic Volume (60-90m)
-  * **Thu:** [RUN] Threshold / Tempo (45m)
+  * **Mon:** [BIKE] Strength / Hill Focus (60m)
+  * **Tue:** [SWIM] Technique Focus (30-45m)
+  * **Wed:** [RUN] Threshold / Tempo (45m)
+  * **Thu:** [BIKE] Mid-Week Aerobic Volume (60-90m)
   * **Fri:** [RUN] Aerobic Maintenance (45-60m)
   * **Sat:** [BIKE] Long Steady Distance (2.5h - 4.0h)
   * **Sun:** Rest Day
