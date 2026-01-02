@@ -689,11 +689,22 @@
             updateDurationAnalysis() {
                 const sportSelect = document.getElementById('kpi-sport-select');
                 const daySelect = document.getElementById('kpi-day-select');
+                const timeSelect = document.getElementById('kpi-time-select');
                 
-                if (!sportSelect || !daySelect || !this.logData) return;
+                if (!sportSelect || !daySelect || !timeSelect || !this.logData) return;
 
                 const selectedSport = sportSelect.value; // 'All', 'Bike', 'Run', 'Swim'
                 const selectedDay = daySelect.value; // 'All', 'Weekday', 'Monday', etc.
+                const selectedTime = timeSelect.value; // 'All', '30', '60', '90'
+
+                // Date Cutoff Logic
+                let cutoffDate = null;
+                if (selectedTime !== 'All') {
+                    const days = parseInt(selectedTime);
+                    cutoffDate = new Date();
+                    cutoffDate.setDate(cutoffDate.getDate() - days);
+                    cutoffDate.setHours(0, 0, 0, 0); // Start of that day
+                }
 
                 let totalPlanned = 0;
                 let totalActual = 0;
@@ -703,12 +714,15 @@
                 this.logData.forEach(item => {
                     if (!item.date) return;
                     
+                    // 1. Check Date Filter (Time Period)
+                    if (cutoffDate && item.date < cutoffDate) return;
+
                     const itemDayName = dayMap[item.date.getDay()];
                     
-                    // 1. Check Sport Filter
+                    // 2. Check Sport Filter
                     if (selectedSport !== 'All' && item.type !== selectedSport) return;
 
-                    // 2. Check Day Filter
+                    // 3. Check Day Filter
                     if (selectedDay !== 'All') {
                         if (selectedDay === 'Weekday') {
                             const d = item.date.getDay(); // 0-6
@@ -718,7 +732,7 @@
                         }
                     }
 
-                    // 3. Tally
+                    // 4. Tally
                     totalPlanned += (item.plannedDuration || 0);
                     // Only count actual if type matches
                     if (item.type === item.actualType) {
@@ -895,6 +909,15 @@
                                     <option value="Sunday">Sunday</option>
                                 </select>
                             </div>
+                            <div class="flex-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Time Period</label>
+                                <select id="kpi-time-select" onchange="App.updateDurationAnalysis()" class="gear-select">
+                                    <option value="All">All Time</option>
+                                    <option value="30">Last 30 Days</option>
+                                    <option value="60">Last 60 Days</option>
+                                    <option value="90">Last 90 Days</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1036,44 +1059,6 @@
                 `;
                 document.getElementById('content').innerHTML = html;
                 App.updateGearResult(); // Use direct call instead of 'this'
-            },
-
-            updateGearResult() {
-                if (!this.gearData) return;
-                
-                const tempSelect = document.getElementById('gear-temp');
-                if (!tempSelect) return;
-                const temp = parseInt(tempSelect.value);
-                
-                const processActivity = (activity, prefixBase) => {
-                    const list = this.gearData[activity] || [];
-                    const findMatch = (t) => {
-                        const match = list.find(r => {
-                            if (r.min === -999) return t < r.max;
-                            if (r.max === 999) return t >= r.min;
-                            return t >= r.min && t <= r.max;
-                        });
-                        return match || { upper: "—", lower: "—", extremities: "—" };
-                    };
-
-                    const standard = findMatch(temp);
-                    const weather = findMatch(temp - 10);
-
-                    const updateUI = (prefix, data) => {
-                        const u = document.getElementById(`${prefix}-upper`);
-                        const l = document.getElementById(`${prefix}-lower`);
-                        const e = document.getElementById(`${prefix}-extremities`);
-                        if (u) u.innerHTML = data.upper;
-                        if (l) l.innerHTML = data.lower;
-                        if (e) e.innerHTML = data.extremities;
-                    };
-
-                    updateUI(`${prefixBase}-standard`, standard);
-                    updateUI(`${prefixBase}-weather`, weather);
-                };
-
-                processActivity('bike', 'bike');
-                processActivity('run', 'run');
             },
 
             renderZones() {
