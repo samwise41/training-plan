@@ -12,7 +12,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 | **Date** | **Event Type** | **Goal** | **Priority** | 
 | :--- | :--- | :--- | :--- | 
 | June 20, 2026 | Jordanelle Olympic Triathlon | Finish ~ 2:30:00 | **A-Race** | 
-| Aug 16, 2026 | CF Ride for Life Century Ride | Finish ~ 5:30:00 | **A-Race** | 
+| Aug 15, 2026 | CF Ride for Life Century Ride | Finish ~ 5:30:00 | **A-Race** | 
 | Sept 11, 2026 | Brineman 70.3 or Olympic Triathlon | Finish Strong | **B-Race** | 
 
 ## 2. User Profile & Health
