@@ -280,7 +280,7 @@
         };
 
         const Parser = {
-            lastDebugInfo: {}, // Store debug info
+            lastDebugInfo: {}, 
 
             getSection(md, title) {
                 if (!md) return "";
@@ -313,59 +313,42 @@
                 };
             },
 
-            // --- ROBUST PARSER LOGIC FOR SPLIT COLUMNS ---
             parseTrainingLog(md) {
-                this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, sample: [] };
+                this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, firstRowRaw: "" };
 
-                // Find the section that contains the log
                 let sectionName = "Appendix C: Training History Log";
                 let section = this.getSection(md, sectionName);
-                
                 if (!section) {
                      sectionName = "Training History";
                      section = this.getSection(md, sectionName);
                 }
                 
                 if (!section) {
-                    this.lastDebugInfo.error = "Section not found (Tried: 'Appendix C' and 'Training History')";
+                    this.lastDebugInfo.error = "Section not found";
                     return [];
                 }
 
                 this.lastDebugInfo.sectionFound = true;
-                this.lastDebugInfo.sectionName = sectionName;
-
                 const lines = section.split('\n');
                 let dateIdx = -1, planIdx = -1, statusIdx = -1;
                 let data = [];
+                let firstRowFound = false;
 
-                // 1. Find Header Row and Indices
+                // 1. Find Headers
                 for (let line of lines) {
                     if (line.includes('|')) {
                         const lowLine = line.toLowerCase();
-                        // Look for key columns
                         if (lowLine.includes('date') || lowLine.includes('day') || lowLine.includes('planned')) {
-                            // Strip markdown stars for cleaner matching
                             const cleanHeaders = line.split('|').map(h => h.trim().toLowerCase().replace(/\*\*/g, ''));
                             
                             let foundPlan = false;
                             cleanHeaders.forEach((h, index) => {
-                                // Find DATE (Prioritize explicit 'date' over 'day')
-                                if (h === 'date' || h.includes('date')) {
-                                    dateIdx = index;
-                                } else if ((h === 'day' || h.includes('day')) && dateIdx === -1) {
-                                    // Fallback to 'day' only if we haven't found 'date' yet
-                                    dateIdx = index;
-                                }
+                                if (h === 'date' || h.includes('date')) dateIdx = index;
+                                else if ((h === 'day' || h.includes('day')) && dateIdx === -1) dateIdx = index;
                                 
-                                // Find Plan
-                                if (h.includes('planned')) {
-                                    planIdx = index;
-                                    foundPlan = true;
-                                } else if (!foundPlan && (h.includes('workout') || h.includes('activity'))) {
-                                    planIdx = index;
-                                }
+                                if (h.includes('planned')) { planIdx = index; foundPlan = true; }
+                                else if (!foundPlan && (h.includes('workout') || h.includes('activity'))) planIdx = index;
 
-                                // Find Status
                                 if (h.includes('status') || h.includes('completion')) statusIdx = index;
                             });
                             
@@ -378,7 +361,7 @@
                 }
 
                 if (dateIdx === -1) {
-                    this.lastDebugInfo.error = "Columns not found. Looked for 'Date' (or 'Day'), 'Planned/Workout', 'Status'.";
+                    this.lastDebugInfo.error = "Columns not found.";
                     return [];
                 }
 
@@ -387,39 +370,40 @@
                 now.setHours(23, 59, 59, 999); 
 
                 for (let line of lines) {
-                    if (!line.includes('|') || line.includes('---')) continue; // Skip non-table lines
+                    if (!line.includes('|') || line.includes('---')) continue;
                     
                     const cols = line.split('|');
-                    if (cols.length <= Math.max(dateIdx, planIdx)) continue; // Malformed row
+                    if (cols.length <= Math.max(dateIdx, planIdx)) continue;
 
-                    // Helper to clean markdown
+                    // Capture first raw row for debugging
+                    if (!firstRowFound) {
+                        this.lastDebugInfo.firstRowRaw = line;
+                        firstRowFound = true;
+                    }
+
                     const cleanText = (str) => (str || "").trim().replace(/\*\*/g, '').replace(/__/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
-
-                    const rawDate = cols[dateIdx];
-                    const rawPlan = cols[planIdx];
-                    const rawStatus = statusIdx > -1 ? cols[statusIdx] : "";
-
-                    const dateStr = cleanText(rawDate);
-                    const planStr = cleanText(rawPlan).toLowerCase();
-                    const statusStr = cleanText(rawStatus).toLowerCase();
-
-                    // Strict Date Validation (Must look like YYYY-MM-DD to accept)
-                    // This prevents us from trying to parse "Monday" or "Cycle Phase 1" as a date
-                    let date = null;
-                    const dateMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
                     
-                    if (dateMatch) {
-                        date = new Date(dateMatch[1], dateMatch[2]-1, dateMatch[3]);
-                    } 
+                    const rawDate = cols[dateIdx];
+                    const dateStr = cleanText(rawDate);
+                    const planStr = cleanText(cols[planIdx]).toLowerCase();
+                    const statusStr = statusIdx > -1 ? cleanText(cols[statusIdx]).toLowerCase() : "";
+
+                    let date = null;
+                    // Attempt 1: Standard
+                    const d = new Date(dateStr);
+                    if (!isNaN(d.getTime())) date = d;
+
+                    // Attempt 2: Regex YYYY-MM-DD
+                    if (!date) {
+                         const match = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                         if (match) date = new Date(match[1], match[2]-1, match[3]);
+                    }
 
                     if (date && !isNaN(date.getTime())) {
-                         date.setHours(12, 0, 0, 0); // Avoid timezone shifts
-
-                        // Ensure date is valid and in the past/today
+                        date.setHours(12, 0, 0, 0);
                         if (date <= now) {
                             data.push({
                                 date: date,
-                                rawDate: dateStr,
                                 type: planStr.includes('bike') ? 'Bike' : 
                                       planStr.includes('run') ? 'Run' : 
                                       planStr.includes('swim') ? 'Swim' : 'Other',
@@ -430,7 +414,6 @@
                 }
                 
                 this.lastDebugInfo.rowsParsed = data.length;
-                this.lastDebugInfo.sample = data.slice(0, 3);
                 return data;
             },
 
@@ -507,9 +490,7 @@
                     this.gearData = Parser.parseGearMatrix(this.gearMd);
 
                     this.updateStats();
-                    
-                    // Fetch weather gracefully
-                    this.fetchWeather().catch(err => console.warn("Weather fetch failed quietly:", err));
+                    this.fetchWeather().catch(err => console.warn("Weather fetch failed:", err));
                     
                     window.addEventListener('hashchange', () => this.handleHashChange());
                     this.handleHashChange();
@@ -666,9 +647,7 @@
                 return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
             },
 
-            // --- UPDATED RENDER KPI WITH DEBUG ---
             renderKPI() {
-                // Parse the log using the new Parser method
                 const logData = Parser.parseTrainingLog(this.planMd);
                 const debugInfo = Parser.lastDebugInfo;
 
@@ -678,19 +657,14 @@
                     const now = new Date();
                     now.setHours(23, 59, 59, 999);
 
-                    // Filter based on Date Range and Type
                     const subset = logData.filter(item => {
                         const dateOk = item.date >= cutoff && item.date <= now;
                         const typeOk = targetType === 'All' || item.type === targetType;
                         return dateOk && typeOk;
                     });
 
-                    // Denominator: Total planned workouts (that exist in the log for these dates)
                     const planned = subset.length; 
-                    
-                    // Numerator: Completed only
                     const completed = subset.filter(item => item.completed).length; 
-                    
                     const pct = planned > 0 ? Math.round((completed / planned) * 100) : 0;
                     
                     return { planned, completed, pct };
@@ -709,19 +683,13 @@
                                 ${this.getIconForType(type)}
                                 <span class="kpi-title">${title}</span>
                             </div>
-                            
                             <div class="progress-container">
                                 <div class="progress-label"><span>Last 30 Days</span> <span>${stats30.pct}% (${stats30.completed}/${stats30.planned})</span></div>
-                                <div class="progress-bar-bg">
-                                    <div class="progress-bar-fill" style="width: ${stats30.pct}%; background-color: ${color30}"></div>
-                                </div>
+                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${stats30.pct}%; background-color: ${color30}"></div></div>
                             </div>
-                            
                             <div class="progress-container">
                                 <div class="progress-label"><span>Last 60 Days</span> <span>${stats60.pct}% (${stats60.completed}/${stats60.planned})</span></div>
-                                <div class="progress-bar-bg">
-                                    <div class="progress-bar-fill" style="width: ${stats60.pct}%; background-color: ${color60}"></div>
-                                </div>
+                                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${stats60.pct}%; background-color: ${color60}"></div></div>
                             </div>
                         </div>
                     `;
@@ -731,13 +699,12 @@
                     <div class="debug-box">
                         <strong>DEBUG LOG:</strong><br>
                         Parsing File Length: ${this.planMd.length} chars<br>
-                        Section Found: ${debugInfo.sectionFound ? `YES (${debugInfo.sectionName})` : "NO - Failed to find 'Training History' header"}<br>
+                        Section Found: ${debugInfo.sectionFound ? `YES (${debugInfo.sectionName})` : "NO"}<br>
                         Headers Found: ${JSON.stringify(debugInfo.headersFound)}<br>
-                        Header Row: ${debugInfo.headersFound.headerRow || "N/A"}<br>
                         Rows Parsed: ${debugInfo.rowsParsed}<br>
                         Error: ${debugInfo.error || "None"}<br>
-                        First 2 Parsed Items:<br> 
-                        ${JSON.stringify(debugInfo.sample, null, 2).replace(/\n/g, '<br>').replace(/ /g, '&nbsp;')}
+                        First Row (Raw):<br> 
+                        "${debugInfo.firstRowRaw.replace(/</g, '&lt;')}"
                     </div>
                 `;
 
@@ -767,7 +734,6 @@
                 }
                 tempOptions += `<option value="75" ${defaultVal === 75 ? 'selected' : ''}>70°F+</option>`;
 
-                // Hourly Forecast Logic
                 let hourlyHtml = '';
                 if (this.hourlyWeather && this.hourlyWeather.time && Array.isArray(this.hourlyWeather.time)) {
                     const times = this.hourlyWeather.time.slice(0, 24); 
@@ -863,7 +829,45 @@
                     </div>
                 `;
                 document.getElementById('content').innerHTML = html;
-                this.updateGearResult();
+                App.updateGearResult(); // Use direct call instead of 'this'
+            },
+
+            updateGearResult() {
+                if (!this.gearData) return;
+                
+                const tempSelect = document.getElementById('gear-temp');
+                if (!tempSelect) return;
+                const temp = parseInt(tempSelect.value);
+                
+                const processActivity = (activity, prefixBase) => {
+                    const list = this.gearData[activity] || [];
+                    const findMatch = (t) => {
+                        const match = list.find(r => {
+                            if (r.min === -999) return t < r.max;
+                            if (r.max === 999) return t >= r.min;
+                            return t >= r.min && t <= r.max;
+                        });
+                        return match || { upper: "—", lower: "—", extremities: "—" };
+                    };
+
+                    const standard = findMatch(temp);
+                    const weather = findMatch(temp - 10);
+
+                    const updateUI = (prefix, data) => {
+                        const u = document.getElementById(`${prefix}-upper`);
+                        const l = document.getElementById(`${prefix}-lower`);
+                        const e = document.getElementById(`${prefix}-extremities`);
+                        if (u) u.innerHTML = data.upper;
+                        if (l) l.innerHTML = data.lower;
+                        if (e) e.innerHTML = data.extremities;
+                    };
+
+                    updateUI(`${prefixBase}-standard`, standard);
+                    updateUI(`${prefixBase}-weather`, weather);
+                };
+
+                processActivity('bike', 'bike');
+                processActivity('run', 'run');
             },
 
             renderZones() {
@@ -931,6 +935,7 @@
         };
 
         window.onload = () => App.init();
+        window.App = App; // Fix for global access
     </script>
 </body>
 </html>
