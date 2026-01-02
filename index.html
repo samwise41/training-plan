@@ -128,37 +128,24 @@
         @media (min-width: 768px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
         
         .kpi-card { background: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; border-radius: 12px; padding: 1.5rem; }
-        .kpi-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #334155; }
+        .kpi-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #334155; }
         .kpi-title { font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; }
         
-        /* Updated Pie/Donut Chart Styles */
+        /* Updated Pie/Donut Chart Styles - LARGER SIZE */
         .charts-row { display: flex; justify-content: space-around; gap: 1rem; align-items: flex-start; }
-        .chart-container { display: flex; flex-direction: column; align-items: center; position: relative; width: 100px; }
-        .chart-label { margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+        .chart-container { display: flex; flex-direction: column; align-items: center; position: relative; width: 120px; }
+        .chart-label { margin-top: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
         
         .donut-svg { transform: rotate(-90deg); }
-        .donut-bg { fill: none; stroke: #1e293b; stroke-width: 2.5; }
-        .donut-segment { fill: none; stroke-width: 2.5; stroke-linecap: round; transition: stroke-dasharray 1s ease-out; }
+        .donut-bg { fill: none; stroke: #1e293b; stroke-width: 2.8; }
+        .donut-segment { fill: none; stroke-width: 2.8; stroke-linecap: round; transition: stroke-dasharray 1s ease-out; }
         
         .donut-text {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100px;
+            position: absolute; top: 0; left: 0; width: 100%; height: 120px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
-        .donut-percent { font-size: 1.25rem; font-weight: 800; color: #f8fafc; line-height: 1; }
-        .donut-fraction { font-size: 0.65rem; color: #64748b; font-weight: 600; margin-top: 2px; }
-
-        /* Debug Box */
-        .debug-box {
-            margin-top: 2rem;
-            padding: 1rem;
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 0.75rem;
-            color: #94a3b8;
-            overflow-x: auto;
-        }
+        .donut-percent { font-size: 1.5rem; font-weight: 800; color: #f8fafc; line-height: 1; }
+        .donut-fraction { font-size: 0.75rem; color: #64748b; font-weight: 600; margin-top: 2px; }
         
         /* Hourly Scroll */
         .hourly-scroll {
@@ -196,6 +183,11 @@
                 Gear Choice
             </button>
 
+            <button onclick="App.navigate('kpi')" id="nav-kpi" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+                KPIs
+            </button>
+
             <button onclick="App.navigate('zones')" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
                 Zones
@@ -214,11 +206,6 @@
             <button onclick="App.navigate('full')" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 Full Plan
-            </button>
-
-            <button onclick="App.navigate('kpi')" id="nav-kpi" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
-                KPIs
             </button>
         </nav>
     </aside>
@@ -660,7 +647,8 @@
 
             renderKPI() {
                 const logData = Parser.parseTrainingLog(this.planMd);
-                const debugInfo = Parser.lastDebugInfo;
+                
+                // Removed Debug Code
 
                 const calculateStats = (targetType, days) => {
                     const cutoff = new Date();
@@ -692,7 +680,7 @@
 
                     return `
                         <div class="chart-container">
-                            <svg width="80" height="80" viewBox="0 0 42 42" class="donut-svg">
+                            <svg width="120" height="120" viewBox="0 0 42 42" class="donut-svg">
                                 <circle class="donut-bg" cx="21" cy="21" r="${radius}"></circle>
                                 <circle class="donut-segment" cx="21" cy="21" r="${radius}" 
                                         stroke="${color}" stroke-dasharray="${strokeDasharray}" stroke-dashoffset="25"></circle>
@@ -724,19 +712,6 @@
                     `;
                 };
 
-                const debugHtml = `
-                    <div class="debug-box">
-                        <strong>DEBUG LOG:</strong><br>
-                        Parsing File Length: ${this.planMd.length} chars<br>
-                        Section Found: ${debugInfo.sectionFound ? `YES (${debugInfo.sectionName})` : "NO"}<br>
-                        Headers Found: ${JSON.stringify(debugInfo.headersFound)}<br>
-                        Rows Parsed: ${debugInfo.rowsParsed}<br>
-                        Error: ${debugInfo.error || "None"}<br>
-                        First Row (Raw):<br> 
-                        "${debugInfo.firstRowRaw.replace(/</g, '&lt;')}"
-                    </div>
-                `;
-
                 const html = `
                     <div class="kpi-grid">
                         ${buildMetric("All Workouts", "All")}
@@ -744,7 +719,9 @@
                         ${buildMetric("Running", "Run")}
                         ${buildMetric("Swimming", "Swim")}
                     </div>
-                    ${debugHtml}
+                    <div class="mt-8 text-center text-xs text-slate-500 italic">
+                        * Calculations based on the "Training History Log" table in the markdown file.
+                    </div>
                 `;
                 document.getElementById('content').innerHTML = html;
             },
