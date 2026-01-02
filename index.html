@@ -323,7 +323,8 @@
                 const val = parseFloat(numMatch[1]);
                 if (isNaN(val)) return 0;
                 
-                if (isHours) {
+                // NEW: Logic to catch small numbers (e.g. "2.5") without "h" unit as hours
+                if (isHours || (val < 10 && !str.toLowerCase().includes('m'))) {
                     return Math.round(val * 60);
                 } else {
                     return Math.round(val); // Assume minutes
@@ -334,9 +335,9 @@
             _getType(str) {
                 if (!str) return 'Other';
                 const lower = str.toLowerCase();
-                if (lower.includes('bike') || lower.includes('cycle') || lower.includes('zwift')) return 'Bike';
-                if (lower.includes('run')) return 'Run';
-                if (lower.includes('swim')) return 'Swim';
+                if (lower.includes('bike') || lower.includes('cycle') || lower.includes('zwift') || lower.includes('ride') || lower.includes('spin') || lower.includes('peloton')) return 'Bike';
+                if (lower.includes('run') || lower.includes('jog') || lower.includes('treadmill')) return 'Run';
+                if (lower.includes('swim') || lower.includes('pool')) return 'Swim';
                 return 'Other';
             },
 
@@ -771,7 +772,9 @@
                 const diff = totalActual - totalPlanned;
                 const pct = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
                 
-                const formatTime = (m) => {
+                // FIXED Format Time to handle ABSOLUTE minutes
+                const formatTime = (minutes) => {
+                    const m = Math.abs(minutes); // Work with positive numbers
                     if (m === 0) return "0m";
                     const h = Math.floor(m / 60);
                     const rem = m % 60;
@@ -783,7 +786,9 @@
                 document.getElementById('kpi-analysis-actual').innerText = formatTime(totalActual);
                 
                 const diffEl = document.getElementById('kpi-analysis-diff');
-                diffEl.innerText = (diff > 0 ? '+' : '') + formatTime(diff);
+                // Handle sign explicitly since formatTime returns positive string
+                const sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
+                diffEl.innerText = sign + formatTime(diff);
                 diffEl.className = `text-xl font-bold ${diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
 
                 const pctEl = document.getElementById('kpi-analysis-pct');
