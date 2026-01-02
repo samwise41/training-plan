@@ -8,6 +8,7 @@ console.log("App.js loading...");
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
     GEAR_FILE: "Gear.md",
+    HISTORY_FILE: "history_archive.md", // NEW FILE
     WEATHER_MAP: {
         0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
         45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"], 51: ["Drizzle", "🌦️"], 61: ["Rain", "🌧️"], 63: ["Rain", "🌧️"],
@@ -18,6 +19,7 @@ const CONFIG = {
 const App = {
     planMd: "",
     gearMd: "",
+    archiveMd: "", // Store raw archive text
     logData: [],
     gearData: null,
     currentTemp: null,
@@ -26,27 +28,32 @@ const App = {
     async init() {
         console.log("App init started");
         try {
-            // 1. Fetch Data
-            const [planRes, gearRes] = await Promise.all([
+            // Fetch ALL 3 Files
+            const [planRes, gearRes, archiveRes] = await Promise.all([
                 fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
-                fetch(`./${CONFIG.GEAR_FILE}?t=${Date.now()}`)
+                fetch(`./${CONFIG.GEAR_FILE}?t=${Date.now()}`),
+                fetch(`./${CONFIG.HISTORY_FILE}?t=${Date.now()}`)
             ]);
             
             if (!planRes.ok) throw new Error("Could not load plan file.");
             if (!gearRes.ok) throw new Error("Could not load gear file.");
-
+            // Archive might be missing if you haven't created it yet, handle gracefully
+            
             this.planMd = await planRes.text();
             this.gearMd = await gearRes.text();
+            this.archiveMd = archiveRes.ok ? await archiveRes.text() : "";
+
+            // MERGE LOGIC: Parse both and combine
+            const currentLog = Parser.parseTrainingLog(this.planMd);
+            const archiveLog = Parser.parseTrainingLog(this.archiveMd);
+            this.logData = [...currentLog, ...archiveLog]; // Combine Arrays
             
-            // 2. Setup UI
             this.setupEventListeners();
             this.updateStats();
             
-            // 3. Handle Routing
             window.addEventListener('hashchange', () => this.handleHashChange());
-            this.handleHashChange(); // Load initial view
+            this.handleHashChange();
 
-            // 4. Fetch Weather (Async, don't block)
             this.fetchWeather().catch(err => console.warn("Weather error:", err));
             
         } catch (e) {
@@ -56,7 +63,6 @@ const App = {
     },
 
     setupEventListeners() {
-        // Attach click events safely via JS instead of HTML onclick
         const bindNav = (id, view) => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('click', () => this.navigate(view));
@@ -70,7 +76,6 @@ const App = {
         bindNav('nav-history', 'history');
         bindNav('nav-full', 'full');
 
-        // Sidebar Toggles
         const btnOpen = document.getElementById('btn-sidebar-open');
         const btnClose = document.getElementById('btn-sidebar-close');
         const overlay = document.getElementById('sidebar-overlay');
@@ -107,7 +112,6 @@ const App = {
     updateStats() {
         if (!this.planMd) return;
         
-        // 1. Update Phase and Week
         const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
         const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
         const currentWeek = statusMatch ? statusMatch[2].trim() : "N/A";
@@ -137,7 +141,6 @@ const App = {
         const weekEl = document.getElementById('stat-week');
         if (weekEl) weekEl.innerText = currentWeek;
         
-        // 2. Update Next Event
         const eventSection = Parser.getSection(this.planMd, "Event Schedule");
         if (eventSection) {
             const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
@@ -177,7 +180,6 @@ const App = {
     },
 
     renderView(view) {
-        // Update Title
         const titles = { 
             schedule: 'Weekly Schedule', phases: 'Phases', zones: 'Zones', 
             gear: 'Gear Selection', full: 'Master Plan', history: 'Training History',
@@ -186,12 +188,10 @@ const App = {
         const titleEl = document.getElementById('header-title-dynamic');
         if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
 
-        // Update Nav Active State
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
         const navBtn = document.getElementById(`nav-${view}`);
         if (navBtn) navBtn.classList.add('active');
         
-        // Transition Content
         const content = document.getElementById('content');
         content.classList.add('opacity-0');
         
@@ -207,9 +207,9 @@ const App = {
                     content.innerHTML = renderZones(this.planMd);
                 } 
                 else if (view === 'kpi') {
-                    const result = renderKPI(this.planMd);
+                    // NEW: Pass the merged logData directly, not the markdown string
+                    const result = renderKPI(this.logData); // This uses the merged array
                     content.innerHTML = result.html;
-                    this.logData = result.logData;
                     this.updateDurationAnalysis();
                 } 
                 else {
@@ -221,7 +221,10 @@ const App = {
                         mdContent = this.planMd;
                     } 
                     else if (view === 'history') {
-                        mdContent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
+                        // Concatenate both for view
+                        const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
+                        const archive = Parser.getSection(this.archiveMd, "Training History");
+                        mdContent = (recent || "") + "\n\n" + (archive || "");
                     }
                     else {
                         mdContent = Parser.getSection(this.planMd, sectionTitle);
@@ -258,6 +261,6 @@ const App = {
     }
 };
 
-// Expose App to window so dynamic dropdown onchange events can find it
 window.App = App;
 window.onload = () => App.init();
+console.log("App attached to window");
