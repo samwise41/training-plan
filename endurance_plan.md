@@ -298,11 +298,12 @@
                 };
             },
 
+            // --- UPDATED PARSER LOGIC FOR KPIS ---
             parseTrainingLog(md) {
                 // Find the section that contains the log
                 let section = this.getSection(md, "Appendix C: Training History Log");
                 if (!section) section = this.getSection(md, "Training History");
-                if (!section) return { all: [], bike: [], run: [], swim: [] };
+                if (!section) return [];
 
                 const lines = section.split('\n');
                 let dayIdx = -1, planIdx = -1, statusIdx = -1;
@@ -314,11 +315,7 @@
                         const lowLine = line.toLowerCase();
                         if (lowLine.includes('day') || lowLine.includes('date')) {
                             const headers = line.split('|').map(h => h.trim().toLowerCase());
-                            // Since split('|') creates empty first/last elements if line starts/ends with |, handle that
-                            // Standard Markdown table: | Day | Plan | Status |
-                            // split result: ["", "day", "plan", "status", ""]
                             
-                            // Let's iterate the parts and find the index
                             headers.forEach((h, index) => {
                                 if (h.includes('day') || h.includes('date')) dayIdx = index;
                                 if (h.includes('planned') || h.includes('workout')) planIdx = index;
@@ -326,19 +323,19 @@
                             });
                             
                             if (dayIdx !== -1 && planIdx !== -1 && statusIdx !== -1) {
-                                break; // Found headers
+                                break; 
                             }
                         }
                     }
                 }
 
-                if (dayIdx === -1) return { all: [], bike: [], run: [], swim: [] };
+                if (dayIdx === -1) return [];
 
                 // 2. Parse Rows
                 const now = new Date();
-                // Set hours to end of day to include "today" in calculations if needed, 
-                // but user said "not include any future days", so strict comparison is safer.
-                now.setHours(23, 59, 59, 999);
+                // Set hours to 0 to be strict about "future" (if a workout is later today, we count it as current/past for simplicity, or we can use strict current time)
+                // User said "not include any future days".
+                now.setHours(23, 59, 59, 999); 
 
                 for (let line of lines) {
                     if (!line.includes('|') || line.includes('---')) continue; // Skip non-table lines
@@ -604,8 +601,9 @@
                 return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
             },
 
+            // --- UPDATED RENDER KPI ---
             renderKPI() {
-                // Parse the log
+                // Parse the log using the new Parser method
                 const logData = Parser.parseTrainingLog(this.planMd);
 
                 const calculateStats = (targetType, days) => {
@@ -621,8 +619,12 @@
                         return dateOk && typeOk;
                     });
 
-                    const planned = subset.length; // Denominator: All matching days
-                    const completed = subset.filter(item => item.completed).length; // Numerator: Completed only
+                    // Denominator: Total planned workouts (that exist in the log for these dates)
+                    const planned = subset.length; 
+                    
+                    // Numerator: Completed only
+                    const completed = subset.filter(item => item.completed).length; 
+                    
                     const pct = planned > 0 ? Math.round((completed / planned) * 100) : 0;
                     
                     return { planned, completed, pct };
@@ -667,7 +669,7 @@
                         ${buildMetric("Swimming", "Swim")}
                     </div>
                     <div class="mt-8 text-center text-xs text-slate-500 italic">
-                        * Calculations based on the "Training History Log" table. Columns searched: "Day" (date), "Planned Workout", "Status".
+                        * Calculations based on the "Training History Log" table in the markdown file.
                     </div>
                 `;
                 document.getElementById('content').innerHTML = html;
@@ -687,7 +689,7 @@
                 }
                 tempOptions += `<option value="75" ${defaultVal === 75 ? 'selected' : ''}>70°F+</option>`;
 
-                // Hourly Forecast Logic with Safety Check
+                // Hourly Forecast Logic
                 let hourlyHtml = '';
                 if (this.hourlyWeather && this.hourlyWeather.time && Array.isArray(this.hourlyWeather.time)) {
                     const times = this.hourlyWeather.time.slice(0, 24); 
@@ -700,7 +702,6 @@
                     
                     times.forEach((t, index) => {
                         const date = new Date(t);
-                        // Only show if data exists
                         if (index < 24 && temps[index] !== undefined) { 
                             const h = date.getHours();
                             const ampm = h >= 12 ? 'PM' : 'AM';
