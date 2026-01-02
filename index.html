@@ -345,13 +345,24 @@
                         if (lowLine.includes('day') || lowLine.includes('date')) {
                             const headers = line.split('|').map(h => h.trim().toLowerCase());
                             
+                            let foundPlan = false;
                             headers.forEach((h, index) => {
+                                // Find Day
                                 if (h.includes('day') || h.includes('date')) dayIdx = index;
-                                if (h.includes('planned') || h.includes('workout') || h.includes('activity')) planIdx = index;
+                                
+                                // Find Plan (Prioritize "Planned", avoid overwriting with "Actual")
+                                if (h.includes('planned')) {
+                                    planIdx = index;
+                                    foundPlan = true;
+                                } else if (!foundPlan && (h.includes('workout') || h.includes('activity'))) {
+                                    planIdx = index;
+                                }
+
+                                // Find Status
                                 if (h.includes('status') || h.includes('completion')) statusIdx = index;
                             });
                             
-                            if (dayIdx !== -1 && planIdx !== -1) { // We at least need Date and Type
+                            if (dayIdx !== -1 && planIdx !== -1) { 
                                 this.lastDebugInfo.headersFound = { dayIdx, planIdx, statusIdx, headerRow: line };
                                 break; 
                             }
@@ -374,22 +385,29 @@
                     const cols = line.split('|');
                     if (cols.length <= Math.max(dayIdx, planIdx)) continue; // Malformed row
 
-                    const dateStr = cols[dayIdx].trim();
-                    const planStr = cols[planIdx].trim().toLowerCase();
-                    // Handle missing status column gracefully
-                    const statusStr = statusIdx > -1 && cols[statusIdx] ? cols[statusIdx].trim().toLowerCase() : "";
+                    // Extract Clean Text from Columns (Remove markdown like ** or links)
+                    const cleanText = (str) => (str || "").trim().replace(/\*\*/g, '').replace(/__/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
 
-                    // Parse Date (Attempt standard formats)
-                    let date = new Date(dateStr);
-                    if (isNaN(date.getTime())) {
-                        // Try parsing manually if YYYY-MM-DD failed standard ctor in some envs, though standard new Date usually works
-                        const dateMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-                        if (dateMatch) {
-                            date = new Date(dateMatch[1], dateMatch[2]-1, dateMatch[3]);
-                        }
+                    const rawDate = cols[dayIdx];
+                    const rawPlan = cols[planIdx];
+                    const rawStatus = statusIdx > -1 ? cols[statusIdx] : "";
+
+                    const dateStr = cleanText(rawDate);
+                    const planStr = cleanText(rawPlan).toLowerCase();
+                    const statusStr = cleanText(rawStatus).toLowerCase();
+
+                    // Parse Date (Using Regex to find YYYY-MM-DD pattern inside the cell to avoid markdown noise)
+                    let date = null;
+                    const dateMatch = rawDate.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                    if (dateMatch) {
+                        date = new Date(dateMatch[1], dateMatch[2]-1, dateMatch[3]);
+                    } else {
+                        // Fallback attempt
+                        const d = new Date(dateStr);
+                        if (!isNaN(d.getTime())) date = d;
                     }
 
-                    if (!isNaN(date.getTime())) {
+                    if (date && !isNaN(date.getTime())) {
                          date.setHours(12, 0, 0, 0); // Avoid timezone shifts
 
                         // Ensure date is valid and in the past/today
