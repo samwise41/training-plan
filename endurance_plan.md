@@ -331,14 +331,18 @@ The athlete has established specific requirements for how the training must be d
 * [ ] **Event Check:** Is there a race this week? (If yes, apply "Taper Protocol").
 
 
-# Appendix D: AI Prompt
+# Appendix E: AI Prompt
 
-I have a training plan location in this github location. can you review this and help me generate my training for the next week (keep in mind that I have not completed this weeks saturday workout, but i will). Please generate a raw markdown text of next week's schedule. Do not include any non Run/Bike/Swim workouts in the plan (e.g. strength, stretching, yoga aetc.) The athlete will do this, but doesn't want to track planned to actuals for this. The schedule can be aggressive in terms of pushing the limits of increased volume/load each week. 
+I have a training plan location in this github location. Can you review this file thoroughly and help me generate my training for the next week. Please generate a raw markdown text of next week's schedule. 
 
-GitHub rep
-https://github.com/samwise41/training-plan
+**CRITICAL FORMATTING RULES:**
+1. Return the schedule **ONLY** as a Markdown table.
+2. You **MUST** use these exact column headers: `| Status | Day | Planned Workout | Planned Duration | Actual Workout | Actual Duration | Notes / Targets | Date |`
+3. Do **NOT** change the header names or order, or the dashboard parser will break.
+4. Dates must be in `YYYY-MM-DD` format.
+5. Do not include Strength/Yoga/Stretching in this table; only Run/Bike/Swim.
+6. "Status" should be "PLANNED" for all future workouts.
 
-GitHub Training Plan File
+GitHub Training Plan File:
 https://github.com/samwise41/training-plan/blob/main/endurance_plan.md
-
 
