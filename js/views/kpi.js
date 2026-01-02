@@ -2,7 +2,7 @@ import { Parser } from '../parser.js';
 
 let logData = [];
 
-// Helper functions
+// Helper functions internal to this module
 const getIconForType = (type) => {
     if (type === 'Bike') return '<i class="fa-solid fa-bicycle text-blue-500 text-xl"></i>';
     if (type === 'Run') return '<i class="fa-solid fa-person-running text-emerald-500 text-xl"></i>';
@@ -32,6 +32,7 @@ const buildDonut = (percent, label, fraction) => {
     `;
 };
 
+// Exported function to be called by App.js
 export function renderKPI(planMd) {
     logData = Parser.parseTrainingLog(planMd);
 
@@ -50,6 +51,7 @@ export function renderKPI(planMd) {
         const planned = subset.length; 
         const completed = subset.filter(item => item.completed).length; 
         const pct = planned > 0 ? Math.round((completed / planned) * 100) : 0;
+        
         return { planned, completed, pct, label: `${completed}/${planned}` };
     };
 
@@ -77,7 +79,11 @@ export function renderKPI(planMd) {
 
         const pct = totalPlannedMins > 0 ? Math.round((totalActualMins / totalPlannedMins) * 100) : 0;
         const formatTime = (m) => m > 120 ? `${(m/60).toFixed(1)}h` : `${m}m`;
-        return { pct, label: `${formatTime(totalActualMins)}/${formatTime(totalPlannedMins)}` };
+
+        return { 
+            pct, 
+            label: `${formatTime(totalActualMins)}/${formatTime(totalPlannedMins)}` 
+        };
     };
 
     const buildMetricRow = (title, type, isDuration = false) => {
@@ -204,6 +210,7 @@ export function renderKPI(planMd) {
     return { html, logData };
 }
 
+// Exported logic for the interactivity
 export function updateDurationAnalysis(data) {
     const sportSelect = document.getElementById('kpi-sport-select');
     const daySelect = document.getElementById('kpi-day-select');
