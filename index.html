@@ -699,58 +699,78 @@
                 
                 if (!sportSelect || !daySelect || !timeSelect || !this.logData) return;
 
-                const selectedSport = sportSelect.value; // 'All', 'Bike', 'Run', 'Swim'
-                const selectedDay = daySelect.value; // 'All', 'Weekday', 'Monday', etc.
-                const selectedTime = timeSelect.value; // 'All', '30', '60', '90'
+                const selectedSport = sportSelect.value;
+                const selectedDay = daySelect.value;
+                const selectedTime = timeSelect.value;
 
-                // Date Cutoff Logic
+                // Date Cutoff
                 let cutoffDate = null;
                 if (selectedTime !== 'All') {
                     const days = parseInt(selectedTime);
                     cutoffDate = new Date();
                     cutoffDate.setDate(cutoffDate.getDate() - days);
-                    cutoffDate.setHours(0, 0, 0, 0); // Start of that day
+                    cutoffDate.setHours(0, 0, 0, 0); 
                 }
 
                 let totalPlanned = 0;
                 let totalActual = 0;
-
                 const dayMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                
+                // Clear and prepare Debug Table
+                const debugTableBody = document.querySelector('#kpi-debug-table tbody');
+                if (debugTableBody) debugTableBody.innerHTML = '';
+                let debugRows = '';
 
                 this.logData.forEach(item => {
                     if (!item.date) return;
-                    
-                    // 1. Check Date Filter (Time Period)
                     if (cutoffDate && item.date < cutoffDate) return;
 
                     const itemDayName = dayMap[item.date.getDay()];
-                    
-                    // 2. Check Sport Filter
+
+                    // Sport Filter
                     if (selectedSport !== 'All' && item.type !== selectedSport) return;
 
-                    // 3. Check Day Filter
+                    // Day Filter
                     if (selectedDay !== 'All') {
                         if (selectedDay === 'Weekday') {
-                            const d = item.date.getDay(); // 0-6
-                            if (d === 0 || d === 6) return; // Skip Sun(0) and Sat(6)
+                            const d = item.date.getDay(); 
+                            if (d === 0 || d === 6) return;
                         } else {
                             if (itemDayName !== selectedDay) return;
                         }
                     }
 
-                    // 4. Tally
                     totalPlanned += (item.plannedDuration || 0);
-                    // Only count actual if type matches
+                    
+                    let thisActual = 0;
+                    let actualClass = "text-slate-300";
+                    
                     if (item.type === item.actualType) {
-                        totalActual += (item.actualDuration || 0);
+                        thisActual = (item.actualDuration || 0);
+                        totalActual += thisActual;
+                    } else if (item.plannedDuration > 0) {
+                         // Mismatch sport = 0 actual for this metric
+                         actualClass = "text-red-400 font-bold";
                     }
+
+                    // Add to Debug Table
+                    debugRows += `
+                        <tr class="border-b border-slate-700 hover:bg-slate-800/50">
+                            <td class="py-2 px-2 text-xs font-mono text-slate-400">${item.date.toISOString().split('T')[0]}</td>
+                            <td class="py-2 px-2 text-xs text-slate-300">${itemDayName}</td>
+                            <td class="py-2 px-2 text-xs text-slate-300">${item.type}</td>
+                            <td class="py-2 px-2 text-xs text-slate-300 text-center">${item.plannedDuration}m</td>
+                            <td class="py-2 px-2 text-xs ${actualClass} text-center">${thisActual}m</td>
+                        </tr>
+                    `;
                 });
+
+                if (debugTableBody) debugTableBody.innerHTML = debugRows || '<tr><td colspan="5" class="text-center py-4 text-slate-500 italic">No matching records found</td></tr>';
 
                 // Calculate Results
                 const diff = totalActual - totalPlanned;
                 const pct = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
                 
-                // Format helpers
                 const formatTime = (m) => {
                     if (m === 0) return "0m";
                     const h = Math.floor(m / 60);
@@ -759,7 +779,6 @@
                     return `${rem}m`;
                 };
 
-                // Update DOM
                 document.getElementById('kpi-analysis-planned').innerText = formatTime(totalPlanned);
                 document.getElementById('kpi-analysis-actual').innerText = formatTime(totalActual);
                 
@@ -926,7 +945,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                             <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
                                 <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Planned</div>
                                 <div id="kpi-analysis-planned" class="text-xl font-bold text-white">--</div>
@@ -942,6 +961,25 @@
                             <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
                                 <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Adherence</div>
                                 <div id="kpi-analysis-pct" class="text-xl font-bold text-white">--</div>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-700 pt-4">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Detailed Log (Matches Filters)</h4>
+                            <div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-700 rounded-lg">
+                                <table id="kpi-debug-table" class="w-full text-left text-sm text-slate-300">
+                                    <thead class="bg-slate-900 sticky top-0">
+                                        <tr>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Date</th>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Day</th>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Type</th>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Plan</th>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-700">
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
