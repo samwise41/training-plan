@@ -25,7 +25,7 @@ const App = {
     currentTemp: null,
     hourlyWeather: null,
 
-    async init() {
+async init() {
         console.log("App init started");
         try {
             // Fetch ALL 3 Files
@@ -35,18 +35,30 @@ const App = {
                 fetch(`./${CONFIG.HISTORY_FILE}?t=${Date.now()}`)
             ]);
             
-            if (!planRes.ok) throw new Error("Could not load plan file.");
-            if (!gearRes.ok) throw new Error("Could not load gear file.");
-            // Archive might be missing if you haven't created it yet, handle gracefully
+            if (!planRes.ok) throw new Error(`Could not load ${CONFIG.PLAN_FILE}`);
+            if (!gearRes.ok) throw new Error(`Could not load ${CONFIG.GEAR_FILE}`);
             
             this.planMd = await planRes.text();
             this.gearMd = await gearRes.text();
-            this.archiveMd = archiveRes.ok ? await archiveRes.text() : "";
+            
+            // DEBUG: Check if archive loaded
+            if (archiveRes.ok) {
+                this.archiveMd = await archiveRes.text();
+                console.log(`Archive loaded: ${this.archiveMd.length} characters.`);
+            } else {
+                console.warn(`Archive file not found (404). Check spelling of ${CONFIG.HISTORY_FILE}`);
+                this.archiveMd = "";
+            }
 
-            // MERGE LOGIC: Parse both and combine
+            // MERGE LOGIC
             const currentLog = Parser.parseTrainingLog(this.planMd);
+            console.log(`Current Log Rows: ${currentLog.length}`);
+
             const archiveLog = Parser.parseTrainingLog(this.archiveMd);
-            this.logData = [...currentLog, ...archiveLog]; // Combine Arrays
+            console.log(`Archive Log Rows: ${archiveLog.length}`); // <--- If this is 0, the header/table structure is wrong
+
+            this.logData = [...currentLog, ...archiveLog]; 
+            console.log(`Total Merged Rows: ${this.logData.length}`);
             
             this.setupEventListeners();
             this.updateStats();
