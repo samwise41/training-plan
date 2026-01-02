@@ -154,7 +154,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | PLANNED | 01/03/26 | Sat | [BIKE] Long Endurance Ride | | Durat 3.0 Hours. Zone 2 (134W - 160W). Focus: Endurance. |
 | COMPLETED | 01/02/26 | Fri | [RUN] Volume Run | Morning Run 51 Minutes | Durat 40 mins. Zone 2 (HR: 140-152 bpm). Focus: Easy. |
-| COMPLETED | 01/01/25 | Thu | Rest | Hike 1.93 miles |  |
+| COMPLETED | 01/01/26 | Thu | Rest | Hike 1.93 miles |  |
 | COMPLETED | 12/31/25 | Wed | [BIKE] Steady State | Zwift - Zone 2 - 71% on Lutscher CCW in Innsbruck 62 minutes | Durat 60 mins. Zone 2 (134W - 180W). Focus: Smooth. |
 | COMPLETED | 12/30/25 | Tue | [RUN] Aerobic Base | Morning Run 50:00 | Durat 45 mins. Zone 2 (HR: 140-152 bpm). Focus: Aerobic Base. |
 | MISSED | 12/29/25 | Mon | [SWIM] Technique Focus | | ~500m - 800m. Zone 1 (RPE 3-4). Catch & Pull drills. |
