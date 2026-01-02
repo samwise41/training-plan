@@ -30,7 +30,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 ### Health & Injury Management
 
-* **IT Band:** History of issues. Currently managed via "Prehab" (Banded Leg Raises) 2x/week.
+* **IT Band:** Has had IT band issues in the past. Is not currently causing an issue and is well managed. No need to alter the plan for this unless athlete mentions issues.
 * **General:** No current limitations.
 
 ### Training Availability
@@ -73,7 +73,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 | **Phase** | **Dates** | **Focus** | **Key Workouts** | 
 | :--- | :--- | :--- | :--- | 
-| **1. Base/Prep** | Now – Feb 28 | Aerobic Engine & Swim Form | Z2 Rides, Drill Swims, IT Band Prehab | 
+| **1. Base/Prep** | Now – Feb 28 | Aerobic Engine & Swim Form | Z2 Rides, Drill Swims | 
 | **2. Tri-Build** | Mar 1 – May 15 | Threshold Power & Durability | Sweet Spot Intervals, Brick Runs | 
 | **3. Peak/Taper** | May 16 – June 20 | Race Specificity | Race Simulations, High Intensity Taper | 
 | **4. Century Pivot** | June 21 – Aug 16 | Aerobic Volume | Long Sat Rides (4-5h), Hydration/Fueling | 
