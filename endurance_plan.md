@@ -13,7 +13,13 @@ The primary "A" races and secondary objectives for the 2026 season.
 | :--- | :--- | :--- | :--- | 
 | June 20, 2026 | Jordanelle Olympic Triathlon | Finish ~ 2:30:00 | **A-Race** | 
 | Aug 15, 2026 | CF Ride for Life Century Ride | Finish ~ 5:30:00 | **A-Race** | 
-| Sept 11, 2026 | Brineman 70.3 or Olympic Triathlon | Finish Strong | **B-Race** | 
+| Sept 11, 2026 | Brineman 70.3 or Olympic Triathlon | sub 6:00:00 | **B-Race** | 
+
+| **Event** | **Course Profile** | **Training Implication** |
+| :--- | :--- | :--- |
+| Jordanelle Tri | Hilly Bike / Flat Run | Needs low-cadence/high-torque bike intervals (Strength Endurance). |
+| CF Century | 4000+ ft of climb over two mountains  | Needs sustained Z2 endurance (4-5h saddle time). |
+| Brineman 70.3 | 1000 ft of climb total with no single climb over 200 ft.  | Need to pace effort. |
 
 ## 2. User Profile & Health
 
@@ -68,6 +74,13 @@ The primary "A" races and secondary objectives for the 2026 season.
 * **Zone 5a:** 171 – 174 bpm
 * **Zone 5b:** 175 – 181 bpm
 * **Zone 5c:** > 182 bpm
+
+### Workout Design Preferences
+* **Run Format:** Prescribe runs by **Time** (e.g., 45 mins at 9:15 pace or HR zone 2), not Distance.
+* **Swim Format:** Prescribe swims by **Time**.
+* **Bike Format:** Prescribe rides by **Time** and **Power/Zone**.
+* **Interval Style:** Athlete prefers longer, sustained efforts (e.g., 2x20m Sweet Spot) over complex, multi-step ladders. Keep structure simple. Athlete likes to leverage the gamification of Zwift for indoor rides, especially for high intensity workouts. Use Zwift races when possible for high intensity workouts and use challenges like Alpe du Zwift for FTP testing.
+
 
 ## 4. Periodization Phases and Microcycle Templates
 
@@ -124,6 +137,10 @@ Use these mathematical rules to generate the specific duration and intensity for
   * **Volume:** Reduce total weekly duration to **60%** of the previous week.
   * **Intensity:** Maintain one high-intensity session (to keep blood plasma high) but reduce the number of intervals by 50%.
 
+#### 4. Missed Workout Logic
+* **Rule of Priority:** If a "Key Workout" (Intervals or Long Ride) is missed, it takes priority over an "Aerobic Maintenance" session later in the week.
+* **The "No-Stacking" Rule:** Never reschedule a high-intensity interval session to the day immediately following a Long Run or Long Ride.
+* **The "Lost Cause" Rule:** If >2 days are missed in a single week, reduce the remaining week's volume by 20% to prevent "cramming" stress.
 
 ## 5. Weekly Schedule & Logistics
 
