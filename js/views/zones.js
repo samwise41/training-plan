@@ -42,10 +42,20 @@ export function renderZones(planMd) {
             } else if (current && trimmed.includes(':')) {
                 // Zone Row (e.g. "Zone 1: < 133W")
                 const [label, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
-                const zMatch = label.toLowerCase().match(/zone (\d)/);
-                const zNum = zMatch ? zMatch[1] : '1';
+                let zClass = 'z-1'; // Default to grey
+
+                // Check for specific "Sweet Spot" label first
+                if (label.toLowerCase().includes('sweet spot')) {
+                    zClass = 'z-ss';
+                } else {
+                    // Otherwise look for "Zone X"
+                    const zMatch = label.toLowerCase().match(/zone (\d)/);
+                    const zNum = zMatch ? zMatch[1] : '1';
+                    zClass = `z-${zNum}`;
+                }
+
                 categories[current].push(`
-                    <div class="zone-row z-${zNum}">
+                    <div class="zone-row ${zClass}">
                         <span class="font-bold">${label.trim()}</span>
                         <span class="font-mono text-slate-400">${range ? range.trim() : '--'}</span>
                     </div>
