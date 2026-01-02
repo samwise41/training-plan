@@ -153,11 +153,12 @@ The primary "A" races and secondary objectives for the 2026 season.
 | **Status** | **Day** | **Planned Workout** | **Actual Workout** | **Notes / Targets** | 
 | :--- | :--- | :--- | :--- | :--- |
 | PLANNED | 01/03/26 - Sat | [BIKE] Long Endurance Ride | | Durat 3.0 Hours. Zone 2 (134W - 160W). Focus: Endurance. |
-| PLANNED | 01/02/26 - Fri | [RUN] Volume Run | | Durat 40 mins. Zone 2 (HR: 140-152 bpm). Focus: Easy. |
-| PLANNED | 12/31/25 - Wed | [BIKE] Steady State | | Durat 60 mins. Zone 2 (134W - 180W). Focus: Smooth. |
-| PLANNED | 12/30/25 - Tue | [RUN] Aerobic Base | | Durat 45 mins. Zone 2 (HR: 140-152 bpm). Focus: Aerobic Base. |
-| PLANNED | 12/29/25 - Mon | [SWIM] Technique Focus | | ~500m - 800m. Zone 1 (RPE 3-4). Catch & Pull drills. |
-| COMPLETED | 12/28/25 - Sun | Rest | TBD | Weekly Planning Check-in. |
+| COMPLETED | 01/02/26 - Fri | [RUN] Volume Run | Morning Run 51 Minutes | Durat 40 mins. Zone 2 (HR: 140-152 bpm). Focus: Easy. |
+| COMPLETED | 01/01/25 - Thu | Rest | Hike 1.93 miles |  |
+| COMPLETED | 12/31/25 - Wed | [BIKE] Steady State | Zwift - Zone 2 - 71% on Lutscher CCW in Innsbruck 62 minutes | Durat 60 mins. Zone 2 (134W - 180W). Focus: Smooth. |
+| COMPLETED | 12/30/25 - Tue | [RUN] Aerobic Base | Morning Run 50:00 | Durat 45 mins. Zone 2 (HR: 140-152 bpm). Focus: Aerobic Base. |
+| MISSED | 12/29/25 - Mon | [SWIM] Technique Focus | | ~500m - 800m. Zone 1 (RPE 3-4). Catch & Pull drills. |
+| COMPLETED | 12/28/25 - Sun | Rest | Rest | Weekly Planning Check-in. |
 | COMPLETED | 12/27/25 - Sat | Long Ride [BIKE] | 1h Bike + 40m Swim | Swapped Long Ride for Brick. |
 | COMPLETED | 12/26/25 - Fri | Run Test [RUN] | LTHR Test | 30m TT. Result: 171 bpm. |
 | COMPLETED | 12/25/25 - Thu | Endurance [BIKE] | Endurance [BIKE] | 60 mins Steady Z2. |
