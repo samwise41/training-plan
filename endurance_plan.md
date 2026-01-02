@@ -69,7 +69,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 * **Zone 5b:** 175 – 181 bpm
 * **Zone 5c:** > 182 bpm
 
-## 4. Periodization Phases
+## 4. Periodization Phases and Microcycle Templates
 
 | **Phase** | **Dates** | **Focus** | **Key Workouts** | 
 | :--- | :--- | :--- | :--- | 
@@ -93,6 +93,49 @@ The primary "A" races and secondary objectives for the 2026 season.
 | PLANNED | Saturday | **Long Bike** | 3.0 Hours | | | Zone 2 (134W - 160W). **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. | 2026-01-03 |
 | PLANNED | Sunday | **Rest** | - | | | **Total Recovery.** Optional "Flush" protocol (Appendix D) if stiffness is high. | 01-04-26 |
 
+###**Standard Microcycle Templates**
+These templates define the "default" week structure.
+* **Weeks 1-3 (Loading):** Follow the Phase Template below.
+* **Week 4 (Deload):** Reduce volume by 40%. Keep frequency but shorten sessions.
+
+#### Phase 1: Base/Prep (Focus: Aerobic Capacity & Skill)
+  * **Mon:** [SWIM] Technique Focus (30-45m)
+  * **Tue:** [RUN] Aerobic Maintenance (45-60m)
+  * **Wed:** [BIKE] Mid-Week Aerobic Volume (60-90m)
+  * **Thu:** [RUN] Easy Shakeout (45m Total)
+  * **Fri:** [RUN] Volume / Long Run (45-60m)
+  * **Sat:** [BIKE] Long Steady Distance (2.5h - 4.0h)
+  * **Sun:** Rest Day
+
+#### Phase 2: Build (Focus: Threshold & Durability)
+  * **Mon:** [SWIM] Endurance Intervals (45-60m)
+  * **Tue:** [BIKE] Intervals (Sweet Spot or Threshold) (60-75m)
+  * **Wed:** [RUN] Tempo / Hills (45-60m)
+  * **Thu:** [SWIM] Recovery (45m Total)
+  * **Fri:** [RUN] Aerobic Maintenance (40m)
+  * **Sat:** [BRICK] Long Bike + Transition Run (3h - 5h Total)
+  * **Sun:** Rest Day
+
+###**Progression & Scaling Rules**
+
+Use these mathematical rules to generate the specific duration and intensity for future weeks.
+
+#### 1. The 10% Volume Rule
+  * **Logic:** Total weekly duration (in minutes) should not increase by more than 10% week-over-week.
+  * **Application:** If Week 1 = 600 mins, Week 2 should target ~660 mins.
+
+#### 2. The "Long Session" Step-Ladder
+  * **Logic:** The Saturday Long Bike is the primary driver of endurance.
+  * **Pattern:** Increase duration by **30 minutes** every 4-week block (Mesocycle), not every week.
+      * *Block 1:* 2.5h
+      * *Block 2:* 3.0h
+      * *Block 3:* 3.5h
+  * **Cap:** Cap at 5.5 hours (Century Ride prep).
+
+#### 3. Deload Protocol (Week 4)
+  * **Logic:** Every 4th week must shed fatigue to allow adaptation.
+  * **Volume:** Reduce total weekly duration to **60%** of the previous week.
+  * **Intensity:** Maintain one high-intensity session (to keep blood plasma high) but reduce the number of intervals by 50%.
 
 ## 6. Fueling Strategy & Log
 
@@ -291,3 +334,5 @@ https://github.com/samwise41/training-plan
 
 GitHub Training Plan File
 https://github.com/samwise41/training-plan/blob/main/endurance_plan.md
+
+
