@@ -136,6 +136,11 @@ Use these mathematical rules to generate the specific duration and intensity for
 * **The "No-Stacking" Rule:** Never reschedule a high-intensity interval session to the day immediately following a Long Run or Long Ride.
 * **The "Lost Cause" Rule:** If >2 days are missed in a single week, reduce the remaining week's volume by 20% to prevent "cramming" stress.
 
+#### 5. Race Week Taper Protocol
+* **Volume:** Reduce Race Week volume by **50%** compared to the previous week.
+* **Frequency:** Keep the same number of sessions (do not take extra days off), but cut duration in half.
+* **Intensity:** Include some short bursts of "Race Pace" intensity (e.g., 3 x 2 min) early in the week to keep the system primed, but avoid fatigue.
+
 ## 5. Weekly Schedule & Logistics
 
 **Current Phase:** Phase 1 (Base/Prep) **Current Week:** Week 2 (Aerobic Base Building)
@@ -314,29 +319,16 @@ The athlete has established specific requirements for how the training must be d
 
 ## 3. How to Use the Master Plan
 
-To ensure a seamless transition and continuity of training, the incoming coach should follow these steps:
-
-1. **Review the Baseline:** Start with Section 1 to understand the "Why" behind the current focus and movement selections.
-
-2. **Identify Current Placement in the MTP:**
-
-   * **Review the Periodization Phase Table:** Locate the high-level table that breaks the year/season into specific blocks.
-
-   * **Determine Current Phase:** Identify which phase we are currently in (e.g., Base 1, Build, or Peak). This is found at the beginning of the document under the first headers.
-
-   * **Determine Current Week:** Analyze where the athlete is within that phase (e.g., Week 2 of a 4-week Build block). This is found at the beginning of the document under the first headers.
-  
-   * **Confirm that you determined the correct week:** Confirm with the athlete that you identified the correct week of the plan.
-     
-   * **Review Training Availability:** Review the Training Availability section to make sure that the workouts conform to those constraints..
-
-3. **Review the Training history:** Review the training history in Appendix C in addition to the current week schedule to identify overall progress and identify best days for certain training sessions. Also review the historical training log at https://github.com/samwise41/training-plan/blob/main/history_archive.md
-
-4. **Establish the Next Microcycle:** Once the current position is identified, establish the specific schedule for the next week. This involves aligning the intensity and volume with the goals of that specific phase to maximize training adaptations while respecting the progressive overload logic built into the plan.
-
-5. **Verify the Zones:** Ensure that the power and heart rate zones used in the upcoming week's prescriptions match the most recent testing data found in the baseline metrics.
-
-6. **Iterative Adjustments:** At the end of each microcycle, review the athlete's notes in the MTP to determine if the volume or intensity for the following week needs to be modulated.
+## Weekly Generator Checklist (SOP)
+* [ ] **Review Entire Plan:** Review the entire master plan making sure to understand all rules, restrictions, schedules, training history, archived training history if necessary.
+* [ ] **Review Actuals:** Did the athlete miss >2 days? (If yes, trigger "Lost Cause" Rule).
+* [ ] **Check Phase:** Are we shifting phases this week? (Check Dates).
+* [ ] **Apply Template:** Select the correct Microcycle Template for the current Phase. Confirm that you determined the correct week (don't try and take a shortcut here).
+* [ ] **Calculate Volume:** Apply the **10% Volume Rule** to last week's *completed* duration.
+* [ ] **Verify the Zones:** Ensure that the power and heart rate zones used in the upcoming week's prescriptions match the most recent testing data found in the baseline metrics.
+* [ ] **Place Key Workouts:** Slot the Intervals and Long Ride first. Stick to phase template above when possible. Make sure workouts stick within the training availability section. 
+* [ ] **Logic Check:** Ensure no high-intensity session follows a Long Ride ("No-Stacking Rule").
+* [ ] **Event Check:** Is there a race this week? (If yes, apply "Taper Protocol").
 
 
 # Appendix D: AI Prompt
