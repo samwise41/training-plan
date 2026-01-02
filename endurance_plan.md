@@ -334,7 +334,7 @@ The athlete has established specific requirements for how the training must be d
 
 # Appendix E: AI Prompt
 
-I have a training plan location in this github location. Can you review this file thoroughly and help me generate my training for the next week. Please generate a raw markdown text of next week's schedule. If I forget to attach the GitHub repo, please remind me before spinning your wheels.
+I have a training plan location in this github location. Can you review this file thoroughly and help me generate my training for the next week. Please generate a raw markdown text of next week's schedule. If I forget to attach the GitHub repo, please remind me before spinning your wheels. Please provide evidence that you followed the Weekly Generator Checklist SOP.
 
 **CRITICAL FORMATTING RULES:**
 1. Return the schedule **ONLY** as a raw text Markdown table.
