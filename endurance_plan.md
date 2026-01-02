@@ -40,7 +40,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 * **Saturdays:** 2-3 hours (Long Sessions) during the winter and longer when spring hits.
 * **Sundays:** Rest Day (Strict No-Exercise).
 * Winter Strategy Guidelines
-  * Max Weekday Cap: Weekday rides can be up to 90 minutes (1.5h) to bank aerobic volume.
+  * Max Weekday Cap: Weekday rides can be up to 2 hours to bank aerobic volume.
   * Saturday Floor: Saturday long rides will stay at 2h until the weather allows for outdoor riding or the "Century Pivot" phase begins.
   * Total Load: This shift maintains the weekly "Time in Zone" required for Phase 1 mitochondrial adaptation.
 
