@@ -2,7 +2,7 @@ import { Parser } from '../parser.js';
 
 let logData = [];
 
-// Helper functions internal to this module
+// Helper functions
 const getIconForType = (type) => {
     if (type === 'Bike') return '<i class="fa-solid fa-bicycle text-blue-500 text-xl"></i>';
     if (type === 'Run') return '<i class="fa-solid fa-person-running text-emerald-500 text-xl"></i>';
@@ -32,9 +32,9 @@ const buildDonut = (percent, label, fraction) => {
     `;
 };
 
-// Exported function to be called by App.js
-export function renderKPI(planMd) {
-    logData = Parser.parseTrainingLog(planMd);
+// MODIFIED: Now accepts 'data' array directly, not markdown string
+export function renderKPI(mergedLogData) {
+    logData = mergedLogData; // Store globally for filters
 
     const calculateCountStats = (targetType, days) => {
         const cutoff = new Date();
@@ -194,8 +194,7 @@ export function renderKPI(planMd) {
                                 <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-700">
-                        </tbody>
+                        <tbody class="divide-y divide-slate-700"></tbody>
                     </table>
                 </div>
             </div>
@@ -210,7 +209,6 @@ export function renderKPI(planMd) {
     return { html, logData };
 }
 
-// Exported logic for the interactivity
 export function updateDurationAnalysis(data) {
     const sportSelect = document.getElementById('kpi-sport-select');
     const daySelect = document.getElementById('kpi-day-select');
@@ -230,12 +228,9 @@ export function updateDurationAnalysis(data) {
         cutoffDate.setHours(0, 0, 0, 0); 
     }
 
-    let totalPlanned = 0;
-    let totalActual = 0;
+    let totalPlanned = 0, totalActual = 0;
     const dayMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    
     const debugTableBody = document.querySelector('#kpi-debug-table tbody');
-    if (debugTableBody) debugTableBody.innerHTML = '';
     let debugRows = '';
 
     data.forEach(item => {
@@ -243,20 +238,13 @@ export function updateDurationAnalysis(data) {
         if (cutoffDate && item.date < cutoffDate) return;
 
         const itemDayName = dayMap[item.date.getDay()];
-
         if (selectedSport !== 'All' && item.type !== selectedSport) return;
-
         if (selectedDay !== 'All') {
-            if (selectedDay === 'Weekday') {
-                const d = item.date.getDay(); 
-                if (d === 0 || d === 6) return;
-            } else {
-                if (itemDayName !== selectedDay) return;
-            }
+            if (selectedDay === 'Weekday' && (item.date.getDay() === 0 || item.date.getDay() === 6)) return;
+            if (selectedDay !== 'Weekday' && itemDayName !== selectedDay) return;
         }
 
         totalPlanned += (item.plannedDuration || 0);
-        
         let thisActual = 0;
         let actualClass = "text-slate-300";
         
@@ -274,8 +262,7 @@ export function updateDurationAnalysis(data) {
                 <td class="py-2 px-2 text-xs text-slate-300">${item.type}</td>
                 <td class="py-2 px-2 text-xs text-slate-300 text-center">${item.plannedDuration}m</td>
                 <td class="py-2 px-2 text-xs ${actualClass} text-center">${thisActual}m</td>
-            </tr>
-        `;
+            </tr>`;
     });
 
     if (debugTableBody) debugTableBody.innerHTML = debugRows || '<tr><td colspan="5" class="text-center py-4 text-slate-500 italic">No matching records found</td></tr>';
