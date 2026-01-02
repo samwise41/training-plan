@@ -17,16 +17,16 @@ const CONFIG = {
  * @returns {string} HTML string
  */
 export function renderZones(planMd) {
-    // 1. Calculate Biometrics (Watts/Kg)
+    // 1. Calculate Biometrics
     const { watts, weight } = Parser.getBiometrics(planMd);
     const weightKg = weight * 0.453592;
     const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
     
-    // 2. Determine Category and Gauge Position
+    // 2. Determine Category
     const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
     const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
 
-    // 3. Helper to Parse Zone Tables from Markdown
+    // 3. Parse Zones
     const parseZoneTables = () => {
         const section = Parser.getSection(planMd, "Training Parameters") || Parser.getSection(planMd, "Zones");
         let current = '', html = '', categories = {};
@@ -36,39 +36,39 @@ export function renderZones(planMd) {
         section.split('\n').forEach(line => {
             const trimmed = line.trim();
             if (trimmed.startsWith('###')) {
-                // New Category (e.g. "Cycling Power Zones")
                 current = trimmed.replace(/###/g, '').split('(')[0].trim();
                 categories[current] = [];
             } else if (current && trimmed.includes(':')) {
-                // Zone Row (e.g. "Zone 1: < 133W")
-                const [label, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
+                const [labelRaw, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
+                const label = labelRaw.trim();
                 
-                // --- FIX STARTS HERE ---
-                let zClass = 'z-1'; // Default to Grey/Recovery
+                // --- ROBUST LOGIC START ---
+                let zClass = 'z-1'; // Default
                 
-                // Explicitly check for Sweet Spot first
-                if (label.toLowerCase().includes('sweet spot')) {
+                // normalize string to ensure matching works
+                const cleanLabel = label.toLowerCase();
+
+                if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) {
+                    console.log("✅ FOUND SWEET SPOT: Applying 'z-ss' class"); // <--- LOOK FOR THIS IN CONSOLE
                     zClass = 'z-ss';
                 } else {
-                    // Otherwise look for "Zone X" number
-                    const zMatch = label.toLowerCase().match(/zone (\d)/);
+                    const zMatch = cleanLabel.match(/zone (\d)/);
                     if (zMatch) {
                         zClass = `z-${zMatch[1]}`;
                     }
                 }
-                // --- FIX ENDS HERE ---
+                // --- ROBUST LOGIC END ---
 
                 categories[current].push(`
                     <div class="zone-row ${zClass}">
-                        <span class="font-bold">${label.trim()}</span>
+                        <span class="font-bold">${label}</span>
                         <span class="font-mono text-slate-400">${range ? range.trim() : '--'}</span>
                     </div>
                 `);
             }
         });
         
-        const keys = Object.keys(categories);
-        keys.forEach(k => {
+        Object.keys(categories).forEach(k => {
             html += `
                 <div class="zone-card">
                     <div class="zone-card-title">${k}</div>
@@ -79,7 +79,7 @@ export function renderZones(planMd) {
         return html;
     };
 
-    // 4. Assemble Final HTML
+    // 4. Final HTML
     return `
         <div class="gauge-wrapper">
             <svg viewBox="0 0 300 185" class="gauge-svg">
@@ -88,22 +88,18 @@ export function renderZones(planMd) {
                 <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
                 <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" />
                 <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" />
-                
                 <text x="150" y="135" text-anchor="middle" class="text-4xl font-black fill-white">${wkgNum.toFixed(2)}</text>
                 <text x="150" y="160" text-anchor="middle" font-weight="800" fill="${cat.color}">${cat.label.toUpperCase()}</text>
-                
                 <g class="gauge-needle" style="transform: rotate(${-90 + (percent * 180)}deg)">
                     <path d="M 147 150 L 150 45 L 153 150 Z" fill="white" />
                     <circle cx="150" cy="150" r="6" fill="white" />
                 </g>
             </svg>
         </div>
-        
         <div class="text-center mb-8">
             <span class="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-1">Cycling FTP</span>
             <span class="text-2xl font-bold text-white">${watts > 0 ? watts + ' W' : '--'}</span>
         </div>
-        
         <div id="zone-grid">
             ${parseZoneTables()}
         </div>
