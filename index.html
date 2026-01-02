@@ -298,28 +298,75 @@
                 };
             },
 
-            countWorkouts(md, type, daysLookback) {
-                if (!md) return 0;
-                const now = new Date();
-                const cutoff = new Date();
-                cutoff.setDate(now.getDate() - daysLookback);
+            // --- UPDATED PARSER LOGIC FOR KPIS ---
+            parseTrainingLog(md) {
+                // Find the section that contains the log
+                let section = this.getSection(md, "Appendix C: Training History Log");
+                if (!section) section = this.getSection(md, "Training History");
+                if (!section) return [];
 
-                const dateRegex = /(\d{4}-\d{2}-\d{2})/g;
-                const lines = md.split('\n');
-                let count = 0;
+                const lines = section.split('\n');
+                let dayIdx = -1, planIdx = -1, statusIdx = -1;
+                let data = [];
 
+                // 1. Find Header Row and Indices
                 for (let line of lines) {
-                    const dateMatch = line.match(dateRegex);
-                    if (dateMatch) {
-                        const wDate = new Date(dateMatch[0]);
-                        if (!isNaN(wDate) && wDate >= cutoff && wDate <= now) {
-                            if (type === 'All' || line.toLowerCase().includes(type.toLowerCase())) {
-                                count++;
+                    if (line.includes('|')) {
+                        const lowLine = line.toLowerCase();
+                        if (lowLine.includes('day') || lowLine.includes('date')) {
+                            const headers = line.split('|').map(h => h.trim().toLowerCase());
+                            
+                            headers.forEach((h, index) => {
+                                if (h.includes('day') || h.includes('date')) dayIdx = index;
+                                if (h.includes('planned') || h.includes('workout')) planIdx = index;
+                                if (h.includes('status')) statusIdx = index;
+                            });
+                            
+                            if (dayIdx !== -1 && planIdx !== -1 && statusIdx !== -1) {
+                                break; 
                             }
                         }
                     }
                 }
-                return count;
+
+                if (dayIdx === -1) return [];
+
+                // 2. Parse Rows
+                const now = new Date();
+                // Set hours to 0 to be strict about "future" (if a workout is later today, we count it as current/past for simplicity, or we can use strict current time)
+                // User said "not include any future days".
+                now.setHours(23, 59, 59, 999); 
+
+                for (let line of lines) {
+                    if (!line.includes('|') || line.includes('---')) continue; // Skip non-table lines
+                    
+                    const cols = line.split('|');
+                    if (cols.length <= Math.max(dayIdx, planIdx, statusIdx)) continue; // Malformed row
+
+                    const dateStr = cols[dayIdx].trim();
+                    const planStr = cols[planIdx].trim().toLowerCase();
+                    const statusStr = cols[statusIdx].trim().toLowerCase();
+
+                    // Parse Date (Assume YYYY-MM-DD)
+                    const dateMatch = dateStr.match(/\d{4}-\d{2}-\d{2}/);
+                    if (!dateMatch) continue;
+                    
+                    const date = new Date(dateMatch[0]);
+                    date.setHours(12, 0, 0, 0); // Avoid timezone shifts
+
+                    // Ensure date is valid and in the past/today
+                    if (date <= now) {
+                        data.push({
+                            date: date,
+                            type: planStr.includes('bike') ? 'Bike' : 
+                                  planStr.includes('run') ? 'Run' : 
+                                  planStr.includes('swim') ? 'Swim' : 'Other',
+                            completed: statusStr.includes('completed')
+                        });
+                    }
+                }
+                
+                return data;
             },
 
             parseGearMatrix(md) {
@@ -396,8 +443,7 @@
 
                     this.updateStats();
                     
-                    // We call weather but don't await it to block UI, 
-                    // but we ensure catch blocks prevent crashes
+                    // Fetch weather gracefully
                     this.fetchWeather().catch(err => console.warn("Weather fetch failed quietly:", err));
                     
                     window.addEventListener('hashchange', () => this.handleHashChange());
@@ -555,21 +601,41 @@
                 return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
             },
 
+            // --- UPDATED RENDER KPI ---
             renderKPI() {
-                const planText = this.planMd; 
-                const historyText = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
+                // Parse the log using the new Parser method
+                const logData = Parser.parseTrainingLog(this.planMd);
+
+                const calculateStats = (targetType, days) => {
+                    const cutoff = new Date();
+                    cutoff.setDate(cutoff.getDate() - days);
+                    const now = new Date();
+                    now.setHours(23, 59, 59, 999);
+
+                    // Filter based on Date Range and Type
+                    const subset = logData.filter(item => {
+                        const dateOk = item.date >= cutoff && item.date <= now;
+                        const typeOk = targetType === 'All' || item.type === targetType;
+                        return dateOk && typeOk;
+                    });
+
+                    // Denominator: Total planned workouts (that exist in the log for these dates)
+                    const planned = subset.length; 
+                    
+                    // Numerator: Completed only
+                    const completed = subset.filter(item => item.completed).length; 
+                    
+                    const pct = planned > 0 ? Math.round((completed / planned) * 100) : 0;
+                    
+                    return { planned, completed, pct };
+                };
 
                 const buildMetric = (title, type) => {
-                    const plan30 = Parser.countWorkouts(planText, type, 30);
-                    const done30 = Parser.countWorkouts(historyText, type, 30);
-                    const pct30 = plan30 > 0 ? Math.round((done30 / plan30) * 100) : 0;
-                    
-                    const plan60 = Parser.countWorkouts(planText, type, 60);
-                    const done60 = Parser.countWorkouts(historyText, type, 60);
-                    const pct60 = plan60 > 0 ? Math.round((done60 / plan60) * 100) : 0;
+                    const stats30 = calculateStats(type, 30);
+                    const stats60 = calculateStats(type, 60);
 
-                    const color30 = pct30 >= 80 ? '#22c55e' : (pct30 >= 50 ? '#f59e0b' : '#ef4444');
-                    const color60 = pct60 >= 80 ? '#22c55e' : (pct60 >= 50 ? '#f59e0b' : '#ef4444');
+                    const color30 = stats30.pct >= 80 ? '#22c55e' : (stats30.pct >= 50 ? '#f59e0b' : '#ef4444');
+                    const color60 = stats60.pct >= 80 ? '#22c55e' : (stats60.pct >= 50 ? '#f59e0b' : '#ef4444');
 
                     return `
                         <div class="kpi-card">
@@ -579,16 +645,16 @@
                             </div>
                             
                             <div class="progress-container">
-                                <div class="progress-label"><span>Last 30 Days</span> <span>${pct30}% (${done30}/${plan30})</span></div>
+                                <div class="progress-label"><span>Last 30 Days</span> <span>${stats30.pct}% (${stats30.completed}/${stats30.planned})</span></div>
                                 <div class="progress-bar-bg">
-                                    <div class="progress-bar-fill" style="width: ${pct30}%; background-color: ${color30}"></div>
+                                    <div class="progress-bar-fill" style="width: ${stats30.pct}%; background-color: ${color30}"></div>
                                 </div>
                             </div>
                             
                             <div class="progress-container">
-                                <div class="progress-label"><span>Last 60 Days</span> <span>${pct60}% (${done60}/${plan60})</span></div>
+                                <div class="progress-label"><span>Last 60 Days</span> <span>${stats60.pct}% (${stats60.completed}/${stats60.planned})</span></div>
                                 <div class="progress-bar-bg">
-                                    <div class="progress-bar-fill" style="width: ${pct60}%; background-color: ${color60}"></div>
+                                    <div class="progress-bar-fill" style="width: ${stats60.pct}%; background-color: ${color60}"></div>
                                 </div>
                             </div>
                         </div>
@@ -603,7 +669,7 @@
                         ${buildMetric("Swimming", "Swim")}
                     </div>
                     <div class="mt-8 text-center text-xs text-slate-500 italic">
-                        * Metrics calculated by comparing dates in "Master Plan" vs "Training History". Ensure dates are formatted YYYY-MM-DD.
+                        * Calculations based on the "Training History Log" table in the markdown file.
                     </div>
                 `;
                 document.getElementById('content').innerHTML = html;
@@ -623,7 +689,7 @@
                 }
                 tempOptions += `<option value="75" ${defaultVal === 75 ? 'selected' : ''}>70°F+</option>`;
 
-                // Hourly Forecast Logic with Safety Check
+                // Hourly Forecast Logic
                 let hourlyHtml = '';
                 if (this.hourlyWeather && this.hourlyWeather.time && Array.isArray(this.hourlyWeather.time)) {
                     const times = this.hourlyWeather.time.slice(0, 24); 
@@ -636,7 +702,6 @@
                     
                     times.forEach((t, index) => {
                         const date = new Date(t);
-                        // Only show if data exists
                         if (index < 24 && temps[index] !== undefined) { 
                             const h = date.getHours();
                             const ampm = h >= 12 ? 'PM' : 'AM';
