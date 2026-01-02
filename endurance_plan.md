@@ -79,7 +79,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 | **4. Century Pivot** | June 21 – Aug 16 | Aerobic Volume | Long Sat Rides (4-5h), Hydration/Fueling | 
 | **5. 70.3 Final** | Aug 17 – Sept 11 | Sustained Durability | 70.3 Pacing, Half-Marathon Runs | 
 
-###**Standard Microcycle Templates**
+### **Standard Microcycle Templates**
 These templates define the "default" week structure.
 * **Weeks 1-3 (Loading):** Follow the Phase Template below.
 * **Week 4 (Deload):** Reduce volume by 40%. Keep frequency but shorten sessions.
