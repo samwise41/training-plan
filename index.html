@@ -4,22 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Athlete Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚲</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
     
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="min-h-screen">
 
-    <div class="main-content">
-        <main class="max-w-5xl mx-auto px-4 py-8 lg:py-12 pb-20">
-            <div id="content" class="markdown-body opacity-0 transition-opacity duration-500"></div>
-        </main>
-    </div>
+    <div id="sidebar-overlay" onclick="App.toggleSidebar()" class="fixed inset-0 bg-black/50 hidden z-50"></div>
 
-    <script type="module" src="js/app.js"></script>
+    <aside id="sidebar" class="fixed top-0 left-0 h-full w-[260px] bg-slate-900 border-r border-slate-800 sidebar-closed lg:sidebar-open flex flex-col">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+            <span class="font-bold tracking-widest text-slate-400 text-xs uppercase">Navigation</span>
+            <button onclick="App.toggleSidebar()" class="lg:hidden text-slate-400">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        
+        <nav class="flex-1 py-4">
+            <button onclick="App.navigate('schedule')" id="nav-schedule" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <i class="fa-solid fa-calendar-week w-5 text-center"></i> Weekly Schedule
+            </button>
+            
+            <button onclick="App.navigate('gear')" id="nav-gear" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <i class="fa-solid fa-shirt w-5 text-center"></i> Gear Choice
+            </button>
 
-</body>
-</html>
+            <button onclick="App.navigate('kpi')" id="nav-kpi" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i> KPIs
+            </button>
+
+            <button onclick="App.navigate('zones')" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <i class="fa-solid fa-gauge-high w-5 text-center"></i> Zones
+            </button>
+
+            <button onclick="App.navigate('phases')" id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <i class="fa-solid fa-layer-group w-5 text-center"></i> Phases
+            </button>
+
+            <button onclick="App.navigate('history')" id="nav-history" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i> Training History
+            </button>
+
+            <button onclick="App.navigate('full')" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <i class="fa-solid fa-book-open w-5 text-center"></i> Full Plan
+            </button>
+        </nav>
+    </aside>
+
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 h-16 lg:h-20 flex items-center justify-between px-4 lg:px-8 lg:ml-[260px]">
+        <div class="flex items-center">
+            <button onclick="App.toggleSidebar()" class="lg:hidden p-2 text-slate-400 hover:text-white focus:outline-none">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+            <div class="ml-2 lg:ml-0">
+                <h1 class="text-lg lg:text-xl font-bold text-white tracking-tight" id="header-title-dynamic">Weekly Schedule</h1>
+                <p class="hidden lg:block text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Athlete Performance Suite</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div id="weather-widget" class="flex items-center gap-3">
+                <div
