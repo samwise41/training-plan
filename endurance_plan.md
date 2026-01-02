@@ -37,8 +37,12 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 * **Weekly Volume:** 6 Days/Week.
 * **Weekdays:** Max 1.5 hours per session.
-* **Saturdays:** 3–4 hours (Long Sessions).
+* **Saturdays:** 2-3 hours (Long Sessions) during the winter and longer when spring hits.
 * **Sundays:** Rest Day (Strict No-Exercise).
+* Winter Strategy Guidelines
+  * Max Weekday Cap: Weekday rides can be up to 90 minutes (1.5h) to bank aerobic volume.
+  * Saturday Floor: Saturday long rides will stay at 2h until the weather allows for outdoor riding or the "Century Pivot" phase begins.
+  * Total Load: This shift maintains the weekly "Time in Zone" required for Phase 1 mitochondrial adaptation.
 
 ## 3. Training Parameters
 
@@ -451,6 +455,8 @@ To ensure a seamless transition and continuity of training, the incoming coach s
    * **Determine Current Week:** Analyze where the athlete is within that phase (e.g., Week 2 of a 4-week Build block). This is found at the beginning of the document under the first headers.
   
    * **Confirm that you determined the correct week:** Confirm with the athlete that you identified the correct week of the plan.
+     
+   * **Review Training Availability:** Review the Training Availability section to make sure that the workouts conform to those constraints..
 
 3. **Review the Training history:** Review the training history in Appendix C in addition to the current week schedule to identify overall progress and identify best days for certain training sessions.
 
