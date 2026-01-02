@@ -73,11 +73,12 @@ body {
     margin-bottom: 0.75rem; padding: 1rem; background: var(--bg-dark); border-radius: 8px;
     display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #64748b;
 }
-.z-1 { border-left-color: #94a3b8; }
-.z-2 { border-left-color: #22c55e; }
-.z-3 { border-left-color: #eab308; }
-.z-4 { border-left-color: #f97316; }
-.z-5 { border-left-color: #ef4444; }
+.z-1 { border-left-color: #94a3b8; } /* Grey (Recovery) */
+.z-2 { border-left-color: #3b82f6; } /* Blue (Endurance) */
+.z-3 { border-left-color: #22c55e; } /* Green (Tempo) */
+.z-ss { border-left-color: #eab308; } /* Yellow (Sweet Spot) */
+.z-4 { border-left-color: #f97316; } /* Orange (Threshold) */
+.z-5 { border-left-color: #ef4444; } /* Red (VO2 Max) */
 
 .gear-select {
     background-color: #1e293b;
