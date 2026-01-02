@@ -134,7 +134,7 @@
         /* Updated Pie/Donut Chart Styles - LARGER SIZE */
         .charts-row { display: flex; justify-content: space-around; gap: 1rem; align-items: flex-start; }
         .chart-container { display: flex; flex-direction: column; align-items: center; position: relative; width: 120px; }
-        .chart-label { margin-top: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+        .chart-label { margin-top: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; text-align: center; }
         
         .donut-svg { transform: rotate(-90deg); }
         .donut-bg { fill: none; stroke: #1e293b; stroke-width: 2.8; }
@@ -311,6 +311,36 @@
                 };
             },
 
+            // Helper to parse "2.5 Hours", "60 mins" etc into integer minutes
+            _parseTime(str) {
+                if (!str) return 0;
+                // Check if the string contains 'h' (case insensitive) to denote hours
+                const isHours = str.toLowerCase().includes('h');
+                const numMatch = str.match(/([\d\.]+)/);
+                
+                if (!numMatch) return 0;
+                
+                const val = parseFloat(numMatch[1]);
+                if (isNaN(val)) return 0;
+                
+                // NEW: Logic to catch small numbers (e.g. "2.5") without "h" unit as hours
+                if (isHours || (val < 10 && !str.toLowerCase().includes('m'))) {
+                    return Math.round(val * 60);
+                } else {
+                    return Math.round(val); // Assume minutes
+                }
+            },
+
+            // Helper to determine Activity Type from string
+            _getType(str) {
+                if (!str) return 'Other';
+                const lower = str.toLowerCase();
+                if (lower.includes('bike') || lower.includes('cycle') || lower.includes('zwift') || lower.includes('ride') || lower.includes('spin') || lower.includes('peloton')) return 'Bike';
+                if (lower.includes('run') || lower.includes('jog') || lower.includes('treadmill')) return 'Run';
+                if (lower.includes('swim') || lower.includes('pool')) return 'Swim';
+                return 'Other';
+            },
+
             parseTrainingLog(md) {
                 this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, firstRowRaw: "" };
 
@@ -328,7 +358,15 @@
 
                 this.lastDebugInfo.sectionFound = true;
                 const lines = section.split('\n');
-                let dateIdx = -1, planIdx = -1, statusIdx = -1;
+                
+                // Indices for new column order
+                let dateIdx = -1;
+                let statusIdx = -1;
+                let planWorkoutIdx = -1; // "Planned Workout"
+                let planDurIdx = -1;     // "Planned Duration"
+                let actWorkoutIdx = -1;  // "Actual Workout"
+                let actDurIdx = -1;      // "Actual Duration"
+
                 let data = [];
                 let firstRowFound = false;
 
@@ -336,22 +374,21 @@
                 for (let line of lines) {
                     if (line.includes('|')) {
                         const lowLine = line.toLowerCase();
-                        if (lowLine.includes('date') || lowLine.includes('day') || lowLine.includes('planned')) {
+                        // Header detection based on new layout
+                        if (lowLine.includes('date') && lowLine.includes('planned') && lowLine.includes('actual')) {
                             const cleanHeaders = line.split('|').map(h => h.trim().toLowerCase().replace(/\*\*/g, ''));
                             
-                            let foundPlan = false;
                             cleanHeaders.forEach((h, index) => {
                                 if (h === 'date' || h.includes('date')) dateIdx = index;
-                                else if ((h === 'day' || h.includes('day')) && dateIdx === -1) dateIdx = index;
-                                
-                                if (h.includes('planned')) { planIdx = index; foundPlan = true; }
-                                else if (!foundPlan && (h.includes('workout') || h.includes('activity'))) planIdx = index;
-
-                                if (h.includes('status') || h.includes('completion')) statusIdx = index;
+                                else if (h.includes('status')) statusIdx = index;
+                                else if (h.includes('planned workout')) planWorkoutIdx = index;
+                                else if (h.includes('planned duration')) planDurIdx = index;
+                                else if (h.includes('actual workout')) actWorkoutIdx = index;
+                                else if (h.includes('actual duration')) actDurIdx = index;
                             });
                             
-                            if (dateIdx !== -1 && planIdx !== -1) { 
-                                this.lastDebugInfo.headersFound = { dateIdx, planIdx, statusIdx, headerRow: line };
+                            // Fallback for "Day" if not explicitly mapped, though Date is preferred
+                            if (dateIdx !== -1 && planWorkoutIdx !== -1) { 
                                 break; 
                             }
                         }
@@ -359,7 +396,6 @@
                 }
 
                 if (dateIdx === -1) {
-                    this.lastDebugInfo.error = "Columns not found.";
                     return [];
                 }
 
@@ -371,41 +407,52 @@
                     if (!line.includes('|') || line.includes('---')) continue;
                     
                     const cols = line.split('|');
-                    if (cols.length <= Math.max(dateIdx, planIdx)) continue;
-
-                    // Capture first raw row for debugging
-                    if (!firstRowFound) {
-                        this.lastDebugInfo.firstRowRaw = line;
-                        firstRowFound = true;
-                    }
+                    // Ensure we have enough columns
+                    if (cols.length < 5) continue;
 
                     const cleanText = (str) => (str || "").trim().replace(/\*\*/g, '').replace(/__/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
                     
                     const rawDate = cols[dateIdx];
                     const dateStr = cleanText(rawDate);
-                    const planStr = cleanText(cols[planIdx]).toLowerCase();
+                    const planStr = planWorkoutIdx > -1 ? cleanText(cols[planWorkoutIdx]) : "";
                     const statusStr = statusIdx > -1 ? cleanText(cols[statusIdx]).toLowerCase() : "";
+                    
+                    // Duration Parsing
+                    const planDurStr = planDurIdx > -1 ? cleanText(cols[planDurIdx]) : "";
+                    const actDurStr = actDurIdx > -1 ? cleanText(cols[actDurIdx]) : "";
+                    const actualWorkoutStr = actWorkoutIdx > -1 ? cleanText(cols[actWorkoutIdx]) : "";
 
                     let date = null;
-                    // Attempt 1: Standard
-                    const d = new Date(dateStr);
-                    if (!isNaN(d.getTime())) date = d;
-
-                    // Attempt 2: Regex YYYY-MM-DD
-                    if (!date) {
-                         const match = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-                         if (match) date = new Date(match[1], match[2]-1, match[3]);
+                    
+                    // Regex YYYY-MM-DD - FIX: Force Noon to avoid UTC->Local shift
+                    // If parsing "2025-12-20", force "2025-12-20T12:00:00"
+                    const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                    if (ymdMatch) {
+                        const year = parseInt(ymdMatch[1]);
+                        const month = parseInt(ymdMatch[2]) - 1; // 0-indexed
+                        const day = parseInt(ymdMatch[3]);
+                        date = new Date(year, month, day, 12, 0, 0); // Noon Local Time
+                    } else {
+                        // Fallback
+                        const d = new Date(dateStr);
+                        if (!isNaN(d.getTime())) {
+                            date = d;
+                            date.setHours(12, 0, 0, 0); // Force Noon
+                        }
                     }
 
                     if (date && !isNaN(date.getTime())) {
-                        date.setHours(12, 0, 0, 0);
                         if (date <= now) {
+                            const type = this._getType(planStr);
+                            const actualType = this._getType(actualWorkoutStr);
+
                             data.push({
                                 date: date,
-                                type: planStr.includes('bike') ? 'Bike' : 
-                                      planStr.includes('run') ? 'Run' : 
-                                      planStr.includes('swim') ? 'Swim' : 'Other',
-                                completed: statusStr.includes('completed') || statusStr.includes('done') || statusStr.includes('yes') || statusStr.includes('x')
+                                type: type,
+                                actualType: actualType,
+                                completed: statusStr.includes('completed') || statusStr.includes('done') || statusStr.includes('yes') || statusStr.includes('x'),
+                                plannedDuration: this._parseTime(planDurStr),
+                                actualDuration: this._parseTime(actDurStr)
                             });
                         }
                     }
@@ -475,6 +522,7 @@
             gearData: null,
             currentTemp: null,
             hourlyWeather: null,
+            logData: [], // Stores parsed training history
             
             async init() {
                 try {
@@ -645,18 +693,121 @@
                 return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
             },
 
-            renderKPI() {
-                const logData = Parser.parseTrainingLog(this.planMd);
+            updateDurationAnalysis() {
+                const sportSelect = document.getElementById('kpi-sport-select');
+                const daySelect = document.getElementById('kpi-day-select');
+                const timeSelect = document.getElementById('kpi-time-select');
                 
-                // Removed Debug Code
+                if (!sportSelect || !daySelect || !timeSelect || !this.logData) return;
 
-                const calculateStats = (targetType, days) => {
+                const selectedSport = sportSelect.value;
+                const selectedDay = daySelect.value;
+                const selectedTime = timeSelect.value;
+
+                // Date Cutoff
+                let cutoffDate = null;
+                if (selectedTime !== 'All') {
+                    const days = parseInt(selectedTime);
+                    cutoffDate = new Date();
+                    cutoffDate.setDate(cutoffDate.getDate() - days);
+                    cutoffDate.setHours(0, 0, 0, 0); 
+                }
+
+                let totalPlanned = 0;
+                let totalActual = 0;
+                const dayMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                
+                // Clear and prepare Debug Table
+                const debugTableBody = document.querySelector('#kpi-debug-table tbody');
+                if (debugTableBody) debugTableBody.innerHTML = '';
+                let debugRows = '';
+
+                this.logData.forEach(item => {
+                    if (!item.date) return;
+                    if (cutoffDate && item.date < cutoffDate) return;
+
+                    const itemDayName = dayMap[item.date.getDay()];
+
+                    // Sport Filter
+                    if (selectedSport !== 'All' && item.type !== selectedSport) return;
+
+                    // Day Filter
+                    if (selectedDay !== 'All') {
+                        if (selectedDay === 'Weekday') {
+                            const d = item.date.getDay(); 
+                            if (d === 0 || d === 6) return;
+                        } else {
+                            if (itemDayName !== selectedDay) return;
+                        }
+                    }
+
+                    totalPlanned += (item.plannedDuration || 0);
+                    
+                    let thisActual = 0;
+                    let actualClass = "text-slate-300";
+                    
+                    if (item.type === item.actualType) {
+                        thisActual = (item.actualDuration || 0);
+                        totalActual += thisActual;
+                    } else if (item.plannedDuration > 0) {
+                         // Mismatch sport = 0 actual for this metric
+                         actualClass = "text-red-400 font-bold";
+                    }
+
+                    // Add to Debug Table
+                    debugRows += `
+                        <tr class="border-b border-slate-700 hover:bg-slate-800/50">
+                            <td class="py-2 px-2 text-xs font-mono text-slate-400">${item.date.toISOString().split('T')[0]}</td>
+                            <td class="py-2 px-2 text-xs text-slate-300">${itemDayName}</td>
+                            <td class="py-2 px-2 text-xs text-slate-300">${item.type}</td>
+                            <td class="py-2 px-2 text-xs text-slate-300 text-center">${item.plannedDuration}m</td>
+                            <td class="py-2 px-2 text-xs ${actualClass} text-center">${thisActual}m</td>
+                        </tr>
+                    `;
+                });
+
+                if (debugTableBody) debugTableBody.innerHTML = debugRows || '<tr><td colspan="5" class="text-center py-4 text-slate-500 italic">No matching records found</td></tr>';
+
+                // Calculate Results
+                const diff = totalActual - totalPlanned;
+                const pct = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
+                
+                // FIXED Format Time to handle ABSOLUTE minutes
+                const formatTime = (minutes) => {
+                    const m = Math.abs(minutes); // Work with positive numbers
+                    if (m === 0) return "0m";
+                    const h = Math.floor(m / 60);
+                    const rem = m % 60;
+                    if (h > 0) return `${h}h ${rem}m`;
+                    return `${rem}m`;
+                };
+
+                document.getElementById('kpi-analysis-planned').innerText = formatTime(totalPlanned);
+                document.getElementById('kpi-analysis-actual').innerText = formatTime(totalActual);
+                
+                const diffEl = document.getElementById('kpi-analysis-diff');
+                // Handle sign explicitly since formatTime returns positive string
+                const sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
+                diffEl.innerText = sign + formatTime(diff);
+                diffEl.className = `text-xl font-bold ${diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+
+                const pctEl = document.getElementById('kpi-analysis-pct');
+                pctEl.innerText = `${pct}%`;
+                pctEl.className = `text-xl font-bold ${pct >= 80 ? 'text-emerald-400' : (pct >= 50 ? 'text-yellow-400' : 'text-red-400')}`;
+            },
+
+            renderKPI() {
+                // Parse and store log data in the App object for the analysis function to use
+                this.logData = Parser.parseTrainingLog(this.planMd);
+
+                // --- 1. Completion Count Stats ---
+                const calculateCountStats = (targetType, days) => {
                     const cutoff = new Date();
                     cutoff.setDate(cutoff.getDate() - days);
                     const now = new Date();
                     now.setHours(23, 59, 59, 999);
 
-                    const subset = logData.filter(item => {
+                    const subset = this.logData.filter(item => {
                         const dateOk = item.date >= cutoff && item.date <= now;
                         const typeOk = targetType === 'All' || item.type === targetType;
                         return dateOk && typeOk;
@@ -666,16 +817,45 @@
                     const completed = subset.filter(item => item.completed).length; 
                     const pct = planned > 0 ? Math.round((completed / planned) * 100) : 0;
                     
-                    return { planned, completed, pct };
+                    return { planned, completed, pct, label: `${completed}/${planned}` };
+                };
+
+                // --- 2. Duration Stats (Time vs Plan) ---
+                const calculateDurationStats = (targetType, days) => {
+                    const cutoff = new Date();
+                    cutoff.setDate(cutoff.getDate() - days);
+                    const now = new Date();
+                    now.setHours(23, 59, 59, 999);
+
+                    const subset = this.logData.filter(item => {
+                        const dateOk = item.date >= cutoff && item.date <= now;
+                        const typeOk = targetType === 'All' || item.type === targetType;
+                        return dateOk && typeOk;
+                    });
+
+                    let totalPlannedMins = 0;
+                    let totalActualMins = 0;
+
+                    subset.forEach(item => {
+                        totalPlannedMins += (item.plannedDuration || 0);
+                        if (item.type === item.actualType) {
+                            totalActualMins += (item.actualDuration || 0);
+                        }
+                    });
+
+                    const pct = totalPlannedMins > 0 ? Math.round((totalActualMins / totalPlannedMins) * 100) : 0;
+                    const formatTime = (m) => m > 120 ? `${(m/60).toFixed(1)}h` : `${m}m`;
+
+                    return { 
+                        pct, 
+                        label: `${formatTime(totalActualMins)}/${formatTime(totalPlannedMins)}` 
+                    };
                 };
 
                 const buildDonut = (percent, label, fraction) => {
-                    // SVG Donut Math
-                    // Radius = 15.9155 (to make circumference ~100)
                     const radius = 15.9155;
                     const circumference = 2 * Math.PI * radius; // ~100
                     const strokeDasharray = `${percent} ${100 - percent}`;
-                    
                     const color = percent >= 80 ? '#22c55e' : (percent >= 50 ? '#eab308' : '#ef4444');
 
                     return `
@@ -694,9 +874,9 @@
                     `;
                 };
 
-                const buildMetric = (title, type) => {
-                    const stats30 = calculateStats(type, 30);
-                    const stats60 = calculateStats(type, 60);
+                const buildMetricRow = (title, type, isDuration = false) => {
+                    const stats30 = isDuration ? calculateDurationStats(type, 30) : calculateCountStats(type, 30);
+                    const stats60 = isDuration ? calculateDurationStats(type, 60) : calculateCountStats(type, 60);
 
                     return `
                         <div class="kpi-card">
@@ -705,25 +885,117 @@
                                 <span class="kpi-title">${title}</span>
                             </div>
                             <div class="charts-row">
-                                ${buildDonut(stats30.pct, "Last 30 Days", `${stats30.completed}/${stats30.planned}`)}
-                                ${buildDonut(stats60.pct, "Last 60 Days", `${stats60.completed}/${stats60.planned}`)}
+                                ${buildDonut(stats30.pct, "Last 30 Days", stats30.label)}
+                                ${buildDonut(stats60.pct, "Last 60 Days", stats60.label)}
                             </div>
                         </div>
                     `;
                 };
 
                 const html = `
-                    <div class="kpi-grid">
-                        ${buildMetric("All Workouts", "All")}
-                        ${buildMetric("Cycling", "Bike")}
-                        ${buildMetric("Running", "Run")}
-                        ${buildMetric("Swimming", "Swim")}
+                    <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Workout Completion (Count)</h2>
+                    <div class="kpi-grid mb-12">
+                        ${buildMetricRow("All Workouts", "All")}
+                        ${buildMetricRow("Cycling", "Bike")}
+                        ${buildMetricRow("Running", "Run")}
+                        ${buildMetricRow("Swimming", "Swim")}
                     </div>
+
+                    <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Duration Adherence (Time vs Plan)</h2>
+                    <div class="kpi-grid mb-12">
+                        ${buildMetricRow("All Duration", "All", true)}
+                        ${buildMetricRow("Cycling Time", "Bike", true)}
+                        ${buildMetricRow("Running Time", "Run", true)}
+                        ${buildMetricRow("Swim Time", "Swim", true)}
+                    </div>
+
+                    <div class="kpi-card bg-slate-800/20 border-t-4 border-t-purple-500">
+                        <div class="kpi-header border-b border-slate-700 pb-2 mb-4">
+                            <i class="fa-solid fa-filter text-purple-500 text-xl"></i>
+                            <span class="kpi-title ml-2 text-purple-400">Duration Analysis Tool</span>
+                        </div>
+                        
+                        <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                            <div class="flex-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Sport Filter</label>
+                                <select id="kpi-sport-select" onchange="App.updateDurationAnalysis()" class="gear-select">
+                                    <option value="All">All Sports</option>
+                                    <option value="Bike">Bike</option>
+                                    <option value="Run">Run</option>
+                                    <option value="Swim">Swim</option>
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Day Filter</label>
+                                <select id="kpi-day-select" onchange="App.updateDurationAnalysis()" class="gear-select">
+                                    <option value="All">All Days</option>
+                                    <option value="Weekday">Weekday (Mon-Fri)</option>
+                                    <option value="Monday">Monday</option>
+                                    <option value="Tuesday">Tuesday</option>
+                                    <option value="Wednesday">Wednesday</option>
+                                    <option value="Thursday">Thursday</option>
+                                    <option value="Friday">Friday</option>
+                                    <option value="Saturday">Saturday</option>
+                                    <option value="Sunday">Sunday</option>
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Time Period</label>
+                                <select id="kpi-time-select" onchange="App.updateDurationAnalysis()" class="gear-select">
+                                    <option value="All">All Time</option>
+                                    <option value="30">Last 30 Days</option>
+                                    <option value="60">Last 60 Days</option>
+                                    <option value="90">Last 90 Days</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
+                                <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Planned</div>
+                                <div id="kpi-analysis-planned" class="text-xl font-bold text-white">--</div>
+                            </div>
+                            <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
+                                <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Actual</div>
+                                <div id="kpi-analysis-actual" class="text-xl font-bold text-white">--</div>
+                            </div>
+                            <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
+                                <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Difference</div>
+                                <div id="kpi-analysis-diff" class="text-xl font-bold text-white">--</div>
+                            </div>
+                            <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
+                                <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Adherence</div>
+                                <div id="kpi-analysis-pct" class="text-xl font-bold text-white">--</div>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-700 pt-4">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Detailed Log (Matches Filters)</h4>
+                            <div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-700 rounded-lg">
+                                <table id="kpi-debug-table" class="w-full text-left text-sm text-slate-300">
+                                    <thead class="bg-slate-900 sticky top-0">
+                                        <tr>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Date</th>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Day</th>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Type</th>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Plan</th>
+                                            <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-700">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mt-8 text-center text-xs text-slate-500 italic">
-                        * Calculations based on the "Training History Log" table in the markdown file.
+                        * Duration Stats only count actual time if the performed activity type matches the planned activity type.
+                        * 'h' in duration column denotes hours, otherwise minutes assumed.
                     </div>
                 `;
                 document.getElementById('content').innerHTML = html;
+                this.updateDurationAnalysis(); // Initialize with default 'All' values
             },
 
             renderGear() {
