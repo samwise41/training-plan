@@ -71,6 +71,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 ## 4. Periodization Phases and Microcycle Templates
 
+### **Phases**
 | **Phase** | **Dates** | **Focus** | **Key Workouts** | 
 | :--- | :--- | :--- | :--- | 
 | **1. Base/Prep** | Now – Feb 28 | Aerobic Engine & Swim Form | Z2 Rides, Drill Swims | 
