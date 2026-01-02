@@ -42,18 +42,21 @@ export function renderZones(planMd) {
             } else if (current && trimmed.includes(':')) {
                 // Zone Row (e.g. "Zone 1: < 133W")
                 const [label, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
-                // START CHANGE: Logic to handle Sweet Spot
+                
+                // --- FIX STARTS HERE ---
                 let zClass = 'z-1'; // Default to Grey/Recovery
-
-                // Check for specific "Sweet Spot" label first
+                
+                // Explicitly check for Sweet Spot first
                 if (label.toLowerCase().includes('sweet spot')) {
-                    zClass = 'z-ss'; // Use the yellow class we made
+                    zClass = 'z-ss';
                 } else {
-                    // Otherwise look for "Zone X"
+                    // Otherwise look for "Zone X" number
                     const zMatch = label.toLowerCase().match(/zone (\d)/);
                     if (zMatch) {
-                    zClass = `z-${zMatch[1]}`;
+                        zClass = `z-${zMatch[1]}`;
+                    }
                 }
+                // --- FIX ENDS HERE ---
 
                 categories[current].push(`
                     <div class="zone-row ${zClass}">
