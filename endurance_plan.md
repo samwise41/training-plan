@@ -55,19 +55,20 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 * **Zone 1 (Recovery):** < 133W
 * **Zone 2 (Endurance):** 134W – 180W
-* **Zone 3 (Tempo):** 181W – 216W
-* **Zone 4 (Threshold):** 217W – 253W
+* **Zone 3 (Tempo):** 181W – 210W
+* **Sweet Spot**: 211W – 226W
+* **Zone 4 (Threshold):** 227W – 253W
 * **Zone 5 (VO2 Max):** 254W – 289W
 
 ### Running Heart Rate Zones (Based on 171 bpm LTHR)
 
-* **Zone 1:** < 139 bpm
-* **Zone 2:** 140 – 152 bpm
-* **Zone 3:** 153 – 161 bpm
-* **Zone 4:** 162 – 170 bpm
-* **Zone 5a:** 171 – 174 bpm
-* **Zone 5b:** 175 – 181 bpm
-* **Zone 5c:** > 182 bpm
+* **Zone 1 (Recovery):** < 139 bpm
+* **Zone 2 (Endurance):** 140 – 152 bpm
+* **Zone 3 (Tempo):** 153 – 161 bpm
+* **Zone 4 (Threshold):** 162 – 170 bpm
+* **Zone 5a (Anaerobic Capacity):** 171 – 174 bpm
+* **Zone 5b (Anaerobic Endurance):** 175 – 181 bpm
+* **Zone 5c (Anaerobic Power):** > 182 bpm
 
 ### Workout Design Preferences
 * **Run Format:** Prescribe runs by **Time** (e.g., 45 mins at 9:15 pace or HR zone 2), not Distance.
