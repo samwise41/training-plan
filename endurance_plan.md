@@ -326,7 +326,7 @@ The athlete has established specific requirements for how the training must be d
 * [ ] **Review Actuals:** Did the athlete miss >2 days? (If yes, trigger "Lost Cause" Rule).
 * [ ] **Check Phase:** Are we shifting phases this week? (Check Dates).
 * [ ] **Apply Template:** Select the correct Microcycle Template for the current Phase. Confirm that you determined the correct week (don't try and take a shortcut here).
-* [ ] **Calculate Volume:** Apply the **10% Volume Rule** to last week's *completed* duration.
+* [ ] **Calculate Volume:** Apply the **10% Volume Rule** to last week's *completed* duration. Verify if "Winter Strategy" (Section 2) is active. If it is follow that rule. 
 * [ ] **Verify the Zones:** Ensure that the power and heart rate zones used in the upcoming week's prescriptions match the most recent testing data found in the baseline metrics.
 * [ ] **Place Key Workouts:** Slot the Intervals and Long Ride first. Stick to phase template above when possible. Make sure workouts stick within the training availability section. 
 * [ ] **Logic Check:** Ensure no high-intensity session follows a Long Ride ("No-Stacking Rule").
