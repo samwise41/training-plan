@@ -42,16 +42,17 @@ export function renderZones(planMd) {
             } else if (current && trimmed.includes(':')) {
                 // Zone Row (e.g. "Zone 1: < 133W")
                 const [label, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
-                let zClass = 'z-1'; // Default to grey
+                // START CHANGE: Logic to handle Sweet Spot
+                let zClass = 'z-1'; // Default to Grey/Recovery
 
                 // Check for specific "Sweet Spot" label first
                 if (label.toLowerCase().includes('sweet spot')) {
-                    zClass = 'z-ss';
+                    zClass = 'z-ss'; // Use the yellow class we made
                 } else {
                     // Otherwise look for "Zone X"
                     const zMatch = label.toLowerCase().match(/zone (\d)/);
-                    const zNum = zMatch ? zMatch[1] : '1';
-                    zClass = `z-${zNum}`;
+                    if (zMatch) {
+                    zClass = `z-${zMatch[1]}`;
                 }
 
                 categories[current].push(`
