@@ -107,51 +107,56 @@
             width: 100%;
         }
 
-        /* Gear Tab Specific Styles */
-        .gear-row-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        @media (min-width: 1024px) {
-            .gear-row-container {
-                flex-direction: row;
-                align-items: stretch;
-            }
-        }
+        .gear-row-container { display: flex; flex-direction: column; gap: 1rem; }
+        @media (min-width: 1024px) { .gear-row-container { flex-direction: row; align-items: stretch; } }
         
         .activity-header {
-            min-width: 140px;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-            background: rgba(30, 41, 59, 0.4);
-            border-radius: 0.5rem;
-            border: 1px solid #1e293b;
+            min-width: 140px; display: flex; align-items: center; gap: 0.75rem;
+            padding: 1rem; background: rgba(30, 41, 59, 0.4); border-radius: 0.5rem; border: 1px solid #1e293b;
         }
 
-        .gear-bubbles-row {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 0.75rem;
-            flex: 1;
-        }
-        @media (min-width: 640px) {
-            .gear-bubbles-row {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
+        .gear-bubbles-row { display: grid; grid-template-columns: 1fr; gap: 0.75rem; flex: 1; }
+        @media (min-width: 640px) { .gear-bubbles-row { grid-template-columns: repeat(3, 1fr); } }
 
         .gear-bubble {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid #1e293b;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            height: 100%;
+            background: rgba(15, 23, 42, 0.6); border: 1px solid #1e293b; padding: 1rem;
+            border-radius: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; height: 100%;
+        }
+
+        /* KPI Styles */
+        .kpi-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 768px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
+        
+        .kpi-card { background: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; border-radius: 12px; padding: 1.5rem; }
+        .kpi-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #334155; }
+        .kpi-title { font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; }
+        
+        /* Updated Pie/Donut Chart Styles - LARGER SIZE */
+        .charts-row { display: flex; justify-content: space-around; gap: 1rem; align-items: flex-start; }
+        .chart-container { display: flex; flex-direction: column; align-items: center; position: relative; width: 120px; }
+        .chart-label { margin-top: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .donut-svg { transform: rotate(-90deg); }
+        .donut-bg { fill: none; stroke: #1e293b; stroke-width: 2.8; }
+        .donut-segment { fill: none; stroke-width: 2.8; stroke-linecap: round; transition: stroke-dasharray 1s ease-out; }
+        
+        .donut-text {
+            position: absolute; top: 0; left: 0; width: 100%; height: 120px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .donut-percent { font-size: 1.5rem; font-weight: 800; color: #f8fafc; line-height: 1; }
+        .donut-fraction { font-size: 0.75rem; color: #64748b; font-weight: 600; margin-top: 2px; }
+        
+        /* Hourly Scroll */
+        .hourly-scroll {
+            display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem;
+            scrollbar-width: thin; scrollbar-color: #334155 transparent;
+        }
+        .hourly-scroll::-webkit-scrollbar { height: 6px; }
+        .hourly-scroll::-webkit-scrollbar-thumb { background-color: #334155; border-radius: 3px; }
+        .hourly-item {
+            min-width: 70px; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+            padding: 0.75rem; background: #0f172a; border-radius: 0.5rem; border: 1px solid #1e293b;
         }
     </style>
 </head>
@@ -172,22 +177,32 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 Weekly Schedule
             </button>
-            <button onclick="App.navigate('zones')" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
-                Zones
-            </button>
+            
             <button onclick="App.navigate('gear')" id="nav-gear" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                 Gear Choice
             </button>
+
+            <button onclick="App.navigate('kpi')" id="nav-kpi" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+                KPIs
+            </button>
+
+            <button onclick="App.navigate('zones')" id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
+                Zones
+            </button>
+
             <button onclick="App.navigate('phases')" id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                 Phases
             </button>
+
             <button onclick="App.navigate('history')" id="nav-history" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 Training History
             </button>
+
             <button onclick="App.navigate('full')" id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 Full Plan
@@ -254,10 +269,17 @@
                 { threshold: 2.79, label: "Good",        color: "#22c55e" },
                 { threshold: 2.23, label: "Fair",        color: "#f97316" },
                 { threshold: 0.00, label: "Untrained",   color: "#ef4444" }
-            ]
+            ],
+            WEATHER_MAP: {
+                0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
+                45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"], 51: ["Drizzle", "🌦️"], 61: ["Rain", "🌧️"], 63: ["Rain", "🌧️"],
+                71: ["Snow", "❄️"], 95: ["Storm", "⛈️"]
+            }
         };
 
         const Parser = {
+            lastDebugInfo: {}, 
+
             getSection(md, title) {
                 if (!md) return "";
                 const lines = md.split('\n');
@@ -265,7 +287,6 @@
                 for (let line of lines) {
                     const trimmed = line.trim();
                     const isHeader = trimmed.startsWith('#');
-                    
                     if (isHeader) {
                         if (trimmed.toLowerCase().includes(title.toLowerCase())) {
                             capturing = true;
@@ -275,7 +296,6 @@
                             break;
                         }
                     }
-                    
                     if (capturing) section.push(line);
                 }
                 return section.join('\n').trim();
@@ -291,6 +311,110 @@
                 };
             },
 
+            parseTrainingLog(md) {
+                this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, firstRowRaw: "" };
+
+                let sectionName = "Appendix C: Training History Log";
+                let section = this.getSection(md, sectionName);
+                if (!section) {
+                     sectionName = "Training History";
+                     section = this.getSection(md, sectionName);
+                }
+                
+                if (!section) {
+                    this.lastDebugInfo.error = "Section not found";
+                    return [];
+                }
+
+                this.lastDebugInfo.sectionFound = true;
+                const lines = section.split('\n');
+                let dateIdx = -1, planIdx = -1, statusIdx = -1;
+                let data = [];
+                let firstRowFound = false;
+
+                // 1. Find Headers
+                for (let line of lines) {
+                    if (line.includes('|')) {
+                        const lowLine = line.toLowerCase();
+                        if (lowLine.includes('date') || lowLine.includes('day') || lowLine.includes('planned')) {
+                            const cleanHeaders = line.split('|').map(h => h.trim().toLowerCase().replace(/\*\*/g, ''));
+                            
+                            let foundPlan = false;
+                            cleanHeaders.forEach((h, index) => {
+                                if (h === 'date' || h.includes('date')) dateIdx = index;
+                                else if ((h === 'day' || h.includes('day')) && dateIdx === -1) dateIdx = index;
+                                
+                                if (h.includes('planned')) { planIdx = index; foundPlan = true; }
+                                else if (!foundPlan && (h.includes('workout') || h.includes('activity'))) planIdx = index;
+
+                                if (h.includes('status') || h.includes('completion')) statusIdx = index;
+                            });
+                            
+                            if (dateIdx !== -1 && planIdx !== -1) { 
+                                this.lastDebugInfo.headersFound = { dateIdx, planIdx, statusIdx, headerRow: line };
+                                break; 
+                            }
+                        }
+                    }
+                }
+
+                if (dateIdx === -1) {
+                    this.lastDebugInfo.error = "Columns not found.";
+                    return [];
+                }
+
+                // 2. Parse Rows
+                const now = new Date();
+                now.setHours(23, 59, 59, 999); 
+
+                for (let line of lines) {
+                    if (!line.includes('|') || line.includes('---')) continue;
+                    
+                    const cols = line.split('|');
+                    if (cols.length <= Math.max(dateIdx, planIdx)) continue;
+
+                    // Capture first raw row for debugging
+                    if (!firstRowFound) {
+                        this.lastDebugInfo.firstRowRaw = line;
+                        firstRowFound = true;
+                    }
+
+                    const cleanText = (str) => (str || "").trim().replace(/\*\*/g, '').replace(/__/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
+                    
+                    const rawDate = cols[dateIdx];
+                    const dateStr = cleanText(rawDate);
+                    const planStr = cleanText(cols[planIdx]).toLowerCase();
+                    const statusStr = statusIdx > -1 ? cleanText(cols[statusIdx]).toLowerCase() : "";
+
+                    let date = null;
+                    // Attempt 1: Standard
+                    const d = new Date(dateStr);
+                    if (!isNaN(d.getTime())) date = d;
+
+                    // Attempt 2: Regex YYYY-MM-DD
+                    if (!date) {
+                         const match = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                         if (match) date = new Date(match[1], match[2]-1, match[3]);
+                    }
+
+                    if (date && !isNaN(date.getTime())) {
+                        date.setHours(12, 0, 0, 0);
+                        if (date <= now) {
+                            data.push({
+                                date: date,
+                                type: planStr.includes('bike') ? 'Bike' : 
+                                      planStr.includes('run') ? 'Run' : 
+                                      planStr.includes('swim') ? 'Swim' : 'Other',
+                                completed: statusStr.includes('completed') || statusStr.includes('done') || statusStr.includes('yes') || statusStr.includes('x')
+                            });
+                        }
+                    }
+                }
+                
+                this.lastDebugInfo.rowsParsed = data.length;
+                return data;
+            },
+
             parseGearMatrix(md) {
                 const results = { bike: [], run: [] };
                 const lines = md.split('\n');
@@ -299,7 +423,6 @@
 
                 for (let line of lines) {
                     const trimmed = line.trim();
-                    
                     if (trimmed.startsWith('#')) {
                         const low = trimmed.toLowerCase();
                         if (low.includes('cycling') || low.includes('bike')) currentType = 'bike';
@@ -314,7 +437,6 @@
                             inTable = true;
                             continue;
                         }
-                        
                         if (inTable) {
                             const parts = trimmed.split('|').map(p => p.trim());
                             if (trimmed.startsWith('|')) parts.shift();
@@ -323,32 +445,20 @@
                             if (parts.length >= 2) {
                                 const rangeStr = parts[0];
                                 let min = -999, max = 999;
-                                
                                 const numMatch = rangeStr.match(/\d+/g);
                                 if (!numMatch) continue;
-
                                 const lowRangeStr = rangeStr.toLowerCase();
                                 
                                 if (lowRangeStr.match(/below|under|<|less/)) {
-                                    min = -999; 
-                                    max = parseInt(numMatch[0]);
+                                    min = -999; max = parseInt(numMatch[0]);
                                 } else if (lowRangeStr.match(/above|over|up|\+|more/)) {
-                                    min = parseInt(numMatch[0]); 
-                                    max = 999;
+                                    min = parseInt(numMatch[0]); max = 999;
                                 } else if (numMatch.length >= 2) {
-                                    min = parseInt(numMatch[0]);
-                                    max = parseInt(numMatch[1]);
+                                    min = parseInt(numMatch[0]); max = parseInt(numMatch[1]);
                                 } else {
-                                    min = parseInt(numMatch[0]);
-                                    max = parseInt(numMatch[0]);
+                                    min = parseInt(numMatch[0]); max = parseInt(numMatch[0]);
                                 }
-                                
-                                results[currentType].push({ 
-                                    min, max,
-                                    upper: parts[1] || "—",
-                                    lower: parts[2] || "—",
-                                    extremities: parts[3] || "—"
-                                });
+                                results[currentType].push({ min, max, upper: parts[1] || "—", lower: parts[2] || "—", extremities: parts[3] || "—" });
                             }
                         }
                     } else if (inTable && trimmed !== "") {
@@ -364,6 +474,7 @@
             gearMd: "",
             gearData: null,
             currentTemp: null,
+            hourlyWeather: null,
             
             async init() {
                 try {
@@ -377,13 +488,14 @@
                     this.gearData = Parser.parseGearMatrix(this.gearMd);
 
                     this.updateStats();
-                    await this.fetchWeather();
+                    this.fetchWeather().catch(err => console.warn("Weather fetch failed:", err));
                     
                     window.addEventListener('hashchange', () => this.handleHashChange());
                     this.handleHashChange();
                     
                 } catch (e) {
                     console.error("Init Error:", e);
+                    document.body.innerHTML = `<div class="p-10 text-white"><h1>Error Loading Dashboard</h1><p>${e.message}</p></div>`;
                 }
             },
 
@@ -394,72 +506,53 @@
                     
                     if (locData.city) {
                         document.getElementById('weather-location').innerText = `${locData.city}, ${locData.region_code}`;
-                        
                         const lat = locData.latitude;
                         const lon = locData.longitude;
-                        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`);
+                        
+                        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weathercode,precipitation_probability&temperature_unit=fahrenheit&forecast_days=1`);
                         const weatherData = await weatherRes.json();
                         
                         const temp = Math.round(weatherData.current_weather.temperature);
                         const code = weatherData.current_weather.weathercode;
                         
                         this.currentTemp = temp;
-                        document.getElementById('weather-info').innerText = `${temp}°F • Loading...`;
-                        
-                        const mapping = {
-                            0: ["Clear", "☀️"],
-                            1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Partly Cloudy", "🌤️"],
-                            45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"],
-                            51: ["Drizzle", "🌦️"], 53: ["Drizzle", "🌦️"], 55: ["Drizzle", "🌦️"],
-                            61: ["Rainy", "🌧️"], 63: ["Rainy", "🌧️"], 65: ["Rainy", "🌧️"],
-                            71: ["Snowing", "❄️"], 73: ["Snowing", "❄️"], 75: ["Snowing", "❄️"],
-                            95: ["Stormy", "⛈️"]
-                        };
-                        
-                        const condition = mapping[code] || ["Cloudy", "☁️"];
+                        this.hourlyWeather = weatherData.hourly || null; 
+
+                        const condition = CONFIG.WEATHER_MAP[code] || ["Cloudy", "☁️"];
                         document.getElementById('weather-info').innerText = `${temp}°F • ${condition[0]}`;
                         document.getElementById('weather-icon-top').innerText = condition[1];
                     }
                 } catch (e) {
+                    console.error("Weather Error", e);
                     document.getElementById('weather-info').innerText = "Weather Unavailable";
                 }
             },
 
             updateStats() {
-                // 1. Extract Basic Status Info
+                if (!this.planMd) return;
                 const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
                 const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
                 const currentWeek = statusMatch ? statusMatch[2].trim() : "N/A";
-
-                // 2. Extract Phase Number (e.g. "1") to find matching dates
                 let dateRange = "";
                 const phaseNumMatch = currentPhaseRaw.match(/Phase\s*(\d+)/i);
                 
                 if (phaseNumMatch) {
                     const pNum = phaseNumMatch[1];
                     const phasesSection = Parser.getSection(this.planMd, "Periodization Phases");
-                    
                     if (phasesSection) {
                         const lines = phasesSection.split('\n');
                         for (let line of lines) {
                             if (line.trim().startsWith('|') && line.includes(`**${pNum}.`)) {
                                 const cols = line.split('|');
-                                if (cols.length > 2) {
-                                    dateRange = cols[2].trim(); 
-                                    break;
-                                }
+                                if (cols.length > 2) { dateRange = cols[2].trim(); break; }
                             }
                         }
                     }
                 }
 
-                // 3. Update DOM with Name + Date
                 const phaseEl = document.getElementById('stat-phase');
-                if (dateRange) {
-                    phaseEl.innerHTML = `${currentPhaseRaw}<span class="block text-xs text-slate-400 mt-1 font-normal">${dateRange}</span>`;
-                } else {
-                    phaseEl.innerText = currentPhaseRaw;
-                }
+                if (dateRange) phaseEl.innerHTML = `${currentPhaseRaw}<span class="block text-xs text-slate-400 mt-1 font-normal">${dateRange}</span>`;
+                else phaseEl.innerText = currentPhaseRaw;
 
                 document.getElementById('stat-week').innerText = currentWeek;
                 
@@ -482,11 +575,7 @@
                             else {
                                 const w = Math.floor(diff / 7);
                                 const d = diff % 7;
-                                let str = "";
-                                if (w > 0) str += `${w} week${w > 1 ? 's' : ''}`;
-                                if (w > 0 && d > 0) str += " and ";
-                                if (d > 0 || w === 0) str += `${d} day${d !== 1 ? 's' : ''}`;
-                                countdownEl.innerText = `${str} to go`;
+                                countdownEl.innerText = `${w} weeks, ${d} days to go`;
                             }
                         } else countdownEl.innerText = "Date TBD";
                     }
@@ -495,31 +584,24 @@
 
             handleHashChange() {
                 const hash = window.location.hash.substring(1); 
-                // ADDED 'history' to valid views
-                const validViews = ['schedule', 'phases', 'zones', 'gear', 'full', 'history'];
+                const validViews = ['schedule', 'phases', 'zones', 'gear', 'full', 'history', 'kpi'];
                 const view = validViews.includes(hash) ? hash : 'schedule';
                 this.renderView(view);
             },
 
             navigate(view) {
-                if (window.location.hash === '#' + view) {
-                    this.renderView(view);
-                } else {
-                    window.location.hash = view;
-                }
+                if (window.location.hash === '#' + view) { this.renderView(view); } 
+                else { window.location.hash = view; }
             },
 
             renderView(view) {
-                // ADDED 'history' title
                 const titles = { 
-                    schedule: 'Weekly Schedule', 
-                    phases: 'Phases', 
-                    zones: 'Zones', 
-                    gear: 'Gear Selection', 
-                    full: 'Master Plan',
-                    history: 'Training History'
+                    schedule: 'Weekly Schedule', phases: 'Phases', zones: 'Zones', 
+                    gear: 'Gear Selection', full: 'Master Plan', history: 'Training History',
+                    kpi: 'Performance KPIs'
                 };
-                document.getElementById('header-title-dynamic').innerText = titles[view];
+                const titleEl = document.getElementById('header-title-dynamic');
+                if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
 
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                 const navBtn = document.getElementById(`nav-${view}`);
@@ -529,11 +611,16 @@
                 content.classList.add('opacity-0');
                 
                 setTimeout(() => {
-                    if (view === 'gear') this.renderGear();
-                    else if (view === 'zones') this.renderZones();
-                    else this.renderMarkdown(view);
+                    try {
+                        if (view === 'gear') this.renderGear();
+                        else if (view === 'zones') this.renderZones();
+                        else if (view === 'kpi') this.renderKPI();
+                        else this.renderMarkdown(view);
+                    } catch (err) {
+                        console.error("Render error:", err);
+                        content.innerHTML = `<p class="text-red-400">Error rendering view: ${err.message}</p>`;
+                    }
                     content.classList.remove('opacity-0');
-                    
                     if (window.innerWidth < 1024) {
                         const sidebar = document.getElementById('sidebar');
                         if (sidebar.classList.contains('sidebar-open')) this.toggleSidebar();
@@ -546,10 +633,97 @@
                     schedule: Parser.getSection(this.planMd, "Weekly Schedule"),
                     phases: Parser.getSection(this.planMd, "Periodization"),
                     full: this.planMd,
-                    // ADDED history content map
                     history: Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History")
                 };
                 document.getElementById('content').innerHTML = marked.parse(mdMap[view] || "*Content not found.*");
+            },
+
+            getIconForType(type) {
+                if (type === 'Bike') return '<i class="fa-solid fa-bicycle text-blue-500 text-xl"></i>';
+                if (type === 'Run') return '<i class="fa-solid fa-person-running text-emerald-500 text-xl"></i>';
+                if (type === 'Swim') return '<i class="fa-solid fa-person-swimming text-cyan-500 text-xl"></i>';
+                return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
+            },
+
+            renderKPI() {
+                const logData = Parser.parseTrainingLog(this.planMd);
+                
+                // Removed Debug Code
+
+                const calculateStats = (targetType, days) => {
+                    const cutoff = new Date();
+                    cutoff.setDate(cutoff.getDate() - days);
+                    const now = new Date();
+                    now.setHours(23, 59, 59, 999);
+
+                    const subset = logData.filter(item => {
+                        const dateOk = item.date >= cutoff && item.date <= now;
+                        const typeOk = targetType === 'All' || item.type === targetType;
+                        return dateOk && typeOk;
+                    });
+
+                    const planned = subset.length; 
+                    const completed = subset.filter(item => item.completed).length; 
+                    const pct = planned > 0 ? Math.round((completed / planned) * 100) : 0;
+                    
+                    return { planned, completed, pct };
+                };
+
+                const buildDonut = (percent, label, fraction) => {
+                    // SVG Donut Math
+                    // Radius = 15.9155 (to make circumference ~100)
+                    const radius = 15.9155;
+                    const circumference = 2 * Math.PI * radius; // ~100
+                    const strokeDasharray = `${percent} ${100 - percent}`;
+                    
+                    const color = percent >= 80 ? '#22c55e' : (percent >= 50 ? '#eab308' : '#ef4444');
+
+                    return `
+                        <div class="chart-container">
+                            <svg width="120" height="120" viewBox="0 0 42 42" class="donut-svg">
+                                <circle class="donut-bg" cx="21" cy="21" r="${radius}"></circle>
+                                <circle class="donut-segment" cx="21" cy="21" r="${radius}" 
+                                        stroke="${color}" stroke-dasharray="${strokeDasharray}" stroke-dashoffset="25"></circle>
+                            </svg>
+                            <div class="donut-text">
+                                <span class="donut-percent">${percent}%</span>
+                                <span class="donut-fraction">${fraction}</span>
+                            </div>
+                            <div class="chart-label">${label}</div>
+                        </div>
+                    `;
+                };
+
+                const buildMetric = (title, type) => {
+                    const stats30 = calculateStats(type, 30);
+                    const stats60 = calculateStats(type, 60);
+
+                    return `
+                        <div class="kpi-card">
+                            <div class="kpi-header">
+                                ${this.getIconForType(type)}
+                                <span class="kpi-title">${title}</span>
+                            </div>
+                            <div class="charts-row">
+                                ${buildDonut(stats30.pct, "Last 30 Days", `${stats30.completed}/${stats30.planned}`)}
+                                ${buildDonut(stats60.pct, "Last 60 Days", `${stats60.completed}/${stats60.planned}`)}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                const html = `
+                    <div class="kpi-grid">
+                        ${buildMetric("All Workouts", "All")}
+                        ${buildMetric("Cycling", "Bike")}
+                        ${buildMetric("Running", "Run")}
+                        ${buildMetric("Swimming", "Swim")}
+                    </div>
+                    <div class="mt-8 text-center text-xs text-slate-500 italic">
+                        * Calculations based on the "Training History Log" table in the markdown file.
+                    </div>
+                `;
+                document.getElementById('content').innerHTML = html;
             },
 
             renderGear() {
@@ -565,6 +739,35 @@
                     tempOptions += `<option value="${i}" ${i === defaultVal ? 'selected' : ''}>${i}°F</option>`;
                 }
                 tempOptions += `<option value="75" ${defaultVal === 75 ? 'selected' : ''}>70°F+</option>`;
+
+                let hourlyHtml = '';
+                if (this.hourlyWeather && this.hourlyWeather.time && Array.isArray(this.hourlyWeather.time)) {
+                    const times = this.hourlyWeather.time.slice(0, 24); 
+                    const temps = this.hourlyWeather.temperature_2m;
+                    const codes = this.hourlyWeather.weathercode;
+                    
+                    hourlyHtml = `<div class="mb-6">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Hourly Forecast</p>
+                        <div class="hourly-scroll">`;
+                    
+                    times.forEach((t, index) => {
+                        const date = new Date(t);
+                        if (index < 24 && temps[index] !== undefined) { 
+                            const h = date.getHours();
+                            const ampm = h >= 12 ? 'PM' : 'AM';
+                            const hourLabel = h % 12 === 0 ? 12 : h % 12;
+                            const icon = (CONFIG.WEATHER_MAP[codes[index]] || ["", "☁️"])[1];
+                            hourlyHtml += `
+                                <div class="hourly-item">
+                                    <span class="text-[10px] text-slate-400 font-bold">${hourLabel} ${ampm}</span>
+                                    <span class="text-lg">${icon}</span>
+                                    <span class="text-xs font-bold text-slate-200">${Math.round(temps[index])}°</span>
+                                </div>
+                            `;
+                        }
+                    });
+                    hourlyHtml += `</div></div>`;
+                }
 
                 const generateRow = (idPrefix, iconClass, label) => `
                     <div class="gear-row-container">
@@ -591,6 +794,8 @@
 
                 const html = `
                     <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-6 mb-8">
+                        ${hourlyHtml}
+                        
                         <div class="flex flex-col gap-2 mb-8 max-w-md mx-auto">
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Select Temperature</label>
                             <select id="gear-temp" onchange="App.updateGearResult()" class="gear-select text-center text-lg py-3">
@@ -630,7 +835,7 @@
                     </div>
                 `;
                 document.getElementById('content').innerHTML = html;
-                this.updateGearResult();
+                App.updateGearResult(); // Use direct call instead of 'this'
             },
 
             updateGearResult() {
@@ -658,7 +863,6 @@
                         const u = document.getElementById(`${prefix}-upper`);
                         const l = document.getElementById(`${prefix}-lower`);
                         const e = document.getElementById(`${prefix}-extremities`);
-                        // Use innerHTML to allow <br> tags from cells to render correctly
                         if (u) u.innerHTML = data.upper;
                         if (l) l.innerHTML = data.lower;
                         if (e) e.innerHTML = data.extremities;
@@ -707,6 +911,8 @@
             parseZoneTables() {
                 const section = Parser.getSection(this.planMd, "Training Parameters") || Parser.getSection(this.planMd, "Zones");
                 let current = '', html = '', categories = {};
+                if (!section) return `<p class="text-slate-500 text-center col-span-2">No zone data found.</p>`;
+                
                 section.split('\n').forEach(line => {
                     const trimmed = line.trim();
                     if (trimmed.startsWith('###')) {
@@ -721,8 +927,6 @@
                 });
                 
                 const keys = Object.keys(categories);
-                if (keys.length === 0) return `<p class="text-slate-500 text-center col-span-2">No zone data found.</p>`;
-                
                 keys.forEach(k => html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`);
                 return html;
             },
@@ -737,6 +941,7 @@
         };
 
         window.onload = () => App.init();
+        window.App = App; // Fix for global access
     </script>
 </body>
 </html>
