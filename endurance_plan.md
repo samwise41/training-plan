@@ -53,11 +53,11 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 ### Cycling Power Zones (Based on 241W FTP)
 
-* **Zone 1:** < 133W
-* **Zone 2:** 134W – 180W
-* **Zone 3:** 181W – 216W
-* **Zone 4:** 217W – 253W
-* **Zone 5:** 254W – 289W
+* **Zone 1 (Recovery):** < 133W
+* **Zone 2 (Endurance):** 134W – 180W
+* **Zone 3 (Tempo):** 181W – 216W
+* **Zone 4 (Threshold):** 217W – 253W
+* **Zone 5 (VO2 Max):** 254W – 289W
 
 ### Running Heart Rate Zones (Based on 171 bpm LTHR)
 
@@ -79,13 +79,13 @@ The primary "A" races and secondary objectives for the 2026 season.
 ## 4. Periodization Phases and Microcycle Templates
 
 ### **Phases**
-| **Phase** | **Dates** | **Focus** | **Key Workouts** | 
-| :--- | :--- | :--- | :--- | 
-| **1. Base/Prep** | Now – Feb 28 | Aerobic Engine & Swim Form | Z2 Rides, Drill Swims | 
-| **2. Tri-Build** | Mar 1 – May 15 | Threshold Power & Durability | Sweet Spot Intervals, Brick Runs | 
-| **3. Peak/Taper** | May 16 – June 20 | Race Specificity | Race Simulations, High Intensity Taper | 
-| **4. Century Pivot** | June 21 – Aug 16 | Aerobic Volume | Long Sat Rides (4-5h), Hydration/Fueling | 
-| **5. 70.3 Final** | Aug 17 – Sept 11 | Sustained Durability | 70.3 Pacing, Half-Marathon Runs | 
+| **Phase** | **Dates** | **Focus** | **Key Workouts** | **Exit Criteria (Milestone)** |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Base/Prep** | Now – Feb 28 | Aerobic Engine & Swim Form | Z2 Rides, Drill Swims | Ride 3.5h with <5% cardiac drift (HR decoupling). |
+| **2. Tri-Build** | Mar 1 – May 15 | Threshold Power & Durability | Sweet Spot Intervals, Brick Runs | Hold 90% FTP for 30 mins continuous. |
+| **3. Peak/Taper** | May 16 – June 20 | Race Specificity | Race Simulations, High Intensity Taper | Complete "Metric Sim" (50mi Bike + 5mi Run). |
+| **4. Century Pivot** | June 21 – Aug 16 | Aerobic Volume | Long Sat Rides (4-5h), Hydration/Fueling | 80-mile Ride w/ Energy Levels Stable (No bonking). |
+| **5. 70.3 Final** | Aug 17 – Sept 11 | Sustained Durability | 70.3 Pacing, Half-Marathon Runs | Race Pace Brick: 2.5h Bike + 40m Run off the bike. |
 
 ### **Standard Microcycle Templates**
 These templates define the "default" week structure.
