@@ -103,7 +103,7 @@ These templates define the "default" week structure.
   * **Sat:** [BRICK] Long Bike + Transition Run (3h - 5h Total)
   * **Sun:** Rest Day
 
-###**Progression & Scaling Rules**
+### **Progression & Scaling Rules**
 
 Use these mathematical rules to generate the specific duration and intensity for future weeks.
 
