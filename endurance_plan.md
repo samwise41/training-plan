@@ -280,3 +280,14 @@ To ensure a seamless transition and continuity of training, the incoming coach s
 5. **Verify the Zones:** Ensure that the power and heart rate zones used in the upcoming week's prescriptions match the most recent testing data found in the baseline metrics.
 
 6. **Iterative Adjustments:** At the end of each microcycle, review the athlete's notes in the MTP to determine if the volume or intensity for the following week needs to be modulated.
+
+
+# Appendix D: AI Prompt
+
+I have a training plan location in this github location. can you review this and help me generate my training for the next week (keep in mind that I have not completed this weeks saturday workout, but i will). Please generate a raw markdown text of next week's schedule. 
+
+GitHub rep
+https://github.com/samwise41/training-plan
+
+GitHub Training Plan File
+https://github.com/samwise41/training-plan/blob/main/endurance_plan.md
