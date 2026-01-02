@@ -84,8 +84,8 @@ The primary "A" races and secondary objectives for the 2026 season.
 | MISSED | 12-29-25 Monday | **Swim** | ~500m - 800m | Zone 1 (RPE 3-4) | **Technique:** Catch & Pull drills. Ignore the clock. Focus on breathing rhythm. |
 | COMPLETED | 12-30-25 Tuesday | **Run** | 45 mins | Zone 2 (HR: 140-152) | **Aerobic Base:** Flat terrain. Keep cadence high (170+ spm). |
 | COMPLETED | 12-31-25 Wednesday | **Bike** | 60 mins | Zone 2 (134W - 180W) | **Steady State:** Remain seated. Focus on smooth pedal strokes. |
-| PLANNED | 01-01-26 Thursday | **Prehab** | 30 mins | Recovery | **Strength:** Banded Leg Raises (2x15), Planks (3x1m). **No Impact.** |
-| PLANNED | 01-02-26 Friday | **Run** | 40 mins | Zone 2 (HR: 140-152) | **Volume:** Easy aerobic miles. Focus on maintaining posture in final 10 mins. |
+| COMPLETED | 01-01-26 Thursday | **Prehab** | 30 mins | Recovery | **Strength:** Banded Leg Raises (2x15), Planks (3x1m). **No Impact.** |
+| COMPLETED | 01-02-26 Friday | **Run** | 40 mins | Zone 2 (HR: 140-152) | **Volume:** Easy aerobic miles. Focus on maintaining posture in final 10 mins. |
 | PLANNED | 01-03-26 Saturday | **Long Bike** | 3.0 Hours | Zone 2 (134W - 160W) | **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. |
 | PLANNED | 01-04-26 Sunday | **Rest** | - | - | **Total Recovery.** Optional "Flush" protocol (Appendix D) if stiffness is high. |
 
