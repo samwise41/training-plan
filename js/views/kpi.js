@@ -1,5 +1,4 @@
 // Removed unused Parser import to prevent load errors
-// console.log("KPI Module Loaded"); // Debug check
 
 let logData = [];
 
@@ -33,7 +32,102 @@ const buildDonut = (percent, label, fraction) => {
     `;
 };
 
-// --- NEW: Weekly Volume Chart Helper ---
+// --- NEW: FTP Progress Line Chart ---
+const buildFTPChart = () => {
+    // Access the raw plan markdown from the global App object
+    const md = window.App?.planMd || "";
+    if (!md) return '<div class="p-4 text-slate-500 italic">Plan data not loaded</div>';
+
+    // 1. Parse the "Historical FTP Log" Table
+    const lines = md.split('\n');
+    const dataPoints = [];
+    let startFound = false;
+
+    for (let line of lines) {
+        if (line.includes('### Historical FTP Log')) {
+            startFound = true;
+            continue;
+        }
+        if (startFound) {
+            // Stop if we hit a new section or empty lines after finding data
+            if (line.trim().startsWith('#') && dataPoints.length > 0) break; 
+            
+            // Parse Row: | Date | FTP (Watts) | ...
+            if (line.includes('|') && !line.includes('---') && !line.toLowerCase().includes('date')) {
+                const parts = line.split('|');
+                if (parts.length > 2) {
+                    const dateStr = parts[1].trim();
+                    const ftpStr = parts[2].trim(); // e.g. "240 W"
+                    
+                    const date = new Date(dateStr);
+                    const ftp = parseInt(ftpStr.replace(/\D/g, '')); // Extract digits
+                    
+                    if (!isNaN(date.getTime()) && !isNaN(ftp)) {
+                        dataPoints.push({ date, ftp, label: dateStr });
+                    }
+                }
+            }
+        }
+    }
+
+    // Sort by date ascending
+    dataPoints.sort((a, b) => a.date - b.date);
+
+    if (dataPoints.length < 2) return ''; // Need at least 2 points for a line
+
+    // 2. Setup SVG Dimensions & Scaling
+    const width = 800;
+    const height = 250;
+    const padding = { top: 30, bottom: 40, left: 50, right: 30 };
+    
+    const minFTP = Math.min(...dataPoints.map(d => d.ftp)) * 0.95;
+    const maxFTP = Math.max(...dataPoints.map(d => d.ftp)) * 1.05;
+    const minTime = dataPoints[0].date.getTime();
+    const maxTime = dataPoints[dataPoints.length - 1].date.getTime();
+
+    const getX = (d) => padding.left + ((d.date.getTime() - minTime) / (maxTime - minTime)) * (width - padding.left - padding.right);
+    const getY = (d) => height - padding.bottom - ((d.ftp - minFTP) / (maxFTP - minFTP)) * (height - padding.top - padding.bottom);
+
+    // 3. Generate SVG Paths
+    let pathD = `M ${getX(dataPoints[0])} ${getY(dataPoints[0])}`;
+    let pointsHTML = '';
+    
+    dataPoints.forEach(d => {
+        const x = getX(d);
+        const y = getY(d);
+        pathD += ` L ${x} ${y}`;
+        
+        pointsHTML += `
+            <circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2">
+                <title>${d.label}: ${d.ftp}W</title>
+            </circle>
+            <text x="${x}" y="${y - 10}" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="bold">${d.ftp}</text>
+            <text x="${x}" y="${height - 15}" text-anchor="middle" font-size="10" fill="#64748b">${d.date.getMonth()+1}/${d.date.getFullYear() % 100}</text>
+        `;
+    });
+
+    // 4. Return HTML
+    return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
+            <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2 flex items-center gap-2">
+                <i class="fa-solid fa-arrow-trend-up text-emerald-500"></i> FTP Progression
+            </h2>
+            <div class="w-full overflow-x-auto">
+                <svg viewBox="0 0 ${width} ${height}" class="w-full min-w-[600px]">
+                    <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
+                    <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
+                    
+                    <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                    
+                    ${pointsHTML}
+                </svg>
+            </div>
+        </div>
+    `;
+};
+
+
+// --- Weekly Volume Chart Helper ---
 const buildWeeklyVolumeChart = (data) => {
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available for volume chart</div>';
@@ -41,7 +135,6 @@ const buildWeeklyVolumeChart = (data) => {
         // 1. Setup 8-Week Buckets (Mon-Sun)
         const buckets = [];
         const now = new Date();
-        // Adjust to Monday of current week
         const day = now.getDay();
         const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
         const currentMonday = new Date(now.setDate(diff));
@@ -62,7 +155,6 @@ const buildWeeklyVolumeChart = (data) => {
             });
         }
 
-        // 2. Aggregate Data
         data.forEach(item => {
             if (!item.date || !item.actualDuration) return;
             const t = item.date.getTime();
@@ -70,34 +162,26 @@ const buildWeeklyVolumeChart = (data) => {
             if (bucket) bucket.mins += item.actualDuration;
         });
 
-        // 3. Calculate Scaling & Max
-        const maxVol = Math.max(...buckets.map(b => b.mins)) || 1; // Avoid div by 0
+        const maxVol = Math.max(...buckets.map(b => b.mins)) || 1; 
         
-        // 4. Build Bars HTML
         let barsHtml = '';
         let prevMins = 0;
 
         buckets.forEach((b, idx) => {
             const height = Math.round((b.mins / maxVol) * 100);
-            
-            // 10% Rule Logic
-            let barColor = 'bg-blue-500'; // Default
+            let barColor = 'bg-blue-500'; 
             if (idx > 0 && prevMins > 0) {
                 const pctChange = (b.mins - prevMins) / prevMins;
-                if (pctChange > 0.15) barColor = 'bg-red-500'; // >15% Spike Warning
-                else if (pctChange > 0.10) barColor = 'bg-yellow-500'; // >10% Caution
-                else if (pctChange < -0.20) barColor = 'bg-slate-600'; // Big drop (Deload?)
-                else barColor = 'bg-emerald-500'; // Safe Increase or steady
+                if (pctChange > 0.15) barColor = 'bg-red-500'; 
+                else if (pctChange > 0.10) barColor = 'bg-yellow-500'; 
+                else if (pctChange < -0.20) barColor = 'bg-slate-600'; 
+                else barColor = 'bg-emerald-500'; 
             }
-            
             prevMins = b.mins;
-
             barsHtml += `
                 <div class="flex flex-col items-center gap-2 flex-1 group">
                     <div class="relative w-full bg-slate-800/50 rounded-t-sm h-48 flex items-end justify-center overflow-hidden">
-                        <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-xs px-2 py-1 rounded border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                            ${Math.round(b.mins)} mins
-                        </div>
+                        <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-xs px-2 py-1 rounded border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">${Math.round(b.mins)} mins</div>
                         <div style="height: ${height}%;" class="w-full mx-1 ${barColor} opacity-80 hover:opacity-100 transition-all rounded-t-sm"></div>
                     </div>
                     <span class="text-[10px] text-slate-500 font-mono">${b.label}</span>
@@ -113,28 +197,23 @@ const buildWeeklyVolumeChart = (data) => {
                     </h2>
                     <div class="flex gap-4 text-[10px] uppercase font-bold tracking-widest text-slate-500">
                         <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Safe</span>
-                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> Caution (>10%)</span>
-                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Spike (>15%)</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> Caution</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Spike</span>
                     </div>
                 </div>
-                <div class="flex items-end justify-between gap-2 w-full">
-                    ${barsHtml}
-                </div>
+                <div class="flex items-end justify-between gap-2 w-full">${barsHtml}</div>
             </div>
         `;
     } catch (e) {
-        console.error("Error building weekly chart", e);
-        return `<div class="p-4 text-red-400 border border-red-500 rounded">Chart Error: ${e.message}</div>`;
+        return `<div class="p-4 text-red-400">Chart Error: ${e.message}</div>`;
     }
 };
 
-
-// MODIFIED: Now accepts 'data' array directly, not markdown string
+// Main Render Function
 export function renderKPI(mergedLogData) {
-    // Safety check for data
     logData = Array.isArray(mergedLogData) ? mergedLogData : [];
 
-    const calculateCountStats = (targetType, days) => {
+    const calculateStats = (targetType, days, isDuration) => {
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - days);
         const now = new Date();
@@ -142,63 +221,37 @@ export function renderKPI(mergedLogData) {
 
         const subset = logData.filter(item => {
             if (!item || !item.date) return false;
-            const dateOk = item.date >= cutoff && item.date <= now;
-            const typeOk = targetType === 'All' || item.type === targetType;
-            return dateOk && typeOk;
+            return item.date >= cutoff && item.date <= now && (targetType === 'All' || item.type === targetType);
         });
 
-        const planned = subset.length; 
-        const completed = subset.filter(item => item.completed).length; 
-        const pct = planned > 0 ? Math.round((completed / planned) * 100) : 0;
-        
-        return { planned, completed, pct, label: `${completed}/${planned}` };
-    };
-
-    const calculateDurationStats = (targetType, days) => {
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - days);
-        const now = new Date();
-        now.setHours(23, 59, 59, 999);
-
-        const subset = logData.filter(item => {
-            if (!item || !item.date) return false;
-            const dateOk = item.date >= cutoff && item.date <= now;
-            const typeOk = targetType === 'All' || item.type === targetType;
-            return dateOk && typeOk;
-        });
-
-        let totalPlannedMins = 0;
-        let totalActualMins = 0;
-
+        let val = 0, target = 0;
         subset.forEach(item => {
-            totalPlannedMins += (item.plannedDuration || 0);
-            if (item.type === item.actualType) {
-                totalActualMins += (item.actualDuration || 0);
+            if (isDuration) {
+                target += (item.plannedDuration || 0);
+                if (item.type === item.actualType) val += (item.actualDuration || 0);
+            } else {
+                target++;
+                if (item.completed) val++;
             }
         });
 
-        const pct = totalPlannedMins > 0 ? Math.round((totalActualMins / totalPlannedMins) * 100) : 0;
-        const formatTime = (m) => m > 120 ? `${(m/60).toFixed(1)}h` : `${m}m`;
-
-        return { 
-            pct, 
-            label: `${formatTime(totalActualMins)}/${formatTime(totalPlannedMins)}` 
-        };
+        const pct = target > 0 ? Math.round((val / target) * 100) : 0;
+        const label = isDuration 
+            ? `${val > 120 ? (val/60).toFixed(1)+'h' : val+'m'}/${target > 120 ? (target/60).toFixed(1)+'h' : target+'m'}`
+            : `${val}/${target}`;
+            
+        return { pct, label };
     };
 
     const buildMetricRow = (title, type, isDuration = false) => {
-        const stats30 = isDuration ? calculateDurationStats(type, 30) : calculateCountStats(type, 30);
-        const stats60 = isDuration ? calculateDurationStats(type, 60) : calculateCountStats(type, 60);
-
+        const s30 = calculateStats(type, 30, isDuration);
+        const s60 = calculateStats(type, 60, isDuration);
         return `
             <div class="kpi-card">
-                <div class="kpi-header">
-                    ${getIconForType(type)}
-                    <span class="kpi-title">${title}</span>
-                </div>
+                <div class="kpi-header">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
                 <div class="charts-row">
-                    ${buildDonut(stats30.pct, "Last 30 Days", stats30.label)}
-                    ${buildDonut(stats60.pct, "Last 60 Days", stats60.label)}
+                    ${buildDonut(s30.pct, "Last 30 Days", s30.label)}
+                    ${buildDonut(s60.pct, "Last 60 Days", s60.label)}
                 </div>
             </div>
         `;
@@ -206,6 +259,8 @@ export function renderKPI(mergedLogData) {
 
     const html = `
         ${buildWeeklyVolumeChart(logData)}
+
+        ${buildFTPChart()}
 
         <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Workout Completion (Count)</h2>
         <div class="kpi-grid mb-12">
@@ -301,22 +356,19 @@ export function renderKPI(mergedLogData) {
                 </div>
             </div>
         </div>
-
-        <div class="mt-8 text-center text-xs text-slate-500 italic">
-            * Duration Stats only count actual time if the performed activity type matches the planned activity type.
-            * 'h' in duration column denotes hours, otherwise minutes assumed.
-        </div>
+        <div class="mt-8 text-center text-xs text-slate-500 italic">* 'h' in duration column denotes hours, otherwise minutes assumed.</div>
     `;
-    
     return { html, logData };
 }
 
 export function updateDurationAnalysis(data) {
+    // Re-implemented to support the event listener call
     const sportSelect = document.getElementById('kpi-sport-select');
     const daySelect = document.getElementById('kpi-day-select');
     const timeSelect = document.getElementById('kpi-time-select');
     
-    if (!sportSelect || !daySelect || !timeSelect || !logData) return;
+    if (!sportSelect || !daySelect || !timeSelect) return;
+    const dataToUse = (Array.isArray(data) && data.length > 0) ? data : logData;
 
     const selectedSport = sportSelect.value;
     const selectedDay = daySelect.value;
@@ -334,9 +386,6 @@ export function updateDurationAnalysis(data) {
     const dayMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const debugTableBody = document.querySelector('#kpi-debug-table tbody');
     let debugRows = '';
-
-    // Use global logData if 'data' arg is missing (event listener call)
-    const dataToUse = (Array.isArray(data) && data.length > 0) ? data : logData;
 
     dataToUse.forEach(item => {
         if (!item || !item.date) return;
@@ -387,12 +436,10 @@ export function updateDurationAnalysis(data) {
     if (document.getElementById('kpi-analysis-planned')) {
         document.getElementById('kpi-analysis-planned').innerText = formatTime(totalPlanned);
         document.getElementById('kpi-analysis-actual').innerText = formatTime(totalActual);
-        
         const diffEl = document.getElementById('kpi-analysis-diff');
         const sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
         diffEl.innerText = sign + formatTime(diff);
         diffEl.className = `text-xl font-bold ${diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
-
         const pctEl = document.getElementById('kpi-analysis-pct');
         pctEl.innerText = `${pct}%`;
         pctEl.className = `text-xl font-bold ${pct >= 80 ? 'text-emerald-400' : (pct >= 50 ? 'text-yellow-400' : 'text-red-400')}`;
