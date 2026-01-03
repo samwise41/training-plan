@@ -154,7 +154,7 @@ Use these mathematical rules to generate the specific duration and intensity for
 | COMPLETED | Wednesday | **Bike** | 60 mins | Run | 62 mins | Zone 2 (134W - 180W). **Steady State:** Remain seated. Focus on smooth pedal strokes. | 2025-12-31 |
 | COMPLETED | Thursday | **Prehab** | 30 mins | Hike | 52 mins | Recovery. **Strength:** Banded Leg Raises (2x15), Planks (3x1m). **No Impact.** | 2026-01-01 |
 | COMPLETED | Friday | **Run** | 40 mins | Run | 51 mins | Zone 2 (HR: 140-152). **Volume:** Easy aerobic miles. Focus on maintaining posture in final 10 mins. | 2026-01-02 |
-| PLANNED | Saturday | **Long Bike** | 3.0 Hours | | | Zone 2 (134W - 160W). **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. | 2026-01-03 |
+| COMPLETED| Saturday | **Long Bike** | 2.0 Hours | | | Zone 2 (134W - 160W). **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. | 2026-01-03 |
 | PLANNED | Sunday | **Rest** | - | | | **Total Recovery.** Optional "Flush" protocol (Appendix D) if stiffness is high. | 01-04-26 |
 
 
