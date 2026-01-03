@@ -188,6 +188,19 @@ Use these mathematical rules to generate the specific duration and intensity for
 * **Dec 23, 2025:** Validated "Finishing Kick" (Held >328W for final 5 mins).
 * **Dec 26, 2025:** Set new Running LTHR Baseline: 171 bpm.
 
+
+### Historical FTP Log
+
+| Date | FTP (Watts) | Growth |
+| :--- | :--- | :--- |
+| Sep 06, 2025 | 240 W | +5 W |
+| Jun 25, 2025 | 235 W | +15 W |
+| Jun 07, 2025 | 220 W | +5 W |
+| May 03, 2025 | 215 W | +5 W |
+| Apr 19, 2025 | 210 W | +7 W |
+| Apr 05, 2025 | 203 W | Baseline |
+
+
 ## 8. Documentation Workflow
 
 > **CRITICAL:** Maintain all header naming conventions exactly as written. These specific headers drive the automated dashboard logic. Do not rename or remove headers during updates.
