@@ -1,4 +1,5 @@
-import { Parser } from '../parser.js';
+// Removed unused Parser import to prevent load errors
+// console.log("KPI Module Loaded"); // Debug check
 
 let logData = [];
 
@@ -32,9 +33,106 @@ const buildDonut = (percent, label, fraction) => {
     `;
 };
 
+// --- NEW: Weekly Volume Chart Helper ---
+const buildWeeklyVolumeChart = (data) => {
+    try {
+        if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available for volume chart</div>';
+
+        // 1. Setup 8-Week Buckets (Mon-Sun)
+        const buckets = [];
+        const now = new Date();
+        // Adjust to Monday of current week
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
+        const currentMonday = new Date(now.setDate(diff));
+        currentMonday.setHours(0,0,0,0);
+
+        for (let i = 7; i >= 0; i--) {
+            const d = new Date(currentMonday);
+            d.setDate(d.getDate() - (i * 7));
+            const e = new Date(d);
+            e.setDate(e.getDate() + 6);
+            e.setHours(23,59,59,999);
+            
+            buckets.push({
+                start: d,
+                end: e,
+                label: `${d.getMonth()+1}/${d.getDate()}`,
+                mins: 0
+            });
+        }
+
+        // 2. Aggregate Data
+        data.forEach(item => {
+            if (!item.date || !item.actualDuration) return;
+            const t = item.date.getTime();
+            const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
+            if (bucket) bucket.mins += item.actualDuration;
+        });
+
+        // 3. Calculate Scaling & Max
+        const maxVol = Math.max(...buckets.map(b => b.mins)) || 1; // Avoid div by 0
+        
+        // 4. Build Bars HTML
+        let barsHtml = '';
+        let prevMins = 0;
+
+        buckets.forEach((b, idx) => {
+            const height = Math.round((b.mins / maxVol) * 100);
+            
+            // 10% Rule Logic
+            let barColor = 'bg-blue-500'; // Default
+            if (idx > 0 && prevMins > 0) {
+                const pctChange = (b.mins - prevMins) / prevMins;
+                if (pctChange > 0.15) barColor = 'bg-red-500'; // >15% Spike Warning
+                else if (pctChange > 0.10) barColor = 'bg-yellow-500'; // >10% Caution
+                else if (pctChange < -0.20) barColor = 'bg-slate-600'; // Big drop (Deload?)
+                else barColor = 'bg-emerald-500'; // Safe Increase or steady
+            }
+            
+            prevMins = b.mins;
+
+            barsHtml += `
+                <div class="flex flex-col items-center gap-2 flex-1 group">
+                    <div class="relative w-full bg-slate-800/50 rounded-t-sm h-48 flex items-end justify-center overflow-hidden">
+                        <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-xs px-2 py-1 rounded border border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                            ${Math.round(b.mins)} mins
+                        </div>
+                        <div style="height: ${height}%;" class="w-full mx-1 ${barColor} opacity-80 hover:opacity-100 transition-all rounded-t-sm"></div>
+                    </div>
+                    <span class="text-[10px] text-slate-500 font-mono">${b.label}</span>
+                </div>
+            `;
+        });
+
+        return `
+            <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
+                <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-2">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-column text-blue-500"></i> Weekly Volume Trend
+                    </h2>
+                    <div class="flex gap-4 text-[10px] uppercase font-bold tracking-widest text-slate-500">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Safe</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> Caution (>10%)</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Spike (>15%)</span>
+                    </div>
+                </div>
+                <div class="flex items-end justify-between gap-2 w-full">
+                    ${barsHtml}
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        console.error("Error building weekly chart", e);
+        return `<div class="p-4 text-red-400 border border-red-500 rounded">Chart Error: ${e.message}</div>`;
+    }
+};
+
+
 // MODIFIED: Now accepts 'data' array directly, not markdown string
 export function renderKPI(mergedLogData) {
-    logData = mergedLogData; // Store globally for filters
+    // Safety check for data
+    logData = Array.isArray(mergedLogData) ? mergedLogData : [];
 
     const calculateCountStats = (targetType, days) => {
         const cutoff = new Date();
@@ -43,6 +141,7 @@ export function renderKPI(mergedLogData) {
         now.setHours(23, 59, 59, 999);
 
         const subset = logData.filter(item => {
+            if (!item || !item.date) return false;
             const dateOk = item.date >= cutoff && item.date <= now;
             const typeOk = targetType === 'All' || item.type === targetType;
             return dateOk && typeOk;
@@ -62,6 +161,7 @@ export function renderKPI(mergedLogData) {
         now.setHours(23, 59, 59, 999);
 
         const subset = logData.filter(item => {
+            if (!item || !item.date) return false;
             const dateOk = item.date >= cutoff && item.date <= now;
             const typeOk = targetType === 'All' || item.type === targetType;
             return dateOk && typeOk;
@@ -105,6 +205,8 @@ export function renderKPI(mergedLogData) {
     };
 
     const html = `
+        ${buildWeeklyVolumeChart(logData)}
+
         <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Workout Completion (Count)</h2>
         <div class="kpi-grid mb-12">
             ${buildMetricRow("All Workouts", "All")}
@@ -214,7 +316,7 @@ export function updateDurationAnalysis(data) {
     const daySelect = document.getElementById('kpi-day-select');
     const timeSelect = document.getElementById('kpi-time-select');
     
-    if (!sportSelect || !daySelect || !timeSelect || !data) return;
+    if (!sportSelect || !daySelect || !timeSelect || !logData) return;
 
     const selectedSport = sportSelect.value;
     const selectedDay = daySelect.value;
@@ -233,8 +335,11 @@ export function updateDurationAnalysis(data) {
     const debugTableBody = document.querySelector('#kpi-debug-table tbody');
     let debugRows = '';
 
-    data.forEach(item => {
-        if (!item.date) return;
+    // Use global logData if 'data' arg is missing (event listener call)
+    const dataToUse = (Array.isArray(data) && data.length > 0) ? data : logData;
+
+    dataToUse.forEach(item => {
+        if (!item || !item.date) return;
         if (cutoffDate && item.date < cutoffDate) return;
 
         const itemDayName = dayMap[item.date.getDay()];
@@ -279,15 +384,17 @@ export function updateDurationAnalysis(data) {
         return `${rem}m`;
     };
 
-    document.getElementById('kpi-analysis-planned').innerText = formatTime(totalPlanned);
-    document.getElementById('kpi-analysis-actual').innerText = formatTime(totalActual);
-    
-    const diffEl = document.getElementById('kpi-analysis-diff');
-    const sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
-    diffEl.innerText = sign + formatTime(diff);
-    diffEl.className = `text-xl font-bold ${diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+    if (document.getElementById('kpi-analysis-planned')) {
+        document.getElementById('kpi-analysis-planned').innerText = formatTime(totalPlanned);
+        document.getElementById('kpi-analysis-actual').innerText = formatTime(totalActual);
+        
+        const diffEl = document.getElementById('kpi-analysis-diff');
+        const sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
+        diffEl.innerText = sign + formatTime(diff);
+        diffEl.className = `text-xl font-bold ${diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
 
-    const pctEl = document.getElementById('kpi-analysis-pct');
-    pctEl.innerText = `${pct}%`;
-    pctEl.className = `text-xl font-bold ${pct >= 80 ? 'text-emerald-400' : (pct >= 50 ? 'text-yellow-400' : 'text-red-400')}`;
+        const pctEl = document.getElementById('kpi-analysis-pct');
+        pctEl.innerText = `${pct}%`;
+        pctEl.className = `text-xl font-bold ${pct >= 80 ? 'text-emerald-400' : (pct >= 50 ? 'text-yellow-400' : 'text-red-400')}`;
+    }
 }
