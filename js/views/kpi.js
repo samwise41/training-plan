@@ -107,13 +107,14 @@ const buildFTPChart = () => {
     });
 
     // 4. Return HTML
+    // CHANGED: Removed 'min-w-[600px]' and added 'h-auto' to allow scaling
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
             <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2 flex items-center gap-2">
                 <i class="fa-solid fa-arrow-trend-up text-emerald-500"></i> FTP Progression
             </h2>
-            <div class="w-full overflow-x-auto">
-                <svg viewBox="0 0 ${width} ${height}" class="w-full min-w-[600px]">
+            <div class="w-full">
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
                     <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
                     <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
                     
