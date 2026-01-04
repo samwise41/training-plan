@@ -12,15 +12,13 @@ const getIconForType = (type) => {
 
 // --- Concentric Donut Chart (30d vs 60d) ---
 const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
-    // Outer Ring (30 Days) - Standard Size
     const r1 = 15.9155;
     const c1 = 100;
     const dash1 = `${stats30.pct} ${100 - stats30.pct}`;
     const color1 = stats30.pct >= 80 ? '#22c55e' : (stats30.pct >= 50 ? '#eab308' : '#ef4444');
 
-    // Inner Ring (60 Days) - Smaller Size
     const r2 = 10; 
-    const c2 = 2 * Math.PI * r2; // ~62.83
+    const c2 = 2 * Math.PI * r2; 
     const val2 = (stats60.pct / 100) * c2;
     const dash2 = `${val2} ${c2 - val2}`;
     const color2 = stats60.pct >= 80 ? '#15803d' : (stats60.pct >= 50 ? '#a16207' : '#b91c1c'); 
@@ -31,52 +29,33 @@ const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
                 <svg width="100%" height="100%" viewBox="0 0 42 42" class="donut-svg">
                     <circle cx="21" cy="21" r="${r1}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
                     <circle cx="21" cy="21" r="${r2}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
-
-                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="${color1}" stroke-width="3"
-                            stroke-dasharray="${dash1}" stroke-dashoffset="25" stroke-linecap="round"></circle>
-
-                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="${color2}" stroke-width="3"
-                            stroke-dasharray="${dash2}" stroke-dashoffset="${c2 * 0.25}" stroke-linecap="round"></circle>
+                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="${color1}" stroke-width="3" stroke-dasharray="${dash1}" stroke-dashoffset="25" stroke-linecap="round"></circle>
+                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="${color2}" stroke-width="3" stroke-dasharray="${dash2}" stroke-dashoffset="${c2 * 0.25}" stroke-linecap="round"></circle>
                 </svg>
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${centerLabel}</span>
                 </div>
             </div>
-
             <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] w-full max-w-[160px]">
-                <div class="text-right font-bold text-slate-400 flex items-center justify-end gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color1}"></span> 30d
-                </div>
-                <div class="font-mono text-white flex items-center gap-1 truncate">
-                    ${stats30.pct}% <span class="text-slate-500 opacity-70">(${stats30.label})</span>
-                </div>
-
-                <div class="text-right font-bold text-slate-500 flex items-center justify-end gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color2}"></span> 60d
-                </div>
-                <div class="font-mono text-slate-300 flex items-center gap-1 truncate">
-                    ${stats60.pct}% <span class="text-slate-600 opacity-70">(${stats60.label})</span>
-                </div>
+                <div class="text-right font-bold text-slate-400 flex items-center justify-end gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color1}"></span> 30d</div>
+                <div class="font-mono text-white flex items-center gap-1 truncate">${stats30.pct}% <span class="text-slate-500 opacity-70">(${stats30.label})</span></div>
+                <div class="text-right font-bold text-slate-500 flex items-center justify-end gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color2}"></span> 60d</div>
+                <div class="font-mono text-slate-300 flex items-center gap-1 truncate">${stats60.pct}% <span class="text-slate-600 opacity-70">(${stats60.label})</span></div>
             </div>
         </div>
     `;
 };
 
-
 // --- FTP Progress Line Chart ---
 const buildFTPChart = () => {
     const md = window.App?.planMd || "";
     if (!md) return '<div class="p-4 text-slate-500 italic">Plan data not loaded</div>';
-
     const lines = md.split('\n');
     const dataPoints = [];
     let startFound = false;
 
     for (let line of lines) {
-        if (line.includes('### Historical FTP Log')) {
-            startFound = true;
-            continue;
-        }
+        if (line.includes('### Historical FTP Log')) { startFound = true; continue; }
         if (startFound) {
             if (line.trim().startsWith('#') && dataPoints.length > 0) break; 
             if (line.includes('|') && !line.includes('---') && !line.toLowerCase().includes('date')) {
@@ -86,10 +65,7 @@ const buildFTPChart = () => {
                     const ftpStr = parts[2].trim();
                     const date = new Date(dateStr);
                     const ftp = parseInt(ftpStr.replace(/\D/g, ''));
-                    
-                    if (!isNaN(date.getTime()) && !isNaN(ftp)) {
-                        dataPoints.push({ date, ftp, label: dateStr });
-                    }
+                    if (!isNaN(date.getTime()) && !isNaN(ftp)) dataPoints.push({ date, ftp, label: dateStr });
                 }
             }
         }
@@ -101,7 +77,6 @@ const buildFTPChart = () => {
     const width = 800;
     const height = 250;
     const padding = { top: 30, bottom: 40, left: 50, right: 30 };
-    
     const minFTP = Math.min(...dataPoints.map(d => d.ftp)) * 0.95;
     const maxFTP = Math.max(...dataPoints.map(d => d.ftp)) * 1.05;
     const minTime = dataPoints[0].date.getTime();
@@ -112,15 +87,12 @@ const buildFTPChart = () => {
 
     let pathD = `M ${getX(dataPoints[0])} ${getY(dataPoints[0])}`;
     let pointsHTML = '';
-    
     dataPoints.forEach(d => {
         const x = getX(d);
         const y = getY(d);
         pathD += ` L ${x} ${y}`;
         pointsHTML += `
-            <circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2">
-                <title>${d.label}: ${d.ftp}W</title>
-            </circle>
+            <circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2"><title>${d.label}: ${d.ftp}W</title></circle>
             <text x="${x}" y="${y - 10}" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="bold">${d.ftp}</text>
             <text x="${x}" y="${height - 15}" text-anchor="middle" font-size="10" fill="#64748b">${d.date.getMonth()+1}/${d.date.getFullYear() % 100}</text>
         `;
@@ -143,74 +115,66 @@ const buildFTPChart = () => {
     `;
 };
 
-// --- Updated Weekly Volume Chart (Stacked SVG) ---
-const buildWeeklyVolumeChart = (data) => {
-    try {
-        if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available for volume chart</div>';
+// --- Helper to Get Buckets for Charts ---
+const getVolumeBuckets = (data) => {
+    const buckets = [];
+    const numWeeks = 10;
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
+    const currentMonday = new Date(now.setDate(diff));
+    currentMonday.setHours(0,0,0,0);
+
+    for (let i = numWeeks - 1; i >= 0; i--) {
+        const d = new Date(currentMonday);
+        d.setDate(d.getDate() - (i * 7));
+        const e = new Date(d);
+        e.setDate(e.getDate() + 6);
+        e.setHours(23,59,59,999);
         
-        // 1. Setup Buckets (Last 10 Weeks)
-        const buckets = [];
-        const numWeeks = 10;
-        const now = new Date();
-        const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
-        const currentMonday = new Date(now.setDate(diff));
-        currentMonday.setHours(0,0,0,0);
+        const label = `${d.getMonth()+1}/${d.getDate()}`;
+        buckets.push({ start: d, end: e, label, total: 0, bike: 0, run: 0, swim: 0, other: 0 });
+    }
 
-        for (let i = numWeeks - 1; i >= 0; i--) {
-            const d = new Date(currentMonday);
-            d.setDate(d.getDate() - (i * 7));
-            const e = new Date(d);
-            e.setDate(e.getDate() + 6);
-            e.setHours(23,59,59,999);
-            
-            const label = `${d.getMonth()+1}/${d.getDate()}`;
-            buckets.push({ 
-                start: d, end: e, label, 
-                total: 0, bike: 0, run: 0, swim: 0, other: 0 
-            });
+    data.forEach(item => {
+        if (!item.date || !item.actualDuration || item.type !== item.actualType) return;
+        const t = item.date.getTime();
+        const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
+        if (bucket) {
+            bucket.total += item.actualDuration;
+            if (item.type === 'Bike') bucket.bike += item.actualDuration;
+            else if (item.type === 'Run') bucket.run += item.actualDuration;
+            else if (item.type === 'Swim') bucket.swim += item.actualDuration;
+            else bucket.other += item.actualDuration;
         }
+    });
+    return buckets;
+}
 
-        // 2. Aggregate Data
-        data.forEach(item => {
-            if (!item.date || !item.actualDuration || item.type !== item.actualType) return;
-            const t = item.date.getTime();
-            const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
-            if (bucket) {
-                bucket.total += item.actualDuration;
-                if (item.type === 'Bike') bucket.bike += item.actualDuration;
-                else if (item.type === 'Run') bucket.run += item.actualDuration;
-                else if (item.type === 'Swim') bucket.swim += item.actualDuration;
-                else bucket.other += item.actualDuration;
-            }
-        });
+// --- Chart 1: Stacked Total Volume ---
+const buildStackedVolumeChart = (data) => {
+    try {
+        if (!data || data.length === 0) return '';
+        const buckets = getVolumeBuckets(data);
 
-        // 3. SVG Config
         const width = 800;
         const height = 300;
         const pad = { t: 40, b: 50, l: 50, r: 20 };
         const maxVol = Math.max(...buckets.map(b => b.total)) || 100;
         const maxVolHours = Math.ceil(maxVol / 60);
         
-        const getX = (i) => pad.l + (i * ((width - pad.l - pad.r) / numWeeks));
+        const getX = (i) => pad.l + (i * ((width - pad.l - pad.r) / buckets.length));
         const getY = (mins) => height - pad.b - ((mins / (maxVolHours * 60)) * (height - pad.t - pad.b));
 
-        // 4. Generate Y-Axis (Hours)
         let yAxisHtml = '';
         for (let i = 0; i <= maxVolHours; i+=2) {
             const y = getY(i * 60);
-            yAxisHtml += `
-                <line x1="${pad.l - 5}" y1="${y}" x2="${width - pad.r}" y2="${y}" stroke="#334155" stroke-width="1" opacity="0.3" />
-                <text x="${pad.l - 10}" y="${y + 4}" text-anchor="end" fill="#94a3b8" font-size="11" font-family="monospace">${i}h</text>
-            `;
+            yAxisHtml += `<line x1="${pad.l - 5}" y1="${y}" x2="${width - pad.r}" y2="${y}" stroke="#334155" stroke-width="1" opacity="0.3" /><text x="${pad.l - 10}" y="${y + 4}" text-anchor="end" fill="#94a3b8" font-size="11" font-family="monospace">${i}h</text>`;
         }
 
-        // 5. Generate Stacked Bars
         let barsHtml = buckets.map((b, i) => {
             const x = getX(i);
             const barWidth = 40;
-            
-            // Stack Height Calculations
             const hTotal = (height - pad.b) - getY(b.total);
             const yBase = height - pad.b;
 
@@ -222,54 +186,79 @@ const buildWeeklyVolumeChart = (data) => {
             const ySwim = yBase - hSwim;
             const yRun = ySwim - hRun;
             const yBike = yRun - hBike;
-            const yOther = yBike - hOther; // Topmost if other exists
+            const yOther = yBike - hOther; 
 
-            // Colors
-            const cSwim = '#06b6d4'; // Cyan
-            const cRun = '#10b981';  // Emerald
-            const cBike = '#3b82f6'; // Blue
-            const cOther = '#a855f7'; // Purple
-
-            // Total Label
             const totalHours = (b.total / 60).toFixed(1);
-            const labelHtml = b.total > 0 
-                ? `<text x="${x}" y="${(b.other > 0 ? yOther : yBike) - 5}" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${totalHours}h</text>`
-                : '';
+            const labelHtml = b.total > 0 ? `<text x="${x}" y="${(b.other > 0 ? yOther : yBike) - 5}" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${totalHours}h</text>` : '';
 
-            return `
-                <g class="hover:opacity-80 transition-opacity">
-                    <rect x="${x - barWidth/2}" y="${ySwim}" width="${barWidth}" height="${hSwim}" fill="${cSwim}" />
-                    <rect x="${x - barWidth/2}" y="${yRun}" width="${barWidth}" height="${hRun}" fill="${cRun}" />
-                    <rect x="${x - barWidth/2}" y="${yBike}" width="${barWidth}" height="${hBike}" fill="${cBike}" />
-                    <rect x="${x - barWidth/2}" y="${yOther}" width="${barWidth}" height="${hOther}" fill="${cOther}" />
-                    
+            return `<g class="hover:opacity-80 transition-opacity">
+                    <rect x="${x - barWidth/2}" y="${ySwim}" width="${barWidth}" height="${hSwim}" fill="#06b6d4" />
+                    <rect x="${x - barWidth/2}" y="${yRun}" width="${barWidth}" height="${hRun}" fill="#10b981" />
+                    <rect x="${x - barWidth/2}" y="${yBike}" width="${barWidth}" height="${hBike}" fill="#3b82f6" />
+                    <rect x="${x - barWidth/2}" y="${yOther}" width="${barWidth}" height="${hOther}" fill="#a855f7" />
                     ${labelHtml}
                     <text x="${x}" y="${height - 15}" text-anchor="middle" fill="#94a3b8" font-size="10">${b.label}</text>
-                </g>
-            `;
+                </g>`;
         }).join('');
 
         return `
-            <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
+            <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-8">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-2">
-                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-chart-column text-blue-500"></i> Weekly Volume Trend
-                    </h2>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-column text-blue-500"></i> Weekly Volume (All Sports)</h2>
                     <div class="flex gap-3 text-[10px] uppercase font-bold tracking-widest text-slate-500">
                         <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-blue-500"></span> Bike</span>
                         <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-emerald-500"></span> Run</span>
                         <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-cyan-500"></span> Swim</span>
                     </div>
                 </div>
-                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
-                    ${yAxisHtml}
-                    ${barsHtml}
-                </svg>
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">${yAxisHtml}${barsHtml}</svg>
             </div>
         `;
-    } catch (e) {
-        return `<div class="p-4 text-red-400">Chart Error: ${e.message}</div>`;
+    } catch (e) { return `<div class="p-4 text-red-400">Chart Error: ${e.message}</div>`; }
+};
+
+// --- Chart 2: Individual Sport Chart (Small) ---
+const buildSportChart = (data, sport, color, icon) => {
+    const buckets = getVolumeBuckets(data);
+    const key = sport.toLowerCase();
+    
+    // Calculate Max for this specific sport
+    const maxVal = Math.max(...buckets.map(b => b[key])) || 60;
+    const maxValHours = Math.ceil(maxVal / 60);
+
+    const width = 400; // Smaller width for grid
+    const height = 200;
+    const pad = { t: 30, b: 30, l: 35, r: 10 };
+    
+    const getX = (i) => pad.l + (i * ((width - pad.l - pad.r) / buckets.length));
+    const getY = (mins) => height - pad.b - ((mins / (maxValHours * 60)) * (height - pad.t - pad.b));
+
+    let yAxisHtml = '';
+    for (let i = 0; i <= maxValHours; i++) {
+        const y = getY(i * 60);
+        yAxisHtml += `<line x1="${pad.l}" y1="${y}" x2="${width - pad.r}" y2="${y}" stroke="#334155" stroke-width="1" opacity="0.3" /><text x="${pad.l - 5}" y="${y + 3}" text-anchor="end" fill="#94a3b8" font-size="9" font-family="monospace">${i}h</text>`;
     }
+
+    let barsHtml = buckets.map((b, i) => {
+        const val = b[key];
+        const x = getX(i);
+        const y = getY(val);
+        const h = (height - pad.b) - y;
+        const barWidth = 20;
+        
+        return `<rect x="${x - barWidth/2}" y="${y}" width="${barWidth}" height="${h}" fill="${color}" opacity="0.9" rx="2" />
+                <text x="${x}" y="${height - 10}" text-anchor="middle" fill="#64748b" font-size="8">${b.label}</text>`;
+    }).join('');
+
+    return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-4">
+                <i class="fa-solid ${icon} text-slate-400"></i>
+                <span class="text-xs font-bold text-slate-300 uppercase tracking-widest">${sport} Volume</span>
+            </div>
+            <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">${yAxisHtml}${barsHtml}</svg>
+        </div>
+    `;
 };
 
 // Main Render Function
@@ -306,13 +295,9 @@ export function renderKPI(mergedLogData) {
         return { pct, label };
     };
 
-    // New Function to Combine Both Charts into One Card
     const buildCombinedCard = (title, type) => {
-        // Count Stats
         const count30 = calculateStats(type, 30, false);
         const count60 = calculateStats(type, 60, false);
-        
-        // Duration Stats
         const dur30 = calculateStats(type, 30, true);
         const dur60 = calculateStats(type, 60, true);
 
@@ -320,19 +305,20 @@ export function renderKPI(mergedLogData) {
             <div class="kpi-card">
                 <div class="kpi-header mb-2">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
                 <div class="flex justify-around items-start">
-                    <div class="w-1/2 border-r border-slate-700 pr-2">
-                        ${buildConcentricChart(count30, count60, "Count")}
-                    </div>
-                    <div class="w-1/2 pl-2">
-                        ${buildConcentricChart(dur30, dur60, "Time")}
-                    </div>
+                    <div class="w-1/2 border-r border-slate-700 pr-2">${buildConcentricChart(count30, count60, "Count")}</div>
+                    <div class="w-1/2 pl-2">${buildConcentricChart(dur30, dur60, "Time")}</div>
                 </div>
-            </div>
-        `;
+            </div>`;
     };
 
     const html = `
-        ${buildWeeklyVolumeChart(logData)}
+        ${buildStackedVolumeChart(logData)}
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+            ${buildSportChart(logData, 'Bike', '#3b82f6', 'fa-bicycle')}
+            ${buildSportChart(logData, 'Run', '#10b981', 'fa-person-running')}
+            ${buildSportChart(logData, 'Swim', '#06b6d4', 'fa-person-swimming')}
+        </div>
 
         ${buildFTPChart()}
 
