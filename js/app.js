@@ -1,9 +1,10 @@
-import { Parser } from './parser.js';
-import { renderKPI, updateDurationAnalysis } from './views/kpi.js';
-import { renderGear, updateGearResult } from './views/gear.js';
-import { renderZones } from './views/zones.js';
+// NEW: Added ?v=3 to all imports to break the cache
+import { Parser } from './parser.js?v=3';
+import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=3';
+import { renderGear, updateGearResult } from './views/gear.js?v=3';
+import { renderZones } from './views/zones.js?v=3';
 
-console.log("App.js loading...");
+console.log("App.js loading - Version 3.0 (Cache Bust)");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
@@ -78,7 +79,6 @@ const App = {
             this.logData = [...currentLog, ...archiveLog]; 
             
             this.setupEventListeners();
-            this.updateStats(); // This might run before schedule renders, but that's ok
             
             window.addEventListener('hashchange', () => this.handleHashChange());
             this.handleHashChange();
@@ -257,7 +257,7 @@ const App = {
                         mdContent = Parser.getSection(this.planMd, sectionTitle);
                     }
                     
-                    // -- START OF CHANGE --
+                    // -- HTML Generation --
                     let html = marked.parse(mdContent || "*Content not found.*");
                     
                     // Inject stats bar ONLY for schedule view
@@ -271,7 +271,6 @@ const App = {
                     if (view === 'schedule') {
                         this.updateStats();
                     }
-                    // -- END OF CHANGE --
                 }
             } catch (err) {
                 console.error("Render error:", err);
@@ -305,4 +304,3 @@ const App = {
 
 window.App = App;
 window.onload = () => App.init();
-console.log("App attached to window");
