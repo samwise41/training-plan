@@ -280,7 +280,7 @@ const buildWeeklyVolumeChart = (data) => {
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-2">
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-chart-column text-blue-500"></i> Weekly Volume Trend
+                        <i class="fa-solid fa-chart-column text-blue-500"></i> Weekly Volume Trend (Total)
                     </h2>
                     <div class="flex gap-4 text-[10px] uppercase font-bold tracking-widest text-slate-500">
                         <span class="flex items-center gap-1"><span class="w-3 h-3 border border-blue-500/50 bg-blue-900/30 rounded-sm"></span> Plan</span>
@@ -295,6 +295,113 @@ const buildWeeklyVolumeChart = (data) => {
         return `<div class="p-4 text-red-400">Chart Error: ${e.message}</div>`;
     }
 };
+
+// --- NEW Helper: Build Sport-Specific Chart (Reusing Logic) ---
+const buildSportSpecificVolumeChart = (data, sportType, title, iconClass) => {
+    try {
+        if (!data || data.length === 0) return '';
+        
+        // Filter data for just this sport
+        const sportData = data.filter(d => d.type === sportType || d.plannedWorkout?.includes(sportType)); // Basic filter
+        
+        // Setup Buckets (Same logic as main chart)
+        const buckets = [];
+        const now = new Date();
+        const day = now.getDay();
+        const diff = now.getDate() - day; 
+        const currentSunday = new Date(now.setDate(diff));
+        currentSunday.setHours(0,0,0,0);
+
+        for (let i = 7; i >= 0; i--) {
+            const d = new Date(currentSunday);
+            d.setDate(d.getDate() - (i * 7));
+            const e = new Date(d);
+            e.setDate(e.getDate() + 6);
+            e.setHours(23,59,59,999);
+            
+            buckets.push({ 
+                start: d, 
+                end: e, 
+                label: `${e.getMonth()+1}/${e.getDate()}`, 
+                actualMins: 0, 
+                plannedMins: 0 
+            });
+        }
+
+        // Aggregate Sport Data
+        data.forEach(item => {
+            if (!item.date) return;
+            // Strict check for sport type
+            if (item.type !== sportType) return; 
+
+            const t = item.date.getTime();
+            const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
+            if (bucket) {
+                bucket.actualMins += (item.actualDuration || 0);
+                bucket.plannedMins += (item.plannedDuration || 0);
+            }
+        });
+
+        // Render Bars (Simplified version of main chart logic)
+        let barsHtml = '';
+        const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
+
+        buckets.forEach((b, idx) => {
+            const isCurrentWeek = (idx === buckets.length - 1); 
+            const hActual = Math.round((b.actualMins / maxVol) * 100);
+            const hPlan = Math.round((b.plannedMins / maxVol) * 100);
+            const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
+            
+            let comparisonVal = isCurrentWeek ? b.plannedMins : b.actualMins;
+            let growthPct = 0;
+            let colorClass = 'bg-blue-500';
+
+            if (idx > 0 && prevActual > 0) {
+                growthPct = (comparisonVal - prevActual) / prevActual;
+                if (growthPct > 0.15) colorClass = 'bg-red-500'; 
+                else if (growthPct > 0.10) colorClass = 'bg-yellow-500'; 
+                else if (growthPct < -0.20) colorClass = 'bg-slate-600'; 
+                else colorClass = 'bg-emerald-500'; 
+            }
+
+            // Styles
+            let actualBarClass = isCurrentWeek ? 'bg-blue-500' : colorClass;
+            let planBarStyle = '';
+            
+            if (isCurrentWeek) {
+                 let baseColor = colorClass.replace('bg-', '');
+                 const colorMap = {'emerald-500': '#10b981', 'yellow-500': '#eab308', 'red-500': '#ef4444', 'slate-600': '#475569', 'blue-500': '#3b82f6'};
+                 const hex = colorMap[baseColor] || '#3b82f6';
+                 planBarStyle = `background: repeating-linear-gradient(45deg, ${hex}20, ${hex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${hex};`;
+            }
+
+            barsHtml += `
+                <div class="flex flex-col items-center gap-1 flex-1 group relative">
+                    <div class="relative w-full bg-slate-800/30 rounded-t-sm h-32 flex items-end justify-center"> <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-[10px] text-white px-2 py-1 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 whitespace-nowrap">
+                            Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m
+                        </div>
+
+                        <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div>
+                        <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualBarClass} opacity-90 rounded-t-sm"></div>
+                    </div>
+                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none">${b.label}</span>
+                </div>
+            `;
+        });
+
+        return `
+            <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4">
+                <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
+                    <i class="${iconClass} text-slate-400"></i>
+                    <h3 class="text-sm font-bold text-slate-300 uppercase tracking-widest">${title} Volume</h3>
+                </div>
+                <div class="flex items-end justify-between gap-1 w-full">${barsHtml}</div>
+            </div>
+        `;
+    } catch (e) {
+        return `<div class="p-4 text-red-400">Chart Error: ${e.message}</div>`;
+    }
+}
 
 // Main Render Function
 export function renderKPI(mergedLogData) {
@@ -357,6 +464,12 @@ export function renderKPI(mergedLogData) {
 
     const html = `
         ${buildWeeklyVolumeChart(logData)}
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            ${buildSportSpecificVolumeChart(logData, 'Bike', 'Cycling', 'fa-solid fa-bicycle')}
+            ${buildSportSpecificVolumeChart(logData, 'Run', 'Running', 'fa-solid fa-person-running')}
+            ${buildSportSpecificVolumeChart(logData, 'Swim', 'Swimming', 'fa-solid fa-person-swimming')}
+        </div>
 
         ${buildFTPChart()}
 
