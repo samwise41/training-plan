@@ -2,151 +2,104 @@ import { Parser } from '../parser.js';
 
 export function renderPhases(planMd) {
     // 1. Setup Dates
-    // Week 1 ending (Saturday) based on plan: Dec 27, 2025 (Adjusted to current calendar flow)
-    // We'll map Week 1 to the first week of Jan for this projection context
-    const startDate = new Date("2026-01-03T12:00:00"); 
+    // Week 1 ending (Saturday) based on plan: Dec 27, 2025
+    const startDate = new Date("2025-12-27T12:00:00"); 
 
-    // 2. Define Sport-Specific Growth Logic
-    // Strategy: Run grows slowly (safety), Bike grows aggressively (volume lever)
+    // 2. Calculate Data
     const weeks = [];
-    
-    // Baselines (Hours)
-    let bSwim = 0.75; // ~45 mins
-    let bRun = 1.5;   // ~1.5 hours (2x45m)
-    let bBike = 4.0;  // ~4.0 hours (Sat 2h + Thu 1.5h + Mon 0.5h)
+    const block1_sat = 2.0;
+    const block2_sat = 2.5;
+    const block3_sat = 3.0;
 
-    // Helper to generate a block
-    const generateBlock = (startWk, numWeeks, phaseName, satRideDuration, isDeloadBlock) => {
-        for (let i = 0; i < numWeeks; i++) {
-            const wNum = startWk + i;
-            let type = 'normal';
-            let currentSwim = bSwim;
-            let currentRun = bRun;
-            let currentBike = bBike;
-            let sat = satRideDuration;
-
-            // Apply Growth Rules
-            if (i === 0 && startWk > 1) type = 'step'; // First week of new block
-            
-            // Deload Week (Last week of block)
-            if (i === numWeeks - 1) {
-                type = 'deload';
-                currentSwim *= 0.7;
-                currentRun *= 0.7;
-                currentBike *= 0.6;
-                sat *= 0.7;
-            } else {
-                // Normal Growth (Compound weekly)
-                // Run: Conservative 2% growth (Safety)
-                // Bike: Aggressive 5% growth + Base Step Ups
-                const growthFactorRun = 1 + (0.02 * i);
-                const growthFactorBike = 1 + (0.05 * i);
-                
-                currentRun *= growthFactorRun;
-                currentBike *= growthFactorBike;
-            }
-
-            // Calculate Date
-            const current = new Date(startDate);
-            current.setDate(startDate.getDate() + (wNum - 1) * 7);
-            const dateStr = `${current.getMonth() + 1}/${current.getDate()}`;
-
-            const total = currentSwim + currentRun + currentBike;
-
-            weeks.push({ 
-                w: wNum, 
-                swim: currentSwim, 
-                run: currentRun, 
-                bike: currentBike, 
-                total: total,
-                sat: sat, 
-                type, 
-                phase: phaseName, 
-                dateStr 
-            });
-        }
+    // Helper to add weeks with date calculation
+    const addWeek = (wNum, vol, sat, type, phase) => {
+        const current = new Date(startDate);
+        current.setDate(startDate.getDate() + (wNum - 1) * 7);
+        const dateStr = `${current.getMonth() + 1}/${current.getDate()}`;
+        weeks.push({ w: wNum, vol, sat, type, phase, dateStr });
     };
 
-    // --- GENERATE BLOCKS ---
-    // Block 1: Base (Sat Ride 2.0h capped)
-    generateBlock(1, 4, "Base/Prep", 2.0);
+    // Block 1 (Base)
+    let w1 = 6.0;
+    let w2 = w1 * 1.05;
+    let w3 = w2 * 1.05;
+    let w4 = w3 * 0.60;
+    addWeek(1, w1, block1_sat, 'normal', "Base/Prep");
+    addWeek(2, w2, block1_sat, 'normal', "Base/Prep");
+    addWeek(3, w3, block1_sat, 'normal', "Base/Prep");
+    addWeek(4, w4, 1.5, 'deload', "Base/Prep");
 
-    // Block 2: Build (Sat Ride 2.5h - Step Up)
-    // Increase Baselines for next block
-    bRun *= 1.05; // 5% bump in base
-    bBike += 0.5; // Add 30 mins to bike base (Step Up)
-    generateBlock(5, 4, "Tri-Build", 2.5);
+    // Block 2 (Build)
+    let w5 = w3 + 0.5; // Step Up
+    let w6 = w5 * 1.05;
+    let w7 = w6 * 1.05;
+    let w8 = w7 * 0.60;
+    addWeek(5, w5, block2_sat, 'step', "Tri-Build");
+    addWeek(6, w6, block2_sat, 'normal', "Tri-Build");
+    addWeek(7, w7, block2_sat, 'normal', "Tri-Build");
+    addWeek(8, w8, 1.5, 'deload', "Tri-Build");
 
-    // Block 3: Peak (Sat Ride 3.0h - Step Up)
-    bRun *= 1.05;
-    bBike += 0.5;
-    generateBlock(9, 4, "Peak/Taper", 3.0);
+    // Block 3 (Peak)
+    let w9 = w7 + 0.5; // Step Up
+    let w10 = w9 * 1.05;
+    let w11 = w10 * 1.05;
+    let w12 = w11 * 0.60;
+    addWeek(9, w9, block3_sat, 'step', "Peak/Taper");
+    addWeek(10, w10, block3_sat, 'normal', "Peak/Taper");
+    addWeek(11, w11, block3_sat, 'normal', "Peak/Taper");
+    addWeek(12, w12, 2.0, 'deload', "Peak/Taper");
 
-
-    // 3. SVG Configuration
+    // 3. SVG Dimensions
     const width = 800;
-    const height = 450; // Taller for legend
-    const pad = { t: 60, b: 80, l: 50, r: 20 };
-    const maxVol = 14; // Y-Axis Max (Increased for higher volume)
-    
+    const height = 400; // Increased height for dates
+    const pad = { t: 40, b: 80, l: 60, r: 20 }; // Increased Left/Bottom padding for Axis labels
+    const maxVol = 12; 
+
     const getX = (i) => pad.l + (i * ((width - pad.l - pad.r) / 11));
     const getY = (v) => height - pad.b - ((v / maxVol) * (height - pad.t - pad.b));
 
-    // 4. Generate Y-Axis
+    // 4. Generate Y-Axis (Hours)
     let yAxisHtml = '';
     for (let i = 0; i <= maxVol; i += 2) {
         const y = getY(i);
         yAxisHtml += `
-            <line x1="${pad.l - 5}" y1="${y}" x2="${width - pad.r}" y2="${y}" stroke="#334155" stroke-width="1" opacity="0.3" />
+            <line x1="${pad.l - 5}" y1="${y}" x2="${width - pad.r}" y2="${y}" stroke="#334155" stroke-width="1" opacity="0.5" />
             <text x="${pad.l - 10}" y="${y + 4}" text-anchor="end" fill="#94a3b8" font-size="11" font-family="monospace">${i}h</text>
         `;
     }
 
-    // 5. Generate Stacked Bars
+    // 5. Generate Bars & X-Axis
     let barsHtml = weeks.map((d, i) => {
         const x = getX(i);
+        const y = getY(d.vol);
+        const h = (height - pad.b) - y;
         const barWidth = 35;
         
-        // Stack Calculations
-        const yTotal = getY(d.total);
-        const hTotal = (height - pad.b) - yTotal;
-
-        const hSwim = (d.swim / d.total) * hTotal;
-        const hRun = (d.run / d.total) * hTotal;
-        const hBike = (d.bike / d.total) * hTotal;
-
-        const ySwim = (height - pad.b) - hSwim;
-        const yRun = ySwim - hRun;
-        const yBike = yRun - hBike; // Topmost
-
-        // Colors
-        const cSwim = '#06b6d4'; // Cyan-500
-        const cRun = '#10b981';  // Emerald-500
-        const cBike = '#3b82f6'; // Blue-500
-        const opacity = d.type === 'deload' ? '0.5' : '0.9';
-
-        // Labels
-        let topLabel = '';
-        if (d.type === 'step') topLabel = `<text x="${x}" y="${yBike - 10}" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="bold">Step Up</text>`;
-        if (d.type === 'deload') topLabel = `<text x="${x}" y="${yBike - 10}" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="bold">Deload</text>`;
+        let color = '#3b82f6'; // Blue
+        if (d.type === 'deload') { color = '#ef4444'; } // Red
         
-        // Total Text
-        const totalText = `<text x="${x}" y="${yBike - 25}" text-anchor="middle" fill="white" font-size="11" font-weight="bold">${d.total.toFixed(1)}h</text>`;
+        // Value Text (Inside Bar)
+        const valText = `<text x="${x}" y="${y + 15}" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${d.vol.toFixed(1)}</text>`;
+        
+        // Special Label (Step Up / Deload)
+        let topLabel = '';
+        if (d.type === 'step') {
+            topLabel = `<text x="${x}" y="${y - 10}" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="bold">Step Up</text>`;
+        }
+        if (d.type === 'deload') {
+             topLabel = `<text x="${x}" y="${y - 10}" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="bold">Deload</text>`;
+        }
 
         return `
-            <rect x="${x - barWidth/2}" y="${ySwim}" width="${barWidth}" height="${hSwim}" fill="${cSwim}" opacity="${opacity}" />
-            <rect x="${x - barWidth/2}" y="${yRun}" width="${barWidth}" height="${hRun}" fill="${cRun}" opacity="${opacity}" />
-            <rect x="${x - barWidth/2}" y="${yBike}" width="${barWidth}" height="${hBike}" fill="${cBike}" opacity="${opacity}" />
-            
+            <rect x="${x - barWidth/2}" y="${y}" width="${barWidth}" height="${h}" fill="${color}" rx="4" opacity="0.9"></rect>
+            ${valText}
             ${topLabel}
-            ${d.type !== 'deload' && d.type !== 'step' ? totalText : ''}
-            
             <text x="${x}" y="${height - pad.b + 20}" text-anchor="middle" fill="#cbd5e1" font-size="11" font-weight="bold">${d.dateStr}</text>
             <text x="${x}" y="${height - pad.b + 35}" text-anchor="middle" fill="#64748b" font-size="9">W${d.w}</text>
         `;
     }).join('');
 
-    // 6. Saturday Ride Line (Overlay)
+    // 6. Saturday Ride Line
     let linePath = "M " + weeks.map((d, i) => `${getX(i)} ${getY(d.sat)}`).join(" L ");
     let dotsHtml = weeks.map((d, i) => {
         return `<circle cx="${getX(i)}" cy="${getY(d.sat)}" r="4" fill="#1e293b" stroke="#f59e0b" stroke-width="2">
@@ -155,26 +108,19 @@ export function renderPhases(planMd) {
     }).join('');
 
     // 7. Render
+    // Safe marked check
     const safeMarked = window.marked ? window.marked.parse : (t) => t;
     const mdContent = Parser.getSection(planMd, "Periodization Phases") || Parser.getSection(planMd, "Periodization");
 
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-8">
              <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-2">
-                <div>
-                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-layer-group text-blue-500"></i> Projected Volume (Sport Specific)
-                    </h2>
-                    <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">
-                        Visualizing the 15% Cap Strategy: Safe Run Growth vs. Aggressive Bike Build
-                    </p>
-                </div>
-                
-                <div class="flex flex-col items-end gap-1 text-[10px] uppercase font-bold tracking-widest text-slate-500">
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-blue-500"></span> Bike</span>
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-emerald-500"></span> Run</span>
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-cyan-500"></span> Swim</span>
-                    <span class="flex items-center gap-1 mt-1"><span class="w-2 h-2 rounded-full border-2 border-orange-500 bg-slate-800"></span> Sat Long Ride</span>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chart-area text-blue-500"></i> Projected Volume (Hours/Week)
+                </h2>
+                <div class="flex gap-4 text-[10px] uppercase font-bold tracking-widest text-slate-500">
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-blue-500"></span> Total Vol</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full border-2 border-orange-500 bg-slate-800"></span> Sat Ride</span>
                 </div>
             </div>
 
