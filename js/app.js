@@ -1,10 +1,10 @@
-// NEW: Added ?v=3 to all imports to break the cache
-import { Parser } from './parser.js?v=3';
-import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=3';
-import { renderGear, updateGearResult } from './views/gear.js?v=3';
-import { renderZones } from './views/zones.js?v=3';
+// NEW: Updated to v=4
+import { Parser } from './parser.js?v=4';
+import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=4';
+import { renderGear, updateGearResult } from './views/gear.js?v=4';
+import { renderZones } from './views/zones.js?v=4';
 
-console.log("App.js loading - Version 3.0 (Cache Bust)");
+console.log("App.js loading - Version 4.0 (Security Curtain)");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
@@ -26,7 +26,52 @@ const App = {
     currentTemp: null,
     hourlyWeather: null,
 
-    // Helper to generate the stats HTML dynamically
+    // --- NEW: Security Logic ---
+    checkSecurity() {
+        const curtain = document.getElementById('security-curtain');
+        const input = document.getElementById('access-code');
+        const btn = document.getElementById('btn-unlock');
+        const errorMsg = document.getElementById('access-error');
+
+        // 1. Check if we already have the cookie
+        if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
+            if (curtain) curtain.style.display = 'none'; // Cookie found, remove curtain immediately
+            return;
+        }
+
+        // 2. Logic to handle the unlock
+        if (btn && input) {
+            const unlock = () => {
+                const code = input.value;
+                // --- PASSWORD SETTING HERE ---
+                if (code === 'training2026') { 
+                    // Set Cookie (Max-Age = 10 Years)
+                    document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
+                    
+                    // Fade out curtain
+                    curtain.style.opacity = '0';
+                    setTimeout(() => curtain.style.display = 'none', 500);
+                } else {
+                    input.value = '';
+                    if (errorMsg) errorMsg.classList.remove('hidden');
+                    input.classList.add('border-red-500');
+                    input.classList.remove('border-slate-700');
+                }
+            };
+
+            btn.addEventListener('click', unlock);
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') unlock();
+            });
+            // Clear error on type
+            input.addEventListener('input', () => {
+                if (errorMsg) errorMsg.classList.add('hidden');
+                input.classList.remove('border-red-500');
+                input.classList.add('border-slate-700');
+            });
+        }
+    },
+
     getStatsBar() {
         return `
             <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
@@ -50,9 +95,11 @@ const App = {
     },
 
     async init() {
+        // Run security check first
+        this.checkSecurity();
+
         console.log("App init started");
         try {
-            // Fetch ALL 3 Files
             const [planRes, gearRes, archiveRes] = await Promise.all([
                 fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
                 fetch(`./${CONFIG.GEAR_FILE}?t=${Date.now()}`),
@@ -73,7 +120,6 @@ const App = {
                 this.archiveMd = "";
             }
 
-            // MERGE LOGIC
             const currentLog = Parser.parseTrainingLog(this.planMd);
             const archiveLog = Parser.parseTrainingLog(this.archiveMd);
             this.logData = [...currentLog, ...archiveLog]; 
