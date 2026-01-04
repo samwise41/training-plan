@@ -372,6 +372,7 @@ export function renderKPI(mergedLogData) {
 }
 
 export function updateDurationAnalysis(data) {
+    // Re-implemented to support the event listener call
     const sportSelect = document.getElementById('kpi-sport-select');
     const daySelect = document.getElementById('kpi-day-select');
     const timeSelect = document.getElementById('kpi-time-select');
