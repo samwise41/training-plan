@@ -237,7 +237,7 @@ Use these mathematical rules to generate the specific duration and intensity for
 |:---|:---|:---|:---|:---|:---|:---|:---|
 | COMPLETED| Saturday | **Long Bike** | 2.0 Hours | Zwift 71% 2 hours| 121 min | Zone 2 (134W - 160W). **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. | 2026-01-03 |
 | COMPLETED | Fri | [RUN] Volume Run | 40 | [RUN] Morning Run 51 Minutes | 51 | Durat 40 mins. Zone 2 (HR: 140-152 bpm). Focus: Easy. | 2026-01-02 |
-| COMPLETED | Thu | Rest | | | 2 | | 2026-01-01 |
+| COMPLETED | Thu | Rest | | |  | | 2026-01-01 |
 | COMPLETED | Wed | [BIKE] Steady State | 60 | [BIKE] Zwift - Zone 2 - 71% on Lutscher CCW in Innsbruck 62 minutes | 62 | Durat 60 mins. Zone 2 (134W - 180W). Focus: Smooth. | 2025-12-31 |
 | COMPLETED | Tue | [RUN] Aerobic Base | 45 | [RUN] Morning Run 50:00 | 50 | Durat 45 mins. Zone 2 (HR: 140-152 bpm). Focus: Aerobic Base. | 2025-12-30 |
 | MISSED | Mon | [SWIM] Technique Focus | 30 min | | | ~500m - 800m. Zone 1 (RPE 3-4). Catch & Pull drills. | 2025-12-29 |
