@@ -19,6 +19,22 @@
 </head>
 <body class="min-h-screen">
 
+    <div id="security-curtain" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4">
+            <div class="text-4xl mb-4">🔒</div>
+            <h2 class="text-xl font-bold text-white mb-2">Restricted Access</h2>
+            <p class="text-sm text-slate-400 mb-6">Enter access code to view dashboard.</p>
+            
+            <input type="password" id="access-code" placeholder="Enter Code" 
+                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white mb-4 focus:outline-none focus:border-blue-500 text-center tracking-widest placeholder-slate-600 transition-colors">
+            
+            <button id="btn-unlock" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors shadow-lg hover:shadow-blue-500/20">
+                Unlock Dashboard
+            </button>
+            <p id="access-error" class="text-red-400 text-xs mt-4 hidden font-bold"><i class="fa-solid fa-circle-exclamation mr-1"></i> Incorrect code</p>
+        </div>
+    </div>
+
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 hidden z-50"></div>
 
     <aside id="sidebar" class="fixed top-0 left-0 h-full w-[260px] bg-slate-900 border-r border-slate-800 sidebar-closed lg:sidebar-open flex flex-col">
@@ -88,7 +104,7 @@
         </main>
     </div>
 
-    <script type="module" src="js/app.js?v=3"></script>
+    <script type="module" src="js/app.js?v=4"></script>
 
 </body>
 </html>
