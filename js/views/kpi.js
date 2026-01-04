@@ -10,35 +10,64 @@ const getIconForType = (type) => {
     return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
 };
 
-const buildDonut = (percent, label, fraction) => {
-    const radius = 15.9155;
-    const circumference = 2 * Math.PI * radius; 
-    const strokeDasharray = `${percent} ${100 - percent}`;
-    const color = percent >= 80 ? '#22c55e' : (percent >= 50 ? '#eab308' : '#ef4444');
+// --- NEW: Concentric Donut Chart (30d vs 60d) ---
+const buildConcentricChart = (stats30, stats60) => {
+    // Outer Ring (30 Days) - Standard Size
+    const r1 = 15.9155;
+    const c1 = 100;
+    const dash1 = `${stats30.pct} ${100 - stats30.pct}`;
+    const color1 = stats30.pct >= 80 ? '#22c55e' : (stats30.pct >= 50 ? '#eab308' : '#ef4444');
+
+    // Inner Ring (60 Days) - Smaller Size
+    const r2 = 10; 
+    const c2 = 2 * Math.PI * r2; // ~62.83
+    const val2 = (stats60.pct / 100) * c2;
+    const dash2 = `${val2} ${c2 - val2}`;
+    const color2 = stats60.pct >= 80 ? '#15803d' : (stats60.pct >= 50 ? '#a16207' : '#b91c1c'); // Slightly darker for contrast
 
     return `
-        <div class="chart-container">
-            <svg width="120" height="120" viewBox="0 0 42 42" class="donut-svg">
-                <circle class="donut-bg" cx="21" cy="21" r="${radius}"></circle>
-                <circle class="donut-segment" cx="21" cy="21" r="${radius}" 
-                        stroke="${color}" stroke-dasharray="${strokeDasharray}" stroke-dashoffset="25"></circle>
-            </svg>
-            <div class="donut-text">
-                <span class="donut-percent">${percent}%</span>
-                <span class="donut-fraction">${fraction}</span>
+        <div class="flex flex-col items-center justify-center w-full py-2">
+            <div class="relative w-[140px] h-[140px] mb-4">
+                <svg width="100%" height="100%" viewBox="0 0 42 42" class="donut-svg">
+                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
+                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
+
+                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="${color1}" stroke-width="3"
+                            stroke-dasharray="${dash1}" stroke-dashoffset="25" stroke-linecap="round"></circle>
+
+                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="${color2}" stroke-width="3"
+                            stroke-dasharray="${dash2}" stroke-dashoffset="${c2 * 0.25}" stroke-linecap="round"></circle>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Trend</span>
+                </div>
             </div>
-            <div class="chart-label">${label}</div>
+
+            <div class="grid grid-cols-2 gap-x-8 gap-y-1 text-xs w-full max-w-[200px]">
+                <div class="text-right font-bold text-slate-400 flex items-center justify-end gap-2">
+                    <span class="w-2 h-2 rounded-full" style="background-color: ${color1}"></span> 30 Day
+                </div>
+                <div class="font-mono text-white flex items-center gap-1">
+                    ${stats30.pct}% <span class="text-slate-500 text-[10px]">(${stats30.label})</span>
+                </div>
+
+                <div class="text-right font-bold text-slate-500 flex items-center justify-end gap-2">
+                    <span class="w-2 h-2 rounded-full" style="background-color: ${color2}"></span> 60 Day
+                </div>
+                <div class="font-mono text-slate-300 flex items-center gap-1">
+                    ${stats60.pct}% <span class="text-slate-600 text-[10px]">(${stats60.label})</span>
+                </div>
+            </div>
         </div>
     `;
 };
 
-// --- NEW: FTP Progress Line Chart ---
+
+// --- FTP Progress Line Chart ---
 const buildFTPChart = () => {
-    // Access the raw plan markdown from the global App object
     const md = window.App?.planMd || "";
     if (!md) return '<div class="p-4 text-slate-500 italic">Plan data not loaded</div>';
 
-    // 1. Parse the "Historical FTP Log" Table
     const lines = md.split('\n');
     const dataPoints = [];
     let startFound = false;
@@ -49,18 +78,14 @@ const buildFTPChart = () => {
             continue;
         }
         if (startFound) {
-            // Stop if we hit a new section or empty lines after finding data
             if (line.trim().startsWith('#') && dataPoints.length > 0) break; 
-            
-            // Parse Row: | Date | FTP (Watts) | ...
             if (line.includes('|') && !line.includes('---') && !line.toLowerCase().includes('date')) {
                 const parts = line.split('|');
                 if (parts.length > 2) {
                     const dateStr = parts[1].trim();
-                    const ftpStr = parts[2].trim(); // e.g. "240 W"
-                    
+                    const ftpStr = parts[2].trim();
                     const date = new Date(dateStr);
-                    const ftp = parseInt(ftpStr.replace(/\D/g, '')); // Extract digits
+                    const ftp = parseInt(ftpStr.replace(/\D/g, ''));
                     
                     if (!isNaN(date.getTime()) && !isNaN(ftp)) {
                         dataPoints.push({ date, ftp, label: dateStr });
@@ -70,12 +95,9 @@ const buildFTPChart = () => {
         }
     }
 
-    // Sort by date ascending
     dataPoints.sort((a, b) => a.date - b.date);
+    if (dataPoints.length < 2) return ''; 
 
-    if (dataPoints.length < 2) return ''; // Need at least 2 points for a line
-
-    // 2. Setup SVG Dimensions & Scaling
     const width = 800;
     const height = 250;
     const padding = { top: 30, bottom: 40, left: 50, right: 30 };
@@ -88,7 +110,6 @@ const buildFTPChart = () => {
     const getX = (d) => padding.left + ((d.date.getTime() - minTime) / (maxTime - minTime)) * (width - padding.left - padding.right);
     const getY = (d) => height - padding.bottom - ((d.ftp - minFTP) / (maxFTP - minFTP)) * (height - padding.top - padding.bottom);
 
-    // 3. Generate SVG Paths
     let pathD = `M ${getX(dataPoints[0])} ${getY(dataPoints[0])}`;
     let pointsHTML = '';
     
@@ -96,7 +117,6 @@ const buildFTPChart = () => {
         const x = getX(d);
         const y = getY(d);
         pathD += ` L ${x} ${y}`;
-        
         pointsHTML += `
             <circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2">
                 <title>${d.label}: ${d.ftp}W</title>
@@ -106,8 +126,6 @@ const buildFTPChart = () => {
         `;
     });
 
-    // 4. Return HTML
-    // CHANGED: Removed 'min-w-[600px]' and added 'h-auto' to allow scaling
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
             <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2 flex items-center gap-2">
@@ -117,9 +135,7 @@ const buildFTPChart = () => {
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
                     <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
                     <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
-                    
                     <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                    
                     ${pointsHTML}
                 </svg>
             </div>
@@ -127,13 +143,10 @@ const buildFTPChart = () => {
     `;
 };
 
-
 // --- Weekly Volume Chart Helper ---
 const buildWeeklyVolumeChart = (data) => {
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available for volume chart</div>';
-
-        // 1. Setup 8-Week Buckets (Mon-Sun)
         const buckets = [];
         const now = new Date();
         const day = now.getDay();
@@ -147,13 +160,7 @@ const buildWeeklyVolumeChart = (data) => {
             const e = new Date(d);
             e.setDate(e.getDate() + 6);
             e.setHours(23,59,59,999);
-            
-            buckets.push({
-                start: d,
-                end: e,
-                label: `${d.getMonth()+1}/${d.getDate()}`,
-                mins: 0
-            });
+            buckets.push({ start: d, end: e, label: `${d.getMonth()+1}/${d.getDate()}`, mins: 0 });
         }
 
         data.forEach(item => {
@@ -164,7 +171,6 @@ const buildWeeklyVolumeChart = (data) => {
         });
 
         const maxVol = Math.max(...buckets.map(b => b.mins)) || 1; 
-        
         let barsHtml = '';
         let prevMins = 0;
 
@@ -247,13 +253,11 @@ export function renderKPI(mergedLogData) {
     const buildMetricRow = (title, type, isDuration = false) => {
         const s30 = calculateStats(type, 30, isDuration);
         const s60 = calculateStats(type, 60, isDuration);
+        
         return `
             <div class="kpi-card">
                 <div class="kpi-header">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
-                <div class="charts-row">
-                    ${buildDonut(s30.pct, "Last 30 Days", s30.label)}
-                    ${buildDonut(s60.pct, "Last 60 Days", s60.label)}
-                </div>
+                ${buildConcentricChart(s30, s60)}
             </div>
         `;
     };
@@ -363,7 +367,6 @@ export function renderKPI(mergedLogData) {
 }
 
 export function updateDurationAnalysis(data) {
-    // Re-implemented to support the event listener call
     const sportSelect = document.getElementById('kpi-sport-select');
     const daySelect = document.getElementById('kpi-day-select');
     const timeSelect = document.getElementById('kpi-time-select');
