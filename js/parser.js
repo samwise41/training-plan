@@ -24,11 +24,22 @@ export const Parser = {
 
     getBiometrics(md) {
         const profileSection = this.getSection(md, "Profile") || this.getSection(md, "Biometrics");
+        
+        // Cycling Metrics
         const ftp = profileSection.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
         const weight = profileSection.match(/Weight[^0-9]*(\d{1,3})/i);
+
+        // Running Metrics (NEW)
+        const lthr = profileSection.match(/Lactate Threshold HR[^0-9]*(\d{2,3})/i);
+        const runFtp = profileSection.match(/Functional Threshold Pace.*?(\d{1,2}:\d{2})/i);
+        const fiveK = profileSection.match(/5K Prediction.*?(\d{1,2}:\d{2})/i);
+
         return {
             watts: ftp ? parseInt(ftp[1]) : 0,
-            weight: weight ? parseInt(weight[1]) : 0
+            weight: weight ? parseInt(weight[1]) : 0,
+            lthr: lthr ? parseInt(lthr[1]) : 0,
+            runFtp: runFtp ? runFtp[1] : "--",
+            fiveK: fiveK ? fiveK[1] : "--"
         };
     },
 
