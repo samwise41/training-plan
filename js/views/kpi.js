@@ -249,6 +249,7 @@ const buildWeeklyVolumeChart = (data) => {
             `;
         });
 
+        // CHANGED: items-end -> items-start to ensure fixed-height charts align at the top, allowing labels to hang below without shifting the chart.
         return `
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-2">
@@ -261,7 +262,7 @@ const buildWeeklyVolumeChart = (data) => {
                         <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Spike</span>
                     </div>
                 </div>
-                <div class="flex items-end justify-between gap-2 w-full">${barsHtml}</div>
+                <div class="flex items-start justify-between gap-2 w-full">${barsHtml}</div>
             </div>
         `;
     } catch (e) {
