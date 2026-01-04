@@ -17,8 +17,14 @@ const CONFIG = {
  * @returns {string} HTML string
  */
 export function renderZones(planMd) {
-    // 1. Calculate Biometrics
-    const { watts, weight } = Parser.getBiometrics(planMd);
+    // 1. Calculate Biometrics (Safe destructuring in case parser is old)
+    const bio = Parser.getBiometrics(planMd) || {};
+    const watts = bio.watts || 0;
+    const weight = bio.weight || 0;
+    const lthr = bio.lthr || '--';
+    const runFtp = bio.runFtp || '--';
+    const fiveK = bio.fiveK || '--';
+
     const weightKg = weight * 0.453592;
     const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
     
@@ -44,12 +50,9 @@ export function renderZones(planMd) {
                 
                 // --- ROBUST LOGIC START ---
                 let zClass = 'z-1'; // Default
-                
-                // normalize string to ensure matching works
                 const cleanLabel = label.toLowerCase();
 
                 if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) {
-                    console.log("✅ FOUND SWEET SPOT: Applying 'z-ss' class"); // <--- LOOK FOR THIS IN CONSOLE
                     zClass = 'z-ss';
                 } else {
                     const zMatch = cleanLabel.match(/zone (\d)/);
@@ -96,12 +99,50 @@ export function renderZones(planMd) {
                 </g>
             </svg>
         </div>
-        <div class="text-center mb-8">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-1">Cycling FTP</span>
-            <span class="text-2xl font-bold text-white">${watts > 0 ? watts + ' W' : '--'}</span>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 max-w-2xl mx-auto">
+            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg">
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <i class="fa-solid fa-bicycle text-blue-500"></i>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cycling FTP</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-3xl font-black text-white">${watts > 0 ? watts + ' W' : '--'}</span>
+                    <span class="text-xs text-slate-400 font-mono mt-1">${wkgNum.toFixed(2)} W/kg</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg">
+                <div class="flex items-center justify-center gap-2 mb-3">
+                    <i class="fa-solid fa-person-running text-emerald-500"></i>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Profile</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="flex flex-col">
+                        <span class="text-[9px] text-slate-500 font-bold uppercase mb-0.5">Pace (FTP)</span>
+                        <span class="text-lg font-bold text-white leading-none">${runFtp}</span>
+                    </div>
+                    <div class="flex flex-col border-l border-slate-700">
+                        <span class="text-[9px] text-slate-500 font-bold uppercase mb-0.5">LTHR</span>
+                        <span class="text-lg font-bold text-white leading-none">${lthr}</span>
+                    </div>
+                    <div class="flex flex-col border-l border-slate-700">
+                        <span class="text-[9px] text-slate-500 font-bold uppercase mb-0.5">5K Est</span>
+                        <span class="text-lg font-bold text-white leading-none">${fiveK}</span>
+                    </div>
+                </div>
+            </div>
         </div>
+
         <div id="zone-grid">
             ${parseZoneTables()}
+        </div>
+
+        <div class="text-center mt-12 mb-4 h-20 flex items-center justify-center">
+            <button onclick="this.parentElement.innerHTML='<span class=&quot;text-6xl font-black text-emerald-500 animate-bounce block&quot;>67</span>'" 
+                    class="px-8 py-3 bg-slate-800 border border-slate-700 rounded-full text-slate-500 hover:text-white hover:border-emerald-500 hover:bg-slate-700 transition-all text-xs uppercase tracking-[0.2em] font-bold shadow-lg">
+                PUSH ME
+            </button>
         </div>
     `;
 }

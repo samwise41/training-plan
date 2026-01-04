@@ -188,7 +188,6 @@ Use these mathematical rules to generate the specific duration and intensity for
 * **Dec 23, 2025:** Validated "Finishing Kick" (Held >328W for final 5 mins).
 * **Dec 26, 2025:** Set new Running LTHR Baseline: 171 bpm.
 
-
 ### Historical FTP Log
 
 | Date | FTP (Watts) | Growth |
@@ -199,7 +198,6 @@ Use these mathematical rules to generate the specific duration and intensity for
 | May 03, 2025 | 215 W | +5 W |
 | Apr 19, 2025 | 210 W | +7 W |
 | Apr 05, 2025 | 203 W | Baseline |
-
 
 ## 8. Documentation Workflow
 

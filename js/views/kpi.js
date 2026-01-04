@@ -10,35 +10,64 @@ const getIconForType = (type) => {
     return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
 };
 
-const buildDonut = (percent, label, fraction) => {
-    const radius = 15.9155;
-    const circumference = 2 * Math.PI * radius; 
-    const strokeDasharray = `${percent} ${100 - percent}`;
-    const color = percent >= 80 ? '#22c55e' : (percent >= 50 ? '#eab308' : '#ef4444');
+// --- Concentric Donut Chart (30d vs 60d) ---
+const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
+    // Outer Ring (30 Days) - Standard Size
+    const r1 = 15.9155;
+    const c1 = 100;
+    const dash1 = `${stats30.pct} ${100 - stats30.pct}`;
+    const color1 = stats30.pct >= 80 ? '#22c55e' : (stats30.pct >= 50 ? '#eab308' : '#ef4444');
+
+    // Inner Ring (60 Days) - Smaller Size
+    const r2 = 10; 
+    const c2 = 2 * Math.PI * r2; // ~62.83
+    const val2 = (stats60.pct / 100) * c2;
+    const dash2 = `${val2} ${c2 - val2}`;
+    const color2 = stats60.pct >= 80 ? '#15803d' : (stats60.pct >= 50 ? '#a16207' : '#b91c1c'); // Slightly darker for contrast
 
     return `
-        <div class="chart-container">
-            <svg width="120" height="120" viewBox="0 0 42 42" class="donut-svg">
-                <circle class="donut-bg" cx="21" cy="21" r="${radius}"></circle>
-                <circle class="donut-segment" cx="21" cy="21" r="${radius}" 
-                        stroke="${color}" stroke-dasharray="${strokeDasharray}" stroke-dashoffset="25"></circle>
-            </svg>
-            <div class="donut-text">
-                <span class="donut-percent">${percent}%</span>
-                <span class="donut-fraction">${fraction}</span>
+        <div class="flex flex-col items-center justify-center w-full py-2">
+            <div class="relative w-[120px] h-[120px] mb-2">
+                <svg width="100%" height="100%" viewBox="0 0 42 42" class="donut-svg">
+                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
+                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
+
+                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="${color1}" stroke-width="3"
+                            stroke-dasharray="${dash1}" stroke-dashoffset="25" stroke-linecap="round"></circle>
+
+                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="${color2}" stroke-width="3"
+                            stroke-dasharray="${dash2}" stroke-dashoffset="${c2 * 0.25}" stroke-linecap="round"></circle>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${centerLabel}</span>
+                </div>
             </div>
-            <div class="chart-label">${label}</div>
+
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] w-full max-w-[160px]">
+                <div class="text-right font-bold text-slate-400 flex items-center justify-end gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color1}"></span> 30d
+                </div>
+                <div class="font-mono text-white flex items-center gap-1 truncate">
+                    ${stats30.pct}% <span class="text-slate-500 opacity-70">(${stats30.label})</span>
+                </div>
+
+                <div class="text-right font-bold text-slate-500 flex items-center justify-end gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color2}"></span> 60d
+                </div>
+                <div class="font-mono text-slate-300 flex items-center gap-1 truncate">
+                    ${stats60.pct}% <span class="text-slate-600 opacity-70">(${stats60.label})</span>
+                </div>
+            </div>
         </div>
     `;
 };
 
-// --- NEW: FTP Progress Line Chart ---
+
+// --- FTP Progress Line Chart ---
 const buildFTPChart = () => {
-    // Access the raw plan markdown from the global App object
     const md = window.App?.planMd || "";
     if (!md) return '<div class="p-4 text-slate-500 italic">Plan data not loaded</div>';
 
-    // 1. Parse the "Historical FTP Log" Table
     const lines = md.split('\n');
     const dataPoints = [];
     let startFound = false;
@@ -49,18 +78,14 @@ const buildFTPChart = () => {
             continue;
         }
         if (startFound) {
-            // Stop if we hit a new section or empty lines after finding data
             if (line.trim().startsWith('#') && dataPoints.length > 0) break; 
-            
-            // Parse Row: | Date | FTP (Watts) | ...
             if (line.includes('|') && !line.includes('---') && !line.toLowerCase().includes('date')) {
                 const parts = line.split('|');
                 if (parts.length > 2) {
                     const dateStr = parts[1].trim();
-                    const ftpStr = parts[2].trim(); // e.g. "240 W"
-                    
+                    const ftpStr = parts[2].trim();
                     const date = new Date(dateStr);
-                    const ftp = parseInt(ftpStr.replace(/\D/g, '')); // Extract digits
+                    const ftp = parseInt(ftpStr.replace(/\D/g, ''));
                     
                     if (!isNaN(date.getTime()) && !isNaN(ftp)) {
                         dataPoints.push({ date, ftp, label: dateStr });
@@ -70,12 +95,9 @@ const buildFTPChart = () => {
         }
     }
 
-    // Sort by date ascending
     dataPoints.sort((a, b) => a.date - b.date);
+    if (dataPoints.length < 2) return ''; 
 
-    if (dataPoints.length < 2) return ''; // Need at least 2 points for a line
-
-    // 2. Setup SVG Dimensions & Scaling
     const width = 800;
     const height = 250;
     const padding = { top: 30, bottom: 40, left: 50, right: 30 };
@@ -88,7 +110,6 @@ const buildFTPChart = () => {
     const getX = (d) => padding.left + ((d.date.getTime() - minTime) / (maxTime - minTime)) * (width - padding.left - padding.right);
     const getY = (d) => height - padding.bottom - ((d.ftp - minFTP) / (maxFTP - minFTP)) * (height - padding.top - padding.bottom);
 
-    // 3. Generate SVG Paths
     let pathD = `M ${getX(dataPoints[0])} ${getY(dataPoints[0])}`;
     let pointsHTML = '';
     
@@ -96,7 +117,6 @@ const buildFTPChart = () => {
         const x = getX(d);
         const y = getY(d);
         pathD += ` L ${x} ${y}`;
-        
         pointsHTML += `
             <circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2">
                 <title>${d.label}: ${d.ftp}W</title>
@@ -106,19 +126,16 @@ const buildFTPChart = () => {
         `;
     });
 
-    // 4. Return HTML
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
             <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2 flex items-center gap-2">
                 <i class="fa-solid fa-arrow-trend-up text-emerald-500"></i> FTP Progression
             </h2>
-            <div class="w-full overflow-x-auto">
-                <svg viewBox="0 0 ${width} ${height}" class="w-full min-w-[600px]">
+            <div class="w-full">
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
                     <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
                     <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
-                    
                     <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                    
                     ${pointsHTML}
                 </svg>
             </div>
@@ -126,13 +143,10 @@ const buildFTPChart = () => {
     `;
 };
 
-
 // --- Weekly Volume Chart Helper ---
 const buildWeeklyVolumeChart = (data) => {
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available for volume chart</div>';
-
-        // 1. Setup 8-Week Buckets (Mon-Sun)
         const buckets = [];
         const now = new Date();
         const day = now.getDay();
@@ -146,13 +160,7 @@ const buildWeeklyVolumeChart = (data) => {
             const e = new Date(d);
             e.setDate(e.getDate() + 6);
             e.setHours(23,59,59,999);
-            
-            buckets.push({
-                start: d,
-                end: e,
-                label: `${d.getMonth()+1}/${d.getDate()}`,
-                mins: 0
-            });
+            buckets.push({ start: d, end: e, label: `${d.getMonth()+1}/${d.getDate()}`, mins: 0 });
         }
 
         data.forEach(item => {
@@ -163,7 +171,6 @@ const buildWeeklyVolumeChart = (data) => {
         });
 
         const maxVol = Math.max(...buckets.map(b => b.mins)) || 1; 
-        
         let barsHtml = '';
         let prevMins = 0;
 
@@ -243,15 +250,26 @@ export function renderKPI(mergedLogData) {
         return { pct, label };
     };
 
-    const buildMetricRow = (title, type, isDuration = false) => {
-        const s30 = calculateStats(type, 30, isDuration);
-        const s60 = calculateStats(type, 60, isDuration);
+    // New Function to Combine Both Charts into One Card
+    const buildCombinedCard = (title, type) => {
+        // Count Stats
+        const count30 = calculateStats(type, 30, false);
+        const count60 = calculateStats(type, 60, false);
+        
+        // Duration Stats
+        const dur30 = calculateStats(type, 30, true);
+        const dur60 = calculateStats(type, 60, true);
+
         return `
             <div class="kpi-card">
-                <div class="kpi-header">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
-                <div class="charts-row">
-                    ${buildDonut(s30.pct, "Last 30 Days", s30.label)}
-                    ${buildDonut(s60.pct, "Last 60 Days", s60.label)}
+                <div class="kpi-header mb-2">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
+                <div class="flex justify-around items-start">
+                    <div class="w-1/2 border-r border-slate-700 pr-2">
+                        ${buildConcentricChart(count30, count60, "Count")}
+                    </div>
+                    <div class="w-1/2 pl-2">
+                        ${buildConcentricChart(dur30, dur60, "Time")}
+                    </div>
                 </div>
             </div>
         `;
@@ -262,20 +280,12 @@ export function renderKPI(mergedLogData) {
 
         ${buildFTPChart()}
 
-        <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Workout Completion (Count)</h2>
+        <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Adherence Overview</h2>
         <div class="kpi-grid mb-12">
-            ${buildMetricRow("All Workouts", "All")}
-            ${buildMetricRow("Cycling", "Bike")}
-            ${buildMetricRow("Running", "Run")}
-            ${buildMetricRow("Swimming", "Swim")}
-        </div>
-
-        <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Duration Adherence (Time vs Plan)</h2>
-        <div class="kpi-grid mb-12">
-            ${buildMetricRow("All Duration", "All", true)}
-            ${buildMetricRow("Cycling Time", "Bike", true)}
-            ${buildMetricRow("Running Time", "Run", true)}
-            ${buildMetricRow("Swim Time", "Swim", true)}
+            ${buildCombinedCard("All Activities", "All")}
+            ${buildCombinedCard("Cycling", "Bike")}
+            ${buildCombinedCard("Running", "Run")}
+            ${buildCombinedCard("Swimming", "Swim")}
         </div>
 
         <div class="kpi-card bg-slate-800/20 border-t-4 border-t-purple-500">
