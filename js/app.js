@@ -3,6 +3,7 @@ import { Parser } from './parser.js';
 import { renderKPI, updateDurationAnalysis } from './views/kpi.js';
 import { renderGear, updateGearResult } from './views/gear.js';
 import { renderZones } from './views/zones.js';
+import { renderPhases } from './views/phases.js';
 
 console.log("🚀 App.js Safe Mode Loaded");
 
@@ -273,9 +274,12 @@ const App = {
                     content.innerHTML = result.html;
                     this.updateDurationAnalysis();
                 } 
+                else if (view === 'phases') {
+                    content.innerHTML = renderPhases(this.planMd);
+                }
                 else {
                     let sectionTitle = "Weekly Schedule";
-                    if (view === 'phases') sectionTitle = "Periodization";
+                    // if (view === 'phases') sectionTitle = "Periodization"; // Removed as phases is now handled above
                     
                     let mdContent = "";
                     if (view === 'full') {
