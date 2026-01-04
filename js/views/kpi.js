@@ -189,56 +189,83 @@ const buildWeeklyVolumeChart = (data) => {
 
         // 3. Render
         let barsHtml = '';
-        let prevMins = 0; // Tracks 'Actual' of previous week for 10% rule
-
+        
         // Find Max Volume (Across both Planned and Actual)
         const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
 
         buckets.forEach((b, idx) => {
             const isCurrentWeek = (idx === buckets.length - 1); 
             
+            // Heights
             const hActual = Math.round((b.actualMins / maxVol) * 100);
             const hPlan = Math.round((b.plannedMins / maxVol) * 100);
             
-            // 10% Rule Logic (Calculated on Actuals)
-            let barColorClass = 'bg-blue-500'; 
+            // Previous week's actual (for comparison)
+            const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
             
-            if (idx > 0 && prevMins > 0) {
-                const pctChange = (b.actualMins - prevMins) / prevMins;
-                if (pctChange > 0.15) barColorClass = 'bg-red-500'; 
-                else if (pctChange > 0.10) barColorClass = 'bg-yellow-500'; 
-                else if (pctChange < -0.20) barColorClass = 'bg-slate-600'; 
-                else barColorClass = 'bg-emerald-500'; 
+            // Calculate Growth %
+            // If historical: Actual vs Prev Actual
+            // If current: Plan vs Prev Actual
+            let comparisonVal = isCurrentWeek ? b.plannedMins : b.actualMins;
+            let growthPct = 0;
+            let growthLabel = "--";
+            let colorClass = 'bg-blue-500'; // Default safe/blue
+            let growthColor = "text-slate-400";
+
+            if (idx > 0 && prevActual > 0) {
+                growthPct = (comparisonVal - prevActual) / prevActual;
+                
+                // Color Logic
+                if (growthPct > 0.15) { colorClass = 'bg-red-500'; growthColor = "text-red-400"; }
+                else if (growthPct > 0.10) { colorClass = 'bg-yellow-500'; growthColor = "text-yellow-400"; }
+                else if (growthPct < -0.20) { colorClass = 'bg-slate-600'; growthColor = "text-slate-500"; }
+                else { colorClass = 'bg-emerald-500'; growthColor = "text-emerald-400"; }
+
+                const sign = growthPct > 0 ? '▲' : (growthPct < 0 ? '▼' : '');
+                growthLabel = `${sign} ${Math.round(growthPct * 100)}%`;
             }
 
-            // Current Week Planned Style (Striped)
-            let actBarStyle = '';
+            // Determine Bar Styles
+            let actualBarStyle = '';
+            let actualBarClass = colorClass;
+            let planBarStyle = '';
+            let planBarClass = 'bg-blue-900/20 border border-blue-500/30'; // Default Ghost
+
             if (isCurrentWeek) {
-                let baseColor = barColorClass.replace('bg-', '');
+                // For CURRENT week:
+                // Plan Bar (Background) gets the "Risk" color + stripes
+                let baseColor = colorClass.replace('bg-', '');
                 const colorMap = {
                     'emerald-500': '#10b981', 'yellow-500': '#eab308', 
                     'red-500': '#ef4444', 'slate-600': '#475569', 'blue-500': '#3b82f6'
                 };
                 const hex = colorMap[baseColor] || '#3b82f6';
-                barColorClass = ''; 
-                actBarStyle = `background: repeating-linear-gradient(45deg, ${hex}, ${hex} 4px, #1e293b 4px, #1e293b 8px); border: 1px solid ${hex};`;
-            }
+                
+                planBarClass = ''; 
+                planBarStyle = `background: repeating-linear-gradient(45deg, ${hex}20, ${hex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${hex};`;
 
-            if (!isCurrentWeek) prevMins = b.actualMins; 
+                // Actual Bar (Foreground) is neutral/banked
+                actualBarClass = 'bg-blue-500'; 
+            } else {
+                // For HISTORICAL:
+                // Actual Bar gets the color
+                actualBarClass = colorClass;
+            }
 
             barsHtml += `
                 <div class="flex flex-col items-center gap-2 flex-1 group relative">
                     <div class="relative w-full bg-slate-800/30 rounded-t-sm h-48 flex items-end justify-center">
                         
-                        <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 shadow-xl pointer-events-none text-center">
-                            <span class="block text-[9px] text-slate-400 font-normal mb-0.5">${b.start.getMonth()+1}/${b.start.getDate()} - ${b.end.getMonth()+1}/${b.end.getDate()}</span>
-                            Plan: ${Math.round(b.plannedMins)}m <span class="text-slate-500">|</span> Act: ${Math.round(b.actualMins)}m
+                        <div class="absolute -top-16 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 shadow-xl pointer-events-none text-center">
+                            <span class="block text-[9px] text-slate-400 font-normal mb-1">${b.start.getMonth()+1}/${b.start.getDate()} - ${b.end.getMonth()+1}/${b.end.getDate()}</span>
+                            <div class="mb-1">Plan: ${Math.round(b.plannedMins)}m <span class="text-slate-600">|</span> Act: ${Math.round(b.actualMins)}m</div>
+                            <div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1 font-mono">Growth: ${growthLabel}</div>
                             <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-r border-b border-slate-600 transform rotate-45"></div>
                         </div>
 
-                        <div style="height: ${hPlan}%" class="absolute bottom-0 w-full bg-blue-900/20 border border-blue-500/30 rounded-t-sm z-0"></div>
+                        <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full ${planBarClass} rounded-t-sm z-0"></div>
 
-                        <div style="height: ${hActual}%; ${actBarStyle}" class="relative z-10 w-2/3 ${barColorClass} opacity-90 hover:opacity-100 transition-all rounded-t-sm"></div>
+                        <div style="height: ${hActual}%; ${actualBarStyle}" class="relative z-10 w-2/3 ${actualBarClass} opacity-90 hover:opacity-100 transition-all rounded-t-sm"></div>
                     
                     </div>
                     <span class="text-[10px] ${isCurrentWeek ? 'text-white font-bold' : 'text-slate-500'} font-mono text-center leading-none">
@@ -249,7 +276,6 @@ const buildWeeklyVolumeChart = (data) => {
             `;
         });
 
-        // CHANGED: items-end -> items-start to ensure fixed-height charts align at the top, allowing labels to hang below without shifting the chart.
         return `
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-2">
