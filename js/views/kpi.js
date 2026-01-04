@@ -10,8 +10,8 @@ const getIconForType = (type) => {
     return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
 };
 
-// --- NEW: Concentric Donut Chart (30d vs 60d) ---
-const buildConcentricChart = (stats30, stats60) => {
+// --- Concentric Donut Chart (30d vs 60d) ---
+const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
     // Outer Ring (30 Days) - Standard Size
     const r1 = 15.9155;
     const c1 = 100;
@@ -27,7 +27,7 @@ const buildConcentricChart = (stats30, stats60) => {
 
     return `
         <div class="flex flex-col items-center justify-center w-full py-2">
-            <div class="relative w-[140px] h-[140px] mb-4">
+            <div class="relative w-[120px] h-[120px] mb-2">
                 <svg width="100%" height="100%" viewBox="0 0 42 42" class="donut-svg">
                     <circle cx="21" cy="21" r="${r1}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
                     <circle cx="21" cy="21" r="${r2}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
@@ -39,23 +39,23 @@ const buildConcentricChart = (stats30, stats60) => {
                             stroke-dasharray="${dash2}" stroke-dashoffset="${c2 * 0.25}" stroke-linecap="round"></circle>
                 </svg>
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Trend</span>
+                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${centerLabel}</span>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-x-8 gap-y-1 text-xs w-full max-w-[200px]">
-                <div class="text-right font-bold text-slate-400 flex items-center justify-end gap-2">
-                    <span class="w-2 h-2 rounded-full" style="background-color: ${color1}"></span> 30 Day
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] w-full max-w-[160px]">
+                <div class="text-right font-bold text-slate-400 flex items-center justify-end gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color1}"></span> 30d
                 </div>
-                <div class="font-mono text-white flex items-center gap-1">
-                    ${stats30.pct}% <span class="text-slate-500 text-[10px]">(${stats30.label})</span>
+                <div class="font-mono text-white flex items-center gap-1 truncate">
+                    ${stats30.pct}% <span class="text-slate-500 opacity-70">(${stats30.label})</span>
                 </div>
 
-                <div class="text-right font-bold text-slate-500 flex items-center justify-end gap-2">
-                    <span class="w-2 h-2 rounded-full" style="background-color: ${color2}"></span> 60 Day
+                <div class="text-right font-bold text-slate-500 flex items-center justify-end gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color2}"></span> 60d
                 </div>
-                <div class="font-mono text-slate-300 flex items-center gap-1">
-                    ${stats60.pct}% <span class="text-slate-600 text-[10px]">(${stats60.label})</span>
+                <div class="font-mono text-slate-300 flex items-center gap-1 truncate">
+                    ${stats60.pct}% <span class="text-slate-600 opacity-70">(${stats60.label})</span>
                 </div>
             </div>
         </div>
@@ -250,14 +250,27 @@ export function renderKPI(mergedLogData) {
         return { pct, label };
     };
 
-    const buildMetricRow = (title, type, isDuration = false) => {
-        const s30 = calculateStats(type, 30, isDuration);
-        const s60 = calculateStats(type, 60, isDuration);
+    // New Function to Combine Both Charts into One Card
+    const buildCombinedCard = (title, type) => {
+        // Count Stats
+        const count30 = calculateStats(type, 30, false);
+        const count60 = calculateStats(type, 60, false);
         
+        // Duration Stats
+        const dur30 = calculateStats(type, 30, true);
+        const dur60 = calculateStats(type, 60, true);
+
         return `
             <div class="kpi-card">
-                <div class="kpi-header">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
-                ${buildConcentricChart(s30, s60)}
+                <div class="kpi-header mb-2">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
+                <div class="flex justify-around items-start">
+                    <div class="w-1/2 border-r border-slate-700 pr-2">
+                        ${buildConcentricChart(count30, count60, "Count")}
+                    </div>
+                    <div class="w-1/2 pl-2">
+                        ${buildConcentricChart(dur30, dur60, "Time")}
+                    </div>
+                </div>
             </div>
         `;
     };
@@ -267,20 +280,12 @@ export function renderKPI(mergedLogData) {
 
         ${buildFTPChart()}
 
-        <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Workout Completion (Count)</h2>
+        <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Adherence Overview</h2>
         <div class="kpi-grid mb-12">
-            ${buildMetricRow("All Workouts", "All")}
-            ${buildMetricRow("Cycling", "Bike")}
-            ${buildMetricRow("Running", "Run")}
-            ${buildMetricRow("Swimming", "Swim")}
-        </div>
-
-        <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Duration Adherence (Time vs Plan)</h2>
-        <div class="kpi-grid mb-12">
-            ${buildMetricRow("All Duration", "All", true)}
-            ${buildMetricRow("Cycling Time", "Bike", true)}
-            ${buildMetricRow("Running Time", "Run", true)}
-            ${buildMetricRow("Swim Time", "Swim", true)}
+            ${buildCombinedCard("All Activities", "All")}
+            ${buildCombinedCard("Cycling", "Bike")}
+            ${buildCombinedCard("Running", "Run")}
+            ${buildCombinedCard("Swimming", "Swim")}
         </div>
 
         <div class="kpi-card bg-slate-800/20 border-t-4 border-t-purple-500">
