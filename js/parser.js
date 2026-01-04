@@ -70,22 +70,13 @@ export const Parser = {
         return 'Other';
     },
 
-    parseTrainingLog(md) {
-        this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, firstRowRaw: "" };
-
-        let sectionName = "Appendix C: Training History Log";
-        let section = this.getSection(md, sectionName);
-        if (!section) {
-             sectionName = "Training History";
-             section = this.getSection(md, sectionName);
-        }
+    // Refactored: Internal helper to parse a specific raw text block
+    _parseTableBlock(sectionText) {
+        if (!sectionText) return [];
         
-        if (!section) return [];
-
-        this.lastDebugInfo.sectionFound = true;
-        const lines = section.split('\n');
+        const lines = sectionText.split('\n');
         
-        // Indices for new column order
+        // Indices
         let dateIdx = -1;
         let statusIdx = -1;
         let planWorkoutIdx = -1; 
@@ -121,19 +112,20 @@ export const Parser = {
         if (dateIdx === -1) return [];
 
         // 2. Parse Rows
-        const now = new Date();
-        now.setHours(23, 59, 59, 999); 
-
         for (let line of lines) {
             if (!line.includes('|') || line.includes('---')) continue;
             
             const cols = line.split('|');
-            if (cols.length < 5) continue;
+            if (cols.length < 5) continue; // Skip malformed rows
 
             const cleanText = (str) => (str || "").trim().replace(/\*\*/g, '').replace(/__/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
             
             const rawDate = cols[dateIdx];
             const dateStr = cleanText(rawDate);
+            
+            // Skip header repeaters or empty dates
+            if (!dateStr || dateStr.toLowerCase().includes('date')) continue;
+
             const planStr = planWorkoutIdx > -1 ? cleanText(cols[planWorkoutIdx]) : "";
             const statusStr = statusIdx > -1 ? cleanText(cols[statusIdx]).toLowerCase() : "";
             
@@ -154,7 +146,7 @@ export const Parser = {
                 if (!isNaN(d.getTime())) { date = d; date.setHours(12, 0, 0, 0); }
             }
 
-            // MODIFIED: Removed "&& date <= now" to allow future planned workouts
+            // NOTE: Future date filter REMOVED to allow planned workouts
             if (date && !isNaN(date.getTime())) {
                 const type = this._getType(planStr);
                 const actualType = this._getType(actualWorkoutStr);
@@ -170,6 +162,30 @@ export const Parser = {
             }
         }
         return data;
+    },
+
+    parseTrainingLog(md) {
+        this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, firstRowRaw: "" };
+        
+        // 1. Get History Section
+        let historySection = this.getSection(md, "Appendix C: Training History Log");
+        if (!historySection) {
+             historySection = this.getSection(md, "Training History");
+        }
+
+        // 2. Get Active Schedule Section
+        const scheduleSection = this.getSection(md, "Weekly Schedule");
+
+        // 3. Parse Both
+        const historyData = this._parseTableBlock(historySection);
+        const scheduleData = this._parseTableBlock(scheduleSection);
+
+        // 4. Merge
+        // Note: Simple concat. If you move rows from Schedule to History, ensure you clear them from Schedule to avoid duplicates.
+        const merged = [...historyData, ...scheduleData];
+
+        this.lastDebugInfo.rowsParsed = merged.length;
+        return merged;
     },
 
     parseGearMatrix(md) {
