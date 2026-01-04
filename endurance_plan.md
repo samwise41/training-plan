@@ -149,13 +149,14 @@ Use these mathematical rules to generate the specific duration and intensity for
 
 | **Status** | **Day** | **Planned Workout** | **Planned Duration** | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** |
 |:---|:---|:---|:---|:---|:---|:---|:---|
+| PLANNED | Sunday | Rest | - | | | Total Recovery. No active training. | 2026-01-04 |
 | PLANNED | Monday | [BIKE] Strength / Hill Focus | 60 mins | | | Zone 3 / Sweet Spot (181-226W). Focus on low cadence (60-70 rpm) to build force. | 2026-01-05 |
 | PLANNED | Tuesday | [SWIM] Technique Focus | 30 mins | | | Zone 1 (RPE 3-4). Drills: Catch & Pull. Focus on smooth rotation. | 2026-01-06 |
 | PLANNED | Wednesday | [RUN] Tempo / Threshold | 45 mins | | | Zone 3 (153-161 bpm) to low Zone 4. Build durability at speed. | 2026-01-07 |
 | PLANNED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | | | **Winter Strategy Reallocation:** +30 mins added. Zone 2 (134-180W). | 2026-01-08 |
 | PLANNED | Friday | [RUN] Aerobic Maintenance | 45 mins | | | Zone 2 (140-152 bpm). Easy aerobic miles. | 2026-01-09 |
 | PLANNED | Saturday | [BIKE] Long Steady Distance | 2.0 Hours | | | Zone 2 (134-180W). **Winter Cap Applied.** Practice fueling every 45m. | 2026-01-10 |
-| PLANNED | Sunday | Rest | - | | | Total Recovery. No active training. | 2026-01-11 |
+
 
 
 ## 6. Fueling Strategy & Log
@@ -238,7 +239,6 @@ Use these mathematical rules to generate the specific duration and intensity for
 | COMPLETED | Thursday | **Prehab** | 30 mins | Hike | 52 mins | Recovery. **Strength:** Banded Leg Raises (2x15), Planks (3x1m). **No Impact.** | 2026-01-01 |
 | COMPLETED | Friday | **Run** | 40 mins | Run | 51 mins | Zone 2 (HR: 140-152). **Volume:** Easy aerobic miles. Focus on maintaining posture in final 10 mins. | 2026-01-02 |
 | COMPLETED| Saturday | **Long Bike** | 2.0 Hours | | | Zone 2 (134W - 160W). **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. | 2026-01-03 |
-| PLANNED | Sunday | **Rest** | - | | | **Total Recovery.** Optional "Flush" protocol (Appendix D) if stiffness is high. | 01-04-26 |
 | COMPLETED | Fri | [RUN] Volume Run | 40 | [RUN] Morning Run 51 Minutes | 51 | Durat 40 mins. Zone 2 (HR: 140-152 bpm). Focus: Easy. | 2026-01-02 |
 | COMPLETED | Thu | Rest | | | 2 | | 2026-01-01 |
 | COMPLETED | Wed | [BIKE] Steady State | 60 | [BIKE] Zwift - Zone 2 - 71% on Lutscher CCW in Innsbruck 62 minutes | 62 | Durat 60 mins. Zone 2 (134W - 180W). Focus: Smooth. | 2025-12-31 |
