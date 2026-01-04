@@ -8,7 +8,7 @@ console.log("App.js loading...");
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
     GEAR_FILE: "Gear.md",
-    HISTORY_FILE: "history_archive.md", // NEW FILE
+    HISTORY_FILE: "history_archive.md", 
     WEATHER_MAP: {
         0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
         45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"], 51: ["Drizzle", "🌦️"], 61: ["Rain", "🌧️"], 63: ["Rain", "🌧️"],
@@ -19,13 +19,36 @@ const CONFIG = {
 const App = {
     planMd: "",
     gearMd: "",
-    archiveMd: "", // Store raw archive text
+    archiveMd: "", 
     logData: [],
     gearData: null,
     currentTemp: null,
     hourlyWeather: null,
 
-async init() {
+    // Helper to generate the stats HTML dynamically
+    getStatsBar() {
+        return `
+            <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
+                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
+                </div>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
+                    <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
+                </div>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
+                    <div id="stat-event">
+                        <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
+                        <p class="text-[10px] font-normal text-slate-400 mt-1 uppercase" id="stat-event-countdown">--</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    async init() {
         console.log("App init started");
         try {
             // Fetch ALL 3 Files
@@ -41,7 +64,6 @@ async init() {
             this.planMd = await planRes.text();
             this.gearMd = await gearRes.text();
             
-            // DEBUG: Check if archive loaded
             if (archiveRes.ok) {
                 this.archiveMd = await archiveRes.text();
                 console.log(`Archive loaded: ${this.archiveMd.length} characters.`);
@@ -52,16 +74,11 @@ async init() {
 
             // MERGE LOGIC
             const currentLog = Parser.parseTrainingLog(this.planMd);
-            console.log(`Current Log Rows: ${currentLog.length}`);
-
             const archiveLog = Parser.parseTrainingLog(this.archiveMd);
-            console.log(`Archive Log Rows: ${archiveLog.length}`); // <--- If this is 0, the header/table structure is wrong
-
             this.logData = [...currentLog, ...archiveLog]; 
-            console.log(`Total Merged Rows: ${this.logData.length}`);
             
             this.setupEventListeners();
-            this.updateStats();
+            this.updateStats(); // This might run before schedule renders, but that's ok
             
             window.addEventListener('hashchange', () => this.handleHashChange());
             this.handleHashChange();
@@ -219,8 +236,7 @@ async init() {
                     content.innerHTML = renderZones(this.planMd);
                 } 
                 else if (view === 'kpi') {
-                    // NEW: Pass the merged logData directly, not the markdown string
-                    const result = renderKPI(this.logData); // This uses the merged array
+                    const result = renderKPI(this.logData); 
                     content.innerHTML = result.html;
                     this.updateDurationAnalysis();
                 } 
@@ -233,7 +249,6 @@ async init() {
                         mdContent = this.planMd;
                     } 
                     else if (view === 'history') {
-                        // Concatenate both for view
                         const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
                         const archive = Parser.getSection(this.archiveMd, "Training History");
                         mdContent = (recent || "") + "\n\n" + (archive || "");
@@ -241,7 +256,22 @@ async init() {
                     else {
                         mdContent = Parser.getSection(this.planMd, sectionTitle);
                     }
-                    content.innerHTML = marked.parse(mdContent || "*Content not found.*");
+                    
+                    // -- START OF CHANGE --
+                    let html = marked.parse(mdContent || "*Content not found.*");
+                    
+                    // Inject stats bar ONLY for schedule view
+                    if (view === 'schedule') {
+                        html = this.getStatsBar() + html;
+                    }
+                    
+                    content.innerHTML = html;
+
+                    // Re-trigger stats update because we just added the HTML elements to the DOM
+                    if (view === 'schedule') {
+                        this.updateStats();
+                    }
+                    // -- END OF CHANGE --
                 }
             } catch (err) {
                 console.error("Render error:", err);
