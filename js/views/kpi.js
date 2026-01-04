@@ -154,7 +154,6 @@ const buildWeeklyVolumeChart = (data) => {
         const day = now.getDay(); // 0 (Sun) to 6 (Sat)
         
         // Calculate the most recent Sunday (Start of Current Week)
-        // If today is Sunday, diff is 0. If Sat, diff is -6.
         const diff = now.getDate() - day; 
         const currentSunday = new Date(now.setDate(diff));
         currentSunday.setHours(0,0,0,0);
@@ -192,54 +191,55 @@ const buildWeeklyVolumeChart = (data) => {
         let barsHtml = '';
         let prevMins = 0; // Tracks 'Actual' of previous week for 10% rule
 
-        // Find Max Volume (Actual OR Planned) to scale chart correctly
+        // Find Max Volume (Across both Planned and Actual)
         const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
 
         buckets.forEach((b, idx) => {
-            const isCurrentWeek = (idx === buckets.length - 1); // Last bucket is current week
+            const isCurrentWeek = (idx === buckets.length - 1); 
             
-            // Value to Display: Use Planned for Current Week, Actual for Past
-            const val = isCurrentWeek ? b.plannedMins : b.actualMins;
-            const height = Math.round((val / maxVol) * 100);
+            const hActual = Math.round((b.actualMins / maxVol) * 100);
+            const hPlan = Math.round((b.plannedMins / maxVol) * 100);
             
-            // 10% Rule Logic
+            // 10% Rule Logic (Calculated on Actuals)
             let barColorClass = 'bg-blue-500'; 
-            let barStyle = '';
             
             if (idx > 0 && prevMins > 0) {
-                const pctChange = (val - prevMins) / prevMins;
+                const pctChange = (b.actualMins - prevMins) / prevMins;
                 if (pctChange > 0.15) barColorClass = 'bg-red-500'; 
                 else if (pctChange > 0.10) barColorClass = 'bg-yellow-500'; 
                 else if (pctChange < -0.20) barColorClass = 'bg-slate-600'; 
                 else barColorClass = 'bg-emerald-500'; 
             }
 
-            // Apply "Planned" Styling for Current Week
+            // Current Week Planned Style (Striped)
+            let actBarStyle = '';
             if (isCurrentWeek) {
-                // Determine base color based on trend, then stripe it
                 let baseColor = barColorClass.replace('bg-', '');
                 const colorMap = {
                     'emerald-500': '#10b981', 'yellow-500': '#eab308', 
                     'red-500': '#ef4444', 'slate-600': '#475569', 'blue-500': '#3b82f6'
                 };
                 const hex = colorMap[baseColor] || '#3b82f6';
-                
-                barColorClass = ''; // Remove solid bg class
-                barStyle = `background: repeating-linear-gradient(45deg, ${hex}, ${hex} 4px, #1e293b 4px, #1e293b 8px); border: 1px solid ${hex};`;
+                barColorClass = ''; 
+                actBarStyle = `background: repeating-linear-gradient(45deg, ${hex}, ${hex} 4px, #1e293b 4px, #1e293b 8px); border: 1px solid ${hex};`;
             }
 
-            if (!isCurrentWeek) prevMins = b.actualMins; // Only update baseline from Actuals
+            if (!isCurrentWeek) prevMins = b.actualMins; 
 
             barsHtml += `
                 <div class="flex flex-col items-center gap-2 flex-1 group relative">
-                    <div class="relative w-full bg-slate-800/50 rounded-t-sm h-48 flex items-end justify-center">
+                    <div class="relative w-full bg-slate-800/30 rounded-t-sm h-48 flex items-end justify-center">
                         
-                        <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-1.5 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 shadow-xl pointer-events-none">
-                            ${isCurrentWeek ? 'Plan: ' : ''}${Math.round(val)} min
+                        <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 shadow-xl pointer-events-none text-center">
+                            <span class="block text-[9px] text-slate-400 font-normal mb-0.5">${b.start.getMonth()+1}/${b.start.getDate()} - ${b.end.getMonth()+1}/${b.end.getDate()}</span>
+                            Plan: ${Math.round(b.plannedMins)}m <span class="text-slate-500">|</span> Act: ${Math.round(b.actualMins)}m
                             <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-r border-b border-slate-600 transform rotate-45"></div>
                         </div>
 
-                        <div style="height: ${height}%; ${barStyle}" class="w-full mx-1 ${barColorClass} opacity-80 hover:opacity-100 transition-all rounded-t-sm"></div>
+                        <div style="height: ${hPlan}%" class="absolute bottom-0 w-full bg-blue-900/20 border border-blue-500/30 rounded-t-sm z-0"></div>
+
+                        <div style="height: ${hActual}%; ${actBarStyle}" class="relative z-10 w-2/3 ${barColorClass} opacity-90 hover:opacity-100 transition-all rounded-t-sm"></div>
+                    
                     </div>
                     <span class="text-[10px] ${isCurrentWeek ? 'text-white font-bold' : 'text-slate-500'} font-mono text-center leading-none">
                         ${b.label}<br>
@@ -256,11 +256,9 @@ const buildWeeklyVolumeChart = (data) => {
                         <i class="fa-solid fa-chart-column text-blue-500"></i> Weekly Volume Trend
                     </h2>
                     <div class="flex gap-4 text-[10px] uppercase font-bold tracking-widest text-slate-500">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 border border-blue-500/50 bg-blue-900/30 rounded-sm"></span> Plan</span>
                         <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Safe</span>
                         <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Spike</span>
-                        <span class="flex items-center gap-1">
-                            <span class="w-2 h-2 rounded-full border border-blue-500" style="background: repeating-linear-gradient(45deg, #3b82f6, #3b82f6 2px, transparent 2px, transparent 4px)"></span> Planned
-                        </span>
                     </div>
                 </div>
                 <div class="flex items-end justify-between gap-2 w-full">${barsHtml}</div>
