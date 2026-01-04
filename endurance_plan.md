@@ -149,13 +149,14 @@ Use these mathematical rules to generate the specific duration and intensity for
 
 | **Status** | **Day** | **Planned Workout** | **Planned Duration** | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** |
 |:---|:---|:---|:---|:---|:---|:---|:---|
-| PLANNED | Sunday | Rest | - | | | Total Recovery. No active training. | 2026-01-04 |
 | PLANNED | Monday | [BIKE] Strength / Hill Focus | 60 mins | | | Zone 3 / Sweet Spot (181-226W). Focus on low cadence (60-70 rpm) to build force. | 2026-01-05 |
 | PLANNED | Tuesday | [SWIM] Technique Focus | 30 mins | | | Zone 1 (RPE 3-4). Drills: Catch & Pull. Focus on smooth rotation. | 2026-01-06 |
 | PLANNED | Wednesday | [RUN] Tempo / Threshold | 45 mins | | | Zone 3 (153-161 bpm) to low Zone 4. Build durability at speed. | 2026-01-07 |
-| PLANNED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | | | **Winter Strategy Reallocation:** +30 mins added. Zone 2 (134-180W). | 2026-01-08 |
+| PLANNED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | | | **Winter Strategy Applied.** Full volume restored. Zone 2 (134-180W). | 2026-01-08 |
 | PLANNED | Friday | [RUN] Aerobic Maintenance | 45 mins | | | Zone 2 (140-152 bpm). Easy aerobic miles. | 2026-01-09 |
 | PLANNED | Saturday | [BIKE] Long Steady Distance | 2.0 Hours | | | Zone 2 (134-180W). **Winter Cap Applied.** Practice fueling every 45m. | 2026-01-10 |
+| PLANNED | Sunday | Rest | - | | | Total Recovery. No active training. | 2026-01-11 |
+
 
 
 
