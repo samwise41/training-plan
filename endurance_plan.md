@@ -233,11 +233,6 @@ Use these mathematical rules to generate the specific duration and intensity for
 
 | **Status**    | **Day**   | **Planned Workout** | **Planned Duration**   | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** 
 |:---|:---|:---|:---|:---|:---|:---|:---|
-| MISSED | Monday | **Swim** | ~500m - 800m | | | Zone 1 (RPE 3-4). **Technique:** Catch & Pull drills. Ignore the clock. Focus on breathing rhythm. | 2025-12-29 |
-| COMPLETED | Tuesday | **Run** | 45 mins | Run | 50 mins | Zone 2 (HR: 140-152). **Aerobic Base:** Flat terrain. Keep cadence high (170+ spm). | 2025-12-30 |
-| COMPLETED | Wednesday | **Bike** | 60 mins | Run | 62 mins | Zone 2 (134W - 180W). **Steady State:** Remain seated. Focus on smooth pedal strokes. | 2025-12-31 |
-| COMPLETED | Thursday | **Prehab** | 30 mins | Hike | 52 mins | Recovery. **Strength:** Banded Leg Raises (2x15), Planks (3x1m). **No Impact.** | 2026-01-01 |
-| COMPLETED | Friday | **Run** | 40 mins | Run | 51 mins | Zone 2 (HR: 140-152). **Volume:** Easy aerobic miles. Focus on maintaining posture in final 10 mins. | 2026-01-02 |
 | COMPLETED| Saturday | **Long Bike** | 2.0 Hours | | | Zone 2 (134W - 160W). **Endurance:** Keep power low. Practice fueling (eat/drink) every 45 mins. | 2026-01-03 |
 | COMPLETED | Fri | [RUN] Volume Run | 40 | [RUN] Morning Run 51 Minutes | 51 | Durat 40 mins. Zone 2 (HR: 140-152 bpm). Focus: Easy. | 2026-01-02 |
 | COMPLETED | Thu | Rest | | | 2 | | 2026-01-01 |
