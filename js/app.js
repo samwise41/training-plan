@@ -1,14 +1,15 @@
+// REMOVED ?v=4 tags to prevent 404 errors
 import { Parser } from './parser.js';
 import { renderKPI, updateDurationAnalysis } from './views/kpi.js';
 import { renderGear, updateGearResult } from './views/gear.js';
 import { renderZones } from './views/zones.js';
 
-console.log("App.js loading...");
+console.log("🚀 App.js Safe Mode Loaded");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
     GEAR_FILE: "Gear.md",
-    HISTORY_FILE: "history_archive.md", // NEW FILE
+    HISTORY_FILE: "history_archive.md", 
     WEATHER_MAP: {
         0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
         45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"], 51: ["Drizzle", "🌦️"], 61: ["Rain", "🌧️"], 63: ["Rain", "🌧️"],
@@ -19,16 +20,89 @@ const CONFIG = {
 const App = {
     planMd: "",
     gearMd: "",
-    archiveMd: "", // Store raw archive text
+    archiveMd: "", 
     logData: [],
     gearData: null,
     currentTemp: null,
     hourlyWeather: null,
 
-async init() {
+    checkSecurity() {
+        console.log("🔒 Checking Security...");
+        const curtain = document.getElementById('security-curtain');
+        const input = document.getElementById('access-code');
+        const btn = document.getElementById('btn-unlock');
+        const errorMsg = document.getElementById('access-error');
+
+        // 1. Check Cookie
+        if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
+            console.log("✅ Cookie found. Unlocking.");
+            if (curtain) curtain.style.display = 'none';
+            return;
+        }
+
+        // 2. Bind Unlock Button
+        if (btn && input) {
+            console.log("🔒 Lock active. Waiting for password.");
+            
+            const unlock = () => {
+                const code = input.value.trim(); // Trim whitespace
+                console.log("🔑 Attempting unlock with:", code);
+                
+                if (code === 'training2026') { 
+                    console.log("🔓 Access Granted!");
+                    document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
+                    curtain.style.opacity = '0';
+                    setTimeout(() => curtain.style.display = 'none', 500);
+                } else {
+                    console.warn("⛔ Access Denied");
+                    input.value = '';
+                    if (errorMsg) errorMsg.classList.remove('hidden');
+                    input.classList.add('border-red-500');
+                    input.classList.remove('border-slate-700');
+                }
+            };
+
+            btn.onclick = unlock; // Direct binding is sometimes more reliable than addEventListener in simple scripts
+            input.onkeypress = (e) => {
+                if (e.key === 'Enter') unlock();
+            };
+            input.oninput = () => {
+                if (errorMsg) errorMsg.classList.add('hidden');
+                input.classList.remove('border-red-500');
+                input.classList.add('border-slate-700');
+            };
+        } else {
+            console.error("❌ Security elements not found in HTML!");
+        }
+    },
+
+    getStatsBar() {
+        return `
+            <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
+                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
+                </div>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
+                    <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
+                </div>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
+                    <div id="stat-event">
+                        <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
+                        <p class="text-[10px] font-normal text-slate-400 mt-1 uppercase" id="stat-event-countdown">--</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    async init() {
+        this.checkSecurity(); // Run first!
         console.log("App init started");
+        
         try {
-            // Fetch ALL 3 Files
             const [planRes, gearRes, archiveRes] = await Promise.all([
                 fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
                 fetch(`./${CONFIG.GEAR_FILE}?t=${Date.now()}`),
@@ -41,36 +115,25 @@ async init() {
             this.planMd = await planRes.text();
             this.gearMd = await gearRes.text();
             
-            // DEBUG: Check if archive loaded
-            if (archiveRes.ok) {
-                this.archiveMd = await archiveRes.text();
-                console.log(`Archive loaded: ${this.archiveMd.length} characters.`);
-            } else {
-                console.warn(`Archive file not found (404). Check spelling of ${CONFIG.HISTORY_FILE}`);
-                this.archiveMd = "";
-            }
+            if (archiveRes.ok) this.archiveMd = await archiveRes.text();
+            else this.archiveMd = "";
 
-            // MERGE LOGIC
             const currentLog = Parser.parseTrainingLog(this.planMd);
-            console.log(`Current Log Rows: ${currentLog.length}`);
-
             const archiveLog = Parser.parseTrainingLog(this.archiveMd);
-            console.log(`Archive Log Rows: ${archiveLog.length}`); // <--- If this is 0, the header/table structure is wrong
-
             this.logData = [...currentLog, ...archiveLog]; 
-            console.log(`Total Merged Rows: ${this.logData.length}`);
             
             this.setupEventListeners();
-            this.updateStats();
-            
             window.addEventListener('hashchange', () => this.handleHashChange());
             this.handleHashChange();
-
             this.fetchWeather().catch(err => console.warn("Weather error:", err));
             
         } catch (e) {
             console.error("Init Error:", e);
-            document.body.innerHTML = `<div class="p-10 text-white"><h1>Error Loading Dashboard</h1><p>${e.message}</p></div>`;
+            // Fallback: If init crashes, UNLOCK the curtain so you aren't stuck
+            const curtain = document.getElementById('security-curtain');
+            if (curtain) {
+                curtain.innerHTML += `<p class='text-red-500 mt-4 font-bold'>System Error: ${e.message}</p>`;
+            }
         }
     },
 
@@ -79,14 +142,7 @@ async init() {
             const el = document.getElementById(id);
             if (el) el.addEventListener('click', () => this.navigate(view));
         };
-
-        bindNav('nav-schedule', 'schedule');
-        bindNav('nav-gear', 'gear');
-        bindNav('nav-kpi', 'kpi');
-        bindNav('nav-zones', 'zones');
-        bindNav('nav-phases', 'phases');
-        bindNav('nav-history', 'history');
-        bindNav('nav-full', 'full');
+        ['schedule', 'gear', 'kpi', 'zones', 'phases', 'history', 'full'].forEach(v => bindNav(`nav-${v}`, v));
 
         const btnOpen = document.getElementById('btn-sidebar-open');
         const btnClose = document.getElementById('btn-sidebar-close');
@@ -101,16 +157,13 @@ async init() {
         try {
             const locRes = await fetch('https://ipapi.co/json/');
             const locData = await locRes.json();
-            
             if (locData.city) {
                 document.getElementById('weather-location').innerText = `${locData.city}, ${locData.region_code}`;
                 const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${locData.latitude}&longitude=${locData.longitude}&current_weather=true&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&forecast_days=1`);
                 const weatherData = await weatherRes.json();
-                
                 this.currentTemp = Math.round(weatherData.current_weather.temperature);
                 this.hourlyWeather = weatherData.hourly || null; 
                 const code = weatherData.current_weather.weathercode;
-
                 const condition = CONFIG.WEATHER_MAP[code] || ["Cloudy", "☁️"];
                 document.getElementById('weather-info').innerText = `${this.currentTemp}°F • ${condition[0]}`;
                 document.getElementById('weather-icon-top').innerText = condition[1];
@@ -123,7 +176,6 @@ async init() {
 
     updateStats() {
         if (!this.planMd) return;
-        
         const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
         const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
         const currentWeek = statusMatch ? statusMatch[2].trim() : "N/A";
@@ -149,7 +201,6 @@ async init() {
             if (dateRange) phaseEl.innerHTML = `${currentPhaseRaw}<span class="block text-xs text-slate-400 mt-1 font-normal">${dateRange}</span>`;
             else phaseEl.innerText = currentPhaseRaw;
         }
-
         const weekEl = document.getElementById('stat-week');
         if (weekEl) weekEl.innerText = currentWeek;
         
@@ -158,7 +209,6 @@ async init() {
             const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
             const nameEl = document.getElementById('stat-event-name');
             const countdownEl = document.getElementById('stat-event-countdown');
-
             if (eventLines.length > 0 && nameEl) {
                 const parts = eventLines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
                 if (parts.length >= 2) {
@@ -219,8 +269,7 @@ async init() {
                     content.innerHTML = renderZones(this.planMd);
                 } 
                 else if (view === 'kpi') {
-                    // NEW: Pass the merged logData directly, not the markdown string
-                    const result = renderKPI(this.logData); // This uses the merged array
+                    const result = renderKPI(this.logData); 
                     content.innerHTML = result.html;
                     this.updateDurationAnalysis();
                 } 
@@ -233,7 +282,6 @@ async init() {
                         mdContent = this.planMd;
                     } 
                     else if (view === 'history') {
-                        // Concatenate both for view
                         const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
                         const archive = Parser.getSection(this.archiveMd, "Training History");
                         mdContent = (recent || "") + "\n\n" + (archive || "");
@@ -241,7 +289,13 @@ async init() {
                     else {
                         mdContent = Parser.getSection(this.planMd, sectionTitle);
                     }
-                    content.innerHTML = marked.parse(mdContent || "*Content not found.*");
+                    
+                    let html = marked.parse(mdContent || "*Content not found.*");
+                    if (view === 'schedule') {
+                        html = this.getStatsBar() + html;
+                    }
+                    content.innerHTML = html;
+                    if (view === 'schedule') this.updateStats();
                 }
             } catch (err) {
                 console.error("Render error:", err);
@@ -275,4 +329,3 @@ async init() {
 
 window.App = App;
 window.onload = () => App.init();
-console.log("App attached to window");

@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <title>Athlete Dashboard</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚲</text></svg>">
     
@@ -14,6 +18,32 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="min-h-screen">
+
+    <div id="security-curtain" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4">
+            <div class="text-4xl mb-4">🔒</div>
+            <h2 class="text-xl font-bold text-white mb-2">Restricted Access</h2>
+            <p class="text-sm text-slate-400 mb-6">Enter access code to view dashboard.</p>
+            
+            <input type="password" id="access-code" placeholder="Enter Code" 
+                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white mb-4 focus:outline-none focus:border-blue-500 text-center tracking-widest placeholder-slate-600 transition-colors">
+            
+            <button id="btn-unlock" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors shadow-lg hover:shadow-blue-500/20">
+                Unlock Dashboard
+            </button>
+            <p id="access-error" class="text-red-400 text-xs mt-4 hidden font-bold"><i class="fa-solid fa-circle-exclamation mr-1"></i> Incorrect code</p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Check cookie immediately. If found, hide curtain BEFORE the page paints.
+            if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
+                var curtain = document.getElementById('security-curtain');
+                if (curtain) curtain.style.display = 'none';
+            }
+        })();
+    </script>
 
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 hidden z-50"></div>
 
@@ -80,24 +110,6 @@
 
     <div class="main-content">
         <main class="max-w-5xl mx-auto px-4 py-8 lg:py-12 pb-20">
-            <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
-                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
-                </div>
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
-                    <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
-                </div>
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
-                    <div id="stat-event">
-                        <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
-                        <p class="text-[10px] font-normal text-slate-400 mt-1 uppercase" id="stat-event-countdown">--</p>
-                    </div>
-                </div>
-            </div>
-
             <div id="content" class="markdown-body opacity-0 transition-opacity duration-500"></div>
         </main>
     </div>
