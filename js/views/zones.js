@@ -133,5 +133,12 @@ export function renderZones(planMd) {
         <div id="zone-grid">
             ${parseZoneTables()}
         </div>
+
+        <div class="text-center mt-12 mb-4">
+            <button onclick="this.outerHTML='<span class=\'text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-600 animate-pulse\'>67</span>'" 
+                    class="px-6 py-2 bg-slate-800 border border-slate-700 rounded-full text-slate-500 hover:text-white hover:border-slate-500 hover:bg-slate-700 transition-all text-[10px] uppercase tracking-widest font-bold shadow-lg">
+                Reveal the Number
+            </button>
+        </div>
     `;
 }
