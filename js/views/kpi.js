@@ -23,7 +23,7 @@ const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
     const c2 = 2 * Math.PI * r2; // ~62.83
     const val2 = (stats60.pct / 100) * c2;
     const dash2 = `${val2} ${c2 - val2}`;
-    const color2 = stats60.pct >= 80 ? '#15803d' : (stats60.pct >= 50 ? '#a16207' : '#b91c1c'); // Slightly darker for contrast
+    const color2 = stats60.pct >= 80 ? '#15803d' : (stats60.pct >= 50 ? '#a16207' : '#b91c1c'); 
 
     return `
         <div class="flex flex-col items-center justify-center w-full py-2">
@@ -143,138 +143,111 @@ const buildFTPChart = () => {
     `;
 };
 
-// --- Weekly Volume Chart Helper ---
+// --- Updated Weekly Volume Chart (Stacked SVG) ---
 const buildWeeklyVolumeChart = (data) => {
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available for volume chart</div>';
         
-        // 1. Setup 8-Week Buckets (Sun-Sat)
+        // 1. Setup Buckets (Last 10 Weeks)
         const buckets = [];
+        const numWeeks = 10;
         const now = new Date();
-        const day = now.getDay(); // 0 (Sun) to 6 (Sat)
-        
-        // Calculate the most recent Sunday (Start of Current Week)
-        const diff = now.getDate() - day; 
-        const currentSunday = new Date(now.setDate(diff));
-        currentSunday.setHours(0,0,0,0);
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
+        const currentMonday = new Date(now.setDate(diff));
+        currentMonday.setHours(0,0,0,0);
 
-        for (let i = 7; i >= 0; i--) {
-            const d = new Date(currentSunday);
-            d.setDate(d.getDate() - (i * 7)); // Start Date (Sunday)
-            
+        for (let i = numWeeks - 1; i >= 0; i--) {
+            const d = new Date(currentMonday);
+            d.setDate(d.getDate() - (i * 7));
             const e = new Date(d);
-            e.setDate(e.getDate() + 6); // End Date (Saturday)
+            e.setDate(e.getDate() + 6);
             e.setHours(23,59,59,999);
             
-            // Label uses the "Week Ending" date (Saturday)
+            const label = `${d.getMonth()+1}/${d.getDate()}`;
             buckets.push({ 
-                start: d, 
-                end: e, 
-                label: `${e.getMonth()+1}/${e.getDate()}`, 
-                actualMins: 0, 
-                plannedMins: 0 
+                start: d, end: e, label, 
+                total: 0, bike: 0, run: 0, swim: 0, other: 0 
             });
         }
 
         // 2. Aggregate Data
         data.forEach(item => {
-            if (!item.date) return;
+            if (!item.date || !item.actualDuration || item.type !== item.actualType) return;
             const t = item.date.getTime();
             const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
             if (bucket) {
-                bucket.actualMins += (item.actualDuration || 0);
-                bucket.plannedMins += (item.plannedDuration || 0);
+                bucket.total += item.actualDuration;
+                if (item.type === 'Bike') bucket.bike += item.actualDuration;
+                else if (item.type === 'Run') bucket.run += item.actualDuration;
+                else if (item.type === 'Swim') bucket.swim += item.actualDuration;
+                else bucket.other += item.actualDuration;
             }
         });
 
-        // 3. Render
-        let barsHtml = '';
+        // 3. SVG Config
+        const width = 800;
+        const height = 300;
+        const pad = { t: 40, b: 50, l: 50, r: 20 };
+        const maxVol = Math.max(...buckets.map(b => b.total)) || 100;
+        const maxVolHours = Math.ceil(maxVol / 60);
         
-        // Find Max Volume (Across both Planned and Actual)
-        const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
+        const getX = (i) => pad.l + (i * ((width - pad.l - pad.r) / numWeeks));
+        const getY = (mins) => height - pad.b - ((mins / (maxVolHours * 60)) * (height - pad.t - pad.b));
 
-        buckets.forEach((b, idx) => {
-            const isCurrentWeek = (idx === buckets.length - 1); 
-            
-            // Heights
-            const hActual = Math.round((b.actualMins / maxVol) * 100);
-            const hPlan = Math.round((b.plannedMins / maxVol) * 100);
-            
-            // Previous week's actual (for comparison)
-            const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
-            
-            // Calculate Growth %
-            // If historical: Actual vs Prev Actual
-            // If current: Plan vs Prev Actual
-            let comparisonVal = isCurrentWeek ? b.plannedMins : b.actualMins;
-            let growthPct = 0;
-            let growthLabel = "--";
-            let colorClass = 'bg-blue-500'; // Default safe/blue
-            let growthColor = "text-slate-400";
-
-            if (idx > 0 && prevActual > 0) {
-                growthPct = (comparisonVal - prevActual) / prevActual;
-                
-                // Color Logic
-                if (growthPct > 0.15) { colorClass = 'bg-red-500'; growthColor = "text-red-400"; }
-                else if (growthPct > 0.10) { colorClass = 'bg-yellow-500'; growthColor = "text-yellow-400"; }
-                else if (growthPct < -0.20) { colorClass = 'bg-slate-600'; growthColor = "text-slate-500"; }
-                else { colorClass = 'bg-emerald-500'; growthColor = "text-emerald-400"; }
-
-                const sign = growthPct > 0 ? '▲' : (growthPct < 0 ? '▼' : '');
-                growthLabel = `${sign} ${Math.round(growthPct * 100)}%`;
-            }
-
-            // Determine Bar Styles
-            let actualBarStyle = '';
-            let actualBarClass = colorClass;
-            let planBarStyle = '';
-            let planBarClass = 'bg-blue-900/20 border border-blue-500/30'; // Default Ghost
-
-            if (isCurrentWeek) {
-                // For CURRENT week:
-                // Plan Bar (Background) gets the "Risk" color + stripes
-                let baseColor = colorClass.replace('bg-', '');
-                const colorMap = {
-                    'emerald-500': '#10b981', 'yellow-500': '#eab308', 
-                    'red-500': '#ef4444', 'slate-600': '#475569', 'blue-500': '#3b82f6'
-                };
-                const hex = colorMap[baseColor] || '#3b82f6';
-                
-                planBarClass = ''; 
-                planBarStyle = `background: repeating-linear-gradient(45deg, ${hex}20, ${hex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${hex};`;
-
-                // Actual Bar (Foreground) is neutral/banked
-                actualBarClass = 'bg-blue-500'; 
-            } else {
-                // For HISTORICAL:
-                // Actual Bar gets the color
-                actualBarClass = colorClass;
-            }
-
-            barsHtml += `
-                <div class="flex flex-col items-center gap-2 flex-1 group relative">
-                    <div class="relative w-full bg-slate-800/30 rounded-t-sm h-48 flex items-end justify-center">
-                        
-                        <div class="absolute -top-16 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 shadow-xl pointer-events-none text-center">
-                            <span class="block text-[9px] text-slate-400 font-normal mb-1">${b.start.getMonth()+1}/${b.start.getDate()} - ${b.end.getMonth()+1}/${b.end.getDate()}</span>
-                            <div class="mb-1">Plan: ${Math.round(b.plannedMins)}m <span class="text-slate-600">|</span> Act: ${Math.round(b.actualMins)}m</div>
-                            <div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1 font-mono">Growth: ${growthLabel}</div>
-                            <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-r border-b border-slate-600 transform rotate-45"></div>
-                        </div>
-
-                        <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full ${planBarClass} rounded-t-sm z-0"></div>
-
-                        <div style="height: ${hActual}%; ${actualBarStyle}" class="relative z-10 w-2/3 ${actualBarClass} opacity-90 hover:opacity-100 transition-all rounded-t-sm"></div>
-                    
-                    </div>
-                    <span class="text-[10px] ${isCurrentWeek ? 'text-white font-bold' : 'text-slate-500'} font-mono text-center leading-none">
-                        ${b.label}<br>
-                        ${isCurrentWeek ? '<span class="text-[8px] text-blue-400">PLAN</span>' : ''}
-                    </span>
-                </div>
+        // 4. Generate Y-Axis (Hours)
+        let yAxisHtml = '';
+        for (let i = 0; i <= maxVolHours; i+=2) {
+            const y = getY(i * 60);
+            yAxisHtml += `
+                <line x1="${pad.l - 5}" y1="${y}" x2="${width - pad.r}" y2="${y}" stroke="#334155" stroke-width="1" opacity="0.3" />
+                <text x="${pad.l - 10}" y="${y + 4}" text-anchor="end" fill="#94a3b8" font-size="11" font-family="monospace">${i}h</text>
             `;
-        });
+        }
+
+        // 5. Generate Stacked Bars
+        let barsHtml = buckets.map((b, i) => {
+            const x = getX(i);
+            const barWidth = 40;
+            
+            // Stack Height Calculations
+            const hTotal = (height - pad.b) - getY(b.total);
+            const yBase = height - pad.b;
+
+            const hSwim = (b.swim / b.total) * hTotal || 0;
+            const hRun = (b.run / b.total) * hTotal || 0;
+            const hBike = (b.bike / b.total) * hTotal || 0;
+            const hOther = (b.other / b.total) * hTotal || 0;
+
+            const ySwim = yBase - hSwim;
+            const yRun = ySwim - hRun;
+            const yBike = yRun - hBike;
+            const yOther = yBike - hOther; // Topmost if other exists
+
+            // Colors
+            const cSwim = '#06b6d4'; // Cyan
+            const cRun = '#10b981';  // Emerald
+            const cBike = '#3b82f6'; // Blue
+            const cOther = '#a855f7'; // Purple
+
+            // Total Label
+            const totalHours = (b.total / 60).toFixed(1);
+            const labelHtml = b.total > 0 
+                ? `<text x="${x}" y="${(b.other > 0 ? yOther : yBike) - 5}" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${totalHours}h</text>`
+                : '';
+
+            return `
+                <g class="hover:opacity-80 transition-opacity">
+                    <rect x="${x - barWidth/2}" y="${ySwim}" width="${barWidth}" height="${hSwim}" fill="${cSwim}" />
+                    <rect x="${x - barWidth/2}" y="${yRun}" width="${barWidth}" height="${hRun}" fill="${cRun}" />
+                    <rect x="${x - barWidth/2}" y="${yBike}" width="${barWidth}" height="${hBike}" fill="${cBike}" />
+                    <rect x="${x - barWidth/2}" y="${yOther}" width="${barWidth}" height="${hOther}" fill="${cOther}" />
+                    
+                    ${labelHtml}
+                    <text x="${x}" y="${height - 15}" text-anchor="middle" fill="#94a3b8" font-size="10">${b.label}</text>
+                </g>
+            `;
+        }).join('');
 
         return `
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
@@ -282,13 +255,16 @@ const buildWeeklyVolumeChart = (data) => {
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
                         <i class="fa-solid fa-chart-column text-blue-500"></i> Weekly Volume Trend
                     </h2>
-                    <div class="flex gap-4 text-[10px] uppercase font-bold tracking-widest text-slate-500">
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 border border-blue-500/50 bg-blue-900/30 rounded-sm"></span> Plan</span>
-                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Safe</span>
-                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Spike</span>
+                    <div class="flex gap-3 text-[10px] uppercase font-bold tracking-widest text-slate-500">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-blue-500"></span> Bike</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-emerald-500"></span> Run</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-cyan-500"></span> Swim</span>
                     </div>
                 </div>
-                <div class="flex items-start justify-between gap-2 w-full">${barsHtml}</div>
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
+                    ${yAxisHtml}
+                    ${barsHtml}
+                </svg>
             </div>
         `;
     } catch (e) {
