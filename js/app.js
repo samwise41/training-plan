@@ -1,10 +1,10 @@
-// NEW: Updated to v=4
-import { Parser } from './parser.js?v=4';
-import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=4';
-import { renderGear, updateGearResult } from './views/gear.js?v=4';
-import { renderZones } from './views/zones.js?v=4';
+// REMOVED ?v=4 tags to prevent 404 errors
+import { Parser } from './parser.js';
+import { renderKPI, updateDurationAnalysis } from './views/kpi.js';
+import { renderGear, updateGearResult } from './views/gear.js';
+import { renderZones } from './views/zones.js';
 
-console.log("App.js loading - Version 4.0 (Security Curtain)");
+console.log("🚀 App.js Safe Mode Loaded");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
@@ -26,32 +26,35 @@ const App = {
     currentTemp: null,
     hourlyWeather: null,
 
-    // --- NEW: Security Logic ---
     checkSecurity() {
+        console.log("🔒 Checking Security...");
         const curtain = document.getElementById('security-curtain');
         const input = document.getElementById('access-code');
         const btn = document.getElementById('btn-unlock');
         const errorMsg = document.getElementById('access-error');
 
-        // 1. Check if we already have the cookie
+        // 1. Check Cookie
         if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
-            if (curtain) curtain.style.display = 'none'; // Cookie found, remove curtain immediately
+            console.log("✅ Cookie found. Unlocking.");
+            if (curtain) curtain.style.display = 'none';
             return;
         }
 
-        // 2. Logic to handle the unlock
+        // 2. Bind Unlock Button
         if (btn && input) {
+            console.log("🔒 Lock active. Waiting for password.");
+            
             const unlock = () => {
-                const code = input.value;
-                // --- PASSWORD SETTING HERE ---
+                const code = input.value.trim(); // Trim whitespace
+                console.log("🔑 Attempting unlock with:", code);
+                
                 if (code === 'training2026') { 
-                    // Set Cookie (Max-Age = 10 Years)
+                    console.log("🔓 Access Granted!");
                     document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
-                    
-                    // Fade out curtain
                     curtain.style.opacity = '0';
                     setTimeout(() => curtain.style.display = 'none', 500);
                 } else {
+                    console.warn("⛔ Access Denied");
                     input.value = '';
                     if (errorMsg) errorMsg.classList.remove('hidden');
                     input.classList.add('border-red-500');
@@ -59,16 +62,17 @@ const App = {
                 }
             };
 
-            btn.addEventListener('click', unlock);
-            input.addEventListener('keypress', (e) => {
+            btn.onclick = unlock; // Direct binding is sometimes more reliable than addEventListener in simple scripts
+            input.onkeypress = (e) => {
                 if (e.key === 'Enter') unlock();
-            });
-            // Clear error on type
-            input.addEventListener('input', () => {
+            };
+            input.oninput = () => {
                 if (errorMsg) errorMsg.classList.add('hidden');
                 input.classList.remove('border-red-500');
                 input.classList.add('border-slate-700');
-            });
+            };
+        } else {
+            console.error("❌ Security elements not found in HTML!");
         }
     },
 
@@ -95,10 +99,9 @@ const App = {
     },
 
     async init() {
-        // Run security check first
-        this.checkSecurity();
-
+        this.checkSecurity(); // Run first!
         console.log("App init started");
+        
         try {
             const [planRes, gearRes, archiveRes] = await Promise.all([
                 fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
@@ -112,28 +115,25 @@ const App = {
             this.planMd = await planRes.text();
             this.gearMd = await gearRes.text();
             
-            if (archiveRes.ok) {
-                this.archiveMd = await archiveRes.text();
-                console.log(`Archive loaded: ${this.archiveMd.length} characters.`);
-            } else {
-                console.warn(`Archive file not found (404). Check spelling of ${CONFIG.HISTORY_FILE}`);
-                this.archiveMd = "";
-            }
+            if (archiveRes.ok) this.archiveMd = await archiveRes.text();
+            else this.archiveMd = "";
 
             const currentLog = Parser.parseTrainingLog(this.planMd);
             const archiveLog = Parser.parseTrainingLog(this.archiveMd);
             this.logData = [...currentLog, ...archiveLog]; 
             
             this.setupEventListeners();
-            
             window.addEventListener('hashchange', () => this.handleHashChange());
             this.handleHashChange();
-
             this.fetchWeather().catch(err => console.warn("Weather error:", err));
             
         } catch (e) {
             console.error("Init Error:", e);
-            document.body.innerHTML = `<div class="p-10 text-white"><h1>Error Loading Dashboard</h1><p>${e.message}</p></div>`;
+            // Fallback: If init crashes, UNLOCK the curtain so you aren't stuck
+            const curtain = document.getElementById('security-curtain');
+            if (curtain) {
+                curtain.innerHTML += `<p class='text-red-500 mt-4 font-bold'>System Error: ${e.message}</p>`;
+            }
         }
     },
 
@@ -142,14 +142,7 @@ const App = {
             const el = document.getElementById(id);
             if (el) el.addEventListener('click', () => this.navigate(view));
         };
-
-        bindNav('nav-schedule', 'schedule');
-        bindNav('nav-gear', 'gear');
-        bindNav('nav-kpi', 'kpi');
-        bindNav('nav-zones', 'zones');
-        bindNav('nav-phases', 'phases');
-        bindNav('nav-history', 'history');
-        bindNav('nav-full', 'full');
+        ['schedule', 'gear', 'kpi', 'zones', 'phases', 'history', 'full'].forEach(v => bindNav(`nav-${v}`, v));
 
         const btnOpen = document.getElementById('btn-sidebar-open');
         const btnClose = document.getElementById('btn-sidebar-close');
@@ -164,16 +157,13 @@ const App = {
         try {
             const locRes = await fetch('https://ipapi.co/json/');
             const locData = await locRes.json();
-            
             if (locData.city) {
                 document.getElementById('weather-location').innerText = `${locData.city}, ${locData.region_code}`;
                 const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${locData.latitude}&longitude=${locData.longitude}&current_weather=true&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&forecast_days=1`);
                 const weatherData = await weatherRes.json();
-                
                 this.currentTemp = Math.round(weatherData.current_weather.temperature);
                 this.hourlyWeather = weatherData.hourly || null; 
                 const code = weatherData.current_weather.weathercode;
-
                 const condition = CONFIG.WEATHER_MAP[code] || ["Cloudy", "☁️"];
                 document.getElementById('weather-info').innerText = `${this.currentTemp}°F • ${condition[0]}`;
                 document.getElementById('weather-icon-top').innerText = condition[1];
@@ -186,7 +176,6 @@ const App = {
 
     updateStats() {
         if (!this.planMd) return;
-        
         const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
         const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
         const currentWeek = statusMatch ? statusMatch[2].trim() : "N/A";
@@ -212,7 +201,6 @@ const App = {
             if (dateRange) phaseEl.innerHTML = `${currentPhaseRaw}<span class="block text-xs text-slate-400 mt-1 font-normal">${dateRange}</span>`;
             else phaseEl.innerText = currentPhaseRaw;
         }
-
         const weekEl = document.getElementById('stat-week');
         if (weekEl) weekEl.innerText = currentWeek;
         
@@ -221,7 +209,6 @@ const App = {
             const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
             const nameEl = document.getElementById('stat-event-name');
             const countdownEl = document.getElementById('stat-event-countdown');
-
             if (eventLines.length > 0 && nameEl) {
                 const parts = eventLines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
                 if (parts.length >= 2) {
@@ -303,20 +290,12 @@ const App = {
                         mdContent = Parser.getSection(this.planMd, sectionTitle);
                     }
                     
-                    // -- HTML Generation --
                     let html = marked.parse(mdContent || "*Content not found.*");
-                    
-                    // Inject stats bar ONLY for schedule view
                     if (view === 'schedule') {
                         html = this.getStatsBar() + html;
                     }
-                    
                     content.innerHTML = html;
-
-                    // Re-trigger stats update because we just added the HTML elements to the DOM
-                    if (view === 'schedule') {
-                        this.updateStats();
-                    }
+                    if (view === 'schedule') this.updateStats();
                 }
             } catch (err) {
                 console.error("Render error:", err);
