@@ -30,7 +30,6 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 ### Health & Injury Management
 
-* **IT Band:** Has had IT band issues in the past. Is not currently causing an issue and is well managed. No need to alter the plan for this unless athlete mentions issues.
 * **General:** No current limitations.
 
 ### Training Availability
