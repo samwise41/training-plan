@@ -2,7 +2,8 @@ import { Parser } from './parser.js';
 import { renderKPI, updateDurationAnalysis } from './views/kpi.js'; 
 import { renderGear, updateGearResult } from './views/gear.js';
 import { renderZones } from './views/zones.js';
-import { renderRoadmap } from './views/roadmap.js'; // Ensure your roadmap.js is in js/views/
+import { renderRoadmap } from './views/roadmap.js'; 
+import { renderDashboard } from './views/dashboard.js'; // NEW IMPORT
 
 console.log("🚀 App.js Loaded");
 
@@ -32,13 +33,11 @@ const App = {
         const btn = document.getElementById('btn-unlock');
         const errorMsg = document.getElementById('access-error');
 
-        // Check Cookie
         if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
             if (curtain) curtain.style.display = 'none';
             return;
         }
 
-        // Bind Unlock
         if (btn && input) {
             const unlock = () => {
                 const code = input.value.trim();
@@ -105,7 +104,7 @@ const App = {
             
             this.setupEventListeners();
             window.addEventListener('hashchange', () => this.handleHashChange());
-            this.handleHashChange(); // Load initial view
+            this.handleHashChange(); 
             this.fetchWeather();
             
         } catch (e) {
@@ -114,7 +113,6 @@ const App = {
     },
 
     setupEventListeners() {
-        // Map Nav IDs to Hash Views
         const navMap = {
             'nav-dashboard': 'dashboard',
             'nav-trends': 'trends',
@@ -191,7 +189,6 @@ const App = {
 
     handleHashChange() {
         const hash = window.location.hash.substring(1); 
-        // Default to dashboard if hash is empty or unknown
         const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones'];
         const view = validViews.includes(hash) ? hash : 'dashboard';
         this.renderView(view);
@@ -213,7 +210,6 @@ const App = {
         const titleEl = document.getElementById('header-title-dynamic');
         if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
 
-        // Update active nav state
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
         const navBtn = document.getElementById(`nav-${view}`);
         if (navBtn) navBtn.classList.add('active');
@@ -241,23 +237,16 @@ const App = {
                     content.innerHTML = renderRoadmap(this.planMd);
                 }
                 else if (view === 'logbook') {
-                    // Combine Recent + Archive for Logbook view
                     const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
                     const archive = Parser.getSection(this.archiveMd, "Training History");
                     const mdContent = (recent || "") + "\n\n" + (archive || "");
                     const safeMarked = window.marked ? window.marked.parse : (t) => t;
-                    // Wrap in markdown-body for styling
                     content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                 }
                 else {
                     // DEFAULT: Dashboard (Weekly Schedule)
-                    const mdContent = Parser.getSection(this.planMd, "Weekly Schedule");
-                    const safeMarked = window.marked ? window.marked.parse : (t) => t;
-                    
-                    // Render Stats Bar + Schedule Table
-                    const html = this.getStatsBar() + 
-                                 `<div class="markdown-body">${safeMarked(mdContent || "*Schedule not found.*")}</div>`;
-                    
+                    // NEW: We use renderDashboard() instead of raw Markdown
+                    const html = this.getStatsBar() + renderDashboard(this.planMd);
                     content.innerHTML = html;
                     this.updateStats();
                 }
@@ -267,7 +256,6 @@ const App = {
             }
             content.classList.remove('opacity-0');
             
-            // Close sidebar on mobile after navigation
             if (window.innerWidth < 1024) {
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar.classList.contains('sidebar-open')) this.toggleSidebar();
