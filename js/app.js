@@ -1,12 +1,11 @@
+import { Parser } from './parser.js?v=29';
+import { renderTrends, updateDurationAnalysis } from './views/trends.js?v=29'; 
+import { renderGear, updateGearResult } from './views/gear.js?v=29';
+import { renderZones } from './views/zones.js?v=29';
+import { renderRoadmap } from './views/roadmap.js?v=29'; 
+import { renderDashboard } from './views/dashboard.js?v=29'; 
 
-import { Parser } from './parser.js?v=28';
-import { renderTrends, updateDurationAnalysis } from './views/trends.js?v=28'; 
-import { renderGear, updateGearResult } from './views/gear.js?v=28';
-import { renderZones } from './views/zones.js?v=28';
-import { renderRoadmap } from './views/roadmap.js?v=28'; 
-import { renderDashboard } from './views/dashboard.js?v=28'; 
-
-console.log("🚀 App.js Loaded - Version 28");
+console.log("🚀 App.js Loaded - Dashboard Cleanup v29");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
@@ -69,16 +68,15 @@ const App = {
     },
 
     getStatsBar() {
+        // CHANGED: Grid is now 2 columns instead of 3
         return `
-            <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+            <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+                
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
-                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase / Week</p>
+                    <p class="text-lg font-semibold text-blue-400 truncate" id="stat-phase">--</p>
                 </div>
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
-                    <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
-                </div>
+
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
                     <div id="stat-event">
@@ -86,6 +84,7 @@ const App = {
                         <p class="text-[10px] font-normal text-slate-400 mt-1 uppercase" id="stat-event-countdown">--</p>
                     </div>
                 </div>
+
             </div>
         `;
     },
@@ -163,16 +162,19 @@ const App = {
 
     updateStats() {
         if (!this.planMd) return;
+        
+        // CHANGED: Combined Regex Logic
         const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
         const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
-        const currentWeek = statusMatch ? statusMatch[2].trim() : "N/A";
+        const currentWeek = statusMatch ? statusMatch[2].trim() : "";
         
+        // Create Combined String
+        const combinedText = currentWeek ? `${currentPhaseRaw} • ${currentWeek}` : currentPhaseRaw;
+
         const phaseEl = document.getElementById('stat-phase');
-        if (phaseEl) phaseEl.innerText = currentPhaseRaw;
+        if (phaseEl) phaseEl.innerText = combinedText;
         
-        const weekEl = document.getElementById('stat-week');
-        if (weekEl) weekEl.innerText = currentWeek;
-        
+        // Event Logic
         const eventSection = Parser.getSection(this.planMd, "Event Schedule");
         if (eventSection) {
             const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
@@ -235,7 +237,6 @@ const App = {
                     content.innerHTML = renderZones(this.planMd);
                 } 
                 else if (view === 'trends') {
-                    // FIXED: Calls renderTrends instead of renderKPI
                     const result = renderTrends(this.logData); 
                     content.innerHTML = result.html;
                     this.updateDurationAnalysis();
