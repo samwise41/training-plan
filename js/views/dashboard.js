@@ -1,33 +1,33 @@
 import { Parser } from '../parser.js';
 
 export function renderDashboard(planMd) {
-    // 1. Extract Schedule Data using our parser
+    // 1. Extract Schedule Data
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
     if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
 
-    // Use the internal table parser to get structured data
+    // Parse Workouts
     const workouts = Parser._parseTableBlock(scheduleSection);
     
-    // 2. Sort by Date (just in case)
+    // Sort by Date
     workouts.sort((a, b) => a.date - b.date);
 
-    // 3. Helpers for styling
+    // Styling Helpers
     const getIcon = (type) => {
-        if (type === 'Bike') return 'fa-bicycle text-blue-400';
-        if (type === 'Run') return 'fa-person-running text-emerald-400';
-        if (type === 'Swim') return 'fa-person-swimming text-cyan-400';
-        if (type === 'Strength') return 'fa-dumbbell text-purple-400';
-        return 'fa-stopwatch text-slate-400';
+        if (type === 'Bike') return 'fa-bicycle text-blue-500';
+        if (type === 'Run') return 'fa-person-running text-emerald-500';
+        if (type === 'Swim') return 'fa-person-swimming text-cyan-500';
+        if (type === 'Strength') return 'fa-dumbbell text-purple-500';
+        return 'fa-stopwatch text-slate-500';
     };
 
-    const getBorderColor = (type) => {
-        if (type === 'Bike') return 'border-l-blue-500';
-        if (type === 'Run') return 'border-l-emerald-500';
-        if (type === 'Swim') return 'border-l-cyan-500';
-        return 'border-l-slate-500';
+    const getTypeColor = (type) => {
+        if (type === 'Bike') return 'text-blue-500';
+        if (type === 'Run') return 'text-emerald-500';
+        if (type === 'Swim') return 'text-cyan-500';
+        return 'text-slate-400';
     };
 
-    // 4. Build Cards HTML
+    // 2. Build Grid
     let cardsHtml = '';
     
     // Group by Date to handle multiple workouts per day
@@ -44,70 +44,64 @@ export function renderDashboard(planMd) {
         const dailyWorkouts = grouped[dateKey];
         const dateObj = dailyWorkouts[0].date;
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-        const shortDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         
-        // Check if today
+        // Highlight Today
         const today = new Date();
         const isToday = dateObj.getDate() === today.getDate() && 
                         dateObj.getMonth() === today.getMonth() && 
                         dateObj.getFullYear() === today.getFullYear();
+        
+        const cardBorder = isToday ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900' : 'border border-slate-700 hover:border-slate-600';
 
-        const todayClass = isToday ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900' : '';
-
-        // Render Day Header
-        cardsHtml += `
-            <div class="mb-4 break-inside-avoid">
-                <div class="flex items-center gap-2 mb-2 px-1">
-                    <span class="text-sm font-bold text-slate-200 uppercase tracking-widest">${dayName}</span>
-                    <span class="text-xs font-mono text-slate-500">${shortDate}</span>
-                    ${isToday ? '<span class="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Today</span>' : ''}
-                </div>
-                <div class="space-y-3">
-        `;
-
-        // Render Cards for this day
         dailyWorkouts.forEach(w => {
-            const isCompleted = w.completed;
-            const statusIcon = isCompleted 
-                ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' 
-                : '<i class="fa-regular fa-circle text-slate-600"></i>';
-            
-            const opacity = isCompleted ? 'opacity-60 grayscale' : 'opacity-100';
             const notes = w.notes ? w.notes.replace(/\[.*?\]/g, '') : "No specific notes.";
+            
+            // Determine "Big Number" text
+            let displayDuration = w.plannedDuration;
+            let displayUnit = "mins";
+            let statusText = "PLANNED";
+            let statusColor = "text-white"; // Default white for planned
+
+            // Handle Completed State
+            if (w.completed) {
+                statusText = "COMPLETED";
+                statusColor = "text-emerald-500";
+                // Optionally show actual duration if you prefer
+                // displayDuration = w.actualDuration > 0 ? w.actualDuration : w.plannedDuration;
+            } else if (w.type === 'Rest') {
+                displayDuration = "--";
+                statusText = "REST DAY";
+                statusColor = "text-slate-500";
+            }
 
             cardsHtml += `
-                <div class="relative bg-slate-800 border border-slate-700 rounded-lg p-4 shadow-sm hover:border-slate-600 transition-colors border-l-4 ${getBorderColor(w.type)} ${todayClass} ${opacity}">
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid ${getIcon(w.type)} text-lg w-6 text-center"></i>
-                            <h4 class="font-bold text-white text-md leading-tight">${w.planName}</h4>
+                <div class="bg-slate-800 rounded-xl p-6 shadow-lg relative overflow-hidden transition-all ${cardBorder}">
+                    
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">${dayName}</span>
+                        <i class="fa-solid ${getIcon(w.type)} text-xl"></i>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-4xl font-bold text-white tracking-tight">${displayDuration}</span>
+                            <span class="text-lg font-medium text-slate-400 font-mono">${displayUnit}</span>
                         </div>
-                        <div class="text-lg">${statusIcon}</div>
+                        <div class="text-sm font-bold ${statusColor} uppercase tracking-widest mt-1">${statusText}</div>
                     </div>
 
-                    <div class="flex items-center gap-4 mb-3 text-xs text-slate-400 font-mono">
-                        <span class="flex items-center gap-1.5 bg-slate-900/50 px-2 py-1 rounded">
-                            <i class="fa-regular fa-clock"></i> ${w.plannedDuration} min
-                        </span>
-                        ${w.type === 'Bike' ? '<span class="flex items-center gap-1.5"><i class="fa-solid fa-bolt"></i> Power</span>' : ''}
-                        ${w.type === 'Run' ? '<span class="flex items-center gap-1.5"><i class="fa-solid fa-heart-pulse"></i> HR</span>' : ''}
+                    <div class="h-px bg-slate-700 w-full mb-4"></div>
+
+                    <div>
+                        <p class="text-xs text-slate-400 leading-relaxed font-sans">
+                            <span class="${getTypeColor(w.type)} font-bold mb-1 block">${w.planName}</span>
+                            ${notes}
+                        </p>
                     </div>
 
-                    <div class="bg-slate-900/50 rounded p-3 border border-slate-700/50">
-                        <p class="text-xs text-slate-300 leading-relaxed font-sans">${notes}</p>
-                    </div>
-
-                    ${w.actualDuration > 0 ? `
-                        <div class="mt-3 pt-2 border-t border-slate-700/50 flex justify-between items-center">
-                            <span class="text-[10px] font-bold text-slate-500 uppercase">Actual</span>
-                            <span class="text-xs font-mono text-emerald-400">${w.actualDuration} min</span>
-                        </div>
-                    ` : ''}
                 </div>
             `;
         });
-
-        cardsHtml += `</div></div>`; // Close Day Wrapper
     });
 
     return `
