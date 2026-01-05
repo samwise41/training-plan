@@ -1,4 +1,4 @@
-// Helper to build reusable charts (moved from old kpi.js)
+// Helper to build reusable charts (moved from old kpi.js) trends.js not needed anymore.
 const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend') => {
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
