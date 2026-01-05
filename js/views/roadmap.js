@@ -1,7 +1,7 @@
 import { Parser } from '../parser.js';
 
 // ==========================================
-// 1. UTILITY: LIGHTWEIGHT MARKDOWN PARSER (FIXED)
+// 1. UTILITY: LIGHTWEIGHT MARKDOWN PARSER
 // ==========================================
 const simpleRender = (text) => {
     if (!text) return '';
@@ -16,14 +16,12 @@ const simpleRender = (text) => {
 
         // --- 1. TABLE HANDLING ---
         if (trimmed.startsWith('|')) {
-            // Close list if open
             if (listType) { html += (listType === 'ul' ? '</ul>' : '</ol>'); listType = null; }
 
             if (!inTable) {
                 html += '<div class="overflow-x-auto mb-6"><table class="w-full text-left border-collapse border border-slate-700 text-sm">';
                 inTable = true;
             }
-            // Skip separator rows (e.g. |---|---|)
             if (trimmed.includes('---')) return;
 
             const cells = trimmed.split('|').filter(c => c.trim() !== '');
@@ -35,32 +33,26 @@ const simpleRender = (text) => {
                 html += `<${tag} class="border border-slate-600 p-3 ${style}">${parseInline(cell)}</${tag}>`;
             });
             html += '</tr>';
-            return; // Done with this line
+            return;
         } 
         
-        // If we hit here, we are NOT in a table row. Close table if it was open.
         if (inTable) { html += '</table></div>'; inTable = false; }
 
         // --- 2. LIST HANDLING ---
-        
-        // Unordered List (* or -)
         if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-            if (listType === 'ol') { html += '</ol>'; listType = null; } // Switch type
+            if (listType === 'ol') { html += '</ol>'; listType = null; }
             if (!listType) { html += '<ul class="list-disc pl-6 space-y-1 mb-4 text-slate-300">'; listType = 'ul'; }
             html += `<li>${parseInline(trimmed.slice(2))}</li>`;
         } 
-        // Ordered List (1., 2., etc)
         else if (/^\d+\./.test(trimmed)) {
-            if (listType === 'ul') { html += '</ul>'; listType = null; } // Switch type
+            if (listType === 'ul') { html += '</ul>'; listType = null; }
             if (!listType) { html += '<ol class="list-decimal pl-6 space-y-1 mb-4 text-slate-300">'; listType = 'ol'; }
             html += `<li>${parseInline(trimmed.replace(/^\d+\.\s*/, ''))}</li>`;
         } 
         // --- 3. STANDARD CONTENT ---
         else {
-            // Close any open lists
             if (listType) { html += (listType === 'ul' ? '</ul>' : '</ol>'); listType = null; }
 
-            // Headers
             if (trimmed.startsWith('# ')) {
                 html += `<h1 class="text-3xl font-bold text-white mt-10 mb-6 border-b border-slate-700 pb-2">${parseInline(trimmed.slice(2))}</h1>`;
             } else if (trimmed.startsWith('## ')) {
@@ -68,7 +60,6 @@ const simpleRender = (text) => {
             } else if (trimmed.startsWith('### ')) {
                 html += `<h3 class="text-xl font-bold text-blue-400 mt-6 mb-3">${parseInline(trimmed.slice(4))}</h3>`;
             }
-            // Empty Lines / Paragraphs
             else if (trimmed === '') {
                 html += '<div class="h-4"></div>';
             } else {
@@ -77,20 +68,18 @@ const simpleRender = (text) => {
         }
     });
 
-    // Cleanup at end of file
     if (inTable) html += '</table></div>';
     if (listType) html += (listType === 'ul' ? '</ul>' : '</ol>');
     
     return html;
 };
 
-// Helper for bold/italic/code inside lines
 const parseInline = (text) => {
     if (!text) return '';
     return text
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>') // Bold
-        .replace(/\*(.*?)\*/g, '<em class="text-slate-400">$1</em>') // Italic
-        .replace(/`(.*?)`/g, '<code class="bg-slate-700 px-1 py-0.5 rounded text-orange-300 font-mono text-xs">$1</code>'); // Code
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em class="text-slate-400">$1</em>')
+        .replace(/`(.*?)`/g, '<code class="bg-slate-700 px-1 py-0.5 rounded text-orange-300 font-mono text-xs">$1</code>');
 };
 
 // ==========================================
@@ -110,9 +99,7 @@ const buildVolumeGraph = () => {
         weeks.push({ w: wNum, vol, sat, type, phase, dateStr });
     };
 
-    // Calculate Data (Base -> Build -> Peak)
-    let w1 = 6.0;
-    let w2 = w1 * 1.05; let w3 = w2 * 1.05; let w4 = w3 * 0.60;
+    let w1 = 6.0; let w2 = w1 * 1.05; let w3 = w2 * 1.05; let w4 = w3 * 0.60;
     addWeek(1, w1, block1_sat, 'normal', "Base");
     addWeek(2, w2, block1_sat, 'normal', "Base");
     addWeek(3, w3, block1_sat, 'normal', "Base");
@@ -130,7 +117,6 @@ const buildVolumeGraph = () => {
     addWeek(11, w11, block3_sat, 'normal', "Peak");
     addWeek(12, w12, 2.0, 'deload', "Peak");
 
-    // SVG Drawing
     const width = 800; const height = 400; 
     const pad = { t: 40, b: 80, l: 60, r: 20 };
     const maxVol = 12; 
@@ -159,7 +145,7 @@ const buildVolumeGraph = () => {
     let dotsHtml = weeks.map((d, i) => `<circle cx="${getX(i)}" cy="${getY(d.sat)}" r="4" fill="#1e293b" stroke="#f59e0b" stroke-width="2"><title>Sat: ${d.sat}h</title></circle>`).join('');
 
     return `
-        <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-6 shadow-lg mb-10">
+        <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-6 shadow-lg mb-10 select-none">
              <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
                 <h2 class="text-xl font-bold text-white flex items-center gap-2">
                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
@@ -182,7 +168,7 @@ const buildVolumeGraph = () => {
 };
 
 // ==========================================
-// 3. PHASE CHART (Gantt Style)
+// 3. PHASE CHART (Mobile Fixed)
 // ==========================================
 const buildPhaseChart = (planMd) => {
     const phasesSection = Parser.getSection(planMd, "Periodization Phases");
@@ -203,22 +189,37 @@ const buildPhaseChart = (planMd) => {
         if (p.name.includes("Build")) { barColor = "bg-emerald-600"; icon = "fa-chart-line"; }
         if (p.name.includes("Peak")) { barColor = "bg-purple-600"; icon = "fa-flag-checkered"; }
         if (p.name.includes("Recovery")) { barColor = "bg-slate-500"; icon = "fa-bed"; }
+        
         const activeClass = isCurrent ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-900" : "opacity-75";
 
+        // *** UPDATED LAYOUT FOR MOBILE ***
         html += `
-            <div class="relative flex items-center bg-slate-800 rounded-lg p-4 border border-slate-700 ${activeClass}">
-                <div class="w-12 h-12 rounded-lg ${barColor} flex items-center justify-center text-white text-xl shadow-lg shrink-0 mr-4"><i class="fa-solid ${icon}"></i></div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex justify-between items-start mb-1">
-                        <h3 class="text-white font-bold truncate pr-4">${p.name}</h3>
-                        <span class="text-xs font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded border border-slate-700 whitespace-nowrap">${p.weeks}</span>
+            <div class="relative flex flex-col sm:flex-row items-start sm:items-center bg-slate-800 rounded-lg p-4 border border-slate-700 ${activeClass} gap-4">
+                
+                <div class="w-12 h-12 rounded-lg ${barColor} flex items-center justify-center text-white text-xl shadow-lg shrink-0">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+                
+                <div class="flex-1 w-full min-w-0">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
+                        <h3 class="text-white font-bold text-lg leading-tight">${parseInline(p.name)}</h3>
+                        <span class="text-xs font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded border border-slate-700 w-fit whitespace-nowrap">
+                            ${p.weeks}
+                        </span>
                     </div>
-                    <div class="flex justify-between items-end">
-                        <p class="text-sm text-slate-300 truncate mr-4">${p.focus}</p>
-                        <span class="text-xs text-slate-500 font-mono">${p.dates}</span>
+                    
+                    <div class="space-y-2">
+                        <div class="inline-block bg-slate-700/50 px-2 py-1 rounded border border-slate-600 text-xs sm:text-sm text-slate-300">
+                             ${parseInline(p.focus)}
+                        </div>
+                        
+                        <div class="text-xs text-slate-500 font-mono block">
+                            ${p.dates}
+                        </div>
                     </div>
                 </div>
-                ${isCurrent ? '<div class="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-full border-2 border-slate-900 animate-pulse"></div>' : ''}
+
+                ${isCurrent ? '<div class="absolute top-2 right-2 w-3 h-3 bg-blue-500 rounded-full border-2 border-slate-900 animate-pulse"></div>' : ''}
             </div>`;
     });
     return html + `</div>`;
@@ -230,11 +231,8 @@ const buildPhaseChart = (planMd) => {
 export function renderRoadmap(planMd) {
     if (!planMd) return '<div class="p-8 text-center text-slate-500">No plan loaded.</div>';
 
-    // 1. Graph
     const volumeGraphHtml = buildVolumeGraph();
-    // 2. Phases
     const phasesHtml = buildPhaseChart(planMd);
-    // 3. Full Plan (Parsed with our custom parser)
     const fullPlanHtml = simpleRender(planMd);
 
     return `
