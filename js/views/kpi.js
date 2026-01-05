@@ -1,4 +1,4 @@
-// Removed unused Parser import to prevent load errors
+// js/views/kpi.js
 
 let logData = [];
 
@@ -96,7 +96,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
         
-        // 1. Setup Buckets
+        // 1. Setup Buckets (THIS PART WAS LIKELY MISSING)
         const buckets = [];
         const now = new Date();
         const day = now.getDay();
@@ -135,39 +135,31 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             const hActual = Math.round((b.actualMins / maxVol) * 100);
             const hPlan = Math.round((b.plannedMins / maxVol) * 100);
             
-            // Compare BOTH Plan and Actual against the PREVIOUS ACTUAL to determine safety
             const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
             
-            // Default Colors
             let actualColorClass = 'bg-blue-500';
             let planColorClass = 'bg-blue-500';
             let growthLabel = "--";
             let growthColor = "text-slate-400";
 
             if (idx > 0 && prevActual > 0) {
-                // 1. Evaluate ACTUAL Execution Safety
                 const actualGrowth = (b.actualMins - prevActual) / prevActual;
-                
-                // 2. Evaluate PLANNED Safety (Did I intend to spike?)
                 const planGrowth = (b.plannedMins - prevActual) / prevActual;
 
-                // Thresholds
                 let limitRed = 0.15; let limitYellow = 0.10;
                 if (sportType === 'Run') { limitRed = 0.10; limitYellow = 0.05; }
                 else if (sportType === 'Bike' || sportType === 'Swim') { limitRed = 0.20; limitYellow = 0.15; }
 
-                // Helper to get color
                 const getColor = (pct) => {
                     if (pct > limitRed) return 'bg-red-500';
                     if (pct > limitYellow) return 'bg-yellow-500';
-                    if (pct < -0.20) return 'bg-slate-600'; // Deload
-                    return 'bg-emerald-500'; // Safe
+                    if (pct < -0.20) return 'bg-slate-600'; 
+                    return 'bg-emerald-500'; 
                 };
 
                 actualColorClass = getColor(actualGrowth);
                 planColorClass = getColor(planGrowth);
 
-                // Label uses Actual growth for historical, Plan growth for current/future
                 const displayGrowth = isCurrentWeek ? planGrowth : actualGrowth;
                 const sign = displayGrowth > 0 ? '▲' : (displayGrowth < 0 ? '▼' : '');
                 growthLabel = `${sign} ${Math.round(displayGrowth * 100)}%`;
@@ -178,13 +170,10 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
                 else growthColor = "text-emerald-400";
             }
 
-            // --- Styling ---
-            // Plan Bar (Ghost) - Colored by PLAN risk
             const colorMap = {'bg-emerald-500': '#10b981', 'bg-yellow-500': '#eab308', 'bg-red-500': '#ef4444', 'bg-slate-600': '#475569', 'bg-blue-500': '#3b82f6'};
             const planHex = colorMap[planColorClass] || '#3b82f6';
             const planBarStyle = `background: repeating-linear-gradient(45deg, ${planHex}20, ${planHex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${planHex}40;`;
             
-            // Actual Bar (Solid) - Colored by ACTUAL safety
             const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80';
 
             barsHtml += `
@@ -199,9 +188,10 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
                         
                         <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualColorClass} ${actualOpacity} rounded-t-sm"></div>
                     </div>
-                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none">
+                    
+                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none mt-1">
                         ${b.label}
-                        ${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400">NEXT</span>' : ''}
+                        ${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400 font-bold">NEXT</span>' : ''}
                     </span>
                 </div>
             `;
@@ -212,12 +202,13 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         if (sportType === 'Run') iconHtml = '<i class="fa-solid fa-person-running text-emerald-500"></i>';
         if (sportType === 'Swim') iconHtml = '<i class="fa-solid fa-person-swimming text-cyan-500"></i>';
 
+        // FIXED: Using items-start to prevent label shift
         return `
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4">
                 <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">${iconHtml} ${title}</h3>
                 </div>
-                <div class="flex items-end justify-between gap-1 w-full">${barsHtml}</div>
+                <div class="flex items-start justify-between gap-1 w-full">${barsHtml}</div>
             </div>
         `;
     } catch (e) {

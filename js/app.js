@@ -1,11 +1,11 @@
-import { Parser } from './parser.js';
-// CACHE BUSTER: Added ?v=10 to force browser to re-download kpi.js
-import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=10'; 
-import { renderGear, updateGearResult } from './views/gear.js';
-import { renderZones } from './views/zones.js';
-import { renderPhases } from './views/phases.js';
+import { Parser } from './parser.js?v=25';
+import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=25'; 
+import { renderGear, updateGearResult } from './views/gear.js?v=25';
+import { renderZones } from './views/zones.js?v=25';
+import { renderRoadmap } from './views/roadmap.js?v=25'; 
+import { renderDashboard } from './views/dashboard.js?v=25'; 
 
-console.log("🚀 App.js Safe Mode Loaded");
+console.log("🚀 App.js Loaded - Version 25");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
@@ -28,7 +28,6 @@ const App = {
     hourlyWeather: null,
 
     checkSecurity() {
-        console.log("🔒 Checking Security...");
         const curtain = document.getElementById('security-curtain');
         const input = document.getElementById('access-code');
         const btn = document.getElementById('btn-unlock');
@@ -36,44 +35,39 @@ const App = {
 
         // 1. Check Cookie
         if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
-            console.log("✅ Cookie found. Unlocking.");
-            if (curtain) curtain.style.display = 'none';
+            // Logged in: Ensure curtain remains hidden
+            if (curtain) curtain.classList.add('hidden');
             return;
         }
 
-        // 2. Bind Unlock Button
+        // 2. Not Logged in: SHOW Curtain (This was missing!)
+        if (curtain) curtain.classList.remove('hidden');
+
+        // 3. Bind Unlock Logic
         if (btn && input) {
-            console.log("🔒 Lock active. Waiting for password.");
-            
             const unlock = () => {
-                const code = input.value.trim(); // Trim whitespace
-                console.log("🔑 Attempting unlock with:", code);
-                
+                const code = input.value.trim();
                 if (code === 'training2026') { 
-                    console.log("🔓 Access Granted!");
+                    // Set cookie for 1 year
                     document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
+                    
+                    // Fade out curtain
                     curtain.style.opacity = '0';
-                    setTimeout(() => curtain.style.display = 'none', 500);
+                    setTimeout(() => curtain.classList.add('hidden'), 500);
                 } else {
-                    console.warn("⛔ Access Denied");
                     input.value = '';
                     if (errorMsg) errorMsg.classList.remove('hidden');
                     input.classList.add('border-red-500');
                     input.classList.remove('border-slate-700');
                 }
             };
-
             btn.onclick = unlock; 
-            input.onkeypress = (e) => {
-                if (e.key === 'Enter') unlock();
-            };
+            input.onkeypress = (e) => { if (e.key === 'Enter') unlock(); };
             input.oninput = () => {
                 if (errorMsg) errorMsg.classList.add('hidden');
                 input.classList.remove('border-red-500');
                 input.classList.add('border-slate-700');
             };
-        } else {
-            console.error("❌ Security elements not found in HTML!");
         }
     },
 
@@ -100,8 +94,8 @@ const App = {
     },
 
     async init() {
-        this.checkSecurity(); // Run first!
-        console.log("App init started");
+        // Run Security Check FIRST
+        this.checkSecurity();
         
         try {
             const [planRes, gearRes, archiveRes] = await Promise.all([
@@ -111,13 +105,9 @@ const App = {
             ]);
             
             if (!planRes.ok) throw new Error(`Could not load ${CONFIG.PLAN_FILE}`);
-            if (!gearRes.ok) throw new Error(`Could not load ${CONFIG.GEAR_FILE}`);
-            
             this.planMd = await planRes.text();
             this.gearMd = await gearRes.text();
-            
-            if (archiveRes.ok) this.archiveMd = await archiveRes.text();
-            else this.archiveMd = "";
+            this.archiveMd = archiveRes.ok ? await archiveRes.text() : "";
 
             const currentLog = Parser.parseTrainingLog(this.planMd);
             const archiveLog = Parser.parseTrainingLog(this.archiveMd);
@@ -125,24 +115,28 @@ const App = {
             
             this.setupEventListeners();
             window.addEventListener('hashchange', () => this.handleHashChange());
-            this.handleHashChange();
-            this.fetchWeather().catch(err => console.warn("Weather error:", err));
+            this.handleHashChange(); 
+            this.fetchWeather();
             
         } catch (e) {
             console.error("Init Error:", e);
-            const curtain = document.getElementById('security-curtain');
-            if (curtain) {
-                curtain.innerHTML += `<p class='text-red-500 mt-4 font-bold'>System Error: ${e.message}</p>`;
-            }
         }
     },
 
     setupEventListeners() {
-        const bindNav = (id, view) => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('click', () => this.navigate(view));
+        const navMap = {
+            'nav-dashboard': 'dashboard',
+            'nav-trends': 'trends',
+            'nav-logbook': 'logbook',
+            'nav-roadmap': 'roadmap',
+            'nav-gear': 'gear',
+            'nav-zones': 'zones'
         };
-        ['schedule', 'gear', 'kpi', 'zones', 'phases', 'history', 'full'].forEach(v => bindNav(`nav-${v}`, v));
+
+        Object.keys(navMap).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', () => this.navigate(navMap[id]));
+        });
 
         const btnOpen = document.getElementById('btn-sidebar-open');
         const btnClose = document.getElementById('btn-sidebar-close');
@@ -158,7 +152,6 @@ const App = {
             const locRes = await fetch('https://ipapi.co/json/');
             const locData = await locRes.json();
             if (locData.city) {
-                document.getElementById('weather-location').innerText = `${locData.city}, ${locData.region_code}`;
                 const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${locData.latitude}&longitude=${locData.longitude}&current_weather=true&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&forecast_days=1`);
                 const weatherData = await weatherRes.json();
                 this.currentTemp = Math.round(weatherData.current_weather.temperature);
@@ -169,8 +162,7 @@ const App = {
                 document.getElementById('weather-icon-top').innerText = condition[1];
             }
         } catch (e) {
-            console.error("Weather Error", e);
-            document.getElementById('weather-info').innerText = "Weather Unavailable";
+            console.error("Weather unavailable", e);
         }
     },
 
@@ -180,27 +172,9 @@ const App = {
         const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
         const currentWeek = statusMatch ? statusMatch[2].trim() : "N/A";
         
-        let dateRange = "";
-        const phaseNumMatch = currentPhaseRaw.match(/Phase\s*(\d+)/i);
-        if (phaseNumMatch) {
-            const pNum = phaseNumMatch[1];
-            const phasesSection = Parser.getSection(this.planMd, "Periodization Phases");
-            if (phasesSection) {
-                const lines = phasesSection.split('\n');
-                for (let line of lines) {
-                    if (line.trim().startsWith('|') && line.includes(`**${pNum}.`)) {
-                        const cols = line.split('|');
-                        if (cols.length > 2) { dateRange = cols[2].trim(); break; }
-                    }
-                }
-            }
-        }
-
         const phaseEl = document.getElementById('stat-phase');
-        if (phaseEl) {
-            if (dateRange) phaseEl.innerHTML = `${currentPhaseRaw}<span class="block text-xs text-slate-400 mt-1 font-normal">${dateRange}</span>`;
-            else phaseEl.innerText = currentPhaseRaw;
-        }
+        if (phaseEl) phaseEl.innerText = currentPhaseRaw;
+        
         const weekEl = document.getElementById('stat-week');
         if (weekEl) weekEl.innerText = currentWeek;
         
@@ -217,14 +191,8 @@ const App = {
                     if (!isNaN(eventDate)) {
                         const today = new Date(); today.setHours(0,0,0,0);
                         const diff = Math.ceil((eventDate - today) / 86400000);
-                        if (diff < 0) countdownEl.innerText = "Completed";
-                        else if (diff === 0) countdownEl.innerText = "Event Today!";
-                        else {
-                            const w = Math.floor(diff / 7);
-                            const d = diff % 7;
-                            countdownEl.innerText = `${w} weeks, ${d} days to go`;
-                        }
-                    } else countdownEl.innerText = "Date TBD";
+                        countdownEl.innerText = diff < 0 ? "Completed" : (diff === 0 ? "Today!" : `${Math.floor(diff/7)}w ${diff%7}d to go`);
+                    }
                 }
             }
         }
@@ -232,8 +200,8 @@ const App = {
 
     handleHashChange() {
         const hash = window.location.hash.substring(1); 
-        const validViews = ['schedule', 'phases', 'zones', 'gear', 'full', 'history', 'kpi'];
-        const view = validViews.includes(hash) ? hash : 'schedule';
+        const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones'];
+        const view = validViews.includes(hash) ? hash : 'dashboard';
         this.renderView(view);
     },
 
@@ -243,9 +211,12 @@ const App = {
 
     renderView(view) {
         const titles = { 
-            schedule: 'Weekly Schedule', phases: 'Phases', zones: 'Zones', 
-            gear: 'Gear Selection', full: 'Master Plan', history: 'Training History',
-            kpi: 'Performance KPIs'
+            dashboard: 'Weekly Schedule', 
+            trends: 'Trends & KPIs', 
+            logbook: 'Logbook', 
+            roadmap: 'Season Roadmap',
+            gear: 'Gear Choice',
+            zones: 'Training Zones'
         };
         const titleEl = document.getElementById('header-title-dynamic');
         if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
@@ -268,37 +239,25 @@ const App = {
                 else if (view === 'zones') {
                     content.innerHTML = renderZones(this.planMd);
                 } 
-                else if (view === 'kpi') {
+                else if (view === 'trends') {
                     const result = renderKPI(this.logData); 
                     content.innerHTML = result.html;
                     this.updateDurationAnalysis();
                 } 
-                else if (view === 'phases') {
-                    content.innerHTML = renderPhases(this.planMd);
+                else if (view === 'roadmap') {
+                    content.innerHTML = renderRoadmap(this.planMd);
+                }
+                else if (view === 'logbook') {
+                    const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
+                    const archive = Parser.getSection(this.archiveMd, "Training History");
+                    const mdContent = (recent || "") + "\n\n" + (archive || "");
+                    const safeMarked = window.marked ? window.marked.parse : (t) => t;
+                    content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                 }
                 else {
-                    let sectionTitle = "Weekly Schedule";
-                    
-                    let mdContent = "";
-                    if (view === 'full') {
-                        mdContent = this.planMd;
-                    } 
-                    else if (view === 'history') {
-                        const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
-                        const archive = Parser.getSection(this.archiveMd, "Training History");
-                        mdContent = (recent || "") + "\n\n" + (archive || "");
-                    }
-                    else {
-                        mdContent = Parser.getSection(this.planMd, sectionTitle);
-                    }
-                    
-                    const safeMarked = window.marked ? window.marked.parse : (t) => t;
-                    let html = safeMarked(mdContent || "*Content not found.*");
-                    if (view === 'schedule') {
-                        html = this.getStatsBar() + html;
-                    }
+                    const html = this.getStatsBar() + renderDashboard(this.planMd);
                     content.innerHTML = html;
-                    if (view === 'schedule') this.updateStats();
+                    this.updateStats();
                 }
             } catch (err) {
                 console.error("Render error:", err);

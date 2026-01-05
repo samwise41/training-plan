@@ -3,118 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <title>Training Dashboard</title>
     
-    <title>Athlete Dashboard</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚲</text></svg>">
-    
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Cstyle%3E.icon{fill:none;stroke:%233b82f6;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}.head{fill:%233b82f6;stroke:none}%3C/style%3E%3Cg transform='translate(64, 24)'%3E%3Ccircle class='head' cx='0' cy='-12' r='7'/%3E%3Cpath class='icon' d='M-18 -4 c 8 -10, 28 -10, 36 0'/%3E%3Cpath class='icon' d='M-24 8 q 12 8, 24 0 t 24 0'/%3E%3Cpath class='icon' d='M-24 20 q 12 8, 24 0 t 24 0'/%3E%3C/g%3E%3Cg transform='translate(32, 90)'%3E%3Ccircle class='head' cx='0' cy='-24' r='7'/%3E%3Cpath class='icon' d='M0 -14 v 14 l -10 12 m 10 -12 l 10 8'/%3E%3Cpath class='icon' d='M0 -14 l -8 8 m 8 -8 l 8 8'/%3E%3C/g%3E%3Cg transform='translate(96, 90)'%3E%3Ccircle class='head' cx='0' cy='-24' r='7'/%3E%3Ccircle class='icon' cx='-14' cy='12' r='10'/%3E%3Ccircle class='icon' cx='14' cy='12' r='10'/%3E%3Cpath class='icon' d='M-14 12 l 14 -22 h 8 l 6 22'/%3E%3Cpath class='icon' d='M0 -10 l -4 8'/%3E%3C/g%3E%3C/svg%3E">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-dark.min.css">
     
     <link rel="stylesheet" href="css/styles.css">
-</head>
-<body class="min-h-screen">
 
-    <div id="security-curtain" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-500">
-        <div class="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center mx-4">
-            <div class="text-4xl mb-4">🔒</div>
-            <h2 class="text-xl font-bold text-white mb-2">Restricted Access</h2>
-            <p class="text-sm text-slate-400 mb-6">Enter access code to view dashboard.</p>
-            
-            <input type="password" id="access-code" placeholder="Enter Code" 
-                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white mb-4 focus:outline-none focus:border-blue-500 text-center tracking-widest placeholder-slate-600 transition-colors">
-            
-            <button id="btn-unlock" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors shadow-lg hover:shadow-blue-500/20">
-                Unlock Dashboard
-            </button>
-            <p id="access-error" class="text-red-400 text-xs mt-4 hidden font-bold"><i class="fa-solid fa-circle-exclamation mr-1"></i> Incorrect code</p>
-        </div>
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    <script>
-        (function() {
-            // Check cookie immediately. If found, hide curtain BEFORE the page paints.
-            if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
-                var curtain = document.getElementById('security-curtain');
-                if (curtain) curtain.style.display = 'none';
-            }
-        })();
-    </script>
-
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 hidden z-50"></div>
-
-    <aside id="sidebar" class="fixed top-0 left-0 h-full w-[260px] bg-slate-900 border-r border-slate-800 sidebar-closed lg:sidebar-open flex flex-col">
-        <div class="p-6 border-b border-slate-800 flex justify-between items-center">
-            <span class="font-bold tracking-widest text-slate-400 text-xs uppercase">Navigation</span>
-            <button id="btn-sidebar-close" class="lg:hidden text-slate-400">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-        </div>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; }
+        .nav-link { 
+            display: flex; align-items: center; gap: 0.75rem; 
+            padding: 0.75rem 1rem; border-radius: 0.5rem; 
+            color: #94a3b8; transition: all 0.2s; 
+        }
+        .nav-link:hover { background-color: #1e293b; color: #f8fafc; }
+        .nav-link.active { background-color: #3b82f6; color: white; }
+        .nav-link i { width: 1.5rem; text-align: center; }
         
-        <nav class="flex-1 py-4">
-            <button id="nav-schedule" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <i class="fa-solid fa-calendar-week w-5 text-center"></i> Weekly Schedule
+        /* Mobile Sidebar Transitions */
+        .sidebar-closed { transform: translateX(-100%); }
+        .sidebar-open { transform: translateX(0); }
+        @media (min-width: 1024px) { 
+            .sidebar-closed { transform: translateX(0); } 
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-200 min-h-screen flex flex-col lg:block">
+
+    <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/80 z-20 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-slate-900 border-r border-slate-700 z-30 transition-transform duration-300 sidebar-closed flex flex-col">
+        <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-white tracking-tight">
+                <i class="fa-solid fa-person-biking text-blue-500 mr-2"></i>IronPlan
+            </h1>
+            <button id="btn-sidebar-close" class="lg:hidden text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
             </button>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <div class="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-widest">Main</div>
             
-            <button id="nav-gear" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <i class="fa-solid fa-shirt w-5 text-center"></i> Gear Choice
-            </button>
+            <a href="#dashboard" id="nav-dashboard" class="nav-link active">
+                <i class="fa-solid fa-house"></i> <span>Dashboard</span>
+            </a>
+            <a href="#trends" id="nav-trends" class="nav-link">
+                <i class="fa-solid fa-chart-line"></i> <span>Trends</span>
+            </a>
+            <a href="#logbook" id="nav-logbook" class="nav-link">
+                <i class="fa-solid fa-book-open"></i> <span>Logbook</span>
+            </a>
+            <a href="#roadmap" id="nav-roadmap" class="nav-link">
+                <i class="fa-solid fa-map"></i> <span>Roadmap</span>
+            </a>
 
-            <button id="nav-kpi" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <i class="fa-solid fa-chart-pie w-5 text-center"></i> KPIs
-            </button>
+            <div class="px-3 py-2 mt-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Resources</div>
 
-            <button id="nav-zones" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <i class="fa-solid fa-gauge-high w-5 text-center"></i> Zones
-            </button>
-
-            <button id="nav-phases" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <i class="fa-solid fa-layer-group w-5 text-center"></i> Phases
-            </button>
-
-            <button id="nav-history" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i> Training History
-            </button>
-
-            <button id="nav-full" class="nav-link w-full text-left px-6 py-4 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-3">
-                <i class="fa-solid fa-book-open w-5 text-center"></i> Full Plan
-            </button>
+            <a href="#gear" id="nav-gear" class="nav-link">
+                <i class="fa-solid fa-shirt"></i> <span>Gear</span>
+            </a>
+            <a href="#zones" id="nav-zones" class="nav-link">
+                <i class="fa-solid fa-gauge-high"></i> <span>Zones</span>
+            </a>
         </nav>
+
     </aside>
 
-    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 h-16 lg:h-20 flex items-center justify-between px-4 lg:px-8 lg:ml-[260px]">
-        <div class="flex items-center">
-            <button id="btn-sidebar-open" class="lg:hidden p-2 text-slate-400 hover:text-white focus:outline-none">
-                <i class="fa-solid fa-bars text-xl"></i>
-            </button>
-            <div class="ml-2 lg:ml-0">
-                <h1 class="text-lg lg:text-xl font-bold text-white tracking-tight" id="header-title-dynamic">Weekly Schedule</h1>
-                <p class="hidden lg:block text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Athlete Performance Suite</p>
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-900 lg:pl-64 relative min-h-screen">
+        <header class="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-10">
+            <div class="flex items-center gap-4">
+                <button id="btn-sidebar-open" class="lg:hidden text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <h2 id="header-title-dynamic" class="text-lg font-bold text-white">Dashboard</h2>
+            </div>
+            
+            <div class="flex items-center gap-4 text-xs font-mono text-slate-400 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700">
+                <span id="weather-info">Loading...</span>
+                <span id="weather-icon-top" class="text-lg"></span>
+            </div>
+        </header>
+
+        <div id="content" class="flex-1 p-4 md:p-8 scroll-smooth transition-opacity duration-300 opacity-0">
+        </div>
+    </main>
+
+    <div id="security-curtain" class="hidden fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="w-full max-w-sm px-6">
+            <div class="mb-8 text-center">
+                <i class="fa-solid fa-shield-halved text-5xl text-blue-500 mb-4"></i>
+                <h2 class="text-2xl font-bold text-white">Secure Dashboard</h2>
+                <p class="text-slate-400 mt-2 text-sm">Restricted Access Environment</p>
+            </div>
+            <div class="space-y-4">
+                <input type="password" id="access-code" placeholder="Enter Access Code" 
+                       class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors text-center font-mono">
+                <button id="btn-unlock" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
+                    Unlock Dashboard
+                </button>
+                <p id="access-error" class="text-red-500 text-xs text-center hidden font-bold mt-2">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> Access Denied
+                </p>
             </div>
         </div>
-
-        <div class="flex items-center gap-4">
-            <div id="weather-widget" class="flex items-center gap-3">
-                <div class="text-right block"> 
-                    <p id="weather-location" class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1 hidden sm:block">Local Weather</p> 
-                    <p id="weather-info" class="text-xs font-semibold text-slate-300 leading-none">Fetching...</p>
-                </div>
-                <div id="weather-icon-top" class="text-xl lg:text-2xl filter drop-shadow-sm">☁️</div>
-            </div>
-        </div>
-    </header>
-
-    <div class="main-content">
-        <main class="max-w-5xl mx-auto px-4 py-8 lg:py-12 pb-20">
-            <div id="content" class="markdown-body opacity-0 transition-opacity duration-500"></div>
-        </main>
     </div>
 
-    <script type="module" src="js/app.js?v=10"></script>
-
+    <script type="module" src="js/app.js?v=25"></script>
 </body>
 </html>
