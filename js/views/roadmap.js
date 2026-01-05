@@ -1,43 +1,66 @@
 import { Parser } from '../parser.js';
 
 // ==========================================
-// 1. UTILITY: LIGHTWEIGHT MARKDOWN PARSER
+// 1. UTILITY: LIGHTWEIGHT MARKDOWN PARSER (FIXED)
 // ==========================================
-// This ensures the plan looks good even if 'marked' library is missing.
 const simpleRender = (text) => {
     if (!text) return '';
 
     let lines = text.split('\n');
     let html = '';
     let inTable = false;
-    let inList = false;
+    let listType = null; // null | 'ul' | 'ol'
 
     lines.forEach(line => {
         const trimmed = line.trim();
 
-        // --- TABLE HANDLING ---
+        // --- 1. TABLE HANDLING ---
         if (trimmed.startsWith('|')) {
+            // Close list if open
+            if (listType) { html += (listType === 'ul' ? '</ul>' : '</ol>'); listType = null; }
+
             if (!inTable) {
                 html += '<div class="overflow-x-auto mb-6"><table class="w-full text-left border-collapse border border-slate-700 text-sm">';
                 inTable = true;
             }
-            // Check for separator row (e.g., |---|---|)
+            // Skip separator rows (e.g. |---|---|)
             if (trimmed.includes('---')) return;
 
             const cells = trimmed.split('|').filter(c => c.trim() !== '');
             html += '<tr class="even:bg-slate-800/50 hover:bg-slate-700/50 transition-colors">';
             cells.forEach(cell => {
-                // Check if it's likely a header (no elegant way without tracking index, but bolding helps)
                 const isHeader = cell.includes('**'); 
                 const tag = isHeader ? 'th' : 'td';
                 const style = isHeader ? 'bg-slate-800 font-bold text-white' : 'text-slate-300';
                 html += `<${tag} class="border border-slate-600 p-3 ${style}">${parseInline(cell)}</${tag}>`;
             });
             html += '</tr>';
-        } else {
-            if (inTable) { html += '</table></div>'; inTable = false; }
+            return; // Done with this line
+        } 
+        
+        // If we hit here, we are NOT in a table row. Close table if it was open.
+        if (inTable) { html += '</table></div>'; inTable = false; }
 
-            // --- HEADERS ---
+        // --- 2. LIST HANDLING ---
+        
+        // Unordered List (* or -)
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            if (listType === 'ol') { html += '</ol>'; listType = null; } // Switch type
+            if (!listType) { html += '<ul class="list-disc pl-6 space-y-1 mb-4 text-slate-300">'; listType = 'ul'; }
+            html += `<li>${parseInline(trimmed.slice(2))}</li>`;
+        } 
+        // Ordered List (1., 2., etc)
+        else if (/^\d+\./.test(trimmed)) {
+            if (listType === 'ul') { html += '</ul>'; listType = null; } // Switch type
+            if (!listType) { html += '<ol class="list-decimal pl-6 space-y-1 mb-4 text-slate-300">'; listType = 'ol'; }
+            html += `<li>${parseInline(trimmed.replace(/^\d+\.\s*/, ''))}</li>`;
+        } 
+        // --- 3. STANDARD CONTENT ---
+        else {
+            // Close any open lists
+            if (listType) { html += (listType === 'ul' ? '</ul>' : '</ol>'); listType = null; }
+
+            // Headers
             if (trimmed.startsWith('# ')) {
                 html += `<h1 class="text-3xl font-bold text-white mt-10 mb-6 border-b border-slate-700 pb-2">${parseInline(trimmed.slice(2))}</h1>`;
             } else if (trimmed.startsWith('## ')) {
@@ -45,38 +68,29 @@ const simpleRender = (text) => {
             } else if (trimmed.startsWith('### ')) {
                 html += `<h3 class="text-xl font-bold text-blue-400 mt-6 mb-3">${parseInline(trimmed.slice(4))}</h3>`;
             }
-            // --- LISTS ---
-            else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-                if (!inList) { html += '<ul class="list-disc pl-6 space-y-1 mb-4 text-slate-300">'; inList = true; }
-                html += `<li>${parseInline(trimmed.slice(2))}</li>`;
-            } else if (/^\d+\./.test(trimmed)) {
-                 if (!inList) { html += '<ol class="list-decimal pl-6 space-y-1 mb-4 text-slate-300">'; inList = true; }
-                 html += `<li>${parseInline(trimmed.replace(/^\d+\.\s*/, ''))}</li>`;
-            }
-            // --- PARAGRAPHS & EMPTY LINES ---
+            // Empty Lines / Paragraphs
             else if (trimmed === '') {
-                if (inList) { html += inList.startsWith('<ul') ? '</ul>' : '</ol>'; inList = false; }
-                html += '<div class="h-4"></div>'; // Spacer
+                html += '<div class="h-4"></div>';
             } else {
-                if (inList) { html += inList.startsWith('<ul') ? '</ul>' : '</ol>'; inList = false; }
                 html += `<p class="mb-2 text-slate-300 leading-relaxed">${parseInline(trimmed)}</p>`;
             }
         }
     });
 
+    // Cleanup at end of file
     if (inTable) html += '</table></div>';
-    if (inList) html += inList.startsWith('<ul') ? '</ul>' : '</ol>';
+    if (listType) html += (listType === 'ul' ? '</ul>' : '</ol>');
     
     return html;
 };
 
-// Helper for bold/italic inside lines
+// Helper for bold/italic/code inside lines
 const parseInline = (text) => {
     if (!text) return '';
     return text
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em class="text-slate-400">$1</em>')
-        .replace(/`(.*?)`/g, '<code class="bg-slate-700 px-1 py-0.5 rounded text-orange-300 font-mono text-xs">$1</code>');
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>') // Bold
+        .replace(/\*(.*?)\*/g, '<em class="text-slate-400">$1</em>') // Italic
+        .replace(/`(.*?)`/g, '<code class="bg-slate-700 px-1 py-0.5 rounded text-orange-300 font-mono text-xs">$1</code>'); // Code
 };
 
 // ==========================================
