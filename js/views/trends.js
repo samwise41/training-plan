@@ -1,9 +1,102 @@
-// Helper to build reusable charts (moved from old kpi.js) trends.js not needed anymore.
+// js/views/trends.js
+
+let logData = [];
+
+// Helper functions
+const getIconForType = (type) => {
+    if (type === 'Bike') return '<i class="fa-solid fa-bicycle text-blue-500 text-xl"></i>';
+    if (type === 'Run') return '<i class="fa-solid fa-person-running text-emerald-500 text-xl"></i>';
+    if (type === 'Swim') return '<i class="fa-solid fa-person-swimming text-cyan-500 text-xl"></i>';
+    return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
+};
+
+// --- Concentric Donut Chart ---
+const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
+    const r1 = 15.9155; const c1 = 100;
+    const dash1 = `${stats30.pct} ${100 - stats30.pct}`;
+    const color1 = stats30.pct >= 80 ? '#22c55e' : (stats30.pct >= 50 ? '#eab308' : '#ef4444');
+    const r2 = 10; const c2 = 2 * Math.PI * r2; 
+    const val2 = (stats60.pct / 100) * c2;
+    const dash2 = `${val2} ${c2 - val2}`;
+    const color2 = stats60.pct >= 80 ? '#15803d' : (stats60.pct >= 50 ? '#a16207' : '#b91c1c'); 
+
+    return `
+        <div class="flex flex-col items-center justify-center w-full py-2">
+            <div class="relative w-[120px] h-[120px] mb-2">
+                <svg width="100%" height="100%" viewBox="0 0 42 42" class="donut-svg">
+                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
+                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
+                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="${color1}" stroke-width="3" stroke-dasharray="${dash1}" stroke-dashoffset="25" stroke-linecap="round"></circle>
+                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="${color2}" stroke-width="3" stroke-dasharray="${dash2}" stroke-dashoffset="${c2 * 0.25}" stroke-linecap="round"></circle>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none"><span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${centerLabel}</span></div>
+            </div>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] w-full max-w-[160px]">
+                <div class="text-right font-bold text-slate-400 flex items-center justify-end gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color1}"></span> 30d</div>
+                <div class="font-mono text-white flex items-center gap-1 truncate">${stats30.pct}% <span class="text-slate-500 opacity-70">(${stats30.label})</span></div>
+                <div class="text-right font-bold text-slate-500 flex items-center justify-end gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color2}"></span> 60d</div>
+                <div class="font-mono text-slate-300 flex items-center gap-1 truncate">${stats60.pct}% <span class="text-slate-600 opacity-70">(${stats60.label})</span></div>
+            </div>
+        </div>`;
+};
+
+// --- FTP Progress Chart ---
+const buildFTPChart = () => {
+    const md = window.App?.planMd || "";
+    if (!md) return '<div class="p-4 text-slate-500 italic">Plan data not loaded</div>';
+    const lines = md.split('\n');
+    const dataPoints = [];
+    let startFound = false;
+
+    for (let line of lines) {
+        if (line.includes('### Historical FTP Log')) { startFound = true; continue; }
+        if (startFound) {
+            if (line.trim().startsWith('#') && dataPoints.length > 0) break; 
+            if (line.includes('|') && !line.includes('---') && !line.toLowerCase().includes('date')) {
+                const parts = line.split('|');
+                if (parts.length > 2) {
+                    const dateStr = parts[1].trim();
+                    const ftpStr = parts[2].trim();
+                    const date = new Date(dateStr);
+                    const ftp = parseInt(ftpStr.replace(/\D/g, ''));
+                    if (!isNaN(date.getTime()) && !isNaN(ftp)) dataPoints.push({ date, ftp, label: dateStr });
+                }
+            }
+        }
+    }
+    dataPoints.sort((a, b) => a.date - b.date);
+    if (dataPoints.length < 2) return ''; 
+
+    const width = 800, height = 250, padding = { top: 30, bottom: 40, left: 50, right: 30 };
+    const minFTP = Math.min(...dataPoints.map(d => d.ftp)) * 0.95, maxFTP = Math.max(...dataPoints.map(d => d.ftp)) * 1.05;
+    const minTime = dataPoints[0].date.getTime(), maxTime = dataPoints[dataPoints.length - 1].date.getTime();
+    const getX = (d) => padding.left + ((d.date.getTime() - minTime) / (maxTime - minTime)) * (width - padding.left - padding.right);
+    const getY = (d) => height - padding.bottom - ((d.ftp - minFTP) / (maxFTP - minFTP)) * (height - padding.top - padding.bottom);
+
+    let pathD = `M ${getX(dataPoints[0])} ${getY(dataPoints[0])}`;
+    let pointsHTML = '';
+    dataPoints.forEach(d => {
+        const x = getX(d); const y = getY(d); pathD += ` L ${x} ${y}`;
+        pointsHTML += `<circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2"><title>${d.label}: ${d.ftp}W</title></circle>
+            <text x="${x}" y="${y - 10}" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="bold">${d.ftp}</text>
+            <text x="${x}" y="${height - 15}" text-anchor="middle" font-size="10" fill="#64748b">${d.date.getMonth()+1}/${d.date.getFullYear() % 100}</text>`;
+    });
+
+    return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
+            <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2 flex items-center gap-2"><i class="fa-solid fa-arrow-trend-up text-emerald-500"></i> FTP Progression</h2>
+            <div class="w-full"><svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
+                    <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
+                    <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
+                    <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />${pointsHTML}
+                </svg></div></div>`;
+};
+
+// --- REUSABLE VOLUME CHART BUILDER ---
 const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend') => {
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
         
-        // 1. Setup Buckets (Anchor to Upcoming Saturday)
+        // --- DEFINE BUCKETS (Critical Fix) ---
         const buckets = [];
         const now = new Date();
         const day = now.getDay();
@@ -21,7 +114,6 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             buckets.push({ start, end, label: `${end.getMonth()+1}/${end.getDate()}`, actualMins: 0, plannedMins: 0 });
         }
 
-        // 2. Aggregate Data
         data.forEach(item => {
             if (!item.date) return;
             if (sportType !== 'All' && item.type !== sportType) return;
@@ -33,7 +125,6 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             }
         });
 
-        // 3. Render Bars
         let barsHtml = '';
         const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
 
@@ -41,8 +132,8 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             const isCurrentWeek = (idx === buckets.length - 1); 
             const hActual = Math.round((b.actualMins / maxVol) * 100);
             const hPlan = Math.round((b.plannedMins / maxVol) * 100);
-            
             const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
+            
             let actualColorClass = 'bg-blue-500';
             let planColorClass = 'bg-blue-500';
             let growthLabel = "--";
@@ -91,9 +182,9 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
                         <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div>
                         <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualColorClass} ${actualOpacity} rounded-t-sm"></div>
                     </div>
-                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none">
+                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none mt-1">
                         ${b.label}
-                        ${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400">NEXT</span>' : ''}
+                        ${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400 font-bold">NEXT</span>' : ''}
                     </span>
                 </div>
             `;
@@ -109,7 +200,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
                 <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">${iconHtml} ${title}</h3>
                 </div>
-                <div class="flex items-end justify-between gap-1 w-full">${barsHtml}</div>
+                <div class="flex items-start justify-between gap-1 w-full">${barsHtml}</div>
             </div>
         `;
     } catch (e) {
@@ -117,67 +208,52 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
     }
 };
 
-const buildFTPChart = () => {
-    const md = window.App?.planMd || "";
-    if (!md) return '';
-    const lines = md.split('\n');
-    const dataPoints = [];
-    let startFound = false;
+// Main Render Function
+export function renderTrends(mergedLogData) {
+    logData = Array.isArray(mergedLogData) ? mergedLogData : [];
 
-    for (let line of lines) {
-        if (line.includes('### Historical FTP Log')) { startFound = true; continue; }
-        if (startFound) {
-            if (line.trim().startsWith('#') && dataPoints.length > 0) break; 
-            if (line.includes('|') && !line.includes('---') && !line.toLowerCase().includes('date')) {
-                const parts = line.split('|');
-                if (parts.length > 2) {
-                    const dateStr = parts[1].trim();
-                    const ftpStr = parts[2].trim();
-                    const date = new Date(dateStr);
-                    const ftp = parseInt(ftpStr.replace(/\D/g, ''));
-                    if (!isNaN(date.getTime()) && !isNaN(ftp)) dataPoints.push({ date, ftp, label: dateStr });
-                }
-            }
-        }
-    }
-    dataPoints.sort((a, b) => a.date - b.date);
-    if (dataPoints.length < 2) return ''; 
+    const calculateStats = (targetType, days, isDuration) => {
+        const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+        const now = new Date(); now.setHours(23, 59, 59, 999);
+        const subset = logData.filter(item => {
+            if (!item || !item.date) return false;
+            return item.date >= cutoff && item.date <= now && (targetType === 'All' || item.type === targetType);
+        });
+        let val = 0, target = 0;
+        subset.forEach(item => {
+            if (isDuration) { target += (item.plannedDuration || 0); if (item.type === item.actualType) val += (item.actualDuration || 0); }
+            else { target++; if (item.completed) val++; }
+        });
+        const pct = target > 0 ? Math.round((val / target) * 100) : 0;
+        const label = isDuration ? `${val > 120 ? (val/60).toFixed(1)+'h' : val+'m'}/${target > 120 ? (target/60).toFixed(1)+'h' : target+'m'}` : `${val}/${target}`;
+        return { pct, label };
+    };
 
-    const width = 800, height = 250, padding = { top: 30, bottom: 40, left: 50, right: 30 };
-    const minFTP = Math.min(...dataPoints.map(d => d.ftp)) * 0.95, maxFTP = Math.max(...dataPoints.map(d => d.ftp)) * 1.05;
-    const minTime = dataPoints[0].date.getTime(), maxTime = dataPoints[dataPoints.length - 1].date.getTime();
-    const getX = (d) => padding.left + ((d.date.getTime() - minTime) / (maxTime - minTime)) * (width - padding.left - padding.right);
-    const getY = (d) => height - padding.bottom - ((d.ftp - minFTP) / (maxFTP - minFTP)) * (height - padding.top - padding.bottom);
+    const buildCombinedCard = (title, type) => {
+        const count30 = calculateStats(type, 30, false); const count60 = calculateStats(type, 60, false);
+        const dur30 = calculateStats(type, 30, true); const dur60 = calculateStats(type, 60, true);
+        return `<div class="kpi-card"><div class="kpi-header mb-2">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
+                <div class="flex justify-around items-start"><div class="w-1/2 border-r border-slate-700 pr-2">${buildConcentricChart(count30, count60, "Count")}</div><div class="w-1/2 pl-2">${buildConcentricChart(dur30, dur60, "Time")}</div></div></div>`;
+    };
 
-    let pathD = `M ${getX(dataPoints[0])} ${getY(dataPoints[0])}`;
-    let pointsHTML = '';
-    dataPoints.forEach(d => {
-        const x = getX(d); const y = getY(d); pathD += ` L ${x} ${y}`;
-        pointsHTML += `<circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2"><title>${d.label}: ${d.ftp}W</title></circle>
-            <text x="${x}" y="${y - 10}" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="bold">${d.ftp}</text>
-            <text x="${x}" y="${height - 15}" text-anchor="middle" font-size="10" fill="#64748b">${d.date.getMonth()+1}/${d.date.getFullYear() % 100}</text>`;
-    });
-
-    return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
-            <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2 flex items-center gap-2"><i class="fa-solid fa-arrow-trend-up text-emerald-500"></i> FTP Progression</h2>
-            <div class="w-full"><svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
-                    <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
-                    <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
-                    <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />${pointsHTML}
-                </svg></div></div>`;
-};
-
-export function renderTrends(logData) {
-    const data = Array.isArray(logData) ? logData : [];
-    return `
-        ${renderVolumeChart(data, 'All', 'Total Weekly Volume')}
+    const html = `
+        ${renderVolumeChart(logData, 'All', 'Total Weekly Volume')}
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-            ${renderVolumeChart(data, 'Bike', 'Cycling Volume')}
-            ${renderVolumeChart(data, 'Run', 'Running Volume')}
-            ${renderVolumeChart(data, 'Swim', 'Swimming Volume')}
+            ${renderVolumeChart(logData, 'Bike', 'Cycling Volume')}
+            ${renderVolumeChart(logData, 'Run', 'Running Volume')}
+            ${renderVolumeChart(logData, 'Swim', 'Swimming Volume')}
         </div>
 
         ${buildFTPChart()}
-    `;
-}
+        <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Adherence Overview</h2>
+        <div class="kpi-grid mb-12">
+            ${buildCombinedCard("All Activities", "All")}
+            ${buildCombinedCard("Cycling", "Bike")}
+            ${buildCombinedCard("Running", "Run")}
+            ${buildCombinedCard("Swimming", "Swim")}
+        </div>
+
+        <div class="kpi-card bg-slate-800/20 border-t-4 border-t-purple-500">
+            <div class="kpi-header border-b border-slate-700 pb-2 mb-4"><i class="fa-solid fa-filter text-purple-500 text-xl"></i><span class="kpi-title ml-2 text-purple-400">Duration Analysis Tool</span></div>
+            <div class="flex flex-col sm:flex-row
