@@ -11,7 +11,7 @@ export function renderDashboard(planMd) {
     // Sort by Date
     workouts.sort((a, b) => a.date - b.date);
 
-    // 2. Build Progress Widget (With New Hours Display)
+    // 2. Build Progress Widget (New Multi-Bar Version)
     const progressHtml = buildProgressWidget(workouts);
 
     // 3. Helpers for Styling
@@ -125,55 +125,93 @@ export function renderDashboard(planMd) {
 }
 
 /**
- * Helper to build the top progress bar widget with daily chunk markers
+ * Helper to build the multi-bar progress widget
  */
 function buildProgressWidget(workouts) {
     const today = new Date();
     today.setHours(23, 59, 59, 999); 
 
+    // 1. Initialize Data Structures
     let totalPlanned = 0;
     let totalActual = 0;
     let expectedSoFar = 0;
+    const totalDailyMarkers = {};
 
-    // Data structure for daily totals
-    const dailyTotals = {};
+    const sportStats = {
+        Bike: { planned: 0, actual: 0, dailyMarkers: {} },
+        Run: { planned: 0, actual: 0, dailyMarkers: {} },
+        Swim: { planned: 0, actual: 0, dailyMarkers: {} }
+    };
 
+    // 2. Aggregate Data
     workouts.forEach(w => {
         const plan = w.plannedDuration || 0;
         const act = w.actualDuration || 0;
+        const dateKey = w.date.toISOString().split('T')[0];
 
+        // Grand Totals
         totalPlanned += plan;
         totalActual += act;
+        if (w.date <= today) expectedSoFar += plan;
+        if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
+        totalDailyMarkers[dateKey] += plan;
 
-        if (w.date <= today) {
-            expectedSoFar += plan;
+        // Sport Totals
+        if (sportStats[w.type]) {
+            sportStats[w.type].planned += plan;
+            sportStats[w.type].actual += act;
+            if (!sportStats[w.type].dailyMarkers[dateKey]) sportStats[w.type].dailyMarkers[dateKey] = 0;
+            sportStats[w.type].dailyMarkers[dateKey] += plan;
         }
-
-        // Accumulate daily plan for markers
-        const dateKey = w.date.toISOString().split('T')[0];
-        if (!dailyTotals[dateKey]) dailyTotals[dateKey] = 0;
-        dailyTotals[dateKey] += plan;
     });
 
-    // Generate Markers HTML
-    let markersHtml = '';
-    let runningTotal = 0;
-    const sortedDays = Object.keys(dailyTotals).sort();
-    
-    if (totalPlanned > 0) {
-        for (let i = 0; i < sortedDays.length - 1; i++) {
-            runningTotal += dailyTotals[sortedDays[i]];
-            const pct = (runningTotal / totalPlanned) * 100;
-            markersHtml += `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 z-10" style="left: ${pct}%"></div>`;
+    // --- Helper to generate a single bar's HTML ---
+    const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false) => {
+        const pctComplete = planned > 0 ? Math.min(Math.round((actual / planned) * 100), 100) : 0;
+        const actualHrs = (actual / 60).toFixed(1);
+        const plannedHrs = (planned / 60).toFixed(1);
+        
+        // Generate Markers
+        let markersHtml = '';
+        let runningTotal = 0;
+        const sortedDays = Object.keys(dailyMap).sort();
+        if (planned > 0) {
+            for (let i = 0; i < sortedDays.length - 1; i++) {
+                runningTotal += dailyMap[sortedDays[i]];
+                const pct = (runningTotal / planned) * 100;
+                markersHtml += `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 z-10" style="left: ${pct}%"></div>`;
+            }
         }
-    }
 
-    const pctComplete = totalPlanned > 0 ? Math.min(Math.round((totalActual / totalPlanned) * 100), 100) : 0;
-    
-    // NEW: Calculate Hours (Rounded to 1 decimal)
-    const totalActualHrs = (totalActual / 60).toFixed(1);
-    const totalPlannedHrs = (totalPlanned / 60).toFixed(1);
+        const labelHtml = isMain ? `<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">${label}</span>` : '';
+        const iconHtml = iconClass ? `<i class="fa-solid ${iconClass} text-slate-500 mr-2 w-4 text-center"></i>` : '';
+        const heightClass = isMain ? 'h-3' : 'h-2.5';
+        const mbClass = isMain ? 'mb-4' : 'mb-3';
 
+        return `
+            <div class="flex-1 w-full ${mbClass}">
+                <div class="flex justify-between items-end mb-1">
+                    <div class="flex flex-col">
+                        ${labelHtml}
+                        <div class="flex items-center">
+                            ${iconHtml}
+                            <span class="text-sm font-bold text-white flex items-baseline gap-1">
+                                ${Math.round(actual)} / ${Math.round(planned)} mins
+                                <span class="text-xs text-slate-400 font-normal ml-1">(${actualHrs} / ${plannedHrs} hrs)</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="text-xs font-bold text-blue-400">${pctComplete}%</span>
+                </div>
+                <div class="relative w-full ${heightClass} bg-slate-700 rounded-full overflow-hidden">
+                    ${markersHtml}
+                    <div class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out" style="width: ${pctComplete}%"></div>
+                </div>
+            </div>
+        `;
+    };
+
+    // 3. Generate Pacing Data (Main Total Only)
     const pacingDiff = totalActual - expectedSoFar;
     let pacingLabel = "On Track";
     let pacingColor = "text-slate-400";
@@ -189,28 +227,18 @@ function buildProgressWidget(workouts) {
         pacingIcon = "fa-triangle-exclamation";
     }
 
+    // 4. Combine Final HTML
     return `
-        <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-center gap-6 shadow-sm">
+        <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm">
+            
             <div class="flex-1 w-full">
-                <div class="flex justify-between items-end mb-2">
-                    <div class="flex flex-col">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Weekly Goal</span>
-                        <span class="text-sm font-bold text-white flex items-center gap-2">
-                            ${Math.round(totalActual)} / ${Math.round(totalPlanned)} mins
-                            <span class="text-xs text-slate-400 font-normal ml-1">(${totalActualHrs} / ${totalPlannedHrs} hrs)</span>
-                        </span>
-                    </div>
-                    <span class="text-xs font-bold text-blue-400">${pctComplete}%</span>
-                </div>
-                
-                <div class="relative w-full h-3 bg-slate-700 rounded-full overflow-hidden">
-                    ${markersHtml}
-                    
-                    <div class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out" style="width: ${pctComplete}%"></div>
-                </div>
+                ${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true)}
+                ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers)}
+                ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}
+                ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}
             </div>
             
-            <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1">
+            <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1 self-center">
                 <div>
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
                     <div class="flex items-center gap-2">
