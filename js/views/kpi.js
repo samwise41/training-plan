@@ -1,4 +1,4 @@
-// Removed unused Parser import to prevent load errors
+// js/views/kpi.js
 
 let logData = [];
 
@@ -92,24 +92,90 @@ const buildFTPChart = () => {
 };
 
 // --- REUSABLE VOLUME CHART BUILDER ---
-
-
 const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend') => {
     try {
-        // ... (Keep existing Setup Buckets & Aggregate Data logic) ...
+        if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
         
-        // [Existing aggregation code omitted for brevity - no changes needed here]
-        // ...
-        
+        // 1. Setup Buckets (THIS PART WAS LIKELY MISSING)
+        const buckets = [];
+        const now = new Date();
+        const day = now.getDay();
+        const distToSat = 6 - day;
+        const endOfCurrentWeek = new Date(now);
+        endOfCurrentWeek.setDate(now.getDate() + distToSat);
+        endOfCurrentWeek.setHours(23, 59, 59, 999);
+
+        for (let i = 7; i >= 0; i--) {
+            const end = new Date(endOfCurrentWeek);
+            end.setDate(end.getDate() - (i * 7));
+            const start = new Date(end);
+            start.setDate(start.getDate() - 6);
+            start.setHours(0,0,0,0);
+            buckets.push({ start, end, label: `${end.getMonth()+1}/${end.getDate()}`, actualMins: 0, plannedMins: 0 });
+        }
+
+        // 2. Aggregate Data
+        data.forEach(item => {
+            if (!item.date) return;
+            if (sportType !== 'All' && item.type !== sportType) return;
+            const t = item.date.getTime();
+            const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
+            if (bucket) {
+                bucket.actualMins += (item.actualDuration || 0);
+                bucket.plannedMins += (item.plannedDuration || 0);
+            }
+        });
+
         // 3. Render Bars
         let barsHtml = '';
-        // ... (Keep existing bar calculation logic)
+        const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
 
-        // CHANGE 1: We still map over buckets, but styling remains same inside the loop
         buckets.forEach((b, idx) => {
-            // ... (Keep existing color/height logic) ...
+            const isCurrentWeek = (idx === buckets.length - 1); 
+            const hActual = Math.round((b.actualMins / maxVol) * 100);
+            const hPlan = Math.round((b.plannedMins / maxVol) * 100);
             
-            // ... [Inside the loop]
+            const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
+            
+            let actualColorClass = 'bg-blue-500';
+            let planColorClass = 'bg-blue-500';
+            let growthLabel = "--";
+            let growthColor = "text-slate-400";
+
+            if (idx > 0 && prevActual > 0) {
+                const actualGrowth = (b.actualMins - prevActual) / prevActual;
+                const planGrowth = (b.plannedMins - prevActual) / prevActual;
+
+                let limitRed = 0.15; let limitYellow = 0.10;
+                if (sportType === 'Run') { limitRed = 0.10; limitYellow = 0.05; }
+                else if (sportType === 'Bike' || sportType === 'Swim') { limitRed = 0.20; limitYellow = 0.15; }
+
+                const getColor = (pct) => {
+                    if (pct > limitRed) return 'bg-red-500';
+                    if (pct > limitYellow) return 'bg-yellow-500';
+                    if (pct < -0.20) return 'bg-slate-600'; 
+                    return 'bg-emerald-500'; 
+                };
+
+                actualColorClass = getColor(actualGrowth);
+                planColorClass = getColor(planGrowth);
+
+                const displayGrowth = isCurrentWeek ? planGrowth : actualGrowth;
+                const sign = displayGrowth > 0 ? '▲' : (displayGrowth < 0 ? '▼' : '');
+                growthLabel = `${sign} ${Math.round(displayGrowth * 100)}%`;
+                
+                if (displayGrowth > limitRed) growthColor = "text-red-400";
+                else if (displayGrowth > limitYellow) growthColor = "text-yellow-400";
+                else if (displayGrowth < -0.20) growthColor = "text-slate-500";
+                else growthColor = "text-emerald-400";
+            }
+
+            const colorMap = {'bg-emerald-500': '#10b981', 'bg-yellow-500': '#eab308', 'bg-red-500': '#ef4444', 'bg-slate-600': '#475569', 'bg-blue-500': '#3b82f6'};
+            const planHex = colorMap[planColorClass] || '#3b82f6';
+            const planBarStyle = `background: repeating-linear-gradient(45deg, ${planHex}20, ${planHex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${planHex}40;`;
+            
+            const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80';
+
             barsHtml += `
                 <div class="flex flex-col items-center gap-1 flex-1 group relative">
                     <div class="relative w-full bg-slate-800/30 rounded-t-sm h-32 flex items-end justify-center">
@@ -136,23 +202,19 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         if (sportType === 'Run') iconHtml = '<i class="fa-solid fa-person-running text-emerald-500"></i>';
         if (sportType === 'Swim') iconHtml = '<i class="fa-solid fa-person-swimming text-cyan-500"></i>';
 
-        // CHANGE 2: Changed 'items-end' to 'items-start' below
+        // FIXED: Using items-start to prevent label shift
         return `
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4">
                 <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">${iconHtml} ${title}</h3>
                 </div>
-                <div class="flex items-start justify-between gap-1 w-full">
-                    ${barsHtml}
-                </div>
+                <div class="flex items-start justify-between gap-1 w-full">${barsHtml}</div>
             </div>
         `;
     } catch (e) {
         return `<div class="p-4 text-red-400">Chart Error: ${e.message}</div>`;
     }
 };
-
-
 
 // Main Render Function
 export function renderKPI(mergedLogData) {
