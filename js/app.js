@@ -1,5 +1,5 @@
 import { Parser } from './parser.js?v=25';
-import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=25'; 
+import { renderKPI, updateDurationAnalysis } from './views/trends.js?v=25'; 
 import { renderGear, updateGearResult } from './views/gear.js?v=25';
 import { renderZones } from './views/zones.js?v=25';
 import { renderRoadmap } from './views/roadmap.js?v=25'; 
@@ -35,23 +35,19 @@ const App = {
 
         // 1. Check Cookie
         if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
-            // Logged in: Ensure curtain remains hidden
             if (curtain) curtain.classList.add('hidden');
             return;
         }
 
-        // 2. Not Logged in: SHOW Curtain (This was missing!)
+        // 2. Not Logged in: Show Curtain
         if (curtain) curtain.classList.remove('hidden');
 
-        // 3. Bind Unlock Logic
+        // 3. Bind Unlock
         if (btn && input) {
             const unlock = () => {
                 const code = input.value.trim();
                 if (code === 'training2026') { 
-                    // Set cookie for 1 year
                     document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
-                    
-                    // Fade out curtain
                     curtain.style.opacity = '0';
                     setTimeout(() => curtain.classList.add('hidden'), 500);
                 } else {
@@ -94,9 +90,7 @@ const App = {
     },
 
     async init() {
-        // Run Security Check FIRST
         this.checkSecurity();
-        
         try {
             const [planRes, gearRes, archiveRes] = await Promise.all([
                 fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
@@ -240,7 +234,8 @@ const App = {
                     content.innerHTML = renderZones(this.planMd);
                 } 
                 else if (view === 'trends') {
-                    const result = renderKPI(this.logData); 
+                    // FIXED: Calls renderTrends instead of renderKPI
+                    const result = renderTrends(this.logData); 
                     content.innerHTML = result.html;
                     this.updateDurationAnalysis();
                 } 
