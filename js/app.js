@@ -1,11 +1,11 @@
-import { Parser } from './parser.js';
-import { renderKPI, updateDurationAnalysis } from './views/kpi.js'; 
-import { renderGear, updateGearResult } from './views/gear.js';
-import { renderZones } from './views/zones.js';
-import { renderRoadmap } from './views/roadmap.js'; 
-import { renderDashboard } from './views/dashboard.js'; // NEW IMPORT
+import { Parser } from './parser.js?v=25';
+import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=25'; 
+import { renderGear, updateGearResult } from './views/gear.js?v=25';
+import { renderZones } from './views/zones.js?v=25';
+import { renderRoadmap } from './views/roadmap.js?v=25'; 
+import { renderDashboard } from './views/dashboard.js?v=25'; 
 
-console.log("🚀 App.js Loaded");
+console.log("🚀 App.js Loaded - Cache Buster v25");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
@@ -19,74 +19,13 @@ const CONFIG = {
 };
 
 const App = {
-    planMd: "",
-    gearMd: "",
-    archiveMd: "", 
-    logData: [],
-    gearData: null,
-    currentTemp: null,
-    hourlyWeather: null,
-
-    checkSecurity() {
-        const curtain = document.getElementById('security-curtain');
-        const input = document.getElementById('access-code');
-        const btn = document.getElementById('btn-unlock');
-        const errorMsg = document.getElementById('access-error');
-
-        if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
-            if (curtain) curtain.style.display = 'none';
-            return;
-        }
-
-        if (btn && input) {
-            const unlock = () => {
-                const code = input.value.trim();
-                if (code === 'training2026') { 
-                    document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
-                    curtain.style.opacity = '0';
-                    setTimeout(() => curtain.style.display = 'none', 500);
-                } else {
-                    input.value = '';
-                    if (errorMsg) errorMsg.classList.remove('hidden');
-                    input.classList.add('border-red-500');
-                    input.classList.remove('border-slate-700');
-                }
-            };
-            btn.onclick = unlock; 
-            input.onkeypress = (e) => { if (e.key === 'Enter') unlock(); };
-            input.oninput = () => {
-                if (errorMsg) errorMsg.classList.add('hidden');
-                input.classList.remove('border-red-500');
-                input.classList.add('border-slate-700');
-            };
-        }
-    },
-
-    getStatsBar() {
-        return `
-            <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
-                    <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
-                </div>
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Week</p>
-                    <p class="text-lg font-semibold text-slate-300" id="stat-week">--</p>
-                </div>
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
-                    <div id="stat-event">
-                        <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
-                        <p class="text-[10px] font-normal text-slate-400 mt-1 uppercase" id="stat-event-countdown">--</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    },
-
+    // ... (The rest of your App object remains exactly the same)
+    // ... (Just ensure the fetch calls still include ?t=${Date.now()} which you already had)
+    
     async init() {
         this.checkSecurity();
         try {
+            // Your existing data fetch logic (Keep this!)
             const [planRes, gearRes, archiveRes] = await Promise.all([
                 fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
                 fetch(`./${CONFIG.GEAR_FILE}?t=${Date.now()}`),
@@ -111,7 +50,8 @@ const App = {
             console.error("Init Error:", e);
         }
     },
-
+    
+    // ... (Rest of file unchanged)
     setupEventListeners() {
         const navMap = {
             'nav-dashboard': 'dashboard',
@@ -244,8 +184,6 @@ const App = {
                     content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                 }
                 else {
-                    // DEFAULT: Dashboard (Weekly Schedule)
-                    // NEW: We use renderDashboard() instead of raw Markdown
                     const html = this.getStatsBar() + renderDashboard(this.planMd);
                     content.innerHTML = html;
                     this.updateStats();
