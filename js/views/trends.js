@@ -1,3 +1,5 @@
+// js/views/trends.js
+
 let logData = [];
 
 // Helper functions
@@ -94,7 +96,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
         
-        // --- DEFINE BUCKETS (Critical Fix) ---
+        // --- DEFINE BUCKETS ---
         const buckets = [];
         const now = new Date();
         const day = now.getDay();
@@ -170,13 +172,21 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             const planBarStyle = `background: repeating-linear-gradient(45deg, ${planHex}20, ${planHex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${planHex}40;`;
             const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80';
 
+            // Calculate hours for tooltip
+            const planHrs = (b.plannedMins / 60).toFixed(1);
+            const actHrs = (b.actualMins / 60).toFixed(1);
+
             barsHtml += `
                 <div class="flex flex-col items-center gap-1 flex-1 group relative">
                     <div class="relative w-full bg-slate-800/30 rounded-t-sm h-32 flex items-end justify-center">
-                        <div class="absolute -top-16 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-2 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap text-center pointer-events-none">
-                            <div class="mb-1">Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m</div>
-                            <div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1">Growth: ${growthLabel}</div>
+                        <div class="absolute -top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap text-center pointer-events-none shadow-xl">
+                            <div class="mb-1 leading-tight">
+                                <div>Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m</div>
+                                <div class="text-[10px] text-slate-400 font-normal mt-0.5">Plan: ${planHrs}h | Act: ${actHrs}h</div>
+                            </div>
+                            <div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1">Growth: ${growthLabel}</div>
                         </div>
+                        
                         <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div>
                         <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualColorClass} ${actualOpacity} rounded-t-sm"></div>
                     </div>
