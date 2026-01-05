@@ -33,18 +33,27 @@ const App = {
         const btn = document.getElementById('btn-unlock');
         const errorMsg = document.getElementById('access-error');
 
+        // 1. Check Cookie
         if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
-            if (curtain) curtain.style.display = 'none';
+            // Logged in: Ensure curtain remains hidden
+            if (curtain) curtain.classList.add('hidden');
             return;
         }
 
+        // 2. Not Logged in: SHOW Curtain (This was missing!)
+        if (curtain) curtain.classList.remove('hidden');
+
+        // 3. Bind Unlock Logic
         if (btn && input) {
             const unlock = () => {
                 const code = input.value.trim();
                 if (code === 'training2026') { 
+                    // Set cookie for 1 year
                     document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
+                    
+                    // Fade out curtain
                     curtain.style.opacity = '0';
-                    setTimeout(() => curtain.style.display = 'none', 500);
+                    setTimeout(() => curtain.classList.add('hidden'), 500);
                 } else {
                     input.value = '';
                     if (errorMsg) errorMsg.classList.remove('hidden');
@@ -85,7 +94,9 @@ const App = {
     },
 
     async init() {
+        // Run Security Check FIRST
         this.checkSecurity();
+        
         try {
             const [planRes, gearRes, archiveRes] = await Promise.all([
                 fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
@@ -244,8 +255,6 @@ const App = {
                     content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                 }
                 else {
-                    // DEFAULT: Dashboard (Weekly Schedule)
-                    // NEW: We use renderDashboard() instead of raw Markdown
                     const html = this.getStatsBar() + renderDashboard(this.planMd);
                     content.innerHTML = html;
                     this.updateStats();
