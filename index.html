@@ -118,6 +118,14 @@
         </div>
     </div>
 
-    <script type="module" src="js/app.js?v=30"></script>
+    <script>
+        const script = document.createElement('script');
+        script.type = 'module';
+        // Appends current time (?t=12345...) to force browser to reload app.js
+        script.src = 'js/app.js?t=' + Date.now();
+        document.body.appendChild(script);
+    </script>
+</body>
+</html>
 </body>
 </html>
