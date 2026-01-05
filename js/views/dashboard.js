@@ -11,7 +11,7 @@ export function renderDashboard(planMd) {
     // Sort by Date
     workouts.sort((a, b) => a.date - b.date);
 
-    // 2. Build Progress Widget (NEW)
+    // 2. Build Progress Widget
     const progressHtml = buildProgressWidget(workouts);
 
     // 3. Helpers for Styling
@@ -47,32 +47,52 @@ export function renderDashboard(planMd) {
         const dateObj = dailyWorkouts[0].date;
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
         
-        // Highlight Today
+        // Check if today
         const today = new Date();
         const isToday = dateObj.getDate() === today.getDate() && 
                         dateObj.getMonth() === today.getMonth() && 
                         dateObj.getFullYear() === today.getFullYear();
         
-        const cardBorder = isToday ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900' : 'border border-slate-700 hover:border-slate-600';
-
         dailyWorkouts.forEach(w => {
             const notes = w.notes ? w.notes.replace(/\[.*?\]/g, '') : "No specific notes.";
             
-            // Determine "Big Number" text
+            // Determine "Big Number" text & Status Colors
             let displayDuration = w.plannedDuration;
             let displayUnit = "mins";
             let statusText = "PLANNED";
             let statusColor = "text-white"; 
 
-            // Handle Completed State
+            // --- BORDER LOGIC START ---
+            let cardBorder = 'border border-slate-700 hover:border-slate-600'; // Default Gray
+
             if (w.completed) {
                 statusText = "COMPLETED";
                 statusColor = "text-emerald-500";
+
+                // Calculate Adherence
+                const plan = w.plannedDuration || 0;
+                const act = w.actualDuration || 0;
+                const ratio = plan > 0 ? (act / plan) : 1; 
+
+                if (ratio >= 0.95) {
+                    // >= 95%: Green
+                    cardBorder = 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-slate-900';
+                } else if (ratio >= 0.80) {
+                    // 80% - 94%: Yellow
+                    cardBorder = 'ring-2 ring-yellow-500 ring-offset-2 ring-offset-slate-900';
+                } else {
+                    // < 80%: Red
+                    cardBorder = 'ring-2 ring-red-500 ring-offset-2 ring-offset-slate-900';
+                }
+            } else if (isToday) {
+                // Today (Not Completed): Blue
+                cardBorder = 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900';
             } else if (w.type === 'Rest') {
                 displayDuration = "--";
                 statusText = "REST DAY";
                 statusColor = "text-slate-500";
             }
+            // --- BORDER LOGIC END ---
 
             cardsHtml += `
                 <div class="bg-slate-800 rounded-xl p-6 shadow-lg relative overflow-hidden transition-all ${cardBorder}">
@@ -119,7 +139,6 @@ export function renderDashboard(planMd) {
         });
     });
 
-    // Return Combined HTML (Progress Widget + Cards)
     return `
         ${progressHtml}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -133,30 +152,26 @@ export function renderDashboard(planMd) {
  */
 function buildProgressWidget(workouts) {
     const today = new Date();
-    today.setHours(23, 59, 59, 999); // Include all of today
+    today.setHours(23, 59, 59, 999); 
 
     let totalPlanned = 0;
     let totalActual = 0;
     let expectedSoFar = 0;
 
     workouts.forEach(w => {
-        // Skip Rest Days from calculation logic if they have 0 duration
         const plan = w.plannedDuration || 0;
         const act = w.actualDuration || 0;
 
         totalPlanned += plan;
         totalActual += act;
 
-        // If the workout was scheduled for today or earlier, add to "Expected"
         if (w.date <= today) {
             expectedSoFar += plan;
         }
     });
 
-    // Avoid division by zero
     const pctComplete = totalPlanned > 0 ? Math.min(Math.round((totalActual / totalPlanned) * 100), 100) : 0;
     
-    // Calculate Pacing
     const pacingDiff = totalActual - expectedSoFar;
     let pacingLabel = "On Track";
     let pacingColor = "text-slate-400";
@@ -174,7 +189,6 @@ function buildProgressWidget(workouts) {
 
     return `
         <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-center gap-6 shadow-sm">
-            
             <div class="flex-1 w-full">
                 <div class="flex justify-between items-end mb-2">
                     <div class="flex flex-col">
@@ -185,14 +199,11 @@ function buildProgressWidget(workouts) {
                     </div>
                     <span class="text-xs font-bold text-blue-400">${pctComplete}%</span>
                 </div>
-                
                 <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
                     <div class="bg-blue-500 h-full rounded-full transition-all duration-1000 ease-out" style="width: ${pctComplete}%"></div>
                 </div>
             </div>
-
             <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1">
-                
                 <div>
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
                     <div class="flex items-center gap-2">
@@ -200,13 +211,11 @@ function buildProgressWidget(workouts) {
                         <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
                     </div>
                 </div>
-
                 <div class="text-right md:text-left">
                     <span class="text-[10px] text-slate-500 font-mono">
                         Target: ${Math.round(expectedSoFar)}m
                     </span>
                 </div>
-
             </div>
         </div>
     `;
