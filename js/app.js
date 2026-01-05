@@ -1,11 +1,11 @@
 import { Parser } from './parser.js';
-// CACHE BUSTER: Incremented to ?v=20 to ensure fresh load
-import { renderTrends } from './views/trends.js?v=20'; 
-import { renderLogbook, updateDurationAnalysis } from './views/logbook.js?v=20';
-import { renderRoadmap } from './views/roadmap.js?v=20';
-import { renderResources, updateGearResult } from './views/resources.js?v=20';
+// CACHE BUSTER: Incremented to ?v=21 to ensure fresh load
+import { renderTrends } from './views/trends.js?v=21'; 
+import { renderLogbook, updateDurationAnalysis } from './views/logbook.js?v=21';
+import { renderRoadmap } from './views/roadmap.js?v=21';
+import { renderResources, updateGearResult } from './views/resources.js?v=21';
 
-console.log("🚀 App.js v2.0 Loaded");
+console.log("🚀 App.js v2.1 Loaded - Grid View Active");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
@@ -26,6 +26,77 @@ const App = {
     gearData: null,
     currentTemp: null,
     hourlyWeather: null,
+
+    // --- NEW: Helper to turn Markdown Table into a Card Grid ---
+    renderScheduleGrid(mdContent) {
+        if (!mdContent) return '<p class="text-slate-500 italic">No schedule data found.</p>';
+
+        const lines = mdContent.split('\n').filter(line => line.trim().startsWith('|') && !line.includes('---'));
+        if (lines.length === 0) return '<p class="text-slate-500 italic">No schedule rows found.</p>';
+
+        // Skip header if it exists
+        const rows = lines[0].toLowerCase().includes('day') ? lines.slice(1) : lines;
+
+        let gridHtml = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">';
+
+        rows.forEach(row => {
+            const cols = row.split('|').map(c => c.trim()).filter(c => c);
+            // Expected Format: | Status | Day | Type/Name | Duration | ... 
+            // OR Simple: | Day | Activity | Duration | Notes |
+            
+            // Flexible Parsing Strategy
+            let day = "Day";
+            let activity = "Rest";
+            let duration = "-";
+            let notes = "";
+            let icon = '<i class="fa-solid fa-bed text-slate-500"></i>';
+            let colorClass = "border-slate-700 bg-slate-800/50";
+
+            if (cols.length >= 3) {
+                // Try to identify columns based on content
+                day = cols.find(c => /Mon|Tue|Wed|Thu|Fri|Sat|Sun/i.test(c)) || cols[0];
+                duration = cols.find(c => /\d+\s*(min|hr|hour)/i.test(c)) || (cols.length > 2 ? cols[2] : "-");
+                
+                // Activity is usually the longest text that isn't the notes
+                activity = cols.find(c => c !== day && c !== duration && c.length < 50) || "Workout";
+                notes = cols.find(c => c.length > 50) || ""; // Long text is usually notes
+                
+                // Icon & Color Logic
+                const actLower = activity.toLowerCase();
+                const typeLower = (cols[2] || "").toLowerCase(); // Check raw column too
+                
+                if (actLower.includes('bike') || typeLower.includes('bike')) {
+                    icon = '<i class="fa-solid fa-bicycle text-blue-400"></i>';
+                    colorClass = "border-blue-900/30 bg-blue-900/10 hover:border-blue-500/50";
+                } else if (actLower.includes('run') || typeLower.includes('run')) {
+                    icon = '<i class="fa-solid fa-person-running text-emerald-400"></i>';
+                    colorClass = "border-emerald-900/30 bg-emerald-900/10 hover:border-emerald-500/50";
+                } else if (actLower.includes('swim') || typeLower.includes('swim')) {
+                    icon = '<i class="fa-solid fa-person-swimming text-cyan-400"></i>';
+                    colorClass = "border-cyan-900/30 bg-cyan-900/10 hover:border-cyan-500/50";
+                } else if (actLower.includes('rest')) {
+                    colorClass = "border-slate-800 bg-slate-900/50 opacity-75";
+                }
+            }
+
+            gridHtml += `
+                <div class="border ${colorClass} rounded-xl p-4 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold uppercase tracking-widest text-slate-500">${day}</span>
+                            <div class="text-xl opacity-80 group-hover:opacity-100 transition-opacity">${icon}</div>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-200 leading-tight mb-1">${activity.replace(/\[.*?\]/g, '').trim()}</h3>
+                        <div class="text-xs text-slate-400 font-mono mb-3">${duration}</div>
+                    </div>
+                    ${notes ? `<div class="text-xs text-slate-500 border-t border-slate-700/50 pt-2 mt-2 line-clamp-2">${notes}</div>` : ''}
+                </div>
+            `;
+        });
+
+        gridHtml += '</div>';
+        return gridHtml;
+    },
 
     checkSecurity() {
         const curtain = document.getElementById('security-curtain');
@@ -59,7 +130,7 @@ const App = {
 
     getStatsBar() {
         return `
-            <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+            <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
                     <p class="text-lg font-semibold text-blue-400" id="stat-phase">--</p>
@@ -81,7 +152,6 @@ const App = {
 
     async init() {
         this.checkSecurity(); 
-        
         try {
             const [planRes, gearRes, archiveRes] = await Promise.all([
                 fetch(`./${CONFIG.PLAN_FILE}?t=${Date.now()}`),
@@ -250,13 +320,17 @@ const App = {
                 }
                 else {
                     // DEFAULT: DASHBOARD
+                    // --- NEW LOGIC START ---
                     const sectionTitle = "Weekly Schedule";
                     const mdContent = Parser.getSection(this.planMd, sectionTitle);
-                    const safeMarked = window.marked ? window.marked.parse : (t) => t;
-                    let html = safeMarked(mdContent || "*Schedule not found.*");
-                    html = this.getStatsBar() + html;
-                    content.innerHTML = html;
+                    
+                    // Use the custom GRID renderer instead of marked()
+                    let gridHtml = this.renderScheduleGrid(mdContent);
+                    
+                    // Add Stats Bar + Grid
+                    content.innerHTML = this.getStatsBar() + gridHtml;
                     this.updateStats();
+                    // --- NEW LOGIC END ---
                 }
             } catch (err) {
                 console.error("Render error:", err);
