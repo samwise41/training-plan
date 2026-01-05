@@ -146,8 +146,6 @@ Use these mathematical rules to generate the specific duration and intensity for
 
 ## 5. Weekly Schedule & Logistics
 
-**Current Phase:** Phase 1 (Base/Prep) **Current Week:** Week 2 (Aerobic Base Building)
-
 | **Status** | **Day** | **Planned Workout** | **Planned Duration** | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** |
 |:---|:---|:---|:---|:---|:---|:---|:---|
 | COMPLETED | Monday | [BIKE] Strength / Hill Focus | 60 mins | [BIKE] Zwift sweet spot | 60 | Zone 3 / Sweet Spot (181-226W). Focus on low cadence (60-70 rpm) to build force. | 2026-01-05 |
