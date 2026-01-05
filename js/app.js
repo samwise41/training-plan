@@ -1,11 +1,11 @@
-import { Parser } from './parser.js?v=29';
-import { renderTrends, updateDurationAnalysis } from './views/trends.js?v=29'; 
-import { renderGear, updateGearResult } from './views/gear.js?v=29';
-import { renderZones } from './views/zones.js?v=29';
-import { renderRoadmap } from './views/roadmap.js?v=29'; 
-import { renderDashboard } from './views/dashboard.js?v=29'; 
+import { Parser } from './parser.js?v=30';
+import { renderTrends, updateDurationAnalysis } from './views/trends.js?v=30'; 
+import { renderGear, updateGearResult } from './views/gear.js?v=30';
+import { renderZones } from './views/zones.js?v=30';
+import { renderRoadmap } from './views/roadmap.js?v=30'; 
+import { renderDashboard } from './views/dashboard.js?v=30'; 
 
-console.log("🚀 App.js Loaded - Dashboard Cleanup v29");
+console.log("🚀 App.js Loaded - Stacked Phase/Week Card v30");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
@@ -33,16 +33,13 @@ const App = {
         const btn = document.getElementById('btn-unlock');
         const errorMsg = document.getElementById('access-error');
 
-        // 1. Check Cookie
         if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
             if (curtain) curtain.classList.add('hidden');
             return;
         }
 
-        // 2. Not Logged in: Show Curtain
         if (curtain) curtain.classList.remove('hidden');
 
-        // 3. Bind Unlock
         if (btn && input) {
             const unlock = () => {
                 const code = input.value.trim();
@@ -68,13 +65,16 @@ const App = {
     },
 
     getStatsBar() {
-        // CHANGED: Grid is now 2 columns instead of 3
+        // CHANGED: "Phase" and "Week" are now stacked in one card
         return `
             <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
                 
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase / Week</p>
-                    <p class="text-lg font-semibold text-blue-400 truncate" id="stat-phase">--</p>
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg flex flex-col justify-center">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
+                    <div class="flex flex-col">
+                        <span class="text-lg font-bold text-blue-500 leading-tight" id="stat-phase">--</span>
+                        <span class="text-lg font-bold text-white leading-tight" id="stat-week">--</span>
+                    </div>
                 </div>
 
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
@@ -163,18 +163,19 @@ const App = {
     updateStats() {
         if (!this.planMd) return;
         
-        // CHANGED: Combined Regex Logic
+        // Regex extracts both parts separately
         const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
         const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
         const currentWeek = statusMatch ? statusMatch[2].trim() : "";
         
-        // Create Combined String
-        const combinedText = currentWeek ? `${currentPhaseRaw} • ${currentWeek}` : currentPhaseRaw;
-
+        // 1. Update Blue Line (Phase)
         const phaseEl = document.getElementById('stat-phase');
-        if (phaseEl) phaseEl.innerText = combinedText;
+        if (phaseEl) phaseEl.innerText = currentPhaseRaw;
+
+        // 2. Update White Line (Week)
+        const weekEl = document.getElementById('stat-week');
+        if (weekEl) weekEl.innerText = currentWeek;
         
-        // Event Logic
         const eventSection = Parser.getSection(this.planMd, "Event Schedule");
         if (eventSection) {
             const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
