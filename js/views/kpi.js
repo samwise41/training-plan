@@ -12,18 +12,13 @@ const getIconForType = (type) => {
 
 // --- Concentric Donut Chart (30d vs 60d) ---
 const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
-    // Outer Ring (30 Days) - Standard Size
-    const r1 = 15.9155;
-    const c1 = 100;
+    const r1 = 15.9155; const c1 = 100;
     const dash1 = `${stats30.pct} ${100 - stats30.pct}`;
     const color1 = stats30.pct >= 80 ? '#22c55e' : (stats30.pct >= 50 ? '#eab308' : '#ef4444');
-
-    // Inner Ring (60 Days) - Smaller Size
-    const r2 = 10; 
-    const c2 = 2 * Math.PI * r2; // ~62.83
+    const r2 = 10; const c2 = 2 * Math.PI * r2; 
     const val2 = (stats60.pct / 100) * c2;
     const dash2 = `${val2} ${c2 - val2}`;
-    const color2 = stats60.pct >= 80 ? '#15803d' : (stats60.pct >= 50 ? '#a16207' : '#b91c1c'); // Slightly darker for contrast
+    const color2 = stats60.pct >= 80 ? '#15803d' : (stats60.pct >= 50 ? '#a16207' : '#b91c1c'); 
 
     return `
         <div class="flex flex-col items-center justify-center w-full py-2">
@@ -31,52 +26,30 @@ const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
                 <svg width="100%" height="100%" viewBox="0 0 42 42" class="donut-svg">
                     <circle cx="21" cy="21" r="${r1}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
                     <circle cx="21" cy="21" r="${r2}" fill="none" stroke="#1e293b" stroke-width="3"></circle>
-
-                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="${color1}" stroke-width="3"
-                            stroke-dasharray="${dash1}" stroke-dashoffset="25" stroke-linecap="round"></circle>
-
-                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="${color2}" stroke-width="3"
-                            stroke-dasharray="${dash2}" stroke-dashoffset="${c2 * 0.25}" stroke-linecap="round"></circle>
+                    <circle cx="21" cy="21" r="${r1}" fill="none" stroke="${color1}" stroke-width="3" stroke-dasharray="${dash1}" stroke-dashoffset="25" stroke-linecap="round"></circle>
+                    <circle cx="21" cy="21" r="${r2}" fill="none" stroke="${color2}" stroke-width="3" stroke-dasharray="${dash2}" stroke-dashoffset="${c2 * 0.25}" stroke-linecap="round"></circle>
                 </svg>
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${centerLabel}</span>
-                </div>
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none"><span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">${centerLabel}</span></div>
             </div>
-
             <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] w-full max-w-[160px]">
-                <div class="text-right font-bold text-slate-400 flex items-center justify-end gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color1}"></span> 30d
-                </div>
-                <div class="font-mono text-white flex items-center gap-1 truncate">
-                    ${stats30.pct}% <span class="text-slate-500 opacity-70">(${stats30.label})</span>
-                </div>
-
-                <div class="text-right font-bold text-slate-500 flex items-center justify-end gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color2}"></span> 60d
-                </div>
-                <div class="font-mono text-slate-300 flex items-center gap-1 truncate">
-                    ${stats60.pct}% <span class="text-slate-600 opacity-70">(${stats60.label})</span>
-                </div>
+                <div class="text-right font-bold text-slate-400 flex items-center justify-end gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color1}"></span> 30d</div>
+                <div class="font-mono text-white flex items-center gap-1 truncate">${stats30.pct}% <span class="text-slate-500 opacity-70">(${stats30.label})</span></div>
+                <div class="text-right font-bold text-slate-500 flex items-center justify-end gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background-color: ${color2}"></span> 60d</div>
+                <div class="font-mono text-slate-300 flex items-center gap-1 truncate">${stats60.pct}% <span class="text-slate-600 opacity-70">(${stats60.label})</span></div>
             </div>
-        </div>
-    `;
+        </div>`;
 };
 
-
-// --- FTP Progress Line Chart ---
+// --- FTP Progress Chart ---
 const buildFTPChart = () => {
     const md = window.App?.planMd || "";
     if (!md) return '<div class="p-4 text-slate-500 italic">Plan data not loaded</div>';
-
     const lines = md.split('\n');
     const dataPoints = [];
     let startFound = false;
 
     for (let line of lines) {
-        if (line.includes('### Historical FTP Log')) {
-            startFound = true;
-            continue;
-        }
+        if (line.includes('### Historical FTP Log')) { startFound = true; continue; }
         if (startFound) {
             if (line.trim().startsWith('#') && dataPoints.length > 0) break; 
             if (line.includes('|') && !line.includes('---') && !line.toLowerCase().includes('date')) {
@@ -86,61 +59,36 @@ const buildFTPChart = () => {
                     const ftpStr = parts[2].trim();
                     const date = new Date(dateStr);
                     const ftp = parseInt(ftpStr.replace(/\D/g, ''));
-                    
-                    if (!isNaN(date.getTime()) && !isNaN(ftp)) {
-                        dataPoints.push({ date, ftp, label: dateStr });
-                    }
+                    if (!isNaN(date.getTime()) && !isNaN(ftp)) dataPoints.push({ date, ftp, label: dateStr });
                 }
             }
         }
     }
-
     dataPoints.sort((a, b) => a.date - b.date);
     if (dataPoints.length < 2) return ''; 
 
-    const width = 800;
-    const height = 250;
-    const padding = { top: 30, bottom: 40, left: 50, right: 30 };
-    
-    const minFTP = Math.min(...dataPoints.map(d => d.ftp)) * 0.95;
-    const maxFTP = Math.max(...dataPoints.map(d => d.ftp)) * 1.05;
-    const minTime = dataPoints[0].date.getTime();
-    const maxTime = dataPoints[dataPoints.length - 1].date.getTime();
-
+    const width = 800, height = 250, padding = { top: 30, bottom: 40, left: 50, right: 30 };
+    const minFTP = Math.min(...dataPoints.map(d => d.ftp)) * 0.95, maxFTP = Math.max(...dataPoints.map(d => d.ftp)) * 1.05;
+    const minTime = dataPoints[0].date.getTime(), maxTime = dataPoints[dataPoints.length - 1].date.getTime();
     const getX = (d) => padding.left + ((d.date.getTime() - minTime) / (maxTime - minTime)) * (width - padding.left - padding.right);
     const getY = (d) => height - padding.bottom - ((d.ftp - minFTP) / (maxFTP - minFTP)) * (height - padding.top - padding.bottom);
 
     let pathD = `M ${getX(dataPoints[0])} ${getY(dataPoints[0])}`;
     let pointsHTML = '';
-    
     dataPoints.forEach(d => {
-        const x = getX(d);
-        const y = getY(d);
-        pathD += ` L ${x} ${y}`;
-        pointsHTML += `
-            <circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2">
-                <title>${d.label}: ${d.ftp}W</title>
-            </circle>
+        const x = getX(d); const y = getY(d); pathD += ` L ${x} ${y}`;
+        pointsHTML += `<circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2"><title>${d.label}: ${d.ftp}W</title></circle>
             <text x="${x}" y="${y - 10}" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="bold">${d.ftp}</text>
-            <text x="${x}" y="${height - 15}" text-anchor="middle" font-size="10" fill="#64748b">${d.date.getMonth()+1}/${d.date.getFullYear() % 100}</text>
-        `;
+            <text x="${x}" y="${height - 15}" text-anchor="middle" font-size="10" fill="#64748b">${d.date.getMonth()+1}/${d.date.getFullYear() % 100}</text>`;
     });
 
-    return `
-        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
-            <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2 flex items-center gap-2">
-                <i class="fa-solid fa-arrow-trend-up text-emerald-500"></i> FTP Progression
-            </h2>
-            <div class="w-full">
-                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
+    return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-12">
+            <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2 flex items-center gap-2"><i class="fa-solid fa-arrow-trend-up text-emerald-500"></i> FTP Progression</h2>
+            <div class="w-full"><svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
                     <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
                     <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
-                    <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                    ${pointsHTML}
-                </svg>
-            </div>
-        </div>
-    `;
+                    <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />${pointsHTML}
+                </svg></div></div>`;
 };
 
 // --- REUSABLE VOLUME CHART BUILDER ---
@@ -148,27 +96,32 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
         
-        // 1. Setup Buckets (Last 8 Weeks)
+        // 1. Setup Buckets
+        // Fix: Anchor to the UPCOMING Saturday to ensure current/future week is included
         const buckets = [];
         const now = new Date();
-        const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
-        const currentMonday = new Date(now.setDate(diff));
-        currentMonday.setHours(0,0,0,0);
+        const day = now.getDay(); // 0-6
+        // Calculate days until next Saturday (6)
+        const distToSat = 6 - day;
+        const endOfCurrentWeek = new Date(now);
+        endOfCurrentWeek.setDate(now.getDate() + distToSat);
+        endOfCurrentWeek.setHours(23, 59, 59, 999);
 
+        // Generate 8 weeks back from the upcoming Saturday
         for (let i = 7; i >= 0; i--) {
-            const d = new Date(currentMonday);
-            d.setDate(d.getDate() - (i * 7));
-            const e = new Date(d);
-            e.setDate(e.getDate() + 6);
-            e.setHours(23,59,59,999);
-            buckets.push({ start: d, end: e, label: `${d.getMonth()+1}/${d.getDate()}`, actualMins: 0, plannedMins: 0 });
+            const end = new Date(endOfCurrentWeek);
+            end.setDate(end.getDate() - (i * 7));
+            
+            const start = new Date(end);
+            start.setDate(start.getDate() - 6);
+            start.setHours(0,0,0,0);
+
+            buckets.push({ start, end, label: `${end.getMonth()+1}/${end.getDate()}`, actualMins: 0, plannedMins: 0 });
         }
 
-        // 2. Aggregate Data (With Sport Filter)
+        // 2. Aggregate Data
         data.forEach(item => {
             if (!item.date) return;
-            // FILTER: Skip if we are looking for a specific sport and this item doesn't match
             if (sportType !== 'All' && item.type !== sportType) return;
 
             const t = item.date.getTime();
@@ -184,25 +137,28 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
 
         buckets.forEach((b, idx) => {
+            // "Current Week" is the last bucket (which ends this coming Saturday)
             const isCurrentWeek = (idx === buckets.length - 1); 
+            
             const hActual = Math.round((b.actualMins / maxVol) * 100);
             const hPlan = Math.round((b.plannedMins / maxVol) * 100);
-            const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
             
-            let comparisonVal = isCurrentWeek ? b.plannedMins : b.actualMins;
+            // Calculate Growth based on ACTUALS (Historical)
+            const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
             let growthPct = 0;
             let growthLabel = "--";
-            let colorClass = 'bg-blue-500';
+            let colorClass = 'bg-blue-500'; // Default Safe
             let growthColor = "text-slate-400";
 
+            // If we have previous data, calculate growth
+            // For current week, we compare Planned vs Previous Actual
+            const compareVal = isCurrentWeek ? b.plannedMins : b.actualMins;
+            
             if (idx > 0 && prevActual > 0) {
-                growthPct = (comparisonVal - prevActual) / prevActual;
+                growthPct = (compareVal - prevActual) / prevActual;
                 
-                // --- SMART THRESHOLDS LOGIC ---
-                // Run: >10% is Red
-                // Bike/Swim: >20% is Red
-                // All: >15% is Red
-                let limitRed = 0.15;
+                // Smart Thresholds
+                let limitRed = 0.15; // Global
                 let limitYellow = 0.10;
 
                 if (sportType === 'Run') { limitRed = 0.10; limitYellow = 0.05; }
@@ -218,15 +174,17 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             }
 
             // Styles
-            let actualBarClass = isCurrentWeek ? 'bg-blue-500' : colorClass;
-            let planBarStyle = '';
+            // FIX: Always show Plan Bar (Ghost) for historical context
+            let baseColor = colorClass.replace('bg-', '');
+            const colorMap = {'emerald-500': '#10b981', 'yellow-500': '#eab308', 'red-500': '#ef4444', 'slate-600': '#475569', 'blue-500': '#3b82f6'};
+            const hex = colorMap[baseColor] || '#3b82f6';
             
-            if (isCurrentWeek) {
-                let baseColor = colorClass.replace('bg-', '');
-                const colorMap = {'emerald-500': '#10b981', 'yellow-500': '#eab308', 'red-500': '#ef4444', 'slate-600': '#475569', 'blue-500': '#3b82f6'};
-                const hex = colorMap[baseColor] || '#3b82f6';
-                planBarStyle = `background: repeating-linear-gradient(45deg, ${hex}20, ${hex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${hex};`;
-            }
+            // Ghost Bar Style (Plan)
+            const planBarStyle = `background: repeating-linear-gradient(45deg, ${hex}20, ${hex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${hex}40;`;
+            
+            // Actual Bar Style (Solid)
+            const actualBarClass = isCurrentWeek ? 'bg-blue-500' : colorClass;
+            const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80';
 
             barsHtml += `
                 <div class="flex flex-col items-center gap-1 flex-1 group relative">
@@ -237,14 +195,17 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
                         </div>
 
                         <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div>
-                        <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualBarClass} opacity-90 rounded-t-sm"></div>
+                        
+                        <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualBarClass} ${actualOpacity} rounded-t-sm"></div>
                     </div>
-                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none">${b.label}</span>
+                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none">
+                        ${b.label}
+                        ${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400">NEXT</span>' : ''}
+                    </span>
                 </div>
             `;
         });
 
-        // Determine Icon
         let iconHtml = '<i class="fa-solid fa-chart-column text-blue-500"></i>';
         if (sportType === 'Bike') iconHtml = '<i class="fa-solid fa-bicycle text-blue-500"></i>';
         if (sportType === 'Run') iconHtml = '<i class="fa-solid fa-person-running text-emerald-500"></i>';
@@ -253,9 +214,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         return `
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4">
                 <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        ${iconHtml} ${title}
-                    </h3>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">${iconHtml} ${title}</h3>
                 </div>
                 <div class="flex items-end justify-between gap-1 w-full">${barsHtml}</div>
             </div>
@@ -270,63 +229,32 @@ export function renderKPI(mergedLogData) {
     logData = Array.isArray(mergedLogData) ? mergedLogData : [];
 
     const calculateStats = (targetType, days, isDuration) => {
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - days);
-        const now = new Date();
-        now.setHours(23, 59, 59, 999);
-
+        const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+        const now = new Date(); now.setHours(23, 59, 59, 999);
         const subset = logData.filter(item => {
             if (!item || !item.date) return false;
             return item.date >= cutoff && item.date <= now && (targetType === 'All' || item.type === targetType);
         });
-
         let val = 0, target = 0;
         subset.forEach(item => {
-            if (isDuration) {
-                target += (item.plannedDuration || 0);
-                if (item.type === item.actualType) val += (item.actualDuration || 0);
-            } else {
-                target++;
-                if (item.completed) val++;
-            }
+            if (isDuration) { target += (item.plannedDuration || 0); if (item.type === item.actualType) val += (item.actualDuration || 0); }
+            else { target++; if (item.completed) val++; }
         });
-
         const pct = target > 0 ? Math.round((val / target) * 100) : 0;
-        const label = isDuration 
-            ? `${val > 120 ? (val/60).toFixed(1)+'h' : val+'m'}/${target > 120 ? (target/60).toFixed(1)+'h' : target+'m'}`
-            : `${val}/${target}`;
-            
+        const label = isDuration ? `${val > 120 ? (val/60).toFixed(1)+'h' : val+'m'}/${target > 120 ? (target/60).toFixed(1)+'h' : target+'m'}` : `${val}/${target}`;
         return { pct, label };
     };
 
-    // New Function to Combine Both Charts into One Card
     const buildCombinedCard = (title, type) => {
-        // Count Stats
-        const count30 = calculateStats(type, 30, false);
-        const count60 = calculateStats(type, 60, false);
-        
-        // Duration Stats
-        const dur30 = calculateStats(type, 30, true);
-        const dur60 = calculateStats(type, 60, true);
-
-        return `
-            <div class="kpi-card">
-                <div class="kpi-header mb-2">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
-                <div class="flex justify-around items-start">
-                    <div class="w-1/2 border-r border-slate-700 pr-2">
-                        ${buildConcentricChart(count30, count60, "Count")}
-                    </div>
-                    <div class="w-1/2 pl-2">
-                        ${buildConcentricChart(dur30, dur60, "Time")}
-                    </div>
-                </div>
-            </div>
-        `;
+        const count30 = calculateStats(type, 30, false); const count60 = calculateStats(type, 60, false);
+        const dur30 = calculateStats(type, 30, true); const dur60 = calculateStats(type, 60, true);
+        return `<div class="kpi-card"><div class="kpi-header mb-2">${getIconForType(type)}<span class="kpi-title">${title}</span></div>
+                <div class="flex justify-around items-start"><div class="w-1/2 border-r border-slate-700 pr-2">${buildConcentricChart(count30, count60, "Count")}</div><div class="w-1/2 pl-2">${buildConcentricChart(dur30, dur60, "Time")}</div></div></div>`;
     };
 
     const html = `
         ${renderVolumeChart(logData, 'All', 'Total Weekly Volume')}
-
+        
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
             ${renderVolumeChart(logData, 'Bike', 'Cycling Volume')}
             ${renderVolumeChart(logData, 'Run', 'Running Volume')}
@@ -334,7 +262,6 @@ export function renderKPI(mergedLogData) {
         </div>
 
         ${buildFTPChart()}
-
         <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Adherence Overview</h2>
         <div class="kpi-grid mb-12">
             ${buildCombinedCard("All Activities", "All")}
@@ -344,159 +271,50 @@ export function renderKPI(mergedLogData) {
         </div>
 
         <div class="kpi-card bg-slate-800/20 border-t-4 border-t-purple-500">
-            <div class="kpi-header border-b border-slate-700 pb-2 mb-4">
-                <i class="fa-solid fa-filter text-purple-500 text-xl"></i>
-                <span class="kpi-title ml-2 text-purple-400">Duration Analysis Tool</span>
-            </div>
-            
+            <div class="kpi-header border-b border-slate-700 pb-2 mb-4"><i class="fa-solid fa-filter text-purple-500 text-xl"></i><span class="kpi-title ml-2 text-purple-400">Duration Analysis Tool</span></div>
             <div class="flex flex-col sm:flex-row gap-4 mb-8">
-                <div class="flex-1">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Sport Filter</label>
-                    <select id="kpi-sport-select" onchange="window.App.updateDurationAnalysis()" class="gear-select">
-                        <option value="All">All Sports</option>
-                        <option value="Bike">Bike</option>
-                        <option value="Run">Run</option>
-                        <option value="Swim">Swim</option>
-                    </select>
-                </div>
-                <div class="flex-1">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Day Filter</label>
-                    <select id="kpi-day-select" onchange="window.App.updateDurationAnalysis()" class="gear-select">
-                        <option value="All">All Days</option>
-                        <option value="Weekday">Weekday (Mon-Fri)</option>
-                        <option value="Monday">Monday</option>
-                        <option value="Tuesday">Tuesday</option>
-                        <option value="Wednesday">Wednesday</option>
-                        <option value="Thursday">Thursday</option>
-                        <option value="Friday">Friday</option>
-                        <option value="Saturday">Saturday</option>
-                        <option value="Sunday">Sunday</option>
-                    </select>
-                </div>
-                <div class="flex-1">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Time Period</label>
-                    <select id="kpi-time-select" onchange="window.App.updateDurationAnalysis()" class="gear-select">
-                        <option value="All">All Time</option>
-                        <option value="30">Last 30 Days</option>
-                        <option value="60">Last 60 Days</option>
-                        <option value="90">Last 90 Days</option>
-                    </select>
-                </div>
+                <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Sport Filter</label><select id="kpi-sport-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Sports</option><option value="Bike">Bike</option><option value="Run">Run</option><option value="Swim">Swim</option></select></div>
+                <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Day Filter</label><select id="kpi-day-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Days</option><option value="Weekday">Weekday (Mon-Fri)</option><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option></select></div>
+                <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Time Period</label><select id="kpi-time-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Time</option><option value="30">Last 30 Days</option><option value="60">Last 60 Days</option><option value="90">Last 90 Days</option></select></div>
             </div>
-
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Planned</div>
-                    <div id="kpi-analysis-planned" class="text-xl font-bold text-white">--</div>
-                </div>
-                <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Actual</div>
-                    <div id="kpi-analysis-actual" class="text-xl font-bold text-white">--</div>
-                </div>
-                <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Difference</div>
-                    <div id="kpi-analysis-diff" class="text-xl font-bold text-white">--</div>
-                </div>
-                <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm">
-                    <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Adherence</div>
-                    <div id="kpi-analysis-pct" class="text-xl font-bold text-white">--</div>
-                </div>
+                <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Planned</div><div id="kpi-analysis-planned" class="text-xl font-bold text-white">--</div></div>
+                <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Actual</div><div id="kpi-analysis-actual" class="text-xl font-bold text-white">--</div></div>
+                <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Difference</div><div id="kpi-analysis-diff" class="text-xl font-bold text-white">--</div></div>
+                <div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Adherence</div><div id="kpi-analysis-pct" class="text-xl font-bold text-white">--</div></div>
             </div>
-
-            <div class="border-t border-slate-700 pt-4">
-                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Detailed Log (Matches Filters)</h4>
-                <div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-700 rounded-lg">
-                    <table id="kpi-debug-table" class="w-full text-left text-sm text-slate-300">
-                        <thead class="bg-slate-900 sticky top-0">
-                            <tr>
-                                <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Date</th>
-                                <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Day</th>
-                                <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Type</th>
-                                <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Plan</th>
-                                <th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-700"></tbody>
-                    </table>
-                </div>
-            </div>
+            <div class="border-t border-slate-700 pt-4"><h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Detailed Log (Matches Filters)</h4><div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-700 rounded-lg"><table id="kpi-debug-table" class="w-full text-left text-sm text-slate-300"><thead class="bg-slate-900 sticky top-0"><tr><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Date</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Day</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Type</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Plan</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th></tr></thead><tbody class="divide-y divide-slate-700"></tbody></table></div></div>
         </div>
-        <div class="mt-8 text-center text-xs text-slate-500 italic">* 'h' in duration column denotes hours, otherwise minutes assumed.</div>
-    `;
+        <div class="mt-8 text-center text-xs text-slate-500 italic">* 'h' in duration column denotes hours, otherwise minutes assumed.</div>`;
     return { html, logData };
 }
 
 export function updateDurationAnalysis(data) {
-    const sportSelect = document.getElementById('kpi-sport-select');
-    const daySelect = document.getElementById('kpi-day-select');
-    const timeSelect = document.getElementById('kpi-time-select');
-    
+    const sportSelect = document.getElementById('kpi-sport-select'), daySelect = document.getElementById('kpi-day-select'), timeSelect = document.getElementById('kpi-time-select');
     if (!sportSelect || !daySelect || !timeSelect) return;
     const dataToUse = (Array.isArray(data) && data.length > 0) ? data : logData;
-
-    const selectedSport = sportSelect.value;
-    const selectedDay = daySelect.value;
-    const selectedTime = timeSelect.value;
-
+    const selectedSport = sportSelect.value, selectedDay = daySelect.value, selectedTime = timeSelect.value;
     let cutoffDate = null;
-    if (selectedTime !== 'All') {
-        const days = parseInt(selectedTime);
-        cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - days);
-        cutoffDate.setHours(0, 0, 0, 0); 
-    }
-
-    let totalPlanned = 0, totalActual = 0;
+    if (selectedTime !== 'All') { const days = parseInt(selectedTime); cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - days); cutoffDate.setHours(0, 0, 0, 0); }
+    let totalPlanned = 0, totalActual = 0, debugRows = '';
     const dayMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const debugTableBody = document.querySelector('#kpi-debug-table tbody');
-    let debugRows = '';
-
     dataToUse.forEach(item => {
         if (!item || !item.date) return;
         if (cutoffDate && item.date < cutoffDate) return;
-
         const itemDayName = dayMap[item.date.getDay()];
         if (selectedSport !== 'All' && item.type !== selectedSport) return;
         if (selectedDay !== 'All') {
             if (selectedDay === 'Weekday' && (item.date.getDay() === 0 || item.date.getDay() === 6)) return;
             if (selectedDay !== 'Weekday' && itemDayName !== selectedDay) return;
         }
-
-        totalPlanned += (item.plannedDuration || 0);
-        let thisActual = 0;
-        let actualClass = "text-slate-300";
-        
-        if (item.type === item.actualType) {
-            thisActual = (item.actualDuration || 0);
-            totalActual += thisActual;
-        } else if (item.plannedDuration > 0) {
-             actualClass = "text-red-400 font-bold";
-        }
-
-        debugRows += `
-            <tr class="border-b border-slate-700 hover:bg-slate-800/50">
-                <td class="py-2 px-2 text-xs font-mono text-slate-400">${item.date.toISOString().split('T')[0]}</td>
-                <td class="py-2 px-2 text-xs text-slate-300">${itemDayName}</td>
-                <td class="py-2 px-2 text-xs text-slate-300">${item.type}</td>
-                <td class="py-2 px-2 text-xs text-slate-300 text-center">${item.plannedDuration}m</td>
-                <td class="py-2 px-2 text-xs ${actualClass} text-center">${thisActual}m</td>
-            </tr>`;
+        totalPlanned += (item.plannedDuration || 0); let thisActual = 0, actualClass = "text-slate-300";
+        if (item.type === item.actualType) { thisActual = (item.actualDuration || 0); totalActual += thisActual; } else if (item.plannedDuration > 0) { actualClass = "text-red-400 font-bold"; }
+        debugRows += `<tr class="border-b border-slate-700 hover:bg-slate-800/50"><td class="py-2 px-2 text-xs font-mono text-slate-400">${item.date.toISOString().split('T')[0]}</td><td class="py-2 px-2 text-xs text-slate-300">${itemDayName}</td><td class="py-2 px-2 text-xs text-slate-300">${item.type}</td><td class="py-2 px-2 text-xs text-slate-300 text-center">${item.plannedDuration}m</td><td class="py-2 px-2 text-xs ${actualClass} text-center">${thisActual}m</td></tr>`;
     });
-
+    const debugTableBody = document.querySelector('#kpi-debug-table tbody');
     if (debugTableBody) debugTableBody.innerHTML = debugRows || '<tr><td colspan="5" class="text-center py-4 text-slate-500 italic">No matching records found</td></tr>';
-
-    const diff = totalActual - totalPlanned;
-    const pct = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
-    
-    const formatTime = (minutes) => {
-        const m = Math.abs(minutes); 
-        if (m === 0) return "0m";
-        const h = Math.floor(m / 60);
-        const rem = m % 60;
-        if (h > 0) return `${h}h ${rem}m`;
-        return `${rem}m`;
-    };
-
+    const diff = totalActual - totalPlanned, pct = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
+    const formatTime = (minutes) => { const m = Math.abs(minutes); if (m === 0) return "0m"; const h = Math.floor(m / 60), rem = m % 60; return h > 0 ? `${h}h ${rem}m` : `${rem}m`; };
     if (document.getElementById('kpi-analysis-planned')) {
         document.getElementById('kpi-analysis-planned').innerText = formatTime(totalPlanned);
         document.getElementById('kpi-analysis-actual').innerText = formatTime(totalActual);
