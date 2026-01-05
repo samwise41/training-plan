@@ -25,11 +25,8 @@ export const Parser = {
     getBiometrics(md) {
         const profileSection = this.getSection(md, "Profile") || this.getSection(md, "Biometrics");
         
-        // Cycling Metrics
         const ftp = profileSection.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
         const weight = profileSection.match(/Weight[^0-9]*(\d{1,3})/i);
-
-        // Running Metrics (NEW)
         const lthr = profileSection.match(/Lactate Threshold HR[^0-9]*(\d{2,3})/i);
         const runFtp = profileSection.match(/Functional Threshold Pace.*?(\d{1,2}:\d{2})/i);
         const fiveK = profileSection.match(/5K Prediction.*?(\d{1,2}:\d{2})/i);
@@ -53,11 +50,10 @@ export const Parser = {
         const val = parseFloat(numMatch[1]);
         if (isNaN(val)) return 0;
         
-        // Logic to catch small numbers (e.g. "2.5") without "h" unit as hours
         if (isHours || (val < 10 && !str.toLowerCase().includes('m'))) {
             return Math.round(val * 60);
         } else {
-            return Math.round(val); // Assume minutes
+            return Math.round(val);
         }
     },
 
@@ -67,6 +63,7 @@ export const Parser = {
         if (lower.match(/bike|cycle|zwift|ride|spin|peloton/)) return 'Bike';
         if (lower.match(/run|jog|treadmill/)) return 'Run';
         if (lower.match(/swim|pool/)) return 'Swim';
+        if (lower.match(/strength|lift|gym|core/)) return 'Strength';
         return 'Other';
     },
 
@@ -82,7 +79,8 @@ export const Parser = {
         let planWorkoutIdx = -1; 
         let planDurIdx = -1;     
         let actWorkoutIdx = -1;  
-        let actDurIdx = -1;      
+        let actDurIdx = -1;
+        let notesIdx = -1; // NEW: Capture Notes
 
         let data = [];
 
@@ -90,7 +88,7 @@ export const Parser = {
         for (let line of lines) {
             if (line.includes('|')) {
                 const lowLine = line.toLowerCase();
-                if (lowLine.includes('date') && lowLine.includes('planned') && lowLine.includes('actual')) {
+                if (lowLine.includes('date') && lowLine.includes('planned')) {
                     const cleanHeaders = line.split('|').map(h => h.trim().toLowerCase().replace(/\*\*/g, ''));
                     
                     cleanHeaders.forEach((h, index) => {
@@ -100,6 +98,7 @@ export const Parser = {
                         else if (h.includes('planned duration')) planDurIdx = index;
                         else if (h.includes('actual workout')) actWorkoutIdx = index;
                         else if (h.includes('actual duration')) actDurIdx = index;
+                        else if (h.includes('notes') || h.includes('target')) notesIdx = index; // NEW
                     });
                     
                     if (dateIdx !== -1 && planWorkoutIdx !== -1) { 
@@ -116,22 +115,24 @@ export const Parser = {
             if (!line.includes('|') || line.includes('---')) continue;
             
             const cols = line.split('|');
-            if (cols.length < 5) continue; // Skip malformed rows
+            if (cols.length < 3) continue; 
 
             const cleanText = (str) => (str || "").trim().replace(/\*\*/g, '').replace(/__/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
             
-            const rawDate = cols[dateIdx];
-            const dateStr = cleanText(rawDate);
+            // Safe column access
+            const getCol = (idx) => (idx > -1 && idx < cols.length) ? cleanText(cols[idx]) : "";
+
+            const dateStr = getCol(dateIdx);
             
             // Skip header repeaters or empty dates
             if (!dateStr || dateStr.toLowerCase().includes('date')) continue;
 
-            const planStr = planWorkoutIdx > -1 ? cleanText(cols[planWorkoutIdx]) : "";
-            const statusStr = statusIdx > -1 ? cleanText(cols[statusIdx]).toLowerCase() : "";
-            
-            const planDurStr = planDurIdx > -1 ? cleanText(cols[planDurIdx]) : "";
-            const actDurStr = actDurIdx > -1 ? cleanText(cols[actDurIdx]) : "";
-            const actualWorkoutStr = actWorkoutIdx > -1 ? cleanText(cols[actWorkoutIdx]) : "";
+            const planStr = getCol(planWorkoutIdx);
+            const statusStr = getCol(statusIdx).toLowerCase();
+            const planDurStr = getCol(planDurIdx);
+            const actDurStr = getCol(actDurIdx);
+            const actualWorkoutStr = getCol(actWorkoutIdx);
+            const notesStr = getCol(notesIdx); // NEW
 
             let date = null;
             // Force Noon to avoid UTC shift
@@ -146,18 +147,21 @@ export const Parser = {
                 if (!isNaN(d.getTime())) { date = d; date.setHours(12, 0, 0, 0); }
             }
 
-            // NOTE: Future date filter REMOVED to allow planned workouts
             if (date && !isNaN(date.getTime())) {
                 const type = this._getType(planStr);
                 const actualType = this._getType(actualWorkoutStr);
 
                 data.push({
                     date: date,
+                    dayName: date.toLocaleDateString('en-US', { weekday: 'long' }), // Helper for UI
                     type: type,
+                    planName: planStr,
+                    actualName: actualWorkoutStr,
                     actualType: actualType,
                     completed: statusStr.match(/completed|done|yes|x/),
                     plannedDuration: this._parseTime(planDurStr),
-                    actualDuration: this._parseTime(actDurStr)
+                    actualDuration: this._parseTime(actDurStr),
+                    notes: notesStr // NEW
                 });
             }
         }
@@ -167,21 +171,12 @@ export const Parser = {
     parseTrainingLog(md) {
         this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, firstRowRaw: "" };
         
-        // 1. Get History Section
-        let historySection = this.getSection(md, "Appendix C: Training History Log");
-        if (!historySection) {
-             historySection = this.getSection(md, "Training History");
-        }
-
-        // 2. Get Active Schedule Section
+        let historySection = this.getSection(md, "Appendix C: Training History Log") || this.getSection(md, "Training History");
         const scheduleSection = this.getSection(md, "Weekly Schedule");
 
-        // 3. Parse Both
         const historyData = this._parseTableBlock(historySection);
         const scheduleData = this._parseTableBlock(scheduleSection);
 
-        // 4. Merge
-        // Note: Simple concat. If you move rows from Schedule to History, ensure you clear them from Schedule to avoid duplicates.
         const merged = [...historyData, ...scheduleData];
 
         this.lastDebugInfo.rowsParsed = merged.length;
