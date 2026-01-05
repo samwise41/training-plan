@@ -11,7 +11,7 @@ export function renderDashboard(planMd) {
     // Sort by Date
     workouts.sort((a, b) => a.date - b.date);
 
-    // 2. Build Progress Widget (With New Markers)
+    // 2. Build Progress Widget (With New Hours Display)
     const progressHtml = buildProgressWidget(workouts);
 
     // 3. Helpers for Styling
@@ -160,18 +160,20 @@ function buildProgressWidget(workouts) {
     let runningTotal = 0;
     const sortedDays = Object.keys(dailyTotals).sort();
     
-    // We iterate up to length-1 because we don't need a marker at 100%
     if (totalPlanned > 0) {
         for (let i = 0; i < sortedDays.length - 1; i++) {
             runningTotal += dailyTotals[sortedDays[i]];
             const pct = (runningTotal / totalPlanned) * 100;
-            // Using a dark slate color (slate-900) to act as a "cut" or separator in the bar
             markersHtml += `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 z-10" style="left: ${pct}%"></div>`;
         }
     }
 
     const pctComplete = totalPlanned > 0 ? Math.min(Math.round((totalActual / totalPlanned) * 100), 100) : 0;
     
+    // NEW: Calculate Hours (Rounded to 1 decimal)
+    const totalActualHrs = (totalActual / 60).toFixed(1);
+    const totalPlannedHrs = (totalPlanned / 60).toFixed(1);
+
     const pacingDiff = totalActual - expectedSoFar;
     let pacingLabel = "On Track";
     let pacingColor = "text-slate-400";
@@ -195,6 +197,7 @@ function buildProgressWidget(workouts) {
                         <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Weekly Goal</span>
                         <span class="text-sm font-bold text-white flex items-center gap-2">
                             ${Math.round(totalActual)} / ${Math.round(totalPlanned)} mins
+                            <span class="text-xs text-slate-400 font-normal ml-1">(${totalActualHrs} / ${totalPlannedHrs} hrs)</span>
                         </span>
                     </div>
                     <span class="text-xs font-bold text-blue-400">${pctComplete}%</span>
