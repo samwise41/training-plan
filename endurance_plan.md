@@ -269,17 +269,17 @@ Use these mathematical rules to generate the specific duration and intensity for
 | COMPLETED | Wed | [RUN] Speed/Tempo | 45 | [RUN] 6 x 3 Tempo Intervals | 37.9333 | 4 x 3 min @ Zone 3. Add some quality running effort. | 2025-12-03 |
 | COMPLETED | Tue | [BIKE] Sweet Spot Intervals | 70 | [BIKE] Zwift - Sweet Spot - 2 x 20 | 80.3833 | 2x15 min @ 222W - 234W. High-priority session using new FTP. | 2025-12-02 |
 | COMPLETED | Mon | [SWIM] Form Focus | 30 | [SWIM] Morning Swim | 34.7167 | Focus on the Bubble Drill. 30 - 45 minutes @ Easy Effort. | 2025-12-01 |
-| EXTRA | Fri | | | [RUN] Morning Run | 49.5167 | | 2025-11-28 |
-| EXTRA | Thu | | | [RUN] Thanksgiving Run | 58.4167 | | 2025-11-27 |
-| EXTRA | Wed | | | [SWIM] Morning Swim | 33.5833 | | 2025-11-26 |
-| EXTRA | Tue | | | [BIKE] Zwift - Zone 2 - 71% (90 min) | 90.9667 | | 2025-11-25 |
-| EXTRA | Mon | | | [SWIM] Morning Swim | 32.1 | | 2025-11-24 |
-| EXTRA | Sat | | | [BIKE] Morning Ride | 65.9667 | | 2025-11-22 |
-| EXTRA | Fri | | | [RUN] Morning Run | 54.3 | | 2025-11-21 |
-| EXTRA | Thu | | | [BIKE] NEW FTP - Zwift Test | 45.4667 | | 2025-11-20 |
-| EXTRA | Wed | | | [SWIM] Morning Swim | 37.6833 | | 2025-11-19 |
-| EXTRA | Tue | | | [RUN] 10k PR!! | 53.7167 | | 2025-11-18 |
-| EXTRA | Mon | | | [SWIM] Evening Swim With Swim Coach | 37.05 | | 2025-11-17 |
+| COMPLETED | Fri | | | [RUN] Morning Run | 49.5167 | | 2025-11-28 |
+| COMPLETED | Thu | | | [RUN] Thanksgiving Run | 58.4167 | | 2025-11-27 |
+| COMPLETED | Wed | | | [SWIM] Morning Swim | 33.5833 | | 2025-11-26 |
+| COMPLETED | Tue | | | [BIKE] Zwift - Zone 2 - 71% (90 min) | 90.9667 | | 2025-11-25 |
+| COMPLETED | Mon | | | [SWIM] Morning Swim | 32.1 | | 2025-11-24 |
+| COMPLETED | Sat | | | [BIKE] Morning Ride | 65.9667 | | 2025-11-22 |
+| COMPLETED | Fri | | | [RUN] Morning Run | 54.3 | | 2025-11-21 |
+| COMPLETED | Thu | | | [BIKE] NEW FTP - Zwift Test | 45.4667 | | 2025-11-20 |
+| COMPLETED | Wed | | | [SWIM] Morning Swim | 37.6833 | | 2025-11-19 |
+| COMPLETED | Tue | | | [RUN] 10k PR!! | 53.7167 | | 2025-11-18 |
+| COMPLETED | Mon | | | [SWIM] Evening Swim With Swim Coach | 37.05 | | 2025-11-17 |
 | COMPLETED | Sat | [BIKE] Long Endurance | 180 | [BIKE] Zwift - Sugar Cookie | 60.15 | Major cycling push. 50 - 60 Miles @ Z2/low Tempo. | 2025-11-15 |
 | COMPLETED | Fri | [SWIM] Technical Drill | 30 | [RUN] Lunch Run | 44.3333 | Short, third session. Focus on a specific coach-given drill. | 2025-11-14 |
 | COMPLETED | Thu | [BIKE] Zone 2 Endurance | 90 | | | Solid aerobic base. 75 - 90 min @ Z2. | 2025-11-13 |
