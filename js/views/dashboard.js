@@ -60,14 +60,12 @@ export function renderDashboard(planMd) {
             let displayDuration = w.plannedDuration;
             let displayUnit = "mins";
             let statusText = "PLANNED";
-            let statusColor = "text-white"; // Default white for planned
+            let statusColor = "text-white"; 
 
             // Handle Completed State
             if (w.completed) {
                 statusText = "COMPLETED";
                 statusColor = "text-emerald-500";
-                // Optionally show actual duration if you prefer
-                // displayDuration = w.actualDuration > 0 ? w.actualDuration : w.plannedDuration;
             } else if (w.type === 'Rest') {
                 displayDuration = "--";
                 statusText = "REST DAY";
@@ -77,27 +75,42 @@ export function renderDashboard(planMd) {
             cardsHtml += `
                 <div class="bg-slate-800 rounded-xl p-6 shadow-lg relative overflow-hidden transition-all ${cardBorder}">
                     
-                    <div class="flex justify-between items-start mb-4">
+                    <div class="flex justify-between items-start mb-2">
                         <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">${dayName}</span>
-                        <i class="fa-solid ${getIcon(w.type)} text-xl"></i>
+                        <i class="fa-solid ${getIcon(w.type)} text-xl opacity-80"></i>
                     </div>
 
-                    <div class="mb-6">
-                        <div class="flex items-baseline gap-1">
-                            <span class="text-4xl font-bold text-white tracking-tight">${displayDuration}</span>
-                            <span class="text-lg font-medium text-slate-400 font-mono">${displayUnit}</span>
+                    <div class="flex justify-between items-center mb-6 mt-1">
+                        
+                        <div class="flex flex-col">
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-5xl font-bold text-white tracking-tight leading-none">${displayDuration}</span>
+                                <span class="text-lg font-medium text-slate-400 font-mono">${displayUnit}</span>
+                            </div>
+                            <div class="text-sm font-bold ${statusColor} uppercase tracking-widest mt-1">${statusText}</div>
                         </div>
-                        <div class="text-sm font-bold ${statusColor} uppercase tracking-widest mt-1">${statusText}</div>
+
+                        <div class="text-right pl-4 max-w-[55%]">
+                            <h3 class="text-lg font-bold ${getTypeColor(w.type)} leading-tight">
+                                ${w.planName}
+                            </h3>
+                        </div>
                     </div>
 
                     <div class="h-px bg-slate-700 w-full mb-4"></div>
 
                     <div>
-                        <p class="text-xs text-slate-400 leading-relaxed font-sans">
-                            <span class="${getTypeColor(w.type)} font-bold mb-1 block">${w.planName}</span>
+                        <p class="text-sm text-slate-300 leading-relaxed font-sans">
                             ${notes}
                         </p>
                     </div>
+                    
+                    ${w.actualDuration > 0 ? `
+                        <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">Actual Duration</span>
+                            <span class="text-sm font-mono font-bold text-emerald-400">${w.actualDuration} min</span>
+                        </div>
+                    ` : ''}
 
                 </div>
             `;
