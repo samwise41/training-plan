@@ -10,7 +10,7 @@ const getIconForType = (type) => {
     return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
 };
 
-// --- Concentric Donut Chart (30d vs 60d) ---
+// --- Concentric Donut Chart ---
 const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
     const r1 = 15.9155; const c1 = 100;
     const dash1 = `${stats30.pct} ${100 - stats30.pct}`;
@@ -97,25 +97,20 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
         
         // 1. Setup Buckets
-        // Fix: Anchor to the UPCOMING Saturday to ensure current/future week is included
         const buckets = [];
         const now = new Date();
-        const day = now.getDay(); // 0-6
-        // Calculate days until next Saturday (6)
+        const day = now.getDay();
         const distToSat = 6 - day;
         const endOfCurrentWeek = new Date(now);
         endOfCurrentWeek.setDate(now.getDate() + distToSat);
         endOfCurrentWeek.setHours(23, 59, 59, 999);
 
-        // Generate 8 weeks back from the upcoming Saturday
         for (let i = 7; i >= 0; i--) {
             const end = new Date(endOfCurrentWeek);
             end.setDate(end.getDate() - (i * 7));
-            
             const start = new Date(end);
             start.setDate(start.getDate() - 6);
             start.setHours(0,0,0,0);
-
             buckets.push({ start, end, label: `${end.getMonth()+1}/${end.getDate()}`, actualMins: 0, plannedMins: 0 });
         }
 
@@ -123,7 +118,6 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         data.forEach(item => {
             if (!item.date) return;
             if (sportType !== 'All' && item.type !== sportType) return;
-
             const t = item.date.getTime();
             const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
             if (bucket) {
@@ -137,53 +131,60 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
 
         buckets.forEach((b, idx) => {
-            // "Current Week" is the last bucket (which ends this coming Saturday)
             const isCurrentWeek = (idx === buckets.length - 1); 
-            
             const hActual = Math.round((b.actualMins / maxVol) * 100);
             const hPlan = Math.round((b.plannedMins / maxVol) * 100);
             
-            // Calculate Growth based on ACTUALS (Historical)
+            // Compare BOTH Plan and Actual against the PREVIOUS ACTUAL to determine safety
             const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
-            let growthPct = 0;
+            
+            // Default Colors
+            let actualColorClass = 'bg-blue-500';
+            let planColorClass = 'bg-blue-500';
             let growthLabel = "--";
-            let colorClass = 'bg-blue-500'; // Default Safe
             let growthColor = "text-slate-400";
 
-            // If we have previous data, calculate growth
-            // For current week, we compare Planned vs Previous Actual
-            const compareVal = isCurrentWeek ? b.plannedMins : b.actualMins;
-            
             if (idx > 0 && prevActual > 0) {
-                growthPct = (compareVal - prevActual) / prevActual;
+                // 1. Evaluate ACTUAL Execution Safety
+                const actualGrowth = (b.actualMins - prevActual) / prevActual;
                 
-                // Smart Thresholds
-                let limitRed = 0.15; // Global
-                let limitYellow = 0.10;
+                // 2. Evaluate PLANNED Safety (Did I intend to spike?)
+                const planGrowth = (b.plannedMins - prevActual) / prevActual;
 
+                // Thresholds
+                let limitRed = 0.15; let limitYellow = 0.10;
                 if (sportType === 'Run') { limitRed = 0.10; limitYellow = 0.05; }
                 else if (sportType === 'Bike' || sportType === 'Swim') { limitRed = 0.20; limitYellow = 0.15; }
 
-                if (growthPct > limitRed) { colorClass = 'bg-red-500'; growthColor = "text-red-400"; }
-                else if (growthPct > limitYellow) { colorClass = 'bg-yellow-500'; growthColor = "text-yellow-400"; }
-                else if (growthPct < -0.20) { colorClass = 'bg-slate-600'; growthColor = "text-slate-500"; }
-                else { colorClass = 'bg-emerald-500'; growthColor = "text-emerald-400"; }
+                // Helper to get color
+                const getColor = (pct) => {
+                    if (pct > limitRed) return 'bg-red-500';
+                    if (pct > limitYellow) return 'bg-yellow-500';
+                    if (pct < -0.20) return 'bg-slate-600'; // Deload
+                    return 'bg-emerald-500'; // Safe
+                };
 
-                const sign = growthPct > 0 ? '▲' : (growthPct < 0 ? '▼' : '');
-                growthLabel = `${sign} ${Math.round(growthPct * 100)}%`;
+                actualColorClass = getColor(actualGrowth);
+                planColorClass = getColor(planGrowth);
+
+                // Label uses Actual growth for historical, Plan growth for current/future
+                const displayGrowth = isCurrentWeek ? planGrowth : actualGrowth;
+                const sign = displayGrowth > 0 ? '▲' : (displayGrowth < 0 ? '▼' : '');
+                growthLabel = `${sign} ${Math.round(displayGrowth * 100)}%`;
+                
+                if (displayGrowth > limitRed) growthColor = "text-red-400";
+                else if (displayGrowth > limitYellow) growthColor = "text-yellow-400";
+                else if (displayGrowth < -0.20) growthColor = "text-slate-500";
+                else growthColor = "text-emerald-400";
             }
 
-            // Styles
-            // FIX: Always show Plan Bar (Ghost) for historical context
-            let baseColor = colorClass.replace('bg-', '');
-            const colorMap = {'emerald-500': '#10b981', 'yellow-500': '#eab308', 'red-500': '#ef4444', 'slate-600': '#475569', 'blue-500': '#3b82f6'};
-            const hex = colorMap[baseColor] || '#3b82f6';
+            // --- Styling ---
+            // Plan Bar (Ghost) - Colored by PLAN risk
+            const colorMap = {'bg-emerald-500': '#10b981', 'bg-yellow-500': '#eab308', 'bg-red-500': '#ef4444', 'bg-slate-600': '#475569', 'bg-blue-500': '#3b82f6'};
+            const planHex = colorMap[planColorClass] || '#3b82f6';
+            const planBarStyle = `background: repeating-linear-gradient(45deg, ${planHex}20, ${planHex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${planHex}40;`;
             
-            // Ghost Bar Style (Plan)
-            const planBarStyle = `background: repeating-linear-gradient(45deg, ${hex}20, ${hex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${hex}40;`;
-            
-            // Actual Bar Style (Solid)
-            const actualBarClass = isCurrentWeek ? 'bg-blue-500' : colorClass;
+            // Actual Bar (Solid) - Colored by ACTUAL safety
             const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80';
 
             barsHtml += `
@@ -196,7 +197,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
 
                         <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div>
                         
-                        <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualBarClass} ${actualOpacity} rounded-t-sm"></div>
+                        <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualColorClass} ${actualOpacity} rounded-t-sm"></div>
                     </div>
                     <span class="text-[9px] text-slate-500 font-mono text-center leading-none">
                         ${b.label}
