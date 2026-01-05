@@ -1,11 +1,11 @@
-import { Parser } from './parser.js';
-import { renderKPI, updateDurationAnalysis } from './views/kpi.js'; 
-import { renderGear, updateGearResult } from './views/gear.js';
-import { renderZones } from './views/zones.js';
-import { renderRoadmap } from './views/roadmap.js'; 
-import { renderDashboard } from './views/dashboard.js'; // NEW IMPORT
+import { Parser } from './parser.js?v=25';
+import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=25'; 
+import { renderGear, updateGearResult } from './views/gear.js?v=25';
+import { renderZones } from './views/zones.js?v=25';
+import { renderRoadmap } from './views/roadmap.js?v=25'; 
+import { renderDashboard } from './views/dashboard.js?v=25'; 
 
-console.log("🚀 App.js Loaded");
+console.log("🚀 App.js Loaded - Version 25");
 
 const CONFIG = {
     PLAN_FILE: "endurance_plan.md",
