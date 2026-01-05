@@ -1,6 +1,6 @@
-// REMOVED ?v=4 tags to prevent 404 errors
 import { Parser } from './parser.js';
-import { renderKPI, updateDurationAnalysis } from './views/kpi.js';
+// CACHE BUSTER: Added ?v=10 to force browser to re-download kpi.js
+import { renderKPI, updateDurationAnalysis } from './views/kpi.js?v=10'; 
 import { renderGear, updateGearResult } from './views/gear.js';
 import { renderZones } from './views/zones.js';
 import { renderPhases } from './views/phases.js';
@@ -63,7 +63,7 @@ const App = {
                 }
             };
 
-            btn.onclick = unlock; // Direct binding is sometimes more reliable than addEventListener in simple scripts
+            btn.onclick = unlock; 
             input.onkeypress = (e) => {
                 if (e.key === 'Enter') unlock();
             };
@@ -130,7 +130,6 @@ const App = {
             
         } catch (e) {
             console.error("Init Error:", e);
-            // Fallback: If init crashes, UNLOCK the curtain so you aren't stuck
             const curtain = document.getElementById('security-curtain');
             if (curtain) {
                 curtain.innerHTML += `<p class='text-red-500 mt-4 font-bold'>System Error: ${e.message}</p>`;
@@ -279,7 +278,6 @@ const App = {
                 }
                 else {
                     let sectionTitle = "Weekly Schedule";
-                    // if (view === 'phases') sectionTitle = "Periodization"; // Removed as phases is now handled above
                     
                     let mdContent = "";
                     if (view === 'full') {
@@ -294,7 +292,8 @@ const App = {
                         mdContent = Parser.getSection(this.planMd, sectionTitle);
                     }
                     
-                    let html = marked.parse(mdContent || "*Content not found.*");
+                    const safeMarked = window.marked ? window.marked.parse : (t) => t;
+                    let html = safeMarked(mdContent || "*Content not found.*");
                     if (view === 'schedule') {
                         html = this.getStatsBar() + html;
                     }
