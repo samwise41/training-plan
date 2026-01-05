@@ -11,7 +11,7 @@ export function renderDashboard(planMd) {
     // Sort by Date
     workouts.sort((a, b) => a.date - b.date);
 
-    // 2. Build Progress Widget
+    // 2. Build Progress Widget (With New Markers)
     const progressHtml = buildProgressWidget(workouts);
 
     // 3. Helpers for Styling
@@ -62,48 +62,34 @@ export function renderDashboard(planMd) {
             let statusText = "PLANNED";
             let statusColor = "text-white"; 
 
-            // --- BORDER LOGIC START ---
-            let cardBorder = 'border border-slate-700 hover:border-slate-600'; // Default Gray
+            // --- BORDER LOGIC ---
+            let cardBorder = 'border border-slate-700 hover:border-slate-600'; 
 
             if (w.completed) {
                 statusText = "COMPLETED";
                 statusColor = "text-emerald-500";
-
-                // Calculate Adherence
                 const plan = w.plannedDuration || 0;
                 const act = w.actualDuration || 0;
                 const ratio = plan > 0 ? (act / plan) : 1; 
 
-                if (ratio >= 0.95) {
-                    // >= 95%: Green
-                    cardBorder = 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-slate-900';
-                } else if (ratio >= 0.80) {
-                    // 80% - 94%: Yellow
-                    cardBorder = 'ring-2 ring-yellow-500 ring-offset-2 ring-offset-slate-900';
-                } else {
-                    // < 80%: Red
-                    cardBorder = 'ring-2 ring-red-500 ring-offset-2 ring-offset-slate-900';
-                }
+                if (ratio >= 0.95) cardBorder = 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-slate-900';
+                else if (ratio >= 0.80) cardBorder = 'ring-2 ring-yellow-500 ring-offset-2 ring-offset-slate-900';
+                else cardBorder = 'ring-2 ring-red-500 ring-offset-2 ring-offset-slate-900';
             } else if (isToday) {
-                // Today (Not Completed): Blue
                 cardBorder = 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900';
             } else if (w.type === 'Rest') {
                 displayDuration = "--";
                 statusText = "REST DAY";
                 statusColor = "text-slate-500";
             }
-            // --- BORDER LOGIC END ---
 
             cardsHtml += `
                 <div class="bg-slate-800 rounded-xl p-6 shadow-lg relative overflow-hidden transition-all ${cardBorder}">
-                    
                     <div class="flex justify-between items-start mb-2">
                         <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">${dayName}</span>
                         <i class="fa-solid ${getIcon(w.type)} text-xl opacity-80"></i>
                     </div>
-
                     <div class="flex justify-between items-center mb-6 mt-1">
-                        
                         <div class="flex flex-col">
                             <div class="flex items-baseline gap-1">
                                 <span class="text-5xl font-bold text-white tracking-tight leading-none">${displayDuration}</span>
@@ -111,29 +97,20 @@ export function renderDashboard(planMd) {
                             </div>
                             <div class="text-sm font-bold ${statusColor} uppercase tracking-widest mt-1">${statusText}</div>
                         </div>
-
                         <div class="text-right pl-4 max-w-[55%]">
-                            <h3 class="text-lg font-bold ${getTypeColor(w.type)} leading-tight">
-                                ${w.planName}
-                            </h3>
+                            <h3 class="text-lg font-bold ${getTypeColor(w.type)} leading-tight">${w.planName}</h3>
                         </div>
                     </div>
-
                     <div class="h-px bg-slate-700 w-full mb-4"></div>
-
                     <div>
-                        <p class="text-sm text-slate-300 leading-relaxed font-sans">
-                            ${notes}
-                        </p>
+                        <p class="text-sm text-slate-300 leading-relaxed font-sans">${notes}</p>
                     </div>
-                    
                     ${w.actualDuration > 0 ? `
                         <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between items-center">
                             <span class="text-[10px] font-bold text-slate-500 uppercase">Actual Duration</span>
                             <span class="text-sm font-mono font-bold text-emerald-400">${w.actualDuration} min</span>
                         </div>
                     ` : ''}
-
                 </div>
             `;
         });
@@ -148,7 +125,7 @@ export function renderDashboard(planMd) {
 }
 
 /**
- * Helper to build the top progress bar widget
+ * Helper to build the top progress bar widget with daily chunk markers
  */
 function buildProgressWidget(workouts) {
     const today = new Date();
@@ -157,6 +134,9 @@ function buildProgressWidget(workouts) {
     let totalPlanned = 0;
     let totalActual = 0;
     let expectedSoFar = 0;
+
+    // Data structure for daily totals
+    const dailyTotals = {};
 
     workouts.forEach(w => {
         const plan = w.plannedDuration || 0;
@@ -168,7 +148,27 @@ function buildProgressWidget(workouts) {
         if (w.date <= today) {
             expectedSoFar += plan;
         }
+
+        // Accumulate daily plan for markers
+        const dateKey = w.date.toISOString().split('T')[0];
+        if (!dailyTotals[dateKey]) dailyTotals[dateKey] = 0;
+        dailyTotals[dateKey] += plan;
     });
+
+    // Generate Markers HTML
+    let markersHtml = '';
+    let runningTotal = 0;
+    const sortedDays = Object.keys(dailyTotals).sort();
+    
+    // We iterate up to length-1 because we don't need a marker at 100%
+    if (totalPlanned > 0) {
+        for (let i = 0; i < sortedDays.length - 1; i++) {
+            runningTotal += dailyTotals[sortedDays[i]];
+            const pct = (runningTotal / totalPlanned) * 100;
+            // Using a dark slate color (slate-900) to act as a "cut" or separator in the bar
+            markersHtml += `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 z-10" style="left: ${pct}%"></div>`;
+        }
+    }
 
     const pctComplete = totalPlanned > 0 ? Math.min(Math.round((totalActual / totalPlanned) * 100), 100) : 0;
     
@@ -199,10 +199,14 @@ function buildProgressWidget(workouts) {
                     </div>
                     <span class="text-xs font-bold text-blue-400">${pctComplete}%</span>
                 </div>
-                <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
-                    <div class="bg-blue-500 h-full rounded-full transition-all duration-1000 ease-out" style="width: ${pctComplete}%"></div>
+                
+                <div class="relative w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+                    ${markersHtml}
+                    
+                    <div class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out" style="width: ${pctComplete}%"></div>
                 </div>
             </div>
+            
             <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1">
                 <div>
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
