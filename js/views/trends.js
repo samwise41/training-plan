@@ -1,5 +1,3 @@
-// js/views/trends.js
-
 let logData = [];
 
 // Helper functions
