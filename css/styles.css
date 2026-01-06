@@ -9,9 +9,9 @@
 /* Activity Icon Theme Colors */
 :root {
     /* ... existing vars ... */
-    --color-all:  #a855f7; /* Purple-500 */
-    --color-bike: #a855f7; /* Fuchsia-500 */
-    --color-run:  #d946ef; /* Purple-500 */
+    --color-all:  #6366f1; /* Purple-500 */
+    --color-bike: #d946ef; /* Fuchsia-500 */
+    --color-run:  #a855f7; /* Purple-500 */
     --color-swim: #0ea5e9; /* Sky-500 */
 
 }
