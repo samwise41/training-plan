@@ -65,10 +65,11 @@ export function renderGear(gearMd, currentTemp, hourlyWeather) {
     }
 
     // 4. Helper to generate HTML for a Gear Row
-    const generateRow = (idPrefix, iconClass, label) => `
+    // Updated to accept 'colorClass' for the icon
+    const generateRow = (idPrefix, iconClass, label, colorClass) => `
         <div class="gear-row-container">
             <div class="activity-header">
-                <i class="${iconClass} text-slate-400 text-lg"></i>
+                <i class="${iconClass} ${colorClass} text-lg"></i>
                 <span class="text-xs font-bold text-slate-200 uppercase tracking-widest">${label}</span>
             </div>
             <div class="gear-bubbles-row">
@@ -105,8 +106,8 @@ export function renderGear(gearMd, currentTemp, hourlyWeather) {
                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Standard Conditions
                 </h3>
                 <div class="flex flex-col gap-4">
-                    ${generateRow('bike-standard', 'fa-solid fa-bicycle', 'Cycling')}
-                    ${generateRow('run-standard', 'fa-solid fa-person-running', 'Running')}
+                    ${generateRow('bike-standard', 'fa-solid fa-bicycle', 'Cycling', 'text-fuchsia-500')}
+                    ${generateRow('run-standard', 'fa-solid fa-person-running', 'Running', 'text-purple-500')}
                 </div>
             </div>
 
@@ -115,8 +116,8 @@ export function renderGear(gearMd, currentTemp, hourlyWeather) {
                     <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Windy & Rainy (-10°F)
                 </h3>
                 <div class="flex flex-col gap-4">
-                    ${generateRow('bike-weather', 'fa-solid fa-bicycle', 'Cycling')}
-                    ${generateRow('run-weather', 'fa-solid fa-person-running', 'Running')}
+                    ${generateRow('bike-weather', 'fa-solid fa-bicycle', 'Cycling', 'text-fuchsia-500')}
+                    ${generateRow('run-weather', 'fa-solid fa-person-running', 'Running', 'text-purple-500')}
                 </div>
             </div>
         </div>
