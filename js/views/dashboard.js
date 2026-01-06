@@ -58,8 +58,8 @@ export function renderDashboard(planMd) {
         }
     });
 
-    const getIcon = (type) => { if (type === 'Bike') return 'fa-bicycle text-blue-500'; if (type === 'Run') return 'fa-person-running text-emerald-500'; if (type === 'Swim') return 'fa-person-swimming text-cyan-500'; if (type === 'Strength') return 'fa-dumbbell text-purple-500'; return 'fa-stopwatch text-slate-500'; };
-    const getTypeColor = (type) => { if (type === 'Bike') return 'text-blue-500'; if (type === 'Run') return 'text-emerald-500'; if (type === 'Swim') return 'text-cyan-500'; return 'text-slate-400'; };
+    const getIcon = (type) => { if (type === 'Bike') return 'fa-bicycle icon-bike'; if (type === 'Run') return 'fa-person-running text-emerald-500'; if (type === 'Swim') return 'fa-person-swimming text-cyan-500'; if (type === 'Strength') return 'fa-dumbbell text-purple-500'; return 'fa-stopwatch text-slate-500'; };
+    const getTypeColor = (type) => { if (type === 'Bike') return 'icon-bike'; if (type === 'Run') return 'text-emerald-500'; if (type === 'Swim') return 'text-cyan-500'; return 'text-slate-400'; };
 
     let cardsHtml = '';
     const grouped = {};
