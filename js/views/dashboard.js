@@ -60,8 +60,8 @@ export function renderDashboard(planMd, mergedLogData) {
         }
     });
 
-    const getIcon = (type) => { if (type === 'Bike') return 'fa-bicycle icon-bike'; if (type === 'Run') return 'fa-person-running icon-run'; if (type === 'Swim') return 'fa-person-swimming icon-swim'; if (type === 'Strength') return 'fa-dumbbell text-purple-500'; return 'fa-stopwatch text-slate-500'; };
-    const getTypeColor = (type) => { if (type === 'Bike') return 'icon-bike'; if (type === 'Run') return 'icon-run'; if (type === 'Swim') return 'icon-swim'; return 'text-slate-400'; };
+    const getIcon = (type) => { if (type === 'Bike') return 'fa-bicycle text-blue-500'; if (type === 'Run') return 'fa-person-running text-emerald-500'; if (type === 'Swim') return 'fa-person-swimming text-cyan-500'; if (type === 'Strength') return 'fa-dumbbell text-purple-500'; return 'fa-stopwatch text-slate-500'; };
+    const getTypeColor = (type) => { if (type === 'Bike') return 'text-blue-500'; if (type === 'Run') return 'text-emerald-500'; if (type === 'Swim') return 'text-cyan-500'; return 'text-slate-400'; };
 
     let cardsHtml = '';
     const grouped = {};
@@ -99,7 +99,7 @@ export function renderDashboard(planMd, mergedLogData) {
     return `${progressHtml}${plannedWorkoutsSection}<div class="grid grid-cols-1 gap-8 mt-8">${heatmapTrailingHtml}${heatmapYearHtml}</div>`;
 }
 
-// ... (Rest of Helpers: toLocalYMD, buildGenericHeatmap, buildProgressWidget remain unchanged) ...
+// ... (Rest of Helpers: toLocalYMD, buildGenericHeatmap, buildProgressWidget) ...
 
 const toLocalYMD = (dateInput) => {
     const d = new Date(dateInput);
@@ -131,7 +131,50 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" title="${tooltip}" ${clickAttr}></div>`;
         currentDate.setDate(currentDate.getDate() + 1);
     }
-    return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6"><h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-calendar-check text-slate-400"></i> ${title}</h3><div class="overflow-x-auto pb-4"><div class="grid grid-rows-7 grid-flow-col gap-1 w-max mx-auto">${cellsHtml}</div></div><div class="flex flex-wrap items-center justify-center gap-4 mt-2 text-[10px] text-slate-400 font-mono"><div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-purple-500"></div> Event</div><div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-emerald-500/50"></div> Rest</div><div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-slate-700"></div> Planned</div><div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-emerald-500"></div> Done</div><div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-emerald-500" style="${highContrastStripe}"></div> Unplanned</div><div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-yellow-500"></div> Partial</div><div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-red-500/80"></div> Missed</div></div></div>`;
+
+    // --- Build Month Header Row ---
+    let monthsHtml = '';
+    // Align header loop to Sunday so columns match the grid
+    let loopDate = new Date(startDate);
+    loopDate.setDate(loopDate.getDate() - loopDate.getDay());
+    let lastMonth = -1;
+    // Iterate week by week
+    while (loopDate <= endDate) {
+        const m = loopDate.getMonth();
+        let label = "";
+        // Simple logic: if month changed since last column, show label
+        if (m !== lastMonth) {
+            label = loopDate.toLocaleDateString('en-US', { month: 'short' });
+            lastMonth = m;
+        }
+        monthsHtml += `<div class="w-3 m-[1px] text-[9px] font-bold text-slate-500 overflow-visible whitespace-nowrap">${label}</div>`;
+        loopDate.setDate(loopDate.getDate() + 7);
+    }
+
+    return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6">
+            <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-check text-slate-400"></i> ${title}
+            </h3>
+            <div class="overflow-x-auto pb-4">
+                <div class="grid grid-rows-1 grid-flow-col gap-1 w-max mx-auto mb-1">
+                    ${monthsHtml}
+                </div>
+                <div class="grid grid-rows-7 grid-flow-col gap-1 w-max mx-auto">
+                    ${cellsHtml}
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-4 mt-2 text-[10px] text-slate-400 font-mono">
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-purple-500"></div> Event</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-emerald-500/50"></div> Rest</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-slate-700"></div> Planned</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-emerald-500"></div> Done</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-emerald-500" style="${highContrastStripe}"></div> Unplanned</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-yellow-500"></div> Partial</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-red-500/80"></div> Missed</div>
+            </div>
+        </div>
+    `;
 }
 
 function buildProgressWidget(workouts) {
@@ -155,5 +198,5 @@ function buildProgressWidget(workouts) {
     const totalActualHrsPacing = (totalActual / 60).toFixed(1); const expectedHrs = (expectedSoFar / 60).toFixed(1);
     
     // UPDATED: Made Target Text color match Actual Text color
-    return `<div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm"><div class="flex-1 w-full">${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true)}${generateBarHtml('Bike', 'fa-bicycle icon-bike', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers)}${generateBarHtml('Run', 'fa-person-running icon-run', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}${generateBarHtml('Swim', 'fa-person-swimming icon-swim', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}</div><div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1 self-center"><div><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span><div class="flex items-center gap-2"><i class="fa-solid ${pacingIcon} ${pacingColor}"></i><span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span></div></div><div class="text-right md:text-left flex flex-col items-end md:items-start mt-2"><span class="text-[10px] text-slate-300 font-mono mb-0.5">Actual: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span></span><span class="text-[10px] text-slate-300 font-mono">Target: ${Math.round(expectedSoFar)}m <span class="text-slate-500">(${expectedHrs}h)</span></span></div></div></div>`;
+    return `<div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm"><div class="flex-1 w-full">${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true)}${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers)}${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}</div><div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1 self-center"><div><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span><div class="flex items-center gap-2"><i class="fa-solid ${pacingIcon} ${pacingColor}"></i><span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span></div></div><div class="text-right md:text-left flex flex-col items-end md:items-start mt-2"><span class="text-[10px] text-slate-300 font-mono mb-0.5">Actual: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span></span><span class="text-[10px] text-slate-300 font-mono">Target: ${Math.round(expectedSoFar)}m <span class="text-slate-500">(${expectedHrs}h)</span></span></div></div></div>`;
 }
