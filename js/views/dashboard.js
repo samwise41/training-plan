@@ -1,7 +1,7 @@
 import { Parser } from '../parser.js';
 
 // --- Local Copy of Collapsible Builder (same logic as trends.js) ---
-// This ensures the dashboard works even if trends.js isn't the first to load
+// This ensures the dashboard works even if trends.js isn't the first to load.
 const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     const contentClasses = isOpen 
         ? "max-h-[5000px] opacity-100 py-4 mb-8" 
