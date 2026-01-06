@@ -1,6 +1,6 @@
 import { Parser } from '../parser.js';
 
-// --- Local Copy of Collapsible Builder ---
+// ---  Local Copy of Collapsible Builder  ---
 const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     const contentClasses = isOpen 
         ? "max-h-[5000px] opacity-100 py-4 mb-8" 
