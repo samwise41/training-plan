@@ -19,6 +19,7 @@
 .icon-bike { color: var(--color-bike) !important; }
 .icon-run  { color: var(--color-run) !important; }
 .icon-swim { color: var(--color-swim) !important; }
+.icon-all { color: var(--color-all) !important; }
 }
 
 body {
