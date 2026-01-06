@@ -15,41 +15,52 @@ export function renderDashboard(planMd) {
     // 3. Prepare Data for Heatmaps (Full History + Events)
     const fullLogData = Parser.parseTrainingLog(planMd);
     
-    // --- SMART EVENT PARSING ---
+    // --- HELPER: TIMEZONE SAFE DATE KEY ---
+    // Forces everything to local "YYYY-MM-DD" to ensure keys match
+    const toLocalYMD = (dateInput) => {
+        const d = new Date(dateInput);
+        // Adjust for timezone offset to get "Local Date" as YYYY-MM-DD
+        // (Simple trick: use the date components directly)
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // --- ROBUST EVENT PARSING ---
     const eventMap = {};
     const lines = planMd.split('\n');
-    
+    let inEventSection = false;
+
     lines.forEach(line => {
-        if (line.trim().startsWith('|') && /\d{4}-\d{2}-\d{2}/.test(line) && !line.includes('---')) {
-            const parts = line.split('|').map(p => p.trim()).filter(p => p.length > 0);
-            if (parts.length >= 2) {
-                let dateStr = null;
-                let evtName = null;
-                const dateIndex = parts.findIndex(p => /^\d{4}-\d{2}-\d{2}$/.test(p));
+        // Detect Section 1 specifically to avoid false positives
+        if (line.includes('1. Event Schedule')) inEventSection = true;
+        if (line.includes('2. User Profile')) inEventSection = false;
 
-                if (dateIndex !== -1) {
-                    dateStr = parts[dateIndex];
-                    const otherParts = parts.filter((_, idx) => idx !== dateIndex);
-                    otherParts.sort((a, b) => b.length - a.length);
-                    if (otherParts.length > 0) evtName = otherParts[0];
+        if (inEventSection && line.trim().startsWith('|') && !line.includes('---')) {
+            const parts = line.split('|').map(p => p.trim());
+            // Typical format: | Date | Event Name | ...
+            // parts[1] is usually Date, parts[2] is Name.
+            if (parts.length > 2) {
+                const col1 = parts[1];
+                const col2 = parts[2];
+                
+                // Try parsing Col 1 as date
+                const d1 = new Date(col1);
+                if (!isNaN(d1.getTime()) && d1.getFullYear() > 2020) {
+                    eventMap[toLocalYMD(d1)] = col2;
                 }
-
-                if (dateStr && evtName) eventMap[dateStr] = evtName;
             }
         }
     });
 
     // 4. Generate Two Heatmaps
-    const getLocalYMD = (d) => {
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
-
     // A. Trailing 6 Months
     const today = new Date();
     today.setHours(0,0,0,0);
     
     const endOfWeek = new Date(today);
-    const dayOfWeek = endOfWeek.getDay(); 
+    const dayOfWeek = endOfWeek.getDay(); // 0=Sun
     const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); 
     endOfWeek.setDate(endOfWeek.getDate() + distToSunday); 
     if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); 
@@ -61,8 +72,8 @@ export function renderDashboard(planMd) {
     const startYear = new Date(today.getFullYear(), 0, 1);
     const endYear = new Date(today.getFullYear(), 11, 31);
 
-    const heatmapTrailingHtml = buildGenericHeatmap(fullLogData, eventMap, startTrailing, endOfWeek, "Recent Consistency (Trailing 6 Months)", getLocalYMD);
-    const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`, getLocalYMD);
+    const heatmapTrailingHtml = buildGenericHeatmap(fullLogData, eventMap, startTrailing, endOfWeek, "Recent Consistency (Trailing 6 Months)", toLocalYMD);
+    const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`, toLocalYMD);
 
     // 5. Helpers for Card Styling
     const getIcon = (type) => {
@@ -85,7 +96,7 @@ export function renderDashboard(planMd) {
     const grouped = {};
     
     workouts.forEach(w => {
-        const key = getLocalYMD(w.date);
+        const key = toLocalYMD(w.date);
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(w);
     });
@@ -174,12 +185,11 @@ export function renderDashboard(planMd) {
 
 /**
  * Generic Heatmap Builder with Click Tool & Invisible Sundays
- * IMPROVED: Bigger cells, wider gaps, centered layout.
  */
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn) {
     if (!fullLog) fullLog = [];
 
-    // 1. Map Data
+    // 1. Map Data using consistent Key Function
     const dataMap = {};
     fullLog.forEach(item => {
         const dateKey = dateToKeyFn(item.date);
@@ -196,19 +206,27 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     const startDay = startDate.getDay(); // 0=Sun
     let cellsHtml = '';
     
-    // SIZE UPDATE: Changed w-2.5/h-2.5 to w-3/h-3 for better desktop visibility
+    // Add Spacers (invisible)
     for (let i = 0; i < startDay; i++) {
         cellsHtml += `<div class="w-3 h-3 m-[1px] opacity-0"></div>`;
     }
 
     // 3. Generate Cells
     let currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
+    
+    // Ensure loop doesn't run forever
+    const maxLoops = 400; 
+    let loops = 0;
+
+    while (currentDate <= endDate && loops < maxLoops) {
+        loops++;
+        
         const dateKey = dateToKeyFn(currentDate);
         const dayOfWeek = currentDate.getDay(); 
         const dayData = dataMap[dateKey];
         const eventName = eventMap && eventMap[dateKey];
         
+        // Defaults
         let colorClass = 'bg-slate-800'; 
         let tooltip = `${dateKey}: Empty`;
         let inlineStyle = ""; 
@@ -229,6 +247,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         }
 
         const hasActivity = (totalPlan > 0 || totalAct > 0 || isRestType || eventName);
+        const isFuture = currentDate > today;
 
         // --- Logic Tree ---
         if (eventName) {
@@ -237,12 +256,13 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
             clickDetails = `Date: ${dateKey}\\nEvent: ${eventName}${workoutDetails}`;
         }
         else if (totalAct > 0 && (totalPlan === 0 || isRestType)) {
+            // Unplanned
             colorClass = 'bg-emerald-500';
             inlineStyle = highContrastStripe;
             tooltip = `${dateKey}: Unplanned Workout`;
             clickDetails = `Date: ${dateKey}\\nStatus: Unplanned Workout${workoutDetails}`;
         }
-        else if (currentDate > today || (currentDate.getTime() === today.getTime() && totalAct === 0)) {
+        else if (isFuture) {
              if (totalPlan > 0) {
                  colorClass = 'bg-slate-700'; 
                  tooltip = `${dateKey}: Planned`;
@@ -254,12 +274,15 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
              }
         }
         else {
+            // PAST
             if (totalPlan > 0) {
                 if (totalAct === 0) {
+                    // Missed
                     colorClass = 'bg-red-500/80';
                     tooltip = `${dateKey}: Missed`;
                     clickDetails = `Date: ${dateKey}\\nStatus: Missed Workout${workoutDetails}`;
                 } else {
+                    // Compliance
                     const ratio = totalAct / totalPlan;
                     if (ratio >= 0.95) {
                         colorClass = 'bg-emerald-500';
@@ -272,14 +295,16 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
                     }
                 }
             } else {
+                // Past Rest
                 colorClass = 'bg-emerald-500/50'; 
                 tooltip = `${dateKey}: Rest Day`;
                 clickDetails = `Date: ${dateKey}\\nStatus: Rest Day`;
             }
         }
 
-        // --- SUNDAY VISIBILITY ---
-        if (dayOfWeek === 0 && !hasActivity && !eventName) {
+        // --- SUNDAY VISIBILITY LOGIC ---
+        // Hide Sunday ONLY if it has no activity/event
+        if (dayOfWeek === 0 && !hasActivity) {
             colorClass = ''; 
             inlineStyle = 'opacity: 0;'; 
             clickDetails = ''; 
@@ -288,8 +313,9 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         const clickAttr = clickDetails ? `onclick="alert('${clickDetails}')" cursor-pointer` : '';
         const cursorClass = clickDetails ? 'cursor-pointer hover:opacity-80' : '';
 
-        // SIZE UPDATE: w-3 h-3
+        // SIZE: w-3 h-3
         cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" title="${tooltip}" ${clickAttr}></div>`;
+        
         currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -318,7 +344,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// ... (buildProgressWidget remains unchanged) ...
+// ... (buildProgressWidget remains exactly the same) ...
 function buildProgressWidget(workouts) {
     const today = new Date();
     today.setHours(23, 59, 59, 999); 
