@@ -1,105 +1,179 @@
 import { Parser } from '../parser.js';
 
-export function renderGear(planMd) {
-    // 1. Parse Gear Data
-    // We look for a section starting with "## Gear" or "## Equipment"
-    const gearSection = Parser.getSection(planMd, "Gear") || Parser.getSection(planMd, "Equipment");
-    
-    // Default empty state
-    let bikeGear = [];
-    let runGear = [];
+// Weather Icon Mapping
+const WEATHER_MAP = {
+    0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
+    45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"], 51: ["Drizzle", "🌦️"], 61: ["Rain", "🌧️"], 63: ["Rain", "🌧️"],
+    71: ["Snow", "❄️"], 95: ["Storm", "⛈️"]
+};
 
-    if (gearSection) {
-        // Simple line parser: looks for bullet points like "* [Bike] Name (0 miles)"
-        const lines = gearSection.split('\n');
-        lines.forEach(line => {
-            const cleanLine = line.trim();
-            if (cleanLine.startsWith('*')) {
-                // Check tags
-                const isBike = cleanLine.toLowerCase().includes('[bike]') || cleanLine.toLowerCase().includes('cycling');
-                const isRun = cleanLine.toLowerCase().includes('[run]') || cleanLine.toLowerCase().includes('shoe');
-                
-                // Extract Name and Mileage
-                // Format assumption: * [Tag] Name of Gear (100 miles) - Notes
-                // We'll just display the raw text cleaned up for now if specific format isn't strictly enforced
-                const content = cleanLine.substring(1).trim();
-                
-                if (isBike) bikeGear.push(content);
-                else if (isRun) runGear.push(content);
-            }
-        });
+/**
+ * Generates the HTML for the Gear tab.
+ * @param {string} gearMd - Raw Markdown content from Gear.md
+ * @param {number} currentTemp - Current temperature (integer)
+ * @param {object} hourlyWeather - Hourly weather data object from API
+ * @returns {object} { html, gearData }
+ */
+export function renderGear(gearMd, currentTemp, hourlyWeather) {
+    const gearData = Parser.parseGearMatrix(gearMd);
+
+    // 1. Set Default Temperature Selection
+    let defaultVal = 50;
+    if (currentTemp !== null && currentTemp !== undefined) {
+        if (currentTemp < 30) defaultVal = 25;
+        else if (currentTemp > 70) defaultVal = 75;
+        else defaultVal = currentTemp;
     }
 
-    // 2. Build Components with NEW COLORS
-    
-    // Bike Card (Purple)
-    const bikeCardHtml = `
-        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700 hover:border-purple-500 transition-all group cursor-pointer relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <i class="fa-solid fa-bicycle text-9xl text-purple-500 -mr-4 -mt-4 transform rotate-12"></i>
-            </div>
-            <div class="relative z-10 flex flex-col h-full justify-between">
-                <div>
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-600 group-hover:border-purple-500 transition-colors">
-                            <i class="fa-solid fa-bicycle text-purple-500 text-lg"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">CYCLING</h3>
-                    </div>
-                    <div class="space-y-3">
-                        ${bikeGear.length > 0 ? bikeGear.map(item => `
-                            <div class="flex items-start gap-2 text-sm text-slate-300">
-                                <i class="fa-solid fa-angle-right text-purple-500 mt-1"></i>
-                                <span>${item.replace(/\[.*?\]/g, '')}</span>
-                            </div>
-                        `).join('') : '<p class="text-slate-500 italic text-sm">No cycling gear tracked.</p>'}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    // 2. Build Temperature Dropdown Options
+    let tempOptions = `<option value="25" ${defaultVal === 25 ? 'selected' : ''}>&lt;30°F</option>`;
+    for (let i = 30; i <= 70; i++) {
+        tempOptions += `<option value="${i}" ${i === defaultVal ? 'selected' : ''}>${i}°F</option>`;
+    }
+    tempOptions += `<option value="75" ${defaultVal === 75 ? 'selected' : ''}>70°F+</option>`;
 
-    // Run Card (Fuchsia)
-    const runCardHtml = `
-        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700 hover:border-fuchsia-500 transition-all group cursor-pointer relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <i class="fa-solid fa-person-running text-9xl text-fuchsia-500 -mr-4 -mt-4 transform rotate-12"></i>
-            </div>
-            <div class="relative z-10 flex flex-col h-full justify-between">
-                <div>
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-600 group-hover:border-fuchsia-500 transition-colors">
-                            <i class="fa-solid fa-person-running text-fuchsia-500 text-lg"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white group-hover:text-fuchsia-400 transition-colors">RUNNING</h3>
-                    </div>
-                    <div class="space-y-3">
-                        ${runGear.length > 0 ? runGear.map(item => `
-                            <div class="flex items-start gap-2 text-sm text-slate-300">
-                                <i class="fa-solid fa-angle-right text-fuchsia-500 mt-1"></i>
-                                <span>${item.replace(/\[.*?\]/g, '')}</span>
-                            </div>
-                        `).join('') : '<p class="text-slate-500 italic text-sm">No running shoes tracked.</p>'}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // 3. Render
-    return `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            ${bikeCardHtml}
-            ${runCardHtml}
-        </div>
+    // 3. Build Hourly Forecast Scroll
+    let hourlyHtml = '';
+    if (hourlyWeather && hourlyWeather.time && Array.isArray(hourlyWeather.time)) {
+        const times = hourlyWeather.time.slice(0, 24); 
+        const temps = hourlyWeather.temperature_2m;
+        const codes = hourlyWeather.weathercode;
         
-        <div class="bg-slate-800/30 rounded-lg p-4 border-l-4 border-slate-600">
-            <h4 class="text-sm font-bold text-white mb-1"><i class="fa-solid fa-circle-info text-slate-400 mr-2"></i>Tracking Gear</h4>
-            <p class="text-xs text-slate-400">
-                Add a "## Gear" section to your Markdown file to track mileage. Format items as: 
-                <code class="bg-slate-900 px-1 py-0.5 rounded text-purple-400 font-mono">* [Bike] Tarmac SL7 (1,200 miles)</code> or 
-                <code class="bg-slate-900 px-1 py-0.5 rounded text-fuchsia-400 font-mono">* [Run] Saucony Endorphin (45 miles)</code>.
-            </p>
+        hourlyHtml = `<div class="mb-6">
+            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Hourly Forecast</p>
+            <div class="hourly-scroll">`;
+        
+        times.forEach((t, index) => {
+            // Note: Date parsing here relies on browser logic. 
+            // Ideally, pass 't' as is, but new Date(t) works for ISO strings returned by OpenMeteo
+            const date = new Date(t);
+            if (index < 24 && temps[index] !== undefined) { 
+                const h = date.getHours();
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const hourLabel = h % 12 === 0 ? 12 : h % 12;
+                const icon = (WEATHER_MAP[codes[index]] || ["", "☁️"])[1];
+                hourlyHtml += `
+                    <div class="hourly-item">
+                        <span class="text-[10px] text-slate-400 font-bold">${hourLabel} ${ampm}</span>
+                        <span class="text-lg">${icon}</span>
+                        <span class="text-xs font-bold text-slate-200">${Math.round(temps[index])}°</span>
+                    </div>
+                `;
+            }
+        });
+        hourlyHtml += `</div></div>`;
+    }
+
+    // 4. Helper to generate HTML for a Gear Row
+    // Updated to accept 'colorClass' for the icon
+    const generateRow = (idPrefix, iconClass, label, colorClass) => `
+        <div class="gear-row-container">
+            <div class="activity-header">
+                <i class="${iconClass} ${colorClass} text-lg"></i>
+                <span class="text-xs font-bold text-slate-200 uppercase tracking-widest">${label}</span>
+            </div>
+            <div class="gear-bubbles-row">
+                <div class="gear-bubble">
+                    <span class="text-[9px] font-bold text-blue-500 uppercase tracking-widest mb-1">Upper Body</span>
+                    <p id="${idPrefix}-upper" class="text-sm text-slate-100 font-medium leading-relaxed">--</p>
+                </div>
+                <div class="gear-bubble">
+                    <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Lower Body</span>
+                    <p id="${idPrefix}-lower" class="text-sm text-slate-100 font-medium leading-relaxed">--</p>
+                </div>
+                <div class="gear-bubble">
+                    <span class="text-[9px] font-bold text-purple-500 uppercase tracking-widest mb-1">Extremities</span>
+                    <p id="${idPrefix}-extremities" class="text-sm text-slate-100 font-medium leading-relaxed">--</p>
+                </div>
+            </div>
         </div>
     `;
+
+    // 5. Assemble Final HTML
+    const html = `
+        <div class="bg-slate-800/30 border border-slate-800 rounded-xl p-6 mb-8">
+            ${hourlyHtml}
+            
+            <div class="flex flex-col gap-2 mb-8 max-w-md mx-auto">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Select Temperature</label>
+                <select id="gear-temp" onchange="window.App.updateGearResult()" class="gear-select text-center text-lg py-3">
+                    ${tempOptions}
+                </select>
+            </div>
+
+            <div class="mb-10">
+                <h3 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Standard Conditions
+                </h3>
+                <div class="flex flex-col gap-4">
+                    ${generateRow('bike-standard', 'fa-solid fa-bicycle', 'Cycling', 'text-fuchsia-500')}
+                    ${generateRow('run-standard', 'fa-solid fa-person-running', 'Running', 'text-purple-500')}
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-orange-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Windy & Rainy (-10°F)
+                </h3>
+                <div class="flex flex-col gap-4">
+                    ${generateRow('bike-weather', 'fa-solid fa-bicycle', 'Cycling', 'text-fuchsia-500')}
+                    ${generateRow('run-weather', 'fa-solid fa-person-running', 'Running', 'text-purple-500')}
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 border-t border-slate-800 pt-8">
+            <div class="flex items-center gap-2 mb-6">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Full Documentation</h3>
+            </div>
+            <div class="markdown-body">
+                ${marked.parse(gearMd || "*No gear data found in Gear.md.*")}
+            </div>
+        </div>
+    `;
+
+    return { html, gearData };
+}
+
+/**
+ * Updates the gear result text bubbles based on the selected temperature.
+ * @param {object} gearData - The parsed gear data structure
+ */
+export function updateGearResult(gearData) {
+    if (!gearData) return;
+    
+    const tempSelect = document.getElementById('gear-temp');
+    if (!tempSelect) return;
+    const temp = parseInt(tempSelect.value);
+    
+    const processActivity = (activity, prefixBase) => {
+        const list = gearData[activity] || [];
+        const findMatch = (t) => {
+            const match = list.find(r => {
+                if (r.min === -999) return t < r.max;
+                if (r.max === 999) return t >= r.min;
+                return t >= r.min && t <= r.max;
+            });
+            return match || { upper: "—", lower: "—", extremities: "—" };
+        };
+
+        const standard = findMatch(temp);
+        const weather = findMatch(temp - 10);
+
+        const updateUI = (prefix, data) => {
+            const u = document.getElementById(`${prefix}-upper`);
+            const l = document.getElementById(`${prefix}-lower`);
+            const e = document.getElementById(`${prefix}-extremities`);
+            if (u) u.innerHTML = data.upper;
+            if (l) l.innerHTML = data.lower;
+            if (e) e.innerHTML = data.extremities;
+        };
+
+        updateUI(`${prefixBase}-standard`, standard);
+        updateUI(`${prefixBase}-weather`, weather);
+    };
+
+    processActivity('bike', 'bike');
+    processActivity('run', 'run');
 }
