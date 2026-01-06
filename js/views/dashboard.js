@@ -22,7 +22,8 @@ const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     `;
 };
 
-export function renderDashboard(planMd) {
+// Updated to accept merged history data
+export function renderDashboard(planMd, mergedLogData) {
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
     if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
 
@@ -33,7 +34,8 @@ export function renderDashboard(planMd) {
     const progressHtml = buildProgressWidget(workouts);
 
     // 2. Weekly Cards Grid
-    const fullLogData = Parser.parseTrainingLog(planMd);
+    // Use the merged data passed from App, or fallback to parsing the plan
+    const fullLogData = mergedLogData || Parser.parseTrainingLog(planMd);
     
     // --- SMART EVENT PARSING ---
     const eventMap = {};
