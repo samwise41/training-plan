@@ -9,10 +9,11 @@
 /* Activity Icon Theme Colors */
 :root {
     /* ... existing vars ... */
+    --color-all:  #a855f7; /* Purple-500 */
     --color-bike: #a855f7; /* Fuchsia-500 */
     --color-run:  #d946ef; /* Purple-500 */
     --color-swim: #0ea5e9; /* Sky-500 */
-    --color-all:  #a855f7; /* Purple-500 */
+
 }
 
 /* You can still use your classes for icons */
@@ -23,7 +24,9 @@
 }
 
 /* Add these new background classes */
-.bg-icon-all  { background-color: var(--color-all) !important; }
+.bg-icon-all { 
+    background-color: #a855f7 !important; /* Hardcoded Purple for testing */
+}
 .bg-icon-bike { background-color: var(--color-bike) !important; }
 .bg-icon-run  { background-color: var(--color-run) !important; }
 .bg-icon-swim { background-color: var(--color-swim) !important; }
