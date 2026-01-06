@@ -12,7 +12,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 | **Date** | **Event Type** | **Goal** | **Priority** |  **Course Profile** | **Training Implication** |
 | :--- | :--- | :--- | :--- |  :--- | :--- | 
 | June 20, 2026 | Jordanelle Olympic Triathlon | Finish ~ 2:30:00 | **A-Race** |  Hilly Bike / Flat Run | Needs low-cadence/high-torque bike intervals (Strength Endurance). |
-| Aug 15, 2026 | CF Ride for Life Century Ride | Finish ~ 5:30:00 | **A-Race** |  4000+ ft of climb over two mountains  | Needs sustained Z2 endurance (4-5h saddle time). |
+| Aug 16, 2026 | CF Ride for Life Century Ride | Finish ~ 5:30:00 | **A-Race** |  4000+ ft of climb over two mountains  | Needs sustained Z2 endurance (4-5h saddle time). |
 | Sept 11, 2026 | Brineman 70.3 or Olympic Triathlon | sub 6:00:00 | **B-Race** |  1000 ft of climb total with no single climb over 200 ft.  | Need to pace effort. |
 
 ## 2. User Profile & Health
