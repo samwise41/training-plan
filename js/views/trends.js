@@ -30,14 +30,46 @@ if (!window.toggleSection) {
     };
 }
 
+// --- TOOLTIP HANDLER ---
+window.showTrendTooltip = (evt, date, label, value, color) => {
+    const tooltip = document.getElementById('trend-tooltip-popup');
+    if (!tooltip) return;
+
+    // Content
+    tooltip.innerHTML = `
+        <div class="font-bold text-white mb-1 border-b border-slate-600 pb-1">${date}</div>
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span>
+            <span class="text-slate-300 text-xs">${label}:</span>
+            <span class="text-white font-mono font-bold">${value}%</span>
+        </div>
+    `;
+
+    // Position
+    const rect = evt.target.getBoundingClientRect();
+    const container = document.getElementById('trend-charts-container').getBoundingClientRect();
+    
+    // Calculate relative position
+    const left = rect.left - container.left + 10; 
+    const top = rect.top - container.top - 40; 
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.classList.remove('opacity-0', 'pointer-events-none');
+    
+    // Auto-hide after 3 seconds
+    if (window.tooltipTimer) clearTimeout(window.tooltipTimer);
+    window.tooltipTimer = setTimeout(() => {
+        tooltip.classList.add('opacity-0', 'pointer-events-none');
+    }, 3000);
+};
+
 // Default State
 const chartState = {
-    // Sport Filters
     All: true,
     Bike: false,
     Run: false,
     Swim: false,
-    // Time Filter (Default 6m)
     timeRange: '6m' 
 };
 
@@ -73,7 +105,6 @@ const getIconForType = (type) => {
     return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
 };
 
-// Toggle Sport Series
 window.toggleTrendSeries = (type) => {
     if (chartState.hasOwnProperty(type)) {
         chartState[type] = !chartState[type];
@@ -81,7 +112,6 @@ window.toggleTrendSeries = (type) => {
     }
 };
 
-// Toggle Time Range
 window.toggleTrendTime = (range) => {
     chartState.timeRange = range;
     renderDynamicCharts();
@@ -93,8 +123,7 @@ const getRollingPoints = (data, typeFilter, isCount) => {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     
-    // Determine Weeks Back based on Time Range
-    let weeksBack = 26; // Default 6m
+    let weeksBack = 26; 
     if (chartState.timeRange === '30d') weeksBack = 4;
     else if (chartState.timeRange === '60d') weeksBack = 8;
     else if (chartState.timeRange === '90d') weeksBack = 13;
@@ -107,7 +136,6 @@ const getRollingPoints = (data, typeFilter, isCount) => {
             const startWindow = new Date(anchorDate);
             startWindow.setDate(anchorDate.getDate() - days);
             let plan = 0; let act = 0;
-            
             data.forEach(d => {
                 if (d.date >= startWindow && d.date <= anchorDate) {
                     if (typeFilter !== 'All' && d.type !== typeFilter) return;
@@ -118,49 +146,83 @@ const getRollingPoints = (data, typeFilter, isCount) => {
                     }
                 }
             });
-            return plan > 0 ? Math.min(Math.round((act / plan) * 100), 120) : 0;
+            return plan > 0 ? Math.round((act / plan) * 100) : 0; // Removed 120 cap for logic, visual cap handled in renderer if needed
         };
         points.push({ label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`, val30: getStats(30), val60: getStats(60) });
     }
     return points;
 };
 
-// --- CHART BUILDERS ---
+// --- CHART BUILDERS (DYNAMIC Y-AXIS) ---
 const buildTrendChart = (title, isCount) => {
     const height = 200; const width = 800; 
     const padding = { top: 20, bottom: 30, left: 40, right: 20 };
     const chartW = width - padding.left - padding.right; const chartH = height - padding.top - padding.bottom;
-    const getY = (val) => padding.top + chartH - (val / 120) * chartH;
+
+    // 1. Calculate Active Data Range
+    const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange'); 
+    let allValues = [];
+    
+    // Collect all visible data points to find Min/Max
+    activeTypes.forEach(type => {
+        const pts = getRollingPoints(logData, type, isCount);
+        pts.forEach(p => {
+            if(p.val30 > 0) allValues.push(p.val30);
+            if(p.val60 > 0) allValues.push(p.val60);
+        });
+    });
+
+    if (allValues.length === 0) allValues = [0, 100]; // Fallback
+
+    const dataMin = Math.min(...allValues);
+    const dataMax = Math.max(...allValues);
+    
+    // Add padding to range so lines don't touch edges
+    let spread = dataMax - dataMin;
+    if (spread < 20) spread = 20; // Minimum spread of 20%
+    
+    const domainMin = Math.max(0, dataMin - (spread * 0.2)); // Floor at 0
+    const domainMax = dataMax + (spread * 0.2);
+
+    // Dynamic Y Scale
+    const getY = (val) => padding.top + chartH - ((val - domainMin) / (domainMax - domainMin)) * chartH;
     const getX = (idx, total) => padding.left + (idx / (total - 1)) * chartW;
 
+    // 2. Generate Chart Elements
     let pathsHtml = '';
-    const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange'); // Exclude non-sport keys
+    let circlesHtml = '';
 
     activeTypes.forEach(type => {
         const dataPoints = getRollingPoints(logData, type, isCount);
         const color = colorMap[type];
-        
-        // If only 1 point, draw a dot instead of line
         if (dataPoints.length < 2) return;
 
         let d30 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val30)}`;
         let d60 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val60)}`;
         
         dataPoints.forEach((p, i) => {
-            d30 += ` L ${getX(i, dataPoints.length)} ${getY(p.val30)}`;
-            d60 += ` L ${getX(i, dataPoints.length)} ${getY(p.val60)}`;
+            const x = getX(i, dataPoints.length);
+            const y30 = getY(p.val30);
+            const y60 = getY(p.val60);
+
+            d30 += ` L ${x} ${y30}`;
+            d60 += ` L ${x} ${y60}`;
+
+            // Add Clickable Circles
+            circlesHtml += `<circle cx="${x}" cy="${y30}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '30d (${type})', ${p.val30}, '${color}')"></circle>`;
+            circlesHtml += `<circle cx="${x}" cy="${y60}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" opacity="0.6" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
         });
+
         pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
         pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />`;
     });
 
+    // 3. X-Axis Labels
     const axisPoints = getRollingPoints(logData, 'All', isCount);
     let labelsHtml = '';
-    
-    // Dynamic X-Axis Label Frequency based on range
     let modVal = 4;
-    if (chartState.timeRange === '30d') modVal = 1; // Show every week
-    else if (chartState.timeRange === '60d') modVal = 2; // Show every 2 weeks
+    if (chartState.timeRange === '30d') modVal = 1;
+    else if (chartState.timeRange === '60d') modVal = 2;
     
     axisPoints.forEach((p, i) => {
         if (i % modVal === 0 || i === axisPoints.length - 1) {
@@ -168,15 +230,41 @@ const buildTrendChart = (title, isCount) => {
         }
     });
 
-    const y50 = getY(50); const y80 = getY(80); const y100 = getY(100);
-    return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4"><div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2"><h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-line text-slate-400"></i> ${title}</h3></div><div class="w-full relative"><svg viewBox="0 0 ${width} ${height}" class="w-full h-auto"><line x1="${padding.left}" y1="${y50}" x2="${width - padding.right}" y2="${y50}" stroke="#334155" stroke-width="1" stroke-dasharray="4" /><line x1="${padding.left}" y1="${y80}" x2="${width - padding.right}" y2="${y80}" stroke="#334155" stroke-width="1" stroke-dasharray="4" /><line x1="${padding.left}" y1="${y100}" x2="${width - padding.right}" y2="${y100}" stroke="#475569" stroke-width="1" /><text x="${padding.left - 5}" y="${y50 + 3}" text-anchor="end" font-size="9" fill="#64748b">50%</text><text x="${padding.left - 5}" y="${y80 + 3}" text-anchor="end" font-size="9" fill="#64748b">80%</text><text x="${padding.left - 5}" y="${y100 + 3}" text-anchor="end" font-size="9" fill="#94a3b8" font-weight="bold">100%</text>${pathsHtml}${labelsHtml}</svg></div></div>`;
+    // 4. Dynamic Grid Lines (Max, Mid, Min)
+    const yMid = getY((domainMin + domainMax) / 2);
+    const yTop = getY(domainMax * 0.95); // Slightly below absolute top
+    const yBot = getY(domainMin * 1.05 || domainMin + 5); 
+
+    return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4 relative">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-slate-400"></i> ${title}
+                </h3>
+            </div>
+            <div class="w-full relative">
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto overflow-visible">
+                    <line x1="${padding.left}" y1="${yMid}" x2="${width - padding.right}" y2="${yMid}" stroke="#334155" stroke-width="1" stroke-dasharray="4" />
+                    <line x1="${padding.left}" y1="${yTop}" x2="${width - padding.right}" y2="${yTop}" stroke="#334155" stroke-width="1" stroke-dasharray="4" />
+                    <line x1="${padding.left}" y1="${yBot}" x2="${width - padding.right}" y2="${yBot}" stroke="#334155" stroke-width="1" stroke-dasharray="4" />
+                    
+                    <text x="${padding.left - 5}" y="${yBot + 3}" text-anchor="end" font-size="9" fill="#64748b">${Math.round(domainMin)}%</text>
+                    <text x="${padding.left - 5}" y="${yMid + 3}" text-anchor="end" font-size="9" fill="#64748b">${Math.round((domainMin+domainMax)/2)}%</text>
+                    <text x="${padding.left - 5}" y="${yTop + 3}" text-anchor="end" font-size="9" fill="#94a3b8" font-weight="bold">${Math.round(domainMax)}%</text>
+
+                    ${pathsHtml}
+                    ${circlesHtml}
+                    ${labelsHtml}
+                </svg>
+            </div>
+        </div>
+    `;
 };
 
 const renderDynamicCharts = () => {
     const container = document.getElementById('trend-charts-container');
     if (!container) return;
 
-    // Helper for Sport Toggles
     const buildSportToggle = (type, label, colorClass) => {
         const isActive = chartState[type];
         const bg = isActive ? colorClass : 'bg-slate-800';
@@ -185,7 +273,6 @@ const renderDynamicCharts = () => {
         return `<button onclick="window.toggleTrendSeries('${type}')" class="${bg} ${text} ${border} border px-3 py-1 rounded text-xs transition-all hover:opacity-90">${label}</button>`;
     };
 
-    // Helper for Time Toggles
     const buildTimeToggle = (range, label) => {
         const isActive = chartState.timeRange === range;
         const bg = isActive ? 'bg-slate-200' : 'bg-slate-800';
@@ -203,7 +290,6 @@ const renderDynamicCharts = () => {
                 ${buildSportToggle('Run', 'Run', 'bg-emerald-500')}
                 ${buildSportToggle('Swim', 'Swim', 'bg-cyan-500')}
             </div>
-            
             <div class="flex items-center gap-2 flex-wrap sm:ml-auto">
                 <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Range:</span>
                 ${buildTimeToggle('30d', '30d')}
@@ -212,13 +298,15 @@ const renderDynamicCharts = () => {
                 ${buildTimeToggle('6m', '6m')}
             </div>
         </div>
+        <div id="trend-tooltip-popup" class="absolute bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs z-50 pointer-events-none opacity-0 transition-opacity"></div>
+        
         <div class="flex gap-4 text-[10px] text-slate-400 font-mono justify-end mb-2">
             <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400"></div> 30d Avg</span>
             <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400 border-b border-dashed"></div> 60d Avg</span>
         </div>
     `;
 
-    container.innerHTML = `${controlsHtml}${buildTrendChart("Rolling Adherence (Duration Based)", false)}${buildTrendChart("Rolling Adherence (Count Based)", true)}<div class="mt-1 mb-0 text-center text-[10px] text-slate-500 italic">* Lines cap at 120% for readability.</div>`;
+    container.innerHTML = `${controlsHtml}${buildTrendChart("Rolling Adherence (Duration Based)", false)}${buildTrendChart("Rolling Adherence (Count Based)", true)}`;
 };
 
 const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
