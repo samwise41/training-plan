@@ -30,7 +30,7 @@ if (!window.toggleSection) {
     };
 }
 
-// --- TOOLTIP HANDLER ---
+// --- TOOLTIP HANDLER (FIXED POSITIONING) ---
 window.showTrendTooltip = (evt, date, label, value, color) => {
     const tooltip = document.getElementById('trend-tooltip-popup');
     if (!tooltip) return;
@@ -45,13 +45,15 @@ window.showTrendTooltip = (evt, date, label, value, color) => {
         </div>
     `;
 
-    // Position based on Page Coordinates
+    // Position based on Page Coordinates (Robust against scrolling/nesting)
+    // We use 'fixed' to ensure it sits on top of everything visually
     tooltip.style.position = 'fixed';
-    tooltip.style.left = `${evt.clientX + 10}px`; 
-    tooltip.style.top = `${evt.clientY - 40}px`;  
+    tooltip.style.left = `${evt.clientX + 10}px`; // 10px to right of mouse
+    tooltip.style.top = `${evt.clientY - 40}px`;  // 40px above mouse
     
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
     
+    // Auto-hide after 3 seconds
     if (window.tooltipTimer) clearTimeout(window.tooltipTimer);
     window.tooltipTimer = setTimeout(() => {
         tooltip.classList.add('opacity-0', 'pointer-events-none');
@@ -67,8 +69,7 @@ const chartState = {
     timeRange: '6m' 
 };
 
-// UPDATED COLOR MAP: All is now Purple
-const colorMap = { All: '#a855f7', Bike: '#3b82f6', Run: '#10b981', Swim: '#06b6d4' };
+const colorMap = { All: '#ffffff', Bike: '#3b82f6', Run: '#10b981', Swim: '#06b6d4' };
 
 // --- HELPER FUNCTIONS ---
 
@@ -148,12 +149,13 @@ const getRollingPoints = (data, typeFilter, isCount) => {
     return points;
 };
 
-// --- CHART BUILDERS ---
+// --- CHART BUILDERS (DYNAMIC Y-AXIS + CUSTOM GRID) ---
 const buildTrendChart = (title, isCount) => {
     const height = 200; const width = 800; 
     const padding = { top: 20, bottom: 30, left: 40, right: 20 };
     const chartW = width - padding.left - padding.right; const chartH = height - padding.top - padding.bottom;
 
+    // 1. Calculate Active Data Range
     const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange'); 
     let allValues = [];
     
@@ -165,32 +167,34 @@ const buildTrendChart = (title, isCount) => {
         });
     });
 
+    // Ensure we have a baseline range even if data is empty
     if (allValues.length === 0) allValues = [0, 10]; 
 
     const dataMin = Math.min(...allValues);
     const dataMax = Math.max(...allValues);
     
+    // Add padding to range
     let spread = dataMax - dataMin;
-    if (spread < 20) spread = 20; 
+    if (spread < 20) spread = 20; // Minimum visual spread
     
     const domainMin = Math.max(0, dataMin - (spread * 0.1)); 
     const domainMax = dataMax + (spread * 0.1);
 
+    // Dynamic Y Scale function
     const getY = (val) => padding.top + chartH - ((val - domainMin) / (domainMax - domainMin)) * chartH;
     const getX = (idx, total) => padding.left + (idx / (total - 1)) * chartW;
 
-    // --- GRID LINES (Updated Colors) ---
-    // 100% = White (#ffffff)
-    // 80%  = Yellow (#eab308)
-    // 60%  = Red (#ef4444)
+    // 2. Generate Grid Lines (100, 80, 60 Only)
+    // 100=Green (#10b981), 80=Yellow (#eab308), 60=Red (#ef4444)
     const gridLinesDef = [
-        { val: 100, color: '#ffffff' },
+        { val: 100, color: '#10b981' },
         { val: 80, color: '#eab308' },
         { val: 60, color: '#ef4444' }
     ];
 
     let gridHtml = '';
     gridLinesDef.forEach(line => {
+        // Only draw if within the current view window
         if (line.val <= domainMax && line.val >= domainMin) {
             const y = getY(line.val);
             gridHtml += `
@@ -200,6 +204,7 @@ const buildTrendChart = (title, isCount) => {
         }
     });
 
+    // 3. Generate Chart Elements
     let pathsHtml = '';
     let circlesHtml = '';
 
@@ -219,6 +224,7 @@ const buildTrendChart = (title, isCount) => {
             d30 += ` L ${x} ${y30}`;
             d60 += ` L ${x} ${y60}`;
 
+            // Add Clickable Circles
             circlesHtml += `<circle cx="${x}" cy="${y30}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '30d (${type})', ${p.val30}, '${color}')"></circle>`;
             circlesHtml += `<circle cx="${x}" cy="${y60}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" opacity="0.6" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
         });
@@ -227,6 +233,7 @@ const buildTrendChart = (title, isCount) => {
         pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />`;
     });
 
+    // 4. X-Axis Labels
     const axisPoints = getRollingPoints(logData, 'All', isCount);
     let labelsHtml = '';
     let modVal = 4;
@@ -252,6 +259,7 @@ const buildTrendChart = (title, isCount) => {
                     <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
                     
                     ${gridHtml}
+
                     ${pathsHtml}
                     ${circlesHtml}
                     ${labelsHtml}
@@ -281,12 +289,11 @@ const renderDynamicCharts = () => {
         return `<button onclick="window.toggleTrendTime('${range}')" class="${bg} ${text} ${border} border px-3 py-1 rounded text-xs transition-all hover:opacity-90">${label}</button>`;
     };
 
-    // Updated 'All' toggle to use bg-purple-500
     const controlsHtml = `
         <div class="flex flex-col sm:flex-row gap-4 mb-6">
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Sports:</span>
-                ${buildSportToggle('All', 'All', 'bg-purple-500')}
+                ${buildSportToggle('All', 'All', 'bg-white')}
                 ${buildSportToggle('Bike', 'Bike', 'bg-blue-500')}
                 ${buildSportToggle('Run', 'Run', 'bg-emerald-500')}
                 ${buildSportToggle('Swim', 'Swim', 'bg-cyan-500')}
