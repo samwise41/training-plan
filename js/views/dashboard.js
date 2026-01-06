@@ -15,31 +15,44 @@ export function renderDashboard(planMd) {
     // 3. Prepare Data for Heatmaps (Full History + Events)
     const fullLogData = Parser.parseTrainingLog(planMd);
     
-    // --- FIXED EVENT PARSING (Global Scan) ---
-    // Instead of relying on a specific section header, we scan the whole file for date rows.
+    // --- FIXED: Event Parsing for "Month Day, Year" format ---
     const eventMap = {};
+    
+    // We manually scan specifically for Section 1 to avoid false positives
     const lines = planMd.split('\n');
+    let insideEventSection = false;
+
     lines.forEach(line => {
-        // Look for table rows with a date in YYYY-MM-DD format
-        if (line.trim().startsWith('|') && /\d{4}-\d{2}-\d{2}/.test(line) && !line.includes('---')) {
-            const parts = line.split('|').map(p => p.trim());
-            // Standard format: | Date | Event Name | ...
-            // parts[0] is empty, parts[1] is Date, parts[2] is Name
-            if (parts.length > 2) {
-                const dateStr = parts[1];
-                const evtName = parts[2];
-                // Check if valid date and NOT a workout log (usually workout logs have types like Run/Bike)
-                // We assume the Event Schedule is the main place listing future dates with names that aren't just "Bike" or "Run"
-                // To be safe, we just capture it. The Heatmap priority will handle conflicts.
-                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/) && evtName.length > 0) {
-                    eventMap[dateStr] = evtName;
+        // Detect Start of Section 1
+        if (line.includes('1. Event Schedule')) insideEventSection = true;
+        // Detect End (Start of Section 2)
+        else if (line.includes('2. User Profile')) insideEventSection = false;
+
+        if (insideEventSection) {
+            // Look for table rows: | Date | Event | ...
+            if (line.trim().startsWith('|') && !line.includes('---') && !line.toLowerCase().includes('**date**')) {
+                const parts = line.split('|').map(p => p.trim());
+                // | Date | Event Name | ... -> parts[1] is Date, parts[2] is Name
+                if (parts.length > 2) {
+                    const dateRaw = parts[1];
+                    const evtName = parts[2];
+
+                    // Javascript Date Parser handles "June 20, 2026" automatically
+                    const dateObj = new Date(dateRaw);
+                    
+                    if (!isNaN(dateObj) && evtName) {
+                        // Normalize to YYYY-MM-DD to match heatmap keys
+                        // We use Local time to avoid timezone shifts
+                        const ymd = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+                        eventMap[ymd] = evtName;
+                    }
                 }
             }
         }
     });
 
     // 4. Generate Two Heatmaps
-    // Helper to get consistent local date string (YYYY-MM-DD) avoiding UTC shifts
+    // Helper to get consistent local date string (YYYY-MM-DD)
     const getLocalYMD = (d) => {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
@@ -48,14 +61,12 @@ export function renderDashboard(planMd) {
     const today = new Date();
     today.setHours(0,0,0,0);
     
-    // Calculate End of Current Week (Upcoming Sunday)
     const endOfWeek = new Date(today);
     const dayOfWeek = endOfWeek.getDay(); // 0=Sun
     const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); 
     endOfWeek.setDate(endOfWeek.getDate() + distToSunday); 
     if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); 
     
-    // Start Date: 6 Months Prior
     const startTrailing = new Date(endOfWeek);
     startTrailing.setMonth(startTrailing.getMonth() - 6);
 
@@ -183,7 +194,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     // 1. Map Data
     const dataMap = {};
     fullLog.forEach(item => {
-        // Use consistent date key generation
         const dateKey = dateToKeyFn(item.date);
         if (!dataMap[dateKey]) dataMap[dateKey] = [];
         dataMap[dateKey].push(item);
@@ -194,11 +204,9 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 
     const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
 
-    // 2. Alignment Logic: Insert Empty Cells until Sunday
+    // 2. Alignment: Insert Empty Cells until Sunday
     const startDay = startDate.getDay(); // 0=Sun
     let cellsHtml = '';
-    
-    // Add Spacers (invisible)
     for (let i = 0; i < startDay; i++) {
         cellsHtml += `<div class="w-2.5 h-2.5 m-[1px] opacity-0"></div>`;
     }
@@ -206,13 +214,11 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     // 3. Generate Cells
     let currentDate = new Date(startDate);
     while (currentDate <= endDate) {
-        // Safe key generation using Local Time components
         const dateKey = dateToKeyFn(currentDate);
         const dayOfWeek = currentDate.getDay(); 
         const dayData = dataMap[dateKey];
         const eventName = eventMap && eventMap[dateKey];
         
-        // Defaults
         let colorClass = 'bg-slate-800'; 
         let tooltip = `${dateKey}: Empty`;
         let inlineStyle = ""; 
@@ -276,15 +282,17 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
                     }
                 }
             } else {
-                colorClass = 'bg-emerald-500/50'; 
+                colorClass = 'bg-emerald-500/50'; // 50% Green for Past Rest
                 tooltip = `${dateKey}: Rest Day`;
                 clickDetails = `Date: ${dateKey}\\nStatus: Rest Day`;
             }
         }
 
         // --- SUNDAY VISIBILITY LOGIC ---
-        // If it is Sunday AND has no activity/event -> Make Invisible
-        if (dayOfWeek === 0 && !hasActivity) {
+        // Hide Sunday ONLY if it has no workout/event/rest-log
+        // Note: isRestType logic above sets hasActivity=true, so explicit Rest days (Past) will show.
+        // Empty Sundays in Future/Past without data will hide.
+        if (dayOfWeek === 0 && !hasActivity && !eventName) {
             colorClass = ''; 
             inlineStyle = 'opacity: 0;'; 
             clickDetails = ''; 
@@ -322,7 +330,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// ... (buildProgressWidget is unchanged) ...
+// ... (buildProgressWidget remains unchanged) ...
 function buildProgressWidget(workouts) {
     const today = new Date();
     today.setHours(23, 59, 59, 999); 
