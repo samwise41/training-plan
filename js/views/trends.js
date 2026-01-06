@@ -2,7 +2,25 @@
 
 let logData = [];
 
-// Helper functions
+// --- CHART STATE MANAGEMENT ---
+// Default: Only 'All' is active on load
+const chartState = {
+    All: true,
+    Bike: false,
+    Run: false,
+    Swim: false
+};
+
+// Colors matching the dashboard icons
+const colorMap = {
+    All: '#ffffff',      // White
+    Bike: '#3b82f6',     // Blue-500
+    Run: '#10b981',      // Emerald-500
+    Swim: '#06b6d4'      // Cyan-500
+};
+
+// --- HELPER FUNCTIONS ---
+
 const getIconForType = (type) => {
     if (type === 'Bike') return '<i class="fa-solid fa-bicycle text-blue-500 text-xl"></i>';
     if (type === 'Run') return '<i class="fa-solid fa-person-running text-emerald-500 text-xl"></i>';
@@ -10,19 +28,27 @@ const getIconForType = (type) => {
     return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
 };
 
-// --- ROLLING ADHERENCE CHART (NEW) ---
-const buildRollingAdherenceChart = (data) => {
-    // 1. Setup Data Points (Last 52 Weeks)
+// Expose Toggle Function to Global Scope (for HTML onclick)
+window.toggleTrendSeries = (type) => {
+    if (chartState.hasOwnProperty(type)) {
+        chartState[type] = !chartState[type];
+        // Re-render just the charts area
+        renderDynamicCharts(); 
+    }
+};
+
+// --- DATA CALCULATION ---
+
+const getRollingPoints = (data, typeFilter, isCount) => {
     const points = [];
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     
-    // We calculate a data point for every Sunday going back 6 months
+    // Calculate past 26 weeks (6 months)
     for (let i = 26; i >= 0; i--) {
         const anchorDate = new Date(today);
-        anchorDate.setDate(today.getDate() - (i * 7)); // Move back weeks
+        anchorDate.setDate(today.getDate() - (i * 7)); 
         
-        // Calculate 30d and 60d stats relative to this anchor date
         const getStats = (days) => {
             const startWindow = new Date(anchorDate);
             startWindow.setDate(anchorDate.getDate() - days);
@@ -32,27 +58,42 @@ const buildRollingAdherenceChart = (data) => {
             
             data.forEach(d => {
                 if (d.date >= startWindow && d.date <= anchorDate) {
-                    plan += (d.plannedDuration || 0);
-                    act += (d.actualDuration || 0);
+                    // Filter by Sport Type
+                    if (typeFilter !== 'All' && d.type !== typeFilter) return;
+
+                    if (isCount) {
+                        // Count Logic: 1 workout = 1 unit
+                        // Only count if it was actually planned (avoid 0/0)
+                        if (d.plannedDuration > 0 || d.type === 'Rest') {
+                            plan++;
+                            if (d.completed) act++;
+                        }
+                    } else {
+                        // Duration Logic
+                        plan += (d.plannedDuration || 0);
+                        act += (d.actualDuration || 0);
+                    }
                 }
             });
             
-            // Avoid division by zero
-            return plan > 0 ? Math.min(Math.round((act / plan) * 100), 120) : 0; // Cap visual at 120%
+            // Return Percentage (Cap at 120% for visual sanity)
+            return plan > 0 ? Math.min(Math.round((act / plan) * 100), 120) : 0;
         };
 
         points.push({
-            dateLabel: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`,
-            pct30: getStats(30),
-            pct60: getStats(60)
+            label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`,
+            val30: getStats(30),
+            val60: getStats(60)
         });
     }
+    return points;
+};
 
-    // 2. Build SVG
-    if (points.length < 2) return '';
+// --- CHART BUILDER ---
 
+const buildTrendChart = (title, isCount) => {
     const height = 200;
-    const width = 800; // Virtual width
+    const width = 800; 
     const padding = { top: 20, bottom: 30, left: 40, right: 20 };
     const chartW = width - padding.left - padding.right;
     const chartH = height - padding.top - padding.bottom;
@@ -60,40 +101,50 @@ const buildRollingAdherenceChart = (data) => {
     // Y Scale (0% to 120%)
     const getY = (val) => padding.top + chartH - (val / 120) * chartH;
     // X Scale
-    const getX = (idx) => padding.left + (idx / (points.length - 1)) * chartW;
+    const getX = (idx, total) => padding.left + (idx / (total - 1)) * chartW;
 
-    // Generate Paths
-    let path30 = `M ${getX(0)} ${getY(points[0].pct30)}`;
-    let path60 = `M ${getX(0)} ${getY(points[0].pct60)}`;
-    
-    points.forEach((p, i) => {
-        path30 += ` L ${getX(i)} ${getY(p.pct30)}`;
-        path60 += ` L ${getX(i)} ${getY(p.pct60)}`;
+    // Generate Paths for active series
+    let pathsHtml = '';
+    const activeTypes = Object.keys(chartState).filter(k => chartState[k]);
+
+    // Calculate Data & Paths
+    activeTypes.forEach(type => {
+        const dataPoints = getRollingPoints(logData, type, isCount);
+        const color = colorMap[type];
+        
+        let d30 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val30)}`;
+        let d60 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val60)}`;
+
+        dataPoints.forEach((p, i) => {
+            d30 += ` L ${getX(i, dataPoints.length)} ${getY(p.val30)}`;
+            d60 += ` L ${getX(i, dataPoints.length)} ${getY(p.val60)}`;
+        });
+
+        // 30d Line (Solid)
+        pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
+        // 60d Line (Dashed)
+        pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />`;
     });
 
-    // Generate X-Axis Labels (Show every 4th label to avoid crowding)
+    // Axis Labels
+    // Generate dummy points just to get labels from one dataset (use All)
+    const axisPoints = getRollingPoints(logData, 'All', isCount);
     let labelsHtml = '';
-    points.forEach((p, i) => {
-        if (i % 4 === 0 || i === points.length - 1) {
-            labelsHtml += `<text x="${getX(i)}" y="${height - 10}" text-anchor="middle" font-size="10" fill="#64748b">${p.dateLabel}</text>`;
+    axisPoints.forEach((p, i) => {
+        if (i % 4 === 0 || i === axisPoints.length - 1) {
+            labelsHtml += `<text x="${getX(i, axisPoints.length)}" y="${height - 10}" text-anchor="middle" font-size="10" fill="#64748b">${p.label}</text>`;
         }
     });
 
-    // Reference Lines (50%, 80%, 100%)
-    const y50 = getY(50);
-    const y80 = getY(80);
-    const y100 = getY(100);
+    // Reference Lines
+    const y50 = getY(50); const y80 = getY(80); const y100 = getY(100);
 
     return `
-        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-8">
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-chart-line text-yellow-500"></i> Rolling Adherence Trend
+                    <i class="fa-solid fa-chart-line text-slate-400"></i> ${title}
                 </h3>
-                <div class="flex gap-4 text-[10px] font-mono">
-                    <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> 30-Day Avg</div>
-                    <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-orange-700"></span> 60-Day Avg</div>
-                </div>
             </div>
             <div class="w-full relative">
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
@@ -105,18 +156,59 @@ const buildRollingAdherenceChart = (data) => {
                     <text x="${padding.left - 5}" y="${y80 + 3}" text-anchor="end" font-size="9" fill="#64748b">80%</text>
                     <text x="${padding.left - 5}" y="${y100 + 3}" text-anchor="end" font-size="9" fill="#94a3b8" font-weight="bold">100%</text>
 
-                    <path d="${path60}" fill="none" stroke="#c2410c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.8" />
-                    <path d="${path30}" fill="none" stroke="#eab308" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                    ${pathsHtml}
                     
                     ${labelsHtml}
                 </svg>
             </div>
-            <div class="mt-2 text-center text-[10px] text-slate-500 italic">
-                * Shows the % duration compliance for the trailing 30/60 days at the end of each week.
-            </div>
         </div>
     `;
 };
+
+// --- RENDER DYNAMIC SECTION ---
+// This function updates only the charts when toggles are clicked
+const renderDynamicCharts = () => {
+    const container = document.getElementById('trend-charts-container');
+    if (!container) return;
+
+    // Re-render toggles to show active state
+    const buildToggle = (type, label, colorClass) => {
+        const isActive = chartState[type];
+        const bg = isActive ? colorClass : 'bg-slate-800';
+        const text = isActive ? 'text-slate-900 font-bold' : 'text-slate-400';
+        const border = isActive ? 'border-transparent' : 'border-slate-600';
+        
+        return `<button onclick="window.toggleTrendSeries('${type}')" 
+            class="${bg} ${text} ${border} border px-3 py-1 rounded text-xs transition-all hover:opacity-90">
+            ${label}
+        </button>`;
+    };
+
+    const controlsHtml = `
+        <div class="flex flex-wrap items-center gap-2 mb-6">
+            <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Filters:</span>
+            ${buildToggle('All', 'All Sports', 'bg-white')}
+            ${buildToggle('Bike', 'Bike', 'bg-blue-500')}
+            ${buildToggle('Run', 'Run', 'bg-emerald-500')}
+            ${buildToggle('Swim', 'Swim', 'bg-cyan-500')}
+            <div class="ml-auto flex gap-4 text-[10px] text-slate-400 font-mono">
+                <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400"></div> 30d Avg (Solid)</span>
+                <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400 border-b border-dashed"></div> 60d Avg (Dashed)</span>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = `
+        ${controlsHtml}
+        ${buildTrendChart("Rolling Adherence (Duration Based)", false)}
+        ${buildTrendChart("Rolling Adherence (Count Based)", true)}
+        <div class="mt-1 mb-8 text-center text-[10px] text-slate-500 italic">
+            * Lines cap at 120% for readability.
+        </div>
+    `;
+};
+
+// ... (Existing Concentric Chart, FTP Chart, Volume Chart functions unchanged) ...
 
 // --- Concentric Donut Chart ---
 const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
@@ -352,7 +444,8 @@ export function renderTrends(mergedLogData) {
 
     const html = `
         ${renderVolumeChart(logData, 'All', 'Total Weekly Volume')}
-        ${buildRollingAdherenceChart(logData)}
+        
+        <div id="trend-charts-container"></div>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
             ${renderVolumeChart(logData, 'Bike', 'Cycling Volume')}
@@ -385,6 +478,10 @@ export function renderTrends(mergedLogData) {
             <div class="border-t border-slate-700 pt-4"><h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Detailed Log (Matches Filters)</h4><div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-700 rounded-lg"><table id="kpi-debug-table" class="w-full text-left text-sm text-slate-300"><thead class="bg-slate-900 sticky top-0"><tr><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Date</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Day</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Type</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Plan</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th></tr></thead><tbody class="divide-y divide-slate-700"></tbody></table></div></div>
         </div>
         <div class="mt-8 text-center text-xs text-slate-500 italic">* 'h' in duration column denotes hours, otherwise minutes assumed.</div>`;
+    
+    // Defer the chart rendering slightly to ensure the DOM element exists
+    setTimeout(() => renderDynamicCharts(), 0);
+
     return { html, logData };
 }
 
