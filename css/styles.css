@@ -8,16 +8,9 @@
 
 /* Activity Icon Theme Colors */
 :root {
-    /* 1. ALL: Teal (Distinct from Green) */
     --color-all:  #14b8a6; 
-
-    /* 2. BIKE: Pink (Distinct from Red) */
-    --color-bike: #ec4899; 
-
-    /* 3. RUN: Violet (Distinct from Sky Blue) */
-    --color-run:  #8b5cf6; 
-
-    /* 4. SWIM: Sky (Existing) */
+    --color-bike: #8b5cf6; 
+    --color-run:  #ec4899; 
     --color-swim: #0ea5e9; 
 }
 
