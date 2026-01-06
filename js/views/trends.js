@@ -10,6 +10,114 @@ const getIconForType = (type) => {
     return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
 };
 
+// --- ROLLING ADHERENCE CHART (NEW) ---
+const buildRollingAdherenceChart = (data) => {
+    // 1. Setup Data Points (Last 52 Weeks)
+    const points = [];
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    // We calculate a data point for every Sunday going back 6 months
+    for (let i = 26; i >= 0; i--) {
+        const anchorDate = new Date(today);
+        anchorDate.setDate(today.getDate() - (i * 7)); // Move back weeks
+        
+        // Calculate 30d and 60d stats relative to this anchor date
+        const getStats = (days) => {
+            const startWindow = new Date(anchorDate);
+            startWindow.setDate(anchorDate.getDate() - days);
+            
+            let plan = 0; 
+            let act = 0;
+            
+            data.forEach(d => {
+                if (d.date >= startWindow && d.date <= anchorDate) {
+                    plan += (d.plannedDuration || 0);
+                    act += (d.actualDuration || 0);
+                }
+            });
+            
+            // Avoid division by zero
+            return plan > 0 ? Math.min(Math.round((act / plan) * 100), 120) : 0; // Cap visual at 120%
+        };
+
+        points.push({
+            dateLabel: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`,
+            pct30: getStats(30),
+            pct60: getStats(60)
+        });
+    }
+
+    // 2. Build SVG
+    if (points.length < 2) return '';
+
+    const height = 200;
+    const width = 800; // Virtual width
+    const padding = { top: 20, bottom: 30, left: 40, right: 20 };
+    const chartW = width - padding.left - padding.right;
+    const chartH = height - padding.top - padding.bottom;
+
+    // Y Scale (0% to 120%)
+    const getY = (val) => padding.top + chartH - (val / 120) * chartH;
+    // X Scale
+    const getX = (idx) => padding.left + (idx / (points.length - 1)) * chartW;
+
+    // Generate Paths
+    let path30 = `M ${getX(0)} ${getY(points[0].pct30)}`;
+    let path60 = `M ${getX(0)} ${getY(points[0].pct60)}`;
+    
+    points.forEach((p, i) => {
+        path30 += ` L ${getX(i)} ${getY(p.pct30)}`;
+        path60 += ` L ${getX(i)} ${getY(p.pct60)}`;
+    });
+
+    // Generate X-Axis Labels (Show every 4th label to avoid crowding)
+    let labelsHtml = '';
+    points.forEach((p, i) => {
+        if (i % 4 === 0 || i === points.length - 1) {
+            labelsHtml += `<text x="${getX(i)}" y="${height - 10}" text-anchor="middle" font-size="10" fill="#64748b">${p.dateLabel}</text>`;
+        }
+    });
+
+    // Reference Lines (50%, 80%, 100%)
+    const y50 = getY(50);
+    const y80 = getY(80);
+    const y100 = getY(100);
+
+    return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-8">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-yellow-500"></i> Rolling Adherence Trend
+                </h3>
+                <div class="flex gap-4 text-[10px] font-mono">
+                    <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> 30-Day Avg</div>
+                    <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-orange-700"></span> 60-Day Avg</div>
+                </div>
+            </div>
+            <div class="w-full relative">
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto">
+                    <line x1="${padding.left}" y1="${y50}" x2="${width - padding.right}" y2="${y50}" stroke="#334155" stroke-width="1" stroke-dasharray="4" />
+                    <line x1="${padding.left}" y1="${y80}" x2="${width - padding.right}" y2="${y80}" stroke="#334155" stroke-width="1" stroke-dasharray="4" />
+                    <line x1="${padding.left}" y1="${y100}" x2="${width - padding.right}" y2="${y100}" stroke="#475569" stroke-width="1" />
+                    
+                    <text x="${padding.left - 5}" y="${y50 + 3}" text-anchor="end" font-size="9" fill="#64748b">50%</text>
+                    <text x="${padding.left - 5}" y="${y80 + 3}" text-anchor="end" font-size="9" fill="#64748b">80%</text>
+                    <text x="${padding.left - 5}" y="${y100 + 3}" text-anchor="end" font-size="9" fill="#94a3b8" font-weight="bold">100%</text>
+
+                    <path d="${path60}" fill="none" stroke="#c2410c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.8" />
+                    <path d="${path30}" fill="none" stroke="#eab308" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                    
+                    ${labelsHtml}
+                </svg>
+            </div>
+            <div class="mt-2 text-center text-[10px] text-slate-500 italic">
+                * Shows the % duration compliance for the trailing 30/60 days at the end of each week.
+            </div>
+        </div>
+    `;
+};
+
 // --- Concentric Donut Chart ---
 const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
     const r1 = 15.9155; const c1 = 100;
@@ -172,7 +280,6 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             const planBarStyle = `background: repeating-linear-gradient(45deg, ${planHex}20, ${planHex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${planHex}40;`;
             const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80';
 
-            // Calculate hours for tooltip
             const planHrs = (b.plannedMins / 60).toFixed(1);
             const actHrs = (b.actualMins / 60).toFixed(1);
 
@@ -186,7 +293,6 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
                             </div>
                             <div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1">Growth: ${growthLabel}</div>
                         </div>
-                        
                         <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div>
                         <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualColorClass} ${actualOpacity} rounded-t-sm"></div>
                     </div>
@@ -246,6 +352,7 @@ export function renderTrends(mergedLogData) {
 
     const html = `
         ${renderVolumeChart(logData, 'All', 'Total Weekly Volume')}
+        ${buildRollingAdherenceChart(logData)}
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
             ${renderVolumeChart(logData, 'Bike', 'Cycling Volume')}
