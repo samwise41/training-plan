@@ -149,7 +149,7 @@ function buildComplianceHeatmap(fullLog) {
         dataMap[dateKey].push(item);
     });
 
-    // 3. High Contrast Stripe (Emerald 500 & Emerald 800)
+    // 3. Styles
     const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
 
     let cellsHtml = '';
@@ -159,8 +159,8 @@ function buildComplianceHeatmap(fullLog) {
         const dateKey = currentDate.toISOString().split('T')[0];
         const dayData = dataMap[dateKey];
         
-        let colorClass = 'bg-slate-800'; // Default: Dark Grey (Empty/Rest)
-        let tooltip = `${dateKey}: Rest / No Log`;
+        let colorClass = 'bg-slate-800'; // Default Future Empty
+        let tooltip = `${dateKey}: Empty`;
         let inlineStyle = ""; 
 
         // Aggregate day data
@@ -179,7 +179,6 @@ function buildComplianceHeatmap(fullLog) {
         // --- THE LOGIC TREE ---
 
         // 1. UNPLANNED (Green + Stripes)
-        // (Past Only OR Today) - Logic: Actual done, but Plan was 0 (or explicitly Rest)
         if (totalAct > 0 && (totalPlan === 0 || isRestType)) {
             colorClass = 'bg-emerald-500';
             inlineStyle = highContrastStripe;
@@ -192,8 +191,8 @@ function buildComplianceHeatmap(fullLog) {
                  colorClass = 'bg-slate-700'; // Lighter Grey -> Planned
                  tooltip = `${dateKey}: Planned`;
              } else {
-                 colorClass = 'bg-slate-800'; // Dark Grey -> Empty
-                 tooltip = `${dateKey}: Empty`;
+                 colorClass = 'bg-slate-800'; // Dark Grey -> Future Empty
+                 tooltip = `${dateKey}: Future`;
              }
         }
 
@@ -217,7 +216,8 @@ function buildComplianceHeatmap(fullLog) {
                 }
             } else {
                 // Past + Plan=0 + Act=0 -> Rest/No Log
-                colorClass = 'bg-slate-800'; // Grey
+                // CHANGED: Use transparent green for Past Rest
+                colorClass = 'bg-emerald-500/30'; 
                 tooltip = `${dateKey}: Rest Day`;
             }
         }
@@ -241,7 +241,8 @@ function buildComplianceHeatmap(fullLog) {
             </div>
 
             <div class="flex flex-wrap items-center gap-4 mt-4 text-[10px] text-slate-400 font-mono">
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-800"></div> Rest / Empty</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500/30"></div> Rest</div>
+                
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-700"></div> Planned</div>
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Done</div>
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500" style="${highContrastStripe}"></div> Unplanned</div>
