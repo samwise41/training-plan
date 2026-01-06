@@ -71,7 +71,12 @@ const chartState = {
 };
 
 // Colors
-const colorMap = { All: '#a855f7', Bike: '#3b82f6', Run: '#10b981', Swim: '#06b6d4' };
+const colorMap = { 
+    All: 'var(--color-all)', 
+    Bike: 'var(--color-bike)', 
+    Run: 'var(--color-run)', 
+    Swim: 'var(--color-swim)' 
+};
 
 // --- HELPER FUNCTIONS ---
 
