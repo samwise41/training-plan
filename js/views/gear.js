@@ -106,8 +106,8 @@ export function renderGear(gearMd, currentTemp, hourlyWeather) {
                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Standard Conditions
                 </h3>
                 <div class="flex flex-col gap-4">
-                    ${generateRow('bike-standard', 'fa-solid fa-bicycle', 'Cycling', 'text-fuchsia-500')}
-                    ${generateRow('run-standard', 'fa-solid fa-person-running', 'Running', 'text-purple-500')}
+                    ${generateRow('bike-standard', 'fa-solid fa-bicycle', 'Cycling', 'icon-bike')}
+                    ${generateRow('run-standard', 'fa-solid fa-person-running', 'Running', 'icon-run')}
                 </div>
             </div>
 
@@ -116,8 +116,8 @@ export function renderGear(gearMd, currentTemp, hourlyWeather) {
                     <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span> Windy & Rainy (-10°F)
                 </h3>
                 <div class="flex flex-col gap-4">
-                    ${generateRow('bike-weather', 'fa-solid fa-bicycle', 'Cycling', 'text-fuchsia-500')}
-                    ${generateRow('run-weather', 'fa-solid fa-person-running', 'Running', 'text-purple-500')}
+                    ${generateRow('bike-weather', 'fa-solid fa-bicycle', 'Cycling', 'icon-bike')}
+                    ${generateRow('run-weather', 'fa-solid fa-person-running', 'Running', 'icon-run')}
                 </div>
             </div>
         </div>

@@ -6,6 +6,27 @@
     --text-dim: #94a3b8;
 }
 
+/* Activity Icon Theme Colors */
+:root {
+    --color-all:  #14b8a6; 
+    --color-bike: #8b5cf6; 
+    --color-run:  #ec4899; 
+    --color-swim: #0ea5e9; 
+}
+
+/* You can still use your classes for icons */
+.icon-bike { color: var(--color-bike) !important; }
+.icon-run  { color: var(--color-run) !important; }
+.icon-swim { color: var(--color-swim) !important; }
+.icon-all { color: var(--color-all) !important; }
+
+
+/* Add these new background classes */
+.bg-icon-all { background-color: var(--color-all) !important; }
+.bg-icon-bike { background-color: var(--color-bike) !important; }
+.bg-icon-run  { background-color: var(--color-run) !important; }
+.bg-icon-swim { background-color: var(--color-swim) !important; }
+
 body {
     background-color: var(--bg-dark);
     color: var(--text-main);

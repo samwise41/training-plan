@@ -103,7 +103,7 @@ export function renderZones(planMd) {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 max-w-2xl mx-auto">
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg">
                 <div class="flex items-center justify-center gap-2 mb-2">
-                    <i class="fa-solid fa-bicycle text-blue-500"></i>
+                    <i class="fa-solid fa-bicycle icon-bike"></i>
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cycling FTP</span>
                 </div>
                 <div class="flex flex-col">
@@ -114,7 +114,7 @@ export function renderZones(planMd) {
 
             <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg">
                 <div class="flex items-center justify-center gap-2 mb-3">
-                    <i class="fa-solid fa-person-running text-emerald-500"></i>
+                    <i class="fa-solid fa-person-running icon-run"></i>
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Profile</span>
                 </div>
                 <div class="grid grid-cols-3 gap-2">
