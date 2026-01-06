@@ -12,30 +12,51 @@ export function renderDashboard(planMd) {
     // 2. Build Progress Widget (Top)
     const progressHtml = buildProgressWidget(workouts);
 
-    // 3. Build Compliance Heatmap (Bottom - Requires Full History + Events)
+    // 3. Prepare Data for Heatmaps (Full History + Events)
     const fullLogData = Parser.parseTrainingLog(planMd);
     
-    // Parse Events for Heatmap
+    // Parse Events
     const eventSection = Parser.getSection(planMd, "Event Schedule");
     const eventMap = {};
     if (eventSection) {
         const lines = eventSection.split('\n');
         lines.forEach(line => {
-            // Look for rows with dates: | YYYY-MM-DD | Event Name |
             if (line.includes('|') && !line.includes('---') && /\d{4}-\d{2}-\d{2}/.test(line)) {
                 const parts = line.split('|').map(p => p.trim());
                 if (parts.length > 2) {
-                    const dateStr = parts[1]; // Date is usually 2nd column
-                    const evtName = parts[2]; // Name is usually 3rd
+                    const dateStr = parts[1];
+                    const evtName = parts[2];
                     if (dateStr && evtName) eventMap[dateStr] = evtName;
                 }
             }
         });
     }
 
-    const heatmapHtml = buildComplianceHeatmap(fullLogData, eventMap);
+    // 4. Generate Two Heatmaps
+    // A. Trailing 6 Months (Focus View)
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    // Calculate End of Current Week (Upcoming Sunday)
+    const endOfWeek = new Date(today);
+    const dayOfWeek = endOfWeek.getDay(); // 0=Sun...6=Sat
+    const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); // Distance to next Sunday
+    endOfWeek.setDate(endOfWeek.getDate() + distToSunday); // Now it is next Sunday (or today if Sunday? usually standard is end of week)
+    // Actually standard ISO week ends Sunday. Let's aim for the upcoming Sunday.
+    if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); // If today is Sunday, show today
+    
+    // Start Date: 6 Months Prior
+    const startTrailing = new Date(endOfWeek);
+    startTrailing.setMonth(startTrailing.getMonth() - 6);
 
-    // 4. Helpers for Card Styling
+    // B. Calendar Year (Big Picture)
+    const startYear = new Date(today.getFullYear(), 0, 1);
+    const endYear = new Date(today.getFullYear(), 11, 31);
+
+    const heatmapTrailingHtml = buildGenericHeatmap(fullLogData, eventMap, startTrailing, endOfWeek, "Recent Consistency (Trailing 6 Months)");
+    const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`);
+
+    // 5. Helpers for Card Styling
     const getIcon = (type) => {
         if (type === 'Bike') return 'fa-bicycle text-blue-500';
         if (type === 'Run') return 'fa-person-running text-emerald-500';
@@ -51,7 +72,7 @@ export function renderDashboard(planMd) {
         return 'text-slate-400';
     };
 
-    // 5. Build Weekly Cards Grid
+    // 6. Build Weekly Cards Grid
     let cardsHtml = '';
     const grouped = {};
     
@@ -67,23 +88,16 @@ export function renderDashboard(planMd) {
         const dailyWorkouts = grouped[dateKey];
         const dateObj = dailyWorkouts[0].date;
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-        
-        // Check if today
-        const today = new Date();
         const isToday = dateObj.getDate() === today.getDate() && 
                         dateObj.getMonth() === today.getMonth() && 
                         dateObj.getFullYear() === today.getFullYear();
         
         dailyWorkouts.forEach(w => {
             const notes = w.notes ? w.notes.replace(/\[.*?\]/g, '') : "No specific notes.";
-            
-            // Determine "Big Number" text & Status Colors
             let displayDuration = w.plannedDuration;
             let displayUnit = "mins";
             let statusText = "PLANNED";
             let statusColor = "text-white"; 
-
-            // --- BORDER LOGIC ---
             let cardBorder = 'border border-slate-700 hover:border-slate-600'; 
 
             if (w.completed) {
@@ -142,31 +156,21 @@ export function renderDashboard(planMd) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             ${cardsHtml}
         </div>
-        ${heatmapHtml}
+        
+        <div class="grid grid-cols-1 gap-8">
+            ${heatmapTrailingHtml}
+            ${heatmapYearHtml}
+        </div>
     `;
 }
 
 /**
- * Builds the GitHub-style Compliance Heatmap with Trailing 6-Month Window & Event Support
+ * Generic Heatmap Builder
  */
-function buildComplianceHeatmap(fullLog, eventMap) {
+function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title) {
     if (!fullLog) fullLog = [];
 
-    // 1. Setup Date Range (Trailing 6 Months from End of Current Week)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Find the end of the current week (Sunday)
-    const endOfWeek = new Date(today);
-    const dayOfWeek = endOfWeek.getDay(); // 0=Sun, 1=Mon...
-    const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); // Distance to next Sunday (7 if today is Sunday)
-    endOfWeek.setDate(endOfWeek.getDate() + distToSunday);
-
-    // Set Start Date to 6 months prior
-    const startDate = new Date(endOfWeek);
-    startDate.setMonth(startDate.getMonth() - 6);
-    
-    // 2. Map Training Data
+    // 1. Map Data
     const dataMap = {};
     fullLog.forEach(item => {
         const dateKey = item.date.toISOString().split('T')[0];
@@ -174,22 +178,33 @@ function buildComplianceHeatmap(fullLog, eventMap) {
         dataMap[dateKey].push(item);
     });
 
-    // 3. Styles
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
     const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
 
+    // 2. Alignment Logic: Insert Empty Cells until Sunday
+    // Weekday: 0=Sun, 1=Mon...
+    const startDay = startDate.getDay(); // e.g., 3 (Wed)
+    // We need to insert 3 empty cells so Wed becomes the 4th cell (Row 4)
     let cellsHtml = '';
-    let currentDate = new Date(startDate);
     
-    while (currentDate <= endOfWeek) {
+    // Add Spacers
+    for (let i = 0; i < startDay; i++) {
+        cellsHtml += `<div class="w-2.5 h-2.5 m-[1px] opacity-0"></div>`;
+    }
+
+    // 3. Generate Cells
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
         const dateKey = currentDate.toISOString().split('T')[0];
         const dayData = dataMap[dateKey];
         const isEvent = eventMap && eventMap[dateKey];
         
-        let colorClass = 'bg-slate-800'; // Default
+        let colorClass = 'bg-slate-800'; 
         let tooltip = `${dateKey}: Empty`;
         let inlineStyle = ""; 
 
-        // Aggregate day data
         let totalPlan = 0;
         let totalAct = 0;
         let isRestType = false;
@@ -202,64 +217,54 @@ function buildComplianceHeatmap(fullLog, eventMap) {
             });
         }
 
-        // --- THE LOGIC TREE ---
-
-        // 0. PLANNED EVENT (Top Priority Override)
+        // --- Logic Tree ---
         if (isEvent) {
             colorClass = 'bg-purple-500';
             tooltip = `${dateKey}: 🏆 ${eventMap[dateKey]}`;
         }
-        // 1. UNPLANNED (Green + Stripes)
         else if (totalAct > 0 && (totalPlan === 0 || isRestType)) {
             colorClass = 'bg-emerald-500';
             inlineStyle = highContrastStripe;
             tooltip = `${dateKey}: Unplanned Workout`;
         }
-        // 2. FUTURE (Including Today if not completed yet)
         else if (currentDate > today || (currentDate.getTime() === today.getTime() && totalAct === 0)) {
              if (totalPlan > 0) {
-                 colorClass = 'bg-slate-700'; // Lighter Grey -> Planned
+                 colorClass = 'bg-slate-700'; 
                  tooltip = `${dateKey}: Planned`;
              } else {
-                 colorClass = 'bg-slate-800'; // Dark Grey -> Future Empty
+                 colorClass = 'bg-slate-800';
                  tooltip = `${dateKey}: Future`;
              }
         }
-        // 3. PAST (History)
         else {
             if (totalPlan > 0) {
                 if (totalAct === 0) {
-                    // Missed
                     colorClass = 'bg-red-500/80';
                     tooltip = `${dateKey}: Missed`;
                 } else {
-                    // Compliance
                     const ratio = totalAct / totalPlan;
                     if (ratio >= 0.95) {
-                        colorClass = 'bg-emerald-500'; // Completed
+                        colorClass = 'bg-emerald-500';
                         tooltip = `${dateKey}: Completed`;
                     } else {
-                        colorClass = 'bg-yellow-500'; // Partial
+                        colorClass = 'bg-yellow-500';
                         tooltip = `${dateKey}: Partial (${Math.round(ratio*100)}%)`;
                     }
                 }
             } else {
-                // Past + Rest/No Log -> 50% Opacity Green
                 colorClass = 'bg-emerald-500/50'; 
                 tooltip = `${dateKey}: Rest Day`;
             }
         }
 
         cellsHtml += `<div class="w-2.5 h-2.5 rounded-sm ${colorClass} m-[1px]" style="${inlineStyle}" title="${tooltip}"></div>`;
-        
-        // Advance Day
         currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return `
-        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mt-8">
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6">
             <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-calendar-check text-slate-400"></i> Training Consistency (Trailing 6 Months)
+                <i class="fa-solid fa-calendar-check text-slate-400"></i> ${title}
             </h3>
             
             <div class="overflow-x-auto pb-2">
@@ -281,7 +286,8 @@ function buildComplianceHeatmap(fullLog, eventMap) {
     `;
 }
 
-// ... (buildProgressWidget function remains exactly the same below) ...
+
+// ... (Progress Widget Helper Remains Unchanged) ...
 function buildProgressWidget(workouts) {
     const today = new Date();
     today.setHours(23, 59, 59, 999); 
