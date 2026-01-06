@@ -442,16 +442,17 @@ export function renderTrends(mergedLogData) {
                 <div class="flex justify-around items-start"><div class="w-1/2 border-r border-slate-700 pr-2">${buildConcentricChart(count30, count60, "Count")}</div><div class="w-1/2 pl-2">${buildConcentricChart(dur30, dur60, "Time")}</div></div></div>`;
     };
 
+    // --- REORDERED HTML STRUCTURE ---
     const html = `
         ${renderVolumeChart(logData, 'All', 'Total Weekly Volume')}
-        
-        <div id="trend-charts-container"></div>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
             ${renderVolumeChart(logData, 'Bike', 'Cycling Volume')}
             ${renderVolumeChart(logData, 'Run', 'Running Volume')}
             ${renderVolumeChart(logData, 'Swim', 'Swimming Volume')}
         </div>
+
+        <div id="trend-charts-container"></div>
 
         ${buildFTPChart()}
         <h2 class="text-lg font-bold text-white mb-6 border-b border-slate-700 pb-2">Adherence Overview</h2>
