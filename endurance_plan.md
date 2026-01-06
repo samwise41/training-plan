@@ -148,7 +148,7 @@ Use these mathematical rules to generate the specific duration and intensity for
 | **Status** | **Day** | **Planned Workout** | **Planned Duration** | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** |
 |:---|:---|:---|:---|:---|:---|:---|:---|
 | COMPLETED | Monday | [BIKE] Strength / Hill Focus | 60 mins | [BIKE] Zwift sweet spot | 60 | Zone 3 / Sweet Spot (181-226W). Focus on low cadence (60-70 rpm) to build force. | 2026-01-05 |
-| PLANNED | Tuesday | [SWIM] Technique Focus | 30 mins | | | Zone 1 (RPE 3-4). Drills: Catch & Pull. Focus on smooth rotation. | 2026-01-06 |
+| COMPLETED | Tuesday | [SWIM] Technique Focus | 30 mins | morning swim | 37 | Zone 1 (RPE 3-4). Drills: Catch & Pull. Focus on smooth rotation. | 2026-01-06 |
 | PLANNED | Wednesday | [RUN] Tempo / Threshold | 45 mins | | | Zone 3 (153-161 bpm) to low Zone 4. Build durability at speed. | 2026-01-07 |
 | PLANNED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | | | **Winter Strategy Applied.** Full volume restored. Zone 2 (134-180W). | 2026-01-08 |
 | PLANNED | Friday | [RUN] Aerobic Maintenance | 45 mins | | | Zone 2 (140-152 bpm). Easy aerobic miles. | 2026-01-09 |
