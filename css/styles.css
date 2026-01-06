@@ -8,11 +8,17 @@
 
 /* Activity Icon Theme Colors */
 :root {
-    --color-all:  #6366f1; 
-    --color-bike: #d946ef; 
-    --color-run:  #a855f7;
-    --color-swim: #0ea5e9;
+    /* 1. ALL: Teal (Distinct from Green) */
+    --color-all:  #14b8a6; 
 
+    /* 2. BIKE: Pink (Distinct from Red) */
+    --color-bike: #ec4899; 
+
+    /* 3. RUN: Violet (Distinct from Sky Blue) */
+    --color-run:  #8b5cf6; 
+
+    /* 4. SWIM: Sky (Existing) */
+    --color-swim: #0ea5e9; 
 }
 
 /* You can still use your classes for icons */
