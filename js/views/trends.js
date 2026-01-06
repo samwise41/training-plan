@@ -30,7 +30,7 @@ if (!window.toggleSection) {
     };
 }
 
-// --- TOOLTIP HANDLER ---
+// --- TOOLTIP HANDLER (FIXED POSITIONING) ---
 window.showTrendTooltip = (evt, date, label, value, color) => {
     const tooltip = document.getElementById('trend-tooltip-popup');
     if (!tooltip) return;
@@ -45,16 +45,12 @@ window.showTrendTooltip = (evt, date, label, value, color) => {
         </div>
     `;
 
-    // Position
-    const rect = evt.target.getBoundingClientRect();
-    const container = document.getElementById('trend-charts-container').getBoundingClientRect();
+    // Position based on Page Coordinates (Robust against scrolling/nesting)
+    // We use 'fixed' to ensure it sits on top of everything visually
+    tooltip.style.position = 'fixed';
+    tooltip.style.left = `${evt.clientX + 10}px`; // 10px to right of mouse
+    tooltip.style.top = `${evt.clientY - 40}px`;  // 40px above mouse
     
-    // Calculate relative position
-    const left = rect.left - container.left + 10; 
-    const top = rect.top - container.top - 40; 
-
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${top}px`;
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
     
     // Auto-hide after 3 seconds
@@ -146,14 +142,14 @@ const getRollingPoints = (data, typeFilter, isCount) => {
                     }
                 }
             });
-            return plan > 0 ? Math.round((act / plan) * 100) : 0; // Removed 120 cap for logic, visual cap handled in renderer if needed
+            return plan > 0 ? Math.round((act / plan) * 100) : 0; 
         };
         points.push({ label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`, val30: getStats(30), val60: getStats(60) });
     }
     return points;
 };
 
-// --- CHART BUILDERS (DYNAMIC Y-AXIS) ---
+// --- CHART BUILDERS (DYNAMIC Y-AXIS + CUSTOM GRID) ---
 const buildTrendChart = (title, isCount) => {
     const height = 200; const width = 800; 
     const padding = { top: 20, bottom: 30, left: 40, right: 20 };
@@ -163,7 +159,6 @@ const buildTrendChart = (title, isCount) => {
     const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange'); 
     let allValues = [];
     
-    // Collect all visible data points to find Min/Max
     activeTypes.forEach(type => {
         const pts = getRollingPoints(logData, type, isCount);
         pts.forEach(p => {
@@ -172,23 +167,44 @@ const buildTrendChart = (title, isCount) => {
         });
     });
 
-    if (allValues.length === 0) allValues = [0, 100]; // Fallback
+    // Ensure we have a baseline range even if data is empty
+    if (allValues.length === 0) allValues = [0, 10]; 
 
     const dataMin = Math.min(...allValues);
     const dataMax = Math.max(...allValues);
     
-    // Add padding to range so lines don't touch edges
+    // Add padding to range
     let spread = dataMax - dataMin;
-    if (spread < 20) spread = 20; // Minimum spread of 20%
+    if (spread < 20) spread = 20; // Minimum visual spread
     
-    const domainMin = Math.max(0, dataMin - (spread * 0.2)); // Floor at 0
-    const domainMax = dataMax + (spread * 0.2);
+    const domainMin = Math.max(0, dataMin - (spread * 0.1)); 
+    const domainMax = dataMax + (spread * 0.1);
 
-    // Dynamic Y Scale
+    // Dynamic Y Scale function
     const getY = (val) => padding.top + chartH - ((val - domainMin) / (domainMax - domainMin)) * chartH;
     const getX = (idx, total) => padding.left + (idx / (total - 1)) * chartW;
 
-    // 2. Generate Chart Elements
+    // 2. Generate Grid Lines (100, 80, 60 Only)
+    // 100=Green (#10b981), 80=Yellow (#eab308), 60=Red (#ef4444)
+    const gridLinesDef = [
+        { val: 100, color: '#10b981' },
+        { val: 80, color: '#eab308' },
+        { val: 60, color: '#ef4444' }
+    ];
+
+    let gridHtml = '';
+    gridLinesDef.forEach(line => {
+        // Only draw if within the current view window
+        if (line.val <= domainMax && line.val >= domainMin) {
+            const y = getY(line.val);
+            gridHtml += `
+                <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="${line.color}" stroke-width="1" stroke-dasharray="4" opacity="0.6" />
+                <text x="${padding.left - 5}" y="${y + 3}" text-anchor="end" font-size="9" fill="${line.color}" font-weight="bold">${line.val}%</text>
+            `;
+        }
+    });
+
+    // 3. Generate Chart Elements
     let pathsHtml = '';
     let circlesHtml = '';
 
@@ -217,7 +233,7 @@ const buildTrendChart = (title, isCount) => {
         pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />`;
     });
 
-    // 3. X-Axis Labels
+    // 4. X-Axis Labels
     const axisPoints = getRollingPoints(logData, 'All', isCount);
     let labelsHtml = '';
     let modVal = 4;
@@ -230,11 +246,6 @@ const buildTrendChart = (title, isCount) => {
         }
     });
 
-    // 4. Dynamic Grid Lines (Max, Mid, Min)
-    const yMid = getY((domainMin + domainMax) / 2);
-    const yTop = getY(domainMax * 0.95); // Slightly below absolute top
-    const yBot = getY(domainMin * 1.05 || domainMin + 5); 
-
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4 relative">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
@@ -244,13 +255,10 @@ const buildTrendChart = (title, isCount) => {
             </div>
             <div class="w-full relative">
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto overflow-visible">
-                    <line x1="${padding.left}" y1="${yMid}" x2="${width - padding.right}" y2="${yMid}" stroke="#334155" stroke-width="1" stroke-dasharray="4" />
-                    <line x1="${padding.left}" y1="${yTop}" x2="${width - padding.right}" y2="${yTop}" stroke="#334155" stroke-width="1" stroke-dasharray="4" />
-                    <line x1="${padding.left}" y1="${yBot}" x2="${width - padding.right}" y2="${yBot}" stroke="#334155" stroke-width="1" stroke-dasharray="4" />
+                    <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
+                    <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#334155" stroke-width="1" />
                     
-                    <text x="${padding.left - 5}" y="${yBot + 3}" text-anchor="end" font-size="9" fill="#64748b">${Math.round(domainMin)}%</text>
-                    <text x="${padding.left - 5}" y="${yMid + 3}" text-anchor="end" font-size="9" fill="#64748b">${Math.round((domainMin+domainMax)/2)}%</text>
-                    <text x="${padding.left - 5}" y="${yTop + 3}" text-anchor="end" font-size="9" fill="#94a3b8" font-weight="bold">${Math.round(domainMax)}%</text>
+                    ${gridHtml}
 
                     ${pathsHtml}
                     ${circlesHtml}
@@ -298,7 +306,7 @@ const renderDynamicCharts = () => {
                 ${buildTimeToggle('6m', '6m')}
             </div>
         </div>
-        <div id="trend-tooltip-popup" class="absolute bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs z-50 pointer-events-none opacity-0 transition-opacity"></div>
+        <div id="trend-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity"></div>
         
         <div class="flex gap-4 text-[10px] text-slate-400 font-mono justify-end mb-2">
             <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400"></div> 30d Avg</span>
