@@ -3,7 +3,7 @@
 let logData = [];
 
 // --- GLOBAL TOGGLE FUNCTION (For Collapsible Sections) ---
-// This sits on the window so dashboard.js can use it too if loaded
+// This sits on the window so dashboard.js can use it too if loaded.
 if (!window.toggleSection) {
     window.toggleSection = (id) => {
         const content = document.getElementById(id);
