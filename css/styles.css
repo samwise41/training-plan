@@ -7,14 +7,18 @@
 }
 
 /* Activity Icon Theme Colors */
-.icon-bike {
-    color: #a855f7 !important; /* Purple-500 */
+:root {
+    /* ... existing vars ... */
+    --color-bike: #a855f7; /* Fuchsia-500 */
+    --color-run:  #d946ef; /* Purple-500 */
+    --color-swim: #0ea5e9; /* Sky-500 */
+    --color-all:  #a855f7; /* Purple-500 */
 }
-.icon-run {
-    color: #d946ef !important; /* Fuchsia-500 */
-}
-.icon-swim {
-    color: #0ea5e9 !important; /* Sky-500 */
+
+/* You can still use your classes for icons */
+.icon-bike { color: var(--color-bike) !important; }
+.icon-run  { color: var(--color-run) !important; }
+.icon-swim { color: var(--color-swim) !important; }
 }
 
 body {
