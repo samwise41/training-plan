@@ -128,20 +128,20 @@ export function renderDashboard(planMd) {
 }
 
 /**
- * Builds the GitHub-style Compliance Heatmap
+ * Builds the GitHub-style Compliance Heatmap with Updated Logic
  */
 function buildComplianceHeatmap(fullLog) {
     if (!fullLog) fullLog = [];
 
-    // 1. Setup Date Range (Current Year)
+    // 1. Setup Date Range
     const today = new Date();
-    today.setHours(23, 59, 59, 999); // End of today for comparison
+    today.setHours(0, 0, 0, 0); // Start of today
 
     const currentYear = today.getFullYear();
-    const startDate = new Date(currentYear, 0, 1); // Jan 1
-    const endDate = new Date(currentYear, 11, 31); // Dec 31
+    const startDate = new Date(currentYear, 0, 1); 
+    const endDate = new Date(currentYear, 11, 31);
     
-    // 2. Map Data for quick lookup
+    // 2. Map Data
     const dataMap = {};
     fullLog.forEach(item => {
         const dateKey = item.date.toISOString().split('T')[0];
@@ -149,76 +149,79 @@ function buildComplianceHeatmap(fullLog) {
         dataMap[dateKey].push(item);
     });
 
-    // 3. Generate Grid HTML
+    // 3. High Contrast Stripe (Emerald 500 & Emerald 800)
+    const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
+
     let cellsHtml = '';
     let currentDate = new Date(startDate);
     
-    // Stripe Style (CSS Gradient)
-    const stripeStyle = "background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.2) 3px, rgba(255,255,255,0.2) 6px);";
-
     while (currentDate <= endDate) {
         const dateKey = currentDate.toISOString().split('T')[0];
         const dayData = dataMap[dateKey];
         
-        let colorClass = 'bg-slate-800'; // DEFAULT: Grey (Rest / Empty)
-        let tooltip = `${dateKey}: Rest / No Plan`;
-        let inlineStyle = ""; // Used for stripes
+        let colorClass = 'bg-slate-800'; // Default: Dark Grey (Empty/Rest)
+        let tooltip = `${dateKey}: Rest / No Log`;
+        let inlineStyle = ""; 
 
-        // Calculate Totals
+        // Aggregate day data
         let totalPlan = 0;
         let totalAct = 0;
-        let hasCompleted = false;
-        let hasMissed = false;
+        let isRestType = false;
 
         if (dayData && dayData.length > 0) {
             dayData.forEach(d => {
                 totalPlan += (d.plannedDuration || 0);
                 totalAct += (d.actualDuration || 0);
-                
-                // If it's explicitly a "Rest" type, we essentially treat plan as 0
-                if (d.type !== 'Rest') {
-                    if (d.completed) hasCompleted = true;
-                    // If in past, planned but not completed
-                    else if (currentDate < today && d.plannedDuration > 0) hasMissed = true;
-                }
+                if (d.type === 'Rest') isRestType = true;
             });
-
-            // LOGIC TREE
-            if (totalAct > 0 && totalPlan === 0) {
-                // 1. Unplanned Bonus (Green + Stripes)
-                colorClass = 'bg-emerald-500';
-                inlineStyle = stripeStyle;
-                tooltip = `${dateKey}: Unplanned Workout (Bonus)`;
-            } 
-            else if (hasMissed) {
-                // 2. Missed
-                colorClass = 'bg-red-500/80';
-                tooltip = `${dateKey}: Missed Workout`;
-            } 
-            else if (hasCompleted) {
-                // 3. Completed (Check adherence)
-                const ratio = totalPlan > 0 ? (totalAct / totalPlan) : 1;
-                if (ratio < 0.95) {
-                    colorClass = 'bg-yellow-500'; // Partial
-                    tooltip = `${dateKey}: Partial Completion`;
-                } else {
-                    colorClass = 'bg-emerald-500'; // Perfect
-                    tooltip = `${dateKey}: Completed`;
-                }
-            } 
-            else if (totalPlan > 0 && currentDate >= today) {
-                // 4. Future Planned
-                colorClass = 'bg-slate-700';
-                tooltip = `${dateKey}: Planned`;
-            }
-        } else {
-            // No Data Exists (Implicit Rest)
-            // If actualDuration > 0 somehow without data (impossible logically here, but safe to default)
-            // Default colorClass 'bg-slate-800' handles the Grey.
         }
 
-        // Render Cell
-        // We use style="${inlineStyle}" to apply stripes only when needed
+        // --- THE LOGIC TREE ---
+
+        // 1. UNPLANNED (Green + Stripes)
+        // (Past Only OR Today) - Logic: Actual done, but Plan was 0 (or explicitly Rest)
+        if (totalAct > 0 && (totalPlan === 0 || isRestType)) {
+            colorClass = 'bg-emerald-500';
+            inlineStyle = highContrastStripe;
+            tooltip = `${dateKey}: Unplanned Workout`;
+        }
+        
+        // 2. FUTURE (Including Today if not completed yet)
+        else if (currentDate > today || (currentDate.getTime() === today.getTime() && totalAct === 0)) {
+             if (totalPlan > 0) {
+                 colorClass = 'bg-slate-700'; // Lighter Grey -> Planned
+                 tooltip = `${dateKey}: Planned`;
+             } else {
+                 colorClass = 'bg-slate-800'; // Dark Grey -> Empty
+                 tooltip = `${dateKey}: Empty`;
+             }
+        }
+
+        // 3. PAST (History)
+        else {
+            if (totalPlan > 0) {
+                if (totalAct === 0) {
+                    // Missed
+                    colorClass = 'bg-red-500/80';
+                    tooltip = `${dateKey}: Missed`;
+                } else {
+                    // Check Compliance
+                    const ratio = totalAct / totalPlan;
+                    if (ratio >= 0.95) {
+                        colorClass = 'bg-emerald-500'; // Completed
+                        tooltip = `${dateKey}: Completed`;
+                    } else {
+                        colorClass = 'bg-yellow-500'; // Partial
+                        tooltip = `${dateKey}: Partial (${Math.round(ratio*100)}%)`;
+                    }
+                }
+            } else {
+                // Past + Plan=0 + Act=0 -> Rest/No Log
+                colorClass = 'bg-slate-800'; // Grey
+                tooltip = `${dateKey}: Rest Day`;
+            }
+        }
+
         cellsHtml += `<div class="w-2.5 h-2.5 rounded-sm ${colorClass} m-[1px]" style="${inlineStyle}" title="${tooltip}"></div>`;
         
         // Advance Day
@@ -239,22 +242,21 @@ function buildComplianceHeatmap(fullLog) {
 
             <div class="flex flex-wrap items-center gap-4 mt-4 text-[10px] text-slate-400 font-mono">
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-800"></div> Rest / Empty</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-700"></div> Planned</div>
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Done</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500" style="${stripeStyle}"></div> Unplanned</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500" style="${highContrastStripe}"></div> Unplanned</div>
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-yellow-500"></div> Partial</div>
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-red-500/80"></div> Missed</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-700"></div> Future Plan</div>
             </div>
         </div>
     `;
 }
 
-// ... (Previous buildProgressWidget function remains exactly the same below) ...
+// ... (buildProgressWidget remains unchanged) ...
 function buildProgressWidget(workouts) {
     const today = new Date();
     today.setHours(23, 59, 59, 999); 
 
-    // 1. Initialize Data Structures
     let totalPlanned = 0;
     let totalActual = 0;
     let expectedSoFar = 0;
@@ -266,20 +268,17 @@ function buildProgressWidget(workouts) {
         Swim: { planned: 0, actual: 0, dailyMarkers: {} }
     };
 
-    // 2. Aggregate Data
     workouts.forEach(w => {
         const plan = w.plannedDuration || 0;
         const act = w.actualDuration || 0;
         const dateKey = w.date.toISOString().split('T')[0];
 
-        // Grand Totals
         totalPlanned += plan;
         totalActual += act;
         if (w.date <= today) expectedSoFar += plan;
         if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
         totalDailyMarkers[dateKey] += plan;
 
-        // Sport Totals
         if (sportStats[w.type]) {
             sportStats[w.type].planned += plan;
             sportStats[w.type].actual += act;
@@ -288,7 +287,6 @@ function buildProgressWidget(workouts) {
         }
     });
 
-    // --- Helper to generate a single bar's HTML ---
     const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false) => {
         const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0;
         const displayPct = rawPct; 
@@ -338,7 +336,6 @@ function buildProgressWidget(workouts) {
         `;
     };
 
-    // 3. Generate Pacing Data
     const pacingDiff = totalActual - expectedSoFar;
     let pacingLabel = "On Track";
     let pacingColor = "text-slate-400";
