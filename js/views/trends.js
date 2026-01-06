@@ -45,13 +45,10 @@ window.showTrendTooltip = (evt, date, label, value, color) => {
         </div>
     `;
 
-    // Position: Fixed relative to viewport to avoid container scrolling issues
-    const x = evt.clientX;
-    const y = evt.clientY;
-
+    // Position
     tooltip.style.position = 'fixed';
-    tooltip.style.left = `${x + 15}px`; 
-    tooltip.style.top = `${y - 40}px`;  
+    tooltip.style.left = `${evt.clientX + 15}px`; 
+    tooltip.style.top = `${evt.clientY - 40}px`;  
     
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
     
@@ -70,8 +67,9 @@ const chartState = {
     timeRange: '6m' 
 };
 
-// Colors
-const colorMap = { All: '#a855f7', Bike: '#3b82f6', Run: '#10b981', Swim: '#06b6d4' };
+// --- UPDATED COLORS ---
+// Bike: Purple (#a855f7), Run: Fuchsia (#d946ef), Swim: Cyan (#06b6d4), All: White
+const colorMap = { All: '#ffffff', Bike: '#a855f7', Run: '#d946ef', Swim: '#06b6d4' };
 
 // --- HELPER FUNCTIONS ---
 
@@ -97,8 +95,8 @@ const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
 };
 
 const getIconForType = (type) => {
-    if (type === 'Bike') return '<i class="fa-solid fa-bicycle text-blue-500 text-xl"></i>';
-    if (type === 'Run') return '<i class="fa-solid fa-person-running text-emerald-500 text-xl"></i>';
+    if (type === 'Bike') return '<i class="fa-solid fa-bicycle text-purple-500 text-xl"></i>';
+    if (type === 'Run') return '<i class="fa-solid fa-person-running text-fuchsia-500 text-xl"></i>';
     if (type === 'Swim') return '<i class="fa-solid fa-person-swimming text-cyan-500 text-xl"></i>';
     return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
 };
@@ -144,7 +142,7 @@ const getRollingPoints = (data, typeFilter, isCount) => {
                     }
                 }
             });
-            // Cap at 300% to prevent outliers from breaking the graph
+            // Cap at 300% for calculation safety (though visual cap is 120%)
             return plan > 0 ? Math.min(Math.round((act / plan) * 100), 300) : 0; 
         };
         points.push({ label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`, val30: getStats(30), val60: getStats(60) });
@@ -152,57 +150,39 @@ const getRollingPoints = (data, typeFilter, isCount) => {
     return points;
 };
 
-// --- CHART BUILDERS ---
+// --- CHART BUILDERS (FIXED Y-AXIS 0-120) ---
 const buildTrendChart = (title, isCount) => {
     const height = 200; const width = 800; 
     const padding = { top: 20, bottom: 30, left: 40, right: 20 };
     const chartW = width - padding.left - padding.right; const chartH = height - padding.top - padding.bottom;
 
-    const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange'); 
-    let allValues = [];
-    
-    activeTypes.forEach(type => {
-        const pts = getRollingPoints(logData, type, isCount);
-        pts.forEach(p => {
-            if(p.val30 > 0) allValues.push(p.val30);
-            if(p.val60 > 0) allValues.push(p.val60);
-        });
-    });
+    // FIXED SCALE: 0 to 120
+    const domainMin = 0; 
+    const domainMax = 120;
 
-    if (allValues.length === 0) allValues = [0, 10]; 
-
-    const dataMin = Math.min(...allValues);
-    const dataMax = Math.max(...allValues);
-    
-    let spread = dataMax - dataMin;
-    if (spread < 20) spread = 20; 
-    
-    const domainMin = Math.max(0, dataMin - (spread * 0.1)); 
-    const domainMax = dataMax + (spread * 0.1);
-
-    const getY = (val) => padding.top + chartH - ((val - domainMin) / (domainMax - domainMin)) * chartH;
+    const getY = (val) => padding.top + chartH - ((Math.min(val, domainMax) - domainMin) / (domainMax - domainMin)) * chartH;
     const getX = (idx, total) => padding.left + (idx / (total - 1)) * chartW;
 
     // --- GRID LINES ---
     const gridLinesDef = [
-        { val: 100, color: '#ffffff' }, // White
-        { val: 80, color: '#eab308' },  // Yellow
-        { val: 60, color: '#ef4444' }   // Red
+        { val: 100, color: '#ffffff' }, 
+        { val: 80, color: '#eab308' },  
+        { val: 60, color: '#ef4444' }   
     ];
 
     let gridHtml = '';
     gridLinesDef.forEach(line => {
-        if (line.val <= domainMax && line.val >= domainMin) {
-            const y = getY(line.val);
-            gridHtml += `
-                <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="${line.color}" stroke-width="1" stroke-dasharray="4" opacity="0.6" />
-                <text x="${padding.left - 5}" y="${y + 3}" text-anchor="end" font-size="9" fill="${line.color}" font-weight="bold">${line.val}%</text>
-            `;
-        }
+        const y = getY(line.val);
+        gridHtml += `
+            <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="${line.color}" stroke-width="1" stroke-dasharray="4" opacity="0.6" />
+            <text x="${padding.left - 5}" y="${y + 3}" text-anchor="end" font-size="9" fill="${line.color}" font-weight="bold">${line.val}%</text>
+        `;
     });
 
     let pathsHtml = '';
     let circlesHtml = '';
+
+    const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange'); 
 
     activeTypes.forEach(type => {
         const dataPoints = getRollingPoints(logData, type, isCount);
@@ -240,7 +220,6 @@ const buildTrendChart = (title, isCount) => {
         }
     });
 
-    // Added overflow-hidden to prevent outlier lines from leaving the box
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4 relative overflow-hidden">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
@@ -287,9 +266,9 @@ const renderDynamicCharts = () => {
         <div class="flex flex-col sm:flex-row gap-4 mb-6">
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Sports:</span>
-                ${buildSportToggle('All', 'All', 'bg-purple-500')}
-                ${buildSportToggle('Bike', 'Bike', 'bg-blue-500')}
-                ${buildSportToggle('Run', 'Run', 'bg-emerald-500')}
+                ${buildSportToggle('All', 'All', 'bg-white')}
+                ${buildSportToggle('Bike', 'Bike', 'bg-purple-500')}
+                ${buildSportToggle('Run', 'Run', 'bg-fuchsia-500')}
                 ${buildSportToggle('Swim', 'Swim', 'bg-cyan-500')}
             </div>
             <div class="flex items-center gap-2 flex-wrap sm:ml-auto">
