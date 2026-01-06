@@ -2,6 +2,37 @@
 
 let logData = [];
 
+// --- GLOBAL TOGGLE FUNCTION (For Collapsible Sections) ---
+window.toggleSection = (id) => {
+    const content = document.getElementById(id);
+    if (!content) return;
+    const header = content.previousElementSibling;
+    const icon = header.querySelector('i.fa-caret-down');
+
+    // Check current state based on max-height class
+    const isCollapsed = content.classList.contains('max-h-0');
+
+    if (isCollapsed) {
+        // Expand
+        content.classList.remove('max-h-0', 'opacity-0', 'py-0');
+        // Use a large enough max-height to accommodate content, allowing css transition
+        content.classList.add('max-h-[5000px]', 'opacity-100', 'py-4'); 
+        if (icon) {
+            icon.classList.add('rotate-0');
+            icon.classList.remove('-rotate-90');
+        }
+    } else {
+        // Collapse
+        content.classList.add('max-h-0', 'opacity-0', 'py-0');
+        content.classList.remove('max-h-[5000px]', 'opacity-100', 'py-4');
+        if (icon) {
+            icon.classList.remove('rotate-0');
+            icon.classList.add('-rotate-90');
+        }
+    }
+};
+
+
 // --- CHART STATE MANAGEMENT ---
 // Default: Only 'All' is active on load
 const chartState = {
@@ -20,6 +51,29 @@ const colorMap = {
 };
 
 // --- HELPER FUNCTIONS ---
+
+// Builder for Collapsible Section Header & Container
+const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
+    // Set initial state classes based on isOpen param
+    const contentClasses = isOpen 
+        ? "max-h-[5000px] opacity-100 py-4" 
+        : "max-h-0 opacity-0 py-0";
+    const iconClasses = isOpen 
+        ? "rotate-0" 
+        : "-rotate-90";
+
+    return `
+        <div class="mb-8">
+            <div class="flex items-center gap-2 cursor-pointer py-3 border-b-2 border-slate-700 hover:border-slate-500 transition-colors group" onclick="window.toggleSection('${id}')">
+                <i class="fa-solid fa-caret-down text-slate-400 text-base transition-transform duration-300 group-hover:text-white ${iconClasses}"></i>
+                <h2 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">${title}</h2>
+            </div>
+            <div id="${id}" class="collapsible-content overflow-hidden transition-all duration-500 ease-in-out ${contentClasses}">
+                ${contentHtml}
+            </div>
+        </div>
+    `;
+};
 
 const getIconForType = (type) => {
     if (type === 'Bike') return '<i class="fa-solid fa-bicycle text-blue-500 text-xl"></i>';
@@ -442,15 +496,24 @@ export function renderTrends(mergedLogData) {
                 <div class="flex justify-around items-start"><div class="w-1/2 border-r border-slate-700 pr-2">${buildConcentricChart(count30, count60, "Count")}</div><div class="w-1/2 pl-2">${buildConcentricChart(dur30, dur60, "Time")}</div></div></div>`;
     };
 
-    // --- REORDERED HTML STRUCTURE ---
-    const html = `
+    // --- Generate Volume Charts HTML ---
+    const volumeChartsHtml = `
         ${renderVolumeChart(logData, 'All', 'Total Weekly Volume')}
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-0">
             ${renderVolumeChart(logData, 'Bike', 'Cycling Volume')}
             ${renderVolumeChart(logData, 'Run', 'Running Volume')}
             ${renderVolumeChart(logData, 'Swim', 'Swimming Volume')}
         </div>
+    `;
+
+    // --- Wrap Volume Charts in Collapsible Section ---
+    // Defaulting to open (true)
+    const collapsibleVolumeSection = buildCollapsibleSection('volume-analysis-section', 'Weekly Volume Analysis', volumeChartsHtml, true);
+
+
+    // --- REORDERED HTML STRUCTURE ---
+    const html = `
+        ${collapsibleVolumeSection}
 
         <div id="trend-charts-container"></div>
 
