@@ -1,7 +1,6 @@
 import { Parser } from '../parser.js';
 
-// --- Local Copy of Collapsible Builder (same logic as trends.js) ---
-// This ensures the dashboard works even if trends.js isn't the first to load.
+// --- Local Copy of Collapsible Builder ---
 const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     const contentClasses = isOpen 
         ? "max-h-[5000px] opacity-100 py-4 mb-8" 
@@ -35,17 +34,26 @@ export function renderDashboard(planMd) {
 
     // 2. Weekly Cards Grid
     const fullLogData = Parser.parseTrainingLog(planMd);
+    
+    // --- SMART EVENT PARSING ---
     const eventMap = {};
     const lines = planMd.split('\n');
     let inEventSection = false;
+
     lines.forEach(line => {
         if (line.includes('1. Event Schedule')) inEventSection = true;
         if (line.includes('2. User Profile')) inEventSection = false;
+
         if (inEventSection && line.trim().startsWith('|') && !line.includes('---')) {
             const parts = line.split('|').map(p => p.trim());
             if (parts.length > 2) {
-                const col1 = parts[1]; const col2 = parts[2]; const d1 = new Date(col1);
-                if (!isNaN(d1.getTime()) && d1.getFullYear() > 2020) eventMap[toLocalYMD(d1)] = col2;
+                const col1 = parts[1];
+                const col2 = parts[2];
+                
+                const d1 = new Date(col1);
+                if (!isNaN(d1.getTime()) && d1.getFullYear() > 2020) {
+                    eventMap[toLocalYMD(d1)] = col2;
+                }
             }
         }
     });
@@ -73,7 +81,9 @@ export function renderDashboard(planMd) {
         });
     });
 
-    const cardsContainerHtml = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-0">${cardsHtml}</div>`;
+    // Added p-2 to grid container to prevent ring clipping
+    const cardsContainerHtml = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-0 p-2">${cardsHtml}</div>`;
+    
     // --- COLLAPSIBLE SECTION FOR PLANNED WORKOUTS ---
     const plannedWorkoutsSection = buildCollapsibleSection('planned-workouts-section', 'Planned Workouts', cardsContainerHtml, true);
 
