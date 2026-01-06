@@ -211,7 +211,7 @@ function buildProgressWidget(workouts) {
         `;
     };
 
-    // 3. Generate Pacing Data (Main Total Only)
+    // 3. Generate Pacing Data
     const pacingDiff = totalActual - expectedSoFar;
     let pacingLabel = "On Track";
     let pacingColor = "text-slate-400";
@@ -226,6 +226,10 @@ function buildProgressWidget(workouts) {
         pacingColor = "text-orange-400";
         pacingIcon = "fa-triangle-exclamation";
     }
+
+    // Calculate Hours for Pacing display
+    const totalActualHrsPacing = (totalActual / 60).toFixed(1);
+    const expectedHrs = (expectedSoFar / 60).toFixed(1);
 
     // 4. Combine Final HTML
     return `
@@ -246,9 +250,13 @@ function buildProgressWidget(workouts) {
                         <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
                     </div>
                 </div>
-                <div class="text-right md:text-left">
+                
+                <div class="text-right md:text-left flex flex-col items-end md:items-start mt-2">
+                    <span class="text-[10px] text-slate-300 font-mono mb-0.5">
+                        Actual: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span>
+                    </span>
                     <span class="text-[10px] text-slate-500 font-mono">
-                        Target: ${Math.round(expectedSoFar)}m
+                        Target: ${Math.round(expectedSoFar)}m <span class="text-slate-600">(${expectedHrs}h)</span>
                     </span>
                 </div>
             </div>
