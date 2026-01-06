@@ -24,9 +24,7 @@
 }
 
 /* Add these new background classes */
-.bg-icon-all { 
-    background-color: #a855f7 !important; /* Hardcoded Purple for testing */
-}
+.bg-icon-all { background-color: var(--color-all) !important; }
 .bg-icon-bike { background-color: var(--color-bike) !important; }
 .bg-icon-run  { background-color: var(--color-run) !important; }
 .bg-icon-swim { background-color: var(--color-swim) !important; }
