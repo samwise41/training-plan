@@ -1,20 +1,22 @@
 import { Parser } from '../parser.js';
 
 export function renderDashboard(planMd) {
-    // 1. Extract Schedule Data
+    // 1. Extract Weekly Schedule Data (For Cards)
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
     if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
 
-    // Parse Workouts
+    // Parse Current Week Workouts
     const workouts = Parser._parseTableBlock(scheduleSection);
-    
-    // Sort by Date
     workouts.sort((a, b) => a.date - b.date);
 
-    // 2. Build Progress Widget (Multi-Bar + Uncapped %)
+    // 2. Build Progress Widget (Top)
     const progressHtml = buildProgressWidget(workouts);
 
-    // 3. Helpers for Styling
+    // 3. Build Compliance Heatmap (Bottom - Requires Full History)
+    const fullLogData = Parser.parseTrainingLog(planMd);
+    const heatmapHtml = buildComplianceHeatmap(fullLogData);
+
+    // 4. Helpers for Card Styling
     const getIcon = (type) => {
         if (type === 'Bike') return 'fa-bicycle text-blue-500';
         if (type === 'Run') return 'fa-person-running text-emerald-500';
@@ -30,7 +32,7 @@ export function renderDashboard(planMd) {
         return 'text-slate-400';
     };
 
-    // 4. Build Cards Grid
+    // 5. Build Weekly Cards Grid
     let cardsHtml = '';
     const grouped = {};
     
@@ -118,12 +120,117 @@ export function renderDashboard(planMd) {
 
     return `
         ${progressHtml}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             ${cardsHtml}
+        </div>
+        ${heatmapHtml}
+    `;
+}
+
+/**
+ * Builds the GitHub-style Compliance Heatmap
+ */
+function buildComplianceHeatmap(fullLog) {
+    if (!fullLog || fullLog.length === 0) return '';
+
+    // 1. Setup Date Range (Current Year)
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const startDate = new Date(currentYear, 0, 1); // Jan 1
+    const endDate = new Date(currentYear, 11, 31); // Dec 31
+    
+    // 2. Map Data for quick lookup
+    const dataMap = {};
+    fullLog.forEach(item => {
+        const dateKey = item.date.toISOString().split('T')[0];
+        // Handle multiple workouts per day (take best status)
+        if (!dataMap[dateKey]) dataMap[dateKey] = [];
+        dataMap[dateKey].push(item);
+    });
+
+    // 3. Generate Grid HTML
+    let cellsHtml = '';
+    const monthsHtml = ''; 
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+        const dateKey = currentDate.toISOString().split('T')[0];
+        const dayData = dataMap[dateKey];
+        
+        let colorClass = 'bg-slate-800'; // Default Grey (No Log / Rest)
+        let tooltip = `${dateKey}: Rest / No Log`;
+
+        if (dayData && dayData.length > 0) {
+            // Logic: If ANY workout missed, flag Red. If ALL done perfect, Green. Else Yellow.
+            let hasMissed = false;
+            let hasPartial = false;
+            let hasCompleted = false;
+            let totalPlan = 0;
+            let totalAct = 0;
+
+            dayData.forEach(d => {
+                totalPlan += d.plannedDuration;
+                totalAct += d.actualDuration;
+                
+                if (d.type === 'Rest') return;
+
+                if (d.completed) {
+                    hasCompleted = true;
+                    const ratio = d.plannedDuration > 0 ? (d.actualDuration / d.plannedDuration) : 1;
+                    if (ratio < 0.95) hasPartial = true;
+                } else if (currentDate < today) {
+                    // Past and not completed
+                    hasMissed = true;
+                }
+            });
+
+            if (hasMissed) {
+                colorClass = 'bg-red-500/80'; // Missed
+                tooltip = `${dateKey}: Missed Workout`;
+            } else if (hasCompleted) {
+                if (hasPartial) {
+                    colorClass = 'bg-yellow-500'; // Partial
+                    tooltip = `${dateKey}: Partial Completion`;
+                } else {
+                    colorClass = 'bg-emerald-500'; // Perfect
+                    tooltip = `${dateKey}: Completed`;
+                }
+            } else if (currentDate > today && totalPlan > 0) {
+                 colorClass = 'bg-slate-700'; // Future Planned
+                 tooltip = `${dateKey}: Planned`;
+            }
+        }
+
+        cellsHtml += `<div class="w-2.5 h-2.5 rounded-sm ${colorClass} m-[1px]" title="${tooltip}"></div>`;
+        
+        // Advance Day
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mt-8">
+            <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-check text-slate-400"></i> Consistency Heatmap (${currentYear})
+            </h3>
+            
+            <div class="overflow-x-auto pb-2">
+                <div class="grid grid-rows-7 grid-flow-col gap-0 w-max">
+                    ${cellsHtml}
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 mt-4 text-[10px] text-slate-400 font-mono">
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-800"></div> Rest</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Done</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-yellow-500"></div> Partial</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-red-500/80"></div> Missed</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-700"></div> Future</div>
+            </div>
         </div>
     `;
 }
 
+// ... (Previous Multi-Bar BuildProgressWidget helper function stays exactly the same) ...
 /**
  * Helper to build the multi-bar progress widget
  */
@@ -167,15 +274,13 @@ function buildProgressWidget(workouts) {
 
     // --- Helper to generate a single bar's HTML ---
     const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false) => {
-        // CHANGED: Separate logic for Text vs Visual Bar
         const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0;
-        const displayPct = rawPct; // Allow > 100% for text
-        const barWidth = Math.min(rawPct, 100); // Cap at 100% for CSS width
+        const displayPct = rawPct; 
+        const barWidth = Math.min(rawPct, 100); 
 
         const actualHrs = (actual / 60).toFixed(1);
         const plannedHrs = (planned / 60).toFixed(1);
         
-        // Generate Markers
         let markersHtml = '';
         let runningTotal = 0;
         const sortedDays = Object.keys(dailyMap).sort();
@@ -192,7 +297,6 @@ function buildProgressWidget(workouts) {
         const heightClass = isMain ? 'h-3' : 'h-2.5';
         const mbClass = isMain ? 'mb-4' : 'mb-3';
         
-        // Color logic for > 100% text
         const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
 
         return `
@@ -237,17 +341,14 @@ function buildProgressWidget(workouts) {
     const totalActualHrsPacing = (totalActual / 60).toFixed(1);
     const expectedHrs = (expectedSoFar / 60).toFixed(1);
 
-    // 4. Combine Final HTML
     return `
         <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm">
-            
             <div class="flex-1 w-full">
                 ${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true)}
                 ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers)}
                 ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}
                 ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}
             </div>
-            
             <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1 self-center">
                 <div>
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
@@ -256,7 +357,6 @@ function buildProgressWidget(workouts) {
                         <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
                     </div>
                 </div>
-                
                 <div class="text-right md:text-left flex flex-col items-end md:items-start mt-2">
                     <span class="text-[10px] text-slate-300 font-mono mb-0.5">
                         Actual: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span>
