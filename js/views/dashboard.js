@@ -12,9 +12,28 @@ export function renderDashboard(planMd) {
     // 2. Build Progress Widget (Top)
     const progressHtml = buildProgressWidget(workouts);
 
-    // 3. Build Compliance Heatmap (Bottom - Requires Full History)
+    // 3. Build Compliance Heatmap (Bottom - Requires Full History + Events)
     const fullLogData = Parser.parseTrainingLog(planMd);
-    const heatmapHtml = buildComplianceHeatmap(fullLogData);
+    
+    // Parse Events for Heatmap
+    const eventSection = Parser.getSection(planMd, "Event Schedule");
+    const eventMap = {};
+    if (eventSection) {
+        const lines = eventSection.split('\n');
+        lines.forEach(line => {
+            // Look for rows with dates: | YYYY-MM-DD | Event Name |
+            if (line.includes('|') && !line.includes('---') && /\d{4}-\d{2}-\d{2}/.test(line)) {
+                const parts = line.split('|').map(p => p.trim());
+                if (parts.length > 2) {
+                    const dateStr = parts[1]; // Date is usually 2nd column
+                    const evtName = parts[2]; // Name is usually 3rd
+                    if (dateStr && evtName) eventMap[dateStr] = evtName;
+                }
+            }
+        });
+    }
+
+    const heatmapHtml = buildComplianceHeatmap(fullLogData, eventMap);
 
     // 4. Helpers for Card Styling
     const getIcon = (type) => {
@@ -128,20 +147,26 @@ export function renderDashboard(planMd) {
 }
 
 /**
- * Builds the GitHub-style Compliance Heatmap with Updated Logic
+ * Builds the GitHub-style Compliance Heatmap with Trailing 6-Month Window & Event Support
  */
-function buildComplianceHeatmap(fullLog) {
+function buildComplianceHeatmap(fullLog, eventMap) {
     if (!fullLog) fullLog = [];
 
-    // 1. Setup Date Range
+    // 1. Setup Date Range (Trailing 6 Months from End of Current Week)
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
+    today.setHours(0, 0, 0, 0);
 
-    const currentYear = today.getFullYear();
-    const startDate = new Date(currentYear, 0, 1); 
-    const endDate = new Date(currentYear, 11, 31);
+    // Find the end of the current week (Sunday)
+    const endOfWeek = new Date(today);
+    const dayOfWeek = endOfWeek.getDay(); // 0=Sun, 1=Mon...
+    const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); // Distance to next Sunday (7 if today is Sunday)
+    endOfWeek.setDate(endOfWeek.getDate() + distToSunday);
+
+    // Set Start Date to 6 months prior
+    const startDate = new Date(endOfWeek);
+    startDate.setMonth(startDate.getMonth() - 6);
     
-    // 2. Map Data
+    // 2. Map Training Data
     const dataMap = {};
     fullLog.forEach(item => {
         const dateKey = item.date.toISOString().split('T')[0];
@@ -155,11 +180,12 @@ function buildComplianceHeatmap(fullLog) {
     let cellsHtml = '';
     let currentDate = new Date(startDate);
     
-    while (currentDate <= endDate) {
+    while (currentDate <= endOfWeek) {
         const dateKey = currentDate.toISOString().split('T')[0];
         const dayData = dataMap[dateKey];
+        const isEvent = eventMap && eventMap[dateKey];
         
-        let colorClass = 'bg-slate-800'; // Default Future Empty
+        let colorClass = 'bg-slate-800'; // Default
         let tooltip = `${dateKey}: Empty`;
         let inlineStyle = ""; 
 
@@ -178,13 +204,17 @@ function buildComplianceHeatmap(fullLog) {
 
         // --- THE LOGIC TREE ---
 
+        // 0. PLANNED EVENT (Top Priority Override)
+        if (isEvent) {
+            colorClass = 'bg-purple-500';
+            tooltip = `${dateKey}: 🏆 ${eventMap[dateKey]}`;
+        }
         // 1. UNPLANNED (Green + Stripes)
-        if (totalAct > 0 && (totalPlan === 0 || isRestType)) {
+        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) {
             colorClass = 'bg-emerald-500';
             inlineStyle = highContrastStripe;
             tooltip = `${dateKey}: Unplanned Workout`;
         }
-        
         // 2. FUTURE (Including Today if not completed yet)
         else if (currentDate > today || (currentDate.getTime() === today.getTime() && totalAct === 0)) {
              if (totalPlan > 0) {
@@ -195,7 +225,6 @@ function buildComplianceHeatmap(fullLog) {
                  tooltip = `${dateKey}: Future`;
              }
         }
-
         // 3. PAST (History)
         else {
             if (totalPlan > 0) {
@@ -204,7 +233,7 @@ function buildComplianceHeatmap(fullLog) {
                     colorClass = 'bg-red-500/80';
                     tooltip = `${dateKey}: Missed`;
                 } else {
-                    // Check Compliance
+                    // Compliance
                     const ratio = totalAct / totalPlan;
                     if (ratio >= 0.95) {
                         colorClass = 'bg-emerald-500'; // Completed
@@ -215,9 +244,8 @@ function buildComplianceHeatmap(fullLog) {
                     }
                 }
             } else {
-                // Past + Plan=0 + Act=0 -> Rest/No Log
-                // CHANGED: Use transparent green for Past Rest
-                colorClass = 'bg-emerald-500/30'; 
+                // Past + Rest/No Log -> 50% Opacity Green
+                colorClass = 'bg-emerald-500/50'; 
                 tooltip = `${dateKey}: Rest Day`;
             }
         }
@@ -231,7 +259,7 @@ function buildComplianceHeatmap(fullLog) {
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mt-8">
             <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-calendar-check text-slate-400"></i> Consistency Heatmap (${currentYear})
+                <i class="fa-solid fa-calendar-check text-slate-400"></i> Training Consistency (Trailing 6 Months)
             </h3>
             
             <div class="overflow-x-auto pb-2">
@@ -241,8 +269,8 @@ function buildComplianceHeatmap(fullLog) {
             </div>
 
             <div class="flex flex-wrap items-center gap-4 mt-4 text-[10px] text-slate-400 font-mono">
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500/30"></div> Rest</div>
-                
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-purple-500"></div> Event</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500/50"></div> Rest</div>
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-700"></div> Planned</div>
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Done</div>
                 <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500" style="${highContrastStripe}"></div> Unplanned</div>
@@ -253,7 +281,7 @@ function buildComplianceHeatmap(fullLog) {
     `;
 }
 
-// ... (buildProgressWidget remains unchanged) ...
+// ... (buildProgressWidget function remains exactly the same below) ...
 function buildProgressWidget(workouts) {
     const today = new Date();
     today.setHours(23, 59, 59, 999); 
