@@ -15,44 +15,31 @@ export function renderDashboard(planMd) {
     // 3. Prepare Data for Heatmaps (Full History + Events)
     const fullLogData = Parser.parseTrainingLog(planMd);
     
-    // --- FIXED: Event Parsing for "Month Day, Year" format ---
+    // --- SMART EVENT PARSING ---
     const eventMap = {};
-    
-    // We manually scan specifically for Section 1 to avoid false positives
     const lines = planMd.split('\n');
-    let insideEventSection = false;
-
+    
     lines.forEach(line => {
-        // Detect Start of Section 1
-        if (line.includes('1. Event Schedule')) insideEventSection = true;
-        // Detect End (Start of Section 2)
-        else if (line.includes('2. User Profile')) insideEventSection = false;
+        if (line.trim().startsWith('|') && /\d{4}-\d{2}-\d{2}/.test(line) && !line.includes('---')) {
+            const parts = line.split('|').map(p => p.trim()).filter(p => p.length > 0);
+            if (parts.length >= 2) {
+                let dateStr = null;
+                let evtName = null;
+                const dateIndex = parts.findIndex(p => /^\d{4}-\d{2}-\d{2}$/.test(p));
 
-        if (insideEventSection) {
-            // Look for table rows: | Date | Event | ...
-            if (line.trim().startsWith('|') && !line.includes('---') && !line.toLowerCase().includes('**date**')) {
-                const parts = line.split('|').map(p => p.trim());
-                // | Date | Event Name | ... -> parts[1] is Date, parts[2] is Name
-                if (parts.length > 2) {
-                    const dateRaw = parts[1];
-                    const evtName = parts[2];
-
-                    // Javascript Date Parser handles "June 20, 2026" automatically
-                    const dateObj = new Date(dateRaw);
-                    
-                    if (!isNaN(dateObj) && evtName) {
-                        // Normalize to YYYY-MM-DD to match heatmap keys
-                        // We use Local time to avoid timezone shifts
-                        const ymd = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
-                        eventMap[ymd] = evtName;
-                    }
+                if (dateIndex !== -1) {
+                    dateStr = parts[dateIndex];
+                    const otherParts = parts.filter((_, idx) => idx !== dateIndex);
+                    otherParts.sort((a, b) => b.length - a.length);
+                    if (otherParts.length > 0) evtName = otherParts[0];
                 }
+
+                if (dateStr && evtName) eventMap[dateStr] = evtName;
             }
         }
     });
 
     // 4. Generate Two Heatmaps
-    // Helper to get consistent local date string (YYYY-MM-DD)
     const getLocalYMD = (d) => {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
@@ -62,7 +49,7 @@ export function renderDashboard(planMd) {
     today.setHours(0,0,0,0);
     
     const endOfWeek = new Date(today);
-    const dayOfWeek = endOfWeek.getDay(); // 0=Sun
+    const dayOfWeek = endOfWeek.getDay(); 
     const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); 
     endOfWeek.setDate(endOfWeek.getDate() + distToSunday); 
     if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); 
@@ -187,6 +174,7 @@ export function renderDashboard(planMd) {
 
 /**
  * Generic Heatmap Builder with Click Tool & Invisible Sundays
+ * IMPROVED: Bigger cells, wider gaps, centered layout.
  */
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn) {
     if (!fullLog) fullLog = [];
@@ -204,11 +192,13 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 
     const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
 
-    // 2. Alignment: Insert Empty Cells until Sunday
+    // 2. Alignment Logic: Insert Empty Cells until Sunday
     const startDay = startDate.getDay(); // 0=Sun
     let cellsHtml = '';
+    
+    // SIZE UPDATE: Changed w-2.5/h-2.5 to w-3/h-3 for better desktop visibility
     for (let i = 0; i < startDay; i++) {
-        cellsHtml += `<div class="w-2.5 h-2.5 m-[1px] opacity-0"></div>`;
+        cellsHtml += `<div class="w-3 h-3 m-[1px] opacity-0"></div>`;
     }
 
     // 3. Generate Cells
@@ -282,16 +272,13 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
                     }
                 }
             } else {
-                colorClass = 'bg-emerald-500/50'; // 50% Green for Past Rest
+                colorClass = 'bg-emerald-500/50'; 
                 tooltip = `${dateKey}: Rest Day`;
                 clickDetails = `Date: ${dateKey}\\nStatus: Rest Day`;
             }
         }
 
-        // --- SUNDAY VISIBILITY LOGIC ---
-        // Hide Sunday ONLY if it has no workout/event/rest-log
-        // Note: isRestType logic above sets hasActivity=true, so explicit Rest days (Past) will show.
-        // Empty Sundays in Future/Past without data will hide.
+        // --- SUNDAY VISIBILITY ---
         if (dayOfWeek === 0 && !hasActivity && !eventName) {
             colorClass = ''; 
             inlineStyle = 'opacity: 0;'; 
@@ -301,7 +288,8 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         const clickAttr = clickDetails ? `onclick="alert('${clickDetails}')" cursor-pointer` : '';
         const cursorClass = clickDetails ? 'cursor-pointer hover:opacity-80' : '';
 
-        cellsHtml += `<div class="w-2.5 h-2.5 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" title="${tooltip}" ${clickAttr}></div>`;
+        // SIZE UPDATE: w-3 h-3
+        cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" title="${tooltip}" ${clickAttr}></div>`;
         currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -311,20 +299,20 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
                 <i class="fa-solid fa-calendar-check text-slate-400"></i> ${title}
             </h3>
             
-            <div class="overflow-x-auto pb-2">
-                <div class="grid grid-rows-7 grid-flow-col gap-0 w-max">
+            <div class="overflow-x-auto pb-4">
+                <div class="grid grid-rows-7 grid-flow-col gap-1 w-max mx-auto">
                     ${cellsHtml}
                 </div>
             </div>
 
-            <div class="flex flex-wrap items-center gap-4 mt-4 text-[10px] text-slate-400 font-mono">
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-purple-500"></div> Event</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500/50"></div> Rest</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-700"></div> Planned</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Done</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500" style="${highContrastStripe}"></div> Unplanned</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-yellow-500"></div> Partial</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-red-500/80"></div> Missed</div>
+            <div class="flex flex-wrap items-center justify-center gap-4 mt-2 text-[10px] text-slate-400 font-mono">
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-purple-500"></div> Event</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-emerald-500/50"></div> Rest</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-slate-700"></div> Planned</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-emerald-500"></div> Done</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-emerald-500" style="${highContrastStripe}"></div> Unplanned</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-yellow-500"></div> Partial</div>
+                <div class="flex items-center gap-1"><div class="w-3 h-3 rounded-sm bg-red-500/80"></div> Missed</div>
             </div>
         </div>
     `;
