@@ -3,7 +3,6 @@
 let logData = [];
 
 // --- GLOBAL TOGGLE FUNCTION (For Collapsible Sections) ---
-// This sits on the window so dashboard.js can use it too if loaded.
 if (!window.toggleSection) {
     window.toggleSection = (id) => {
         const content = document.getElementById(id);
@@ -37,7 +36,6 @@ const colorMap = { All: '#ffffff', Bike: '#3b82f6', Run: '#10b981', Swim: '#06b6
 // --- HELPER FUNCTIONS ---
 
 const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
-    // Note: Added mb-8 to expanded state, removed from collapsed state for tighter fit
     const contentClasses = isOpen 
         ? "max-h-[5000px] opacity-100 py-4 mb-8" 
         : "max-h-0 opacity-0 py-0 mb-0";
