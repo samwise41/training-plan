@@ -1,6 +1,6 @@
 import { Parser } from '../parser.js';
 
-// ---  Local Copy of Collapsible Builder  ---
+// --- Local Copy of Collapsible Builder ---
 const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     const contentClasses = isOpen 
         ? "max-h-[5000px] opacity-100 py-4 mb-8" 
@@ -58,8 +58,21 @@ export function renderDashboard(planMd) {
         }
     });
 
-    const getIcon = (type) => { if (type === 'Bike') return 'fa-bicycle text-blue-500'; if (type === 'Run') return 'fa-person-running text-emerald-500'; if (type === 'Swim') return 'fa-person-swimming text-cyan-500'; if (type === 'Strength') return 'fa-dumbbell text-purple-500'; return 'fa-stopwatch text-slate-500'; };
-    const getTypeColor = (type) => { if (type === 'Bike') return 'text-blue-500'; if (type === 'Run') return 'text-emerald-500'; if (type === 'Swim') return 'text-cyan-500'; return 'text-slate-400'; };
+    // --- UPDATED COLOR SCHEME (Option 1) ---
+    const getIcon = (type) => { 
+        if (type === 'Bike') return 'fa-bicycle text-purple-500'; // Purple
+        if (type === 'Run') return 'fa-person-running text-fuchsia-500'; // Fuchsia
+        if (type === 'Swim') return 'fa-person-swimming text-cyan-500'; // Cyan
+        if (type === 'Strength') return 'fa-dumbbell text-slate-400'; 
+        return 'fa-stopwatch text-slate-500'; 
+    };
+
+    const getTypeColor = (type) => { 
+        if (type === 'Bike') return 'text-purple-500'; 
+        if (type === 'Run') return 'text-fuchsia-500'; 
+        if (type === 'Swim') return 'text-cyan-500'; 
+        return 'text-slate-400'; 
+    };
 
     let cardsHtml = '';
     const grouped = {};
@@ -145,13 +158,21 @@ function buildProgressWidget(workouts) {
         const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0; const displayPct = rawPct; const barWidth = Math.min(rawPct, 100); const actualHrs = (actual / 60).toFixed(1); const plannedHrs = (planned / 60).toFixed(1);
         let markersHtml = ''; let runningTotal = 0; const sortedDays = Object.keys(dailyMap).sort();
         if (planned > 0) { for (let i = 0; i < sortedDays.length - 1; i++) { runningTotal += dailyMap[sortedDays[i]]; const pct = (runningTotal / planned) * 100; markersHtml += `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 z-10" style="left: ${pct}%"></div>`; } }
-        const labelHtml = isMain ? `<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">${label}</span>` : ''; const iconHtml = iconClass ? `<i class="fa-solid ${iconClass} text-slate-500 mr-2 w-4 text-center"></i>` : ''; const heightClass = isMain ? 'h-3' : 'h-2.5'; const mbClass = isMain ? 'mb-4' : 'mb-3'; const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
-        return `<div class="flex-1 w-full ${mbClass}"><div class="flex justify-between items-end mb-1"><div class="flex flex-col">${labelHtml}<div class="flex items-center">${iconHtml}<span class="text-sm font-bold text-white flex items-baseline gap-1">${Math.round(actual)} / ${Math.round(planned)} mins<span class="text-xs text-slate-400 font-normal ml-1">(${actualHrs} / ${plannedHrs} hrs)</span></span></div></div><span class="text-xs font-bold ${pctColor}">${displayPct}%</span></div><div class="relative w-full ${heightClass} bg-slate-700 rounded-full overflow-hidden">${markersHtml}<div class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out" style="width: ${barWidth}%"></div></div></div>`;
+        // UPDATED ICONS HERE
+        let finalIcon = '';
+        if (iconClass) {
+            if (iconClass.includes('bicycle')) finalIcon = `<i class="fa-solid ${iconClass} text-purple-500 mr-2 w-4 text-center"></i>`;
+            else if (iconClass.includes('running')) finalIcon = `<i class="fa-solid ${iconClass} text-fuchsia-500 mr-2 w-4 text-center"></i>`;
+            else if (iconClass.includes('swimming')) finalIcon = `<i class="fa-solid ${iconClass} text-cyan-500 mr-2 w-4 text-center"></i>`;
+            else finalIcon = `<i class="fa-solid ${iconClass} text-slate-500 mr-2 w-4 text-center"></i>`;
+        }
+        
+        const labelHtml = isMain ? `<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">${label}</span>` : ''; const heightClass = isMain ? 'h-3' : 'h-2.5'; const mbClass = isMain ? 'mb-4' : 'mb-3'; const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
+        return `<div class="flex-1 w-full ${mbClass}"><div class="flex justify-between items-end mb-1"><div class="flex flex-col">${labelHtml}<div class="flex items-center">${finalIcon}<span class="text-sm font-bold text-white flex items-baseline gap-1">${Math.round(actual)} / ${Math.round(planned)} mins<span class="text-xs text-slate-300 font-normal ml-1">(${actualHrs} / ${plannedHrs} hrs)</span></span></div></div><span class="text-xs font-bold ${pctColor}">${displayPct}%</span></div><div class="relative w-full ${heightClass} bg-slate-700 rounded-full overflow-hidden">${markersHtml}<div class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out" style="width: ${barWidth}%"></div></div></div>`;
     };
     const pacingDiff = totalActual - expectedSoFar; let pacingLabel = "On Track"; let pacingColor = "text-slate-400"; let pacingIcon = "fa-check";
     if (pacingDiff >= 15) { pacingLabel = `${Math.round(pacingDiff)}m Ahead`; pacingColor = "text-emerald-400"; pacingIcon = "fa-arrow-trend-up"; } else if (pacingDiff <= -15) { pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`; pacingColor = "text-orange-400"; pacingIcon = "fa-triangle-exclamation"; }
     const totalActualHrsPacing = (totalActual / 60).toFixed(1); const expectedHrs = (expectedSoFar / 60).toFixed(1);
     
-    // UPDATED: Made Target Text color match Actual Text color
     return `<div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm"><div class="flex-1 w-full">${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true)}${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers)}${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}</div><div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1 self-center"><div><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span><div class="flex items-center gap-2"><i class="fa-solid ${pacingIcon} ${pacingColor}"></i><span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span></div></div><div class="text-right md:text-left flex flex-col items-end md:items-start mt-2"><span class="text-[10px] text-slate-300 font-mono mb-0.5">Actual: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span></span><span class="text-[10px] text-slate-300 font-mono">Target: ${Math.round(expectedSoFar)}m <span class="text-slate-500">(${expectedHrs}h)</span></span></div></div></div>`;
 }
