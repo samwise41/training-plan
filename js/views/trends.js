@@ -246,28 +246,31 @@ const buildTrendChart = (title, isCount) => {
             d30 += ` L ${x} ${y30}`;
             d60 += ` L ${x} ${y60}`;
 
-            // Weekly Dots
+            // Weekly Dots (Now Solid Focus)
             if (chartState.showWeekly) {
-                circlesHtml += `<circle cx="${x}" cy="${y7}" r="2" fill="${color}" stroke="none" opacity="0.5" class="cursor-pointer hover:r-4 hover:opacity-100 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', 'Weekly (${type})', ${p.val7}, '${color}')"></circle>`;
+                circlesHtml += `<circle cx="${x}" cy="${y7}" r="2.5" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-4 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', 'Weekly (${type})', ${p.val7}, '${color}')"></circle>`;
             }
             // 30d Dots
             if (chartState.show30d) {
-                circlesHtml += `<circle cx="${x}" cy="${y30}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '30d (${type})', ${p.val30}, '${color}')"></circle>`;
+                circlesHtml += `<circle cx="${x}" cy="${y30}" r="2" fill="${color}" stroke="none" opacity="0.6" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '30d (${type})', ${p.val30}, '${color}')"></circle>`;
             }
             // 60d Dots
             if (chartState.show60d) {
-                circlesHtml += `<circle cx="${x}" cy="${y60}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" opacity="0.3" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
+                circlesHtml += `<circle cx="${x}" cy="${y60}" r="2" fill="${color}" stroke="none" opacity="0.3" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
             }
         });
 
+        // Weekly Line (Now Solid)
         if (chartState.showWeekly) {
-            pathsHtml += `<path d="${d7}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="2,2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5" />`;
+            pathsHtml += `<path d="${d7}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />`;
         }
+        // 30d Line (Now Dashed)
         if (chartState.show30d) {
-            pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
+            pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" />`;
         }
+        // 60d Line (Now Dotted)
         if (chartState.show60d) {
-            pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />`;
+            pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="2,2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />`;
         }
     });
 
@@ -356,7 +359,7 @@ const renderDynamicCharts = () => {
             </div>
             <div class="flex items-center gap-2 flex-wrap border-t border-slate-700 pt-3">
                 <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Lines:</span>
-                ${buildLineToggle('showWeekly', 'Weekly (7d)')}
+                ${buildLineToggle('showWeekly', 'Weekly')}
                 ${buildLineToggle('show30d', '30d Avg')}
                 ${buildLineToggle('show60d', '60d Avg')}
             </div>
@@ -364,7 +367,16 @@ const renderDynamicCharts = () => {
         <div id="trend-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity"></div>
     `;
 
-    container.innerHTML = `${controlsHtml}${buildTrendChart("Rolling Adherence (Duration Based)", false)}${buildTrendChart("Rolling Adherence (Count Based)", true)}`;
+    // Updated LEGEND to reflect new styles
+    const legendHtml = `
+        <div class="flex gap-4 text-[10px] text-slate-400 font-mono justify-end mb-2">
+            <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400"></div> Weekly</span>
+            <span class="flex items-center gap-1"><div class="w-4 h-0.5 border-t-2 border-dashed border-slate-400"></div> 30d Avg</span>
+            <span class="flex items-center gap-1"><div class="w-4 h-0.5 border-t-2 border-dotted border-slate-400"></div> 60d Avg</span>
+        </div>
+    `;
+
+    container.innerHTML = `${controlsHtml}${legendHtml}${buildTrendChart("Rolling Adherence (Duration Based)", false)}${buildTrendChart("Rolling Adherence (Count Based)", true)}`;
 };
 
 const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
