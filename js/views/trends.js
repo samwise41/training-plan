@@ -292,10 +292,10 @@ const renderDynamicCharts = () => {
         <div class="flex flex-col sm:flex-row gap-4 mb-6">
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Sports:</span>
-                ${buildSportToggle('All', 'All', 'icon-all')}
-                ${buildSportToggle('Bike', 'Bike', 'icon-bike')}
-                ${buildSportToggle('Run', 'Run', 'icon-run')}
-                ${buildSportToggle('Swim', 'Swim', 'icon-swim')}
+                ${buildSportToggle('All', 'All', 'bg-icon-all')}
+                ${buildSportToggle('Bike', 'Bike', 'bg-icon-bike')}
+                ${buildSportToggle('Run', 'Run', 'bg-icon-run')}
+                ${buildSportToggle('Swim', 'Swim', 'bg-icon-swim')}
             </div>
             <div class="flex items-center gap-2 flex-wrap sm:ml-auto">
                 <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Range:</span>
