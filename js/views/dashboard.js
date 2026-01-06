@@ -172,3 +172,281 @@ export function renderDashboard(planMd) {
 }
 
 /**
+ * Generic Heatmap Builder with Click Tool & Invisible Sundays
+ */
+function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title) {
+    if (!fullLog) fullLog = [];
+
+    // 1. Map Data
+    const dataMap = {};
+    fullLog.forEach(item => {
+        const dateKey = item.date.toISOString().split('T')[0];
+        if (!dataMap[dateKey]) dataMap[dateKey] = [];
+        dataMap[dateKey].push(item);
+    });
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
+
+    // 2. Alignment Logic: Insert Empty Cells until Sunday
+    const startDay = startDate.getDay(); // 0=Sun, 1=Mon...
+    let cellsHtml = '';
+    
+    // Add Spacers (invisible)
+    for (let i = 0; i < startDay; i++) {
+        cellsHtml += `<div class="w-2.5 h-2.5 m-[1px] opacity-0"></div>`;
+    }
+
+    // 3. Generate Cells
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+        const dateKey = currentDate.toISOString().split('T')[0];
+        const dayOfWeek = currentDate.getDay(); // 0 is Sunday
+        const dayData = dataMap[dateKey];
+        const eventName = eventMap && eventMap[dateKey];
+        
+        // Defaults
+        let colorClass = 'bg-slate-800'; 
+        let tooltip = `${dateKey}: Empty`;
+        let inlineStyle = ""; 
+        let clickDetails = `Date: ${dateKey}\\nStatus: No Data`;
+
+        let totalPlan = 0;
+        let totalAct = 0;
+        let isRestType = false;
+        let workoutDetails = "";
+
+        if (dayData && dayData.length > 0) {
+            dayData.forEach(d => {
+                totalPlan += (d.plannedDuration || 0);
+                totalAct += (d.actualDuration || 0);
+                if (d.type === 'Rest') isRestType = true;
+                // Build detail string for click
+                workoutDetails += `\\n• ${d.type}: ${d.plannedDuration}m Plan / ${d.actualDuration}m Act`;
+            });
+        }
+
+        const hasActivity = (totalPlan > 0 || totalAct > 0 || isRestType || eventName);
+
+        // --- Logic Tree ---
+        if (eventName) {
+            colorClass = 'bg-purple-500';
+            tooltip = `${dateKey}: 🏆 ${eventName}`;
+            clickDetails = `Date: ${dateKey}\\nEvent: ${eventName}${workoutDetails}`;
+        }
+        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) {
+            colorClass = 'bg-emerald-500';
+            inlineStyle = highContrastStripe;
+            tooltip = `${dateKey}: Unplanned Workout`;
+            clickDetails = `Date: ${dateKey}\\nStatus: Unplanned Workout${workoutDetails}`;
+        }
+        else if (currentDate > today || (currentDate.getTime() === today.getTime() && totalAct === 0)) {
+             if (totalPlan > 0) {
+                 colorClass = 'bg-slate-700'; 
+                 tooltip = `${dateKey}: Planned`;
+                 clickDetails = `Date: ${dateKey}\\nStatus: Planned (Future)${workoutDetails}`;
+             } else {
+                 colorClass = 'bg-slate-800';
+                 tooltip = `${dateKey}: Future`;
+                 clickDetails = `Date: ${dateKey}\\nStatus: Future (Empty)`;
+             }
+        }
+        else {
+            if (totalPlan > 0) {
+                if (totalAct === 0) {
+                    colorClass = 'bg-red-500/80';
+                    tooltip = `${dateKey}: Missed`;
+                    clickDetails = `Date: ${dateKey}\\nStatus: Missed Workout${workoutDetails}`;
+                } else {
+                    const ratio = totalAct / totalPlan;
+                    if (ratio >= 0.95) {
+                        colorClass = 'bg-emerald-500';
+                        tooltip = `${dateKey}: Completed`;
+                        clickDetails = `Date: ${dateKey}\\nStatus: Completed${workoutDetails}`;
+                    } else {
+                        colorClass = 'bg-yellow-500';
+                        tooltip = `${dateKey}: Partial (${Math.round(ratio*100)}%)`;
+                        clickDetails = `Date: ${dateKey}\\nStatus: Partial Completion${workoutDetails}`;
+                    }
+                }
+            } else {
+                colorClass = 'bg-emerald-500/50'; 
+                tooltip = `${dateKey}: Rest Day`;
+                clickDetails = `Date: ${dateKey}\\nStatus: Rest Day`;
+            }
+        }
+
+        // --- SUNDAY VISIBILITY LOGIC ---
+        // If it is Sunday AND has no activity/event -> Make Invisible
+        if (dayOfWeek === 0 && !hasActivity) {
+            colorClass = ''; // Remove bg color
+            inlineStyle = 'opacity: 0;'; // Make invisible
+            // We verify it's not clickable if invisible
+            clickDetails = ''; 
+        }
+
+        // Add onclick event
+        const clickAttr = clickDetails ? `onclick="alert('${clickDetails}')" cursor-pointer` : '';
+        const cursorClass = clickDetails ? 'cursor-pointer hover:opacity-80' : '';
+
+        cellsHtml += `<div class="w-2.5 h-2.5 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" title="${tooltip}" ${clickAttr}></div>`;
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6">
+            <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-check text-slate-400"></i> ${title}
+            </h3>
+            
+            <div class="overflow-x-auto pb-2">
+                <div class="grid grid-rows-7 grid-flow-col gap-0 w-max">
+                    ${cellsHtml}
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-4 mt-4 text-[10px] text-slate-400 font-mono">
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-purple-500"></div> Event</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500/50"></div> Rest</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-700"></div> Planned</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Done</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500" style="${highContrastStripe}"></div> Unplanned</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-yellow-500"></div> Partial</div>
+                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-red-500/80"></div> Missed</div>
+            </div>
+        </div>
+    `;
+}
+
+// ... (Progress Widget Helper Remains Unchanged) ...
+function buildProgressWidget(workouts) {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); 
+
+    let totalPlanned = 0;
+    let totalActual = 0;
+    let expectedSoFar = 0;
+    const totalDailyMarkers = {};
+
+    const sportStats = {
+        Bike: { planned: 0, actual: 0, dailyMarkers: {} },
+        Run: { planned: 0, actual: 0, dailyMarkers: {} },
+        Swim: { planned: 0, actual: 0, dailyMarkers: {} }
+    };
+
+    workouts.forEach(w => {
+        const plan = w.plannedDuration || 0;
+        const act = w.actualDuration || 0;
+        const dateKey = w.date.toISOString().split('T')[0];
+
+        totalPlanned += plan;
+        totalActual += act;
+        if (w.date <= today) expectedSoFar += plan;
+        if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
+        totalDailyMarkers[dateKey] += plan;
+
+        if (sportStats[w.type]) {
+            sportStats[w.type].planned += plan;
+            sportStats[w.type].actual += act;
+            if (!sportStats[w.type].dailyMarkers[dateKey]) sportStats[w.type].dailyMarkers[dateKey] = 0;
+            sportStats[w.type].dailyMarkers[dateKey] += plan;
+        }
+    });
+
+    const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false) => {
+        const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0;
+        const displayPct = rawPct; 
+        const barWidth = Math.min(rawPct, 100); 
+
+        const actualHrs = (actual / 60).toFixed(1);
+        const plannedHrs = (planned / 60).toFixed(1);
+        
+        let markersHtml = '';
+        let runningTotal = 0;
+        const sortedDays = Object.keys(dailyMap).sort();
+        if (planned > 0) {
+            for (let i = 0; i < sortedDays.length - 1; i++) {
+                runningTotal += dailyMap[sortedDays[i]];
+                const pct = (runningTotal / planned) * 100;
+                markersHtml += `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 z-10" style="left: ${pct}%"></div>`;
+            }
+        }
+
+        const labelHtml = isMain ? `<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">${label}</span>` : '';
+        const iconHtml = iconClass ? `<i class="fa-solid ${iconClass} text-slate-500 mr-2 w-4 text-center"></i>` : '';
+        const heightClass = isMain ? 'h-3' : 'h-2.5';
+        const mbClass = isMain ? 'mb-4' : 'mb-3';
+        
+        const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
+
+        return `
+            <div class="flex-1 w-full ${mbClass}">
+                <div class="flex justify-between items-end mb-1">
+                    <div class="flex flex-col">
+                        ${labelHtml}
+                        <div class="flex items-center">
+                            ${iconHtml}
+                            <span class="text-sm font-bold text-white flex items-baseline gap-1">
+                                ${Math.round(actual)} / ${Math.round(planned)} mins
+                                <span class="text-xs text-slate-400 font-normal ml-1">(${actualHrs} / ${plannedHrs} hrs)</span>
+                            </span>
+                        </div>
+                    </div>
+                    <span class="text-xs font-bold ${pctColor}">${displayPct}%</span>
+                </div>
+                <div class="relative w-full ${heightClass} bg-slate-700 rounded-full overflow-hidden">
+                    ${markersHtml}
+                    <div class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out" style="width: ${barWidth}%"></div>
+                </div>
+            </div>
+        `;
+    };
+
+    const pacingDiff = totalActual - expectedSoFar;
+    let pacingLabel = "On Track";
+    let pacingColor = "text-slate-400";
+    let pacingIcon = "fa-check";
+
+    if (pacingDiff >= 15) {
+        pacingLabel = `${Math.round(pacingDiff)}m Ahead`;
+        pacingColor = "text-emerald-400";
+        pacingIcon = "fa-arrow-trend-up";
+    } else if (pacingDiff <= -15) {
+        pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`;
+        pacingColor = "text-orange-400";
+        pacingIcon = "fa-triangle-exclamation";
+    }
+
+    const totalActualHrsPacing = (totalActual / 60).toFixed(1);
+    const expectedHrs = (expectedSoFar / 60).toFixed(1);
+
+    return `
+        <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm">
+            <div class="flex-1 w-full">
+                ${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true)}
+                ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers)}
+                ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}
+                ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}
+            </div>
+            <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1 self-center">
+                <div>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid ${pacingIcon} ${pacingColor}"></i>
+                        <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
+                    </div>
+                </div>
+                <div class="text-right md:text-left flex flex-col items-end md:items-start mt-2">
+                    <span class="text-[10px] text-slate-300 font-mono mb-0.5">
+                        Actual: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span>
+                    </span>
+                    <span class="text-[10px] text-slate-500 font-mono">
+                        Target: ${Math.round(expectedSoFar)}m <span class="text-slate-600">(${expectedHrs}h)</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+}
