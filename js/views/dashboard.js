@@ -11,7 +11,7 @@ export function renderDashboard(planMd) {
     // Sort by Date
     workouts.sort((a, b) => a.date - b.date);
 
-    // 2. Build Progress Widget (New Multi-Bar Version)
+    // 2. Build Progress Widget (Multi-Bar + Uncapped %)
     const progressHtml = buildProgressWidget(workouts);
 
     // 3. Helpers for Styling
@@ -167,7 +167,11 @@ function buildProgressWidget(workouts) {
 
     // --- Helper to generate a single bar's HTML ---
     const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false) => {
-        const pctComplete = planned > 0 ? Math.min(Math.round((actual / planned) * 100), 100) : 0;
+        // CHANGED: Separate logic for Text vs Visual Bar
+        const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0;
+        const displayPct = rawPct; // Allow > 100% for text
+        const barWidth = Math.min(rawPct, 100); // Cap at 100% for CSS width
+
         const actualHrs = (actual / 60).toFixed(1);
         const plannedHrs = (planned / 60).toFixed(1);
         
@@ -187,6 +191,9 @@ function buildProgressWidget(workouts) {
         const iconHtml = iconClass ? `<i class="fa-solid ${iconClass} text-slate-500 mr-2 w-4 text-center"></i>` : '';
         const heightClass = isMain ? 'h-3' : 'h-2.5';
         const mbClass = isMain ? 'mb-4' : 'mb-3';
+        
+        // Color logic for > 100% text
+        const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
 
         return `
             <div class="flex-1 w-full ${mbClass}">
@@ -201,11 +208,11 @@ function buildProgressWidget(workouts) {
                             </span>
                         </div>
                     </div>
-                    <span class="text-xs font-bold text-blue-400">${pctComplete}%</span>
+                    <span class="text-xs font-bold ${pctColor}">${displayPct}%</span>
                 </div>
                 <div class="relative w-full ${heightClass} bg-slate-700 rounded-full overflow-hidden">
                     ${markersHtml}
-                    <div class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out" style="width: ${pctComplete}%"></div>
+                    <div class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out" style="width: ${barWidth}%"></div>
                 </div>
             </div>
         `;
@@ -227,7 +234,6 @@ function buildProgressWidget(workouts) {
         pacingIcon = "fa-triangle-exclamation";
     }
 
-    // Calculate Hours for Pacing display
     const totalActualHrsPacing = (totalActual / 60).toFixed(1);
     const expectedHrs = (expectedSoFar / 60).toFixed(1);
 
