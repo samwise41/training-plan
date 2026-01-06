@@ -67,7 +67,7 @@ const chartState = {
     Bike: false,
     Run: false,
     Swim: false,
-    timeRange: '6m' 
+    timeRange: '60d' 
 };
 
 // Colors - Updated to use CSS Variables so they match your styles.css
