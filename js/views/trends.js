@@ -71,8 +71,6 @@ const chartState = {
 };
 
 // Colors - Updated to use CSS Variables so they match your styles.css
-// Note: We use getComputedStyle logic or just raw vars if your graph library supports it.
-// Since this is custom SVG, we can inject var(--x) directly into the stroke attributes.
 const colorMap = { 
     All: 'var(--color-all)', 
     Bike: 'var(--color-bike)',
@@ -134,6 +132,7 @@ const getRollingPoints = (data, typeFilter, isCount) => {
     if (chartState.timeRange === '30d') weeksBack = 4;
     else if (chartState.timeRange === '60d') weeksBack = 8;
     else if (chartState.timeRange === '90d') weeksBack = 13;
+    else if (chartState.timeRange === '1y') weeksBack = 52; // Support for 1 Year
 
     for (let i = weeksBack; i >= 0; i--) {
         const anchorDate = new Date(today);
@@ -156,7 +155,13 @@ const getRollingPoints = (data, typeFilter, isCount) => {
             // Cap at 300% to prevent outliers from breaking the graph
             return plan > 0 ? Math.min(Math.round((act / plan) * 100), 300) : 0; 
         };
-        points.push({ label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`, val30: getStats(30), val60: getStats(60) });
+        // ADDED val7 for Weekly Adherence
+        points.push({ 
+            label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`, 
+            val7: getStats(7),
+            val30: getStats(30), 
+            val60: getStats(60) 
+        });
     }
     return points;
 };
@@ -173,6 +178,8 @@ const buildTrendChart = (title, isCount) => {
     activeTypes.forEach(type => {
         const pts = getRollingPoints(logData, type, isCount);
         pts.forEach(p => {
+            // Collect all values to determine scale
+            if(p.val7 > 0) allValues.push(p.val7);
             if(p.val30 > 0) allValues.push(p.val30);
             if(p.val60 > 0) allValues.push(p.val60);
         });
@@ -218,23 +225,36 @@ const buildTrendChart = (title, isCount) => {
         const color = colorMap[type]; // Now returns var(--color-x)
         if (dataPoints.length < 2) return;
 
+        let d7 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val7)}`;
         let d30 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val30)}`;
         let d60 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val60)}`;
         
         dataPoints.forEach((p, i) => {
             const x = getX(i, dataPoints.length);
+            const y7 = getY(p.val7);
             const y30 = getY(p.val30);
             const y60 = getY(p.val60);
 
+            d7 += ` L ${x} ${y7}`;
             d30 += ` L ${x} ${y30}`;
             d60 += ` L ${x} ${y60}`;
 
+            // Weekly (7d) Dots - Small, slightly transparent
+            circlesHtml += `<circle cx="${x}" cy="${y7}" r="2" fill="${color}" stroke="none" opacity="0.5" class="cursor-pointer hover:r-4 hover:opacity-100 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', 'Weekly (${type})', ${p.val7}, '${color}')"></circle>`;
+            
+            // 30d Dots - Main
             circlesHtml += `<circle cx="${x}" cy="${y30}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '30d (${type})', ${p.val30}, '${color}')"></circle>`;
-            circlesHtml += `<circle cx="${x}" cy="${y60}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" opacity="0.6" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
+            
+            // 60d Dots - Ghosted
+            circlesHtml += `<circle cx="${x}" cy="${y60}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" opacity="0.3" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
         });
 
+        // Weekly Line (Thin, Dotted)
+        pathsHtml += `<path d="${d7}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="2,2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5" />`;
+        // 30d Line (Solid, Thick)
         pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
-        pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />`;
+        // 60d Line (Dashed)
+        pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />`;
     });
 
     const axisPoints = getRollingPoints(logData, 'All', isCount);
@@ -242,6 +262,8 @@ const buildTrendChart = (title, isCount) => {
     let modVal = 4;
     if (chartState.timeRange === '30d') modVal = 1;
     else if (chartState.timeRange === '60d') modVal = 2;
+    else if (chartState.timeRange === '90d') modVal = 3;
+    else if (chartState.timeRange === '1y') modVal = 8;
     
     axisPoints.forEach((p, i) => {
         if (i % modVal === 0 || i === axisPoints.length - 1) {
@@ -249,7 +271,6 @@ const buildTrendChart = (title, isCount) => {
         }
     });
 
-    // Added overflow-hidden to prevent outlier lines from leaving the box
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4 relative overflow-hidden">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
@@ -308,11 +329,13 @@ const renderDynamicCharts = () => {
                 ${buildTimeToggle('60d', '60d')}
                 ${buildTimeToggle('90d', '90d')}
                 ${buildTimeToggle('6m', '6m')}
+                ${buildTimeToggle('1y', '1y')}
             </div>
         </div>
         <div id="trend-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity"></div>
         
         <div class="flex gap-4 text-[10px] text-slate-400 font-mono justify-end mb-2">
+            <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400 border-b border-dotted border-white opacity-50"></div> Weekly</span>
             <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400"></div> 30d Avg</span>
             <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400 border-b border-dashed"></div> 60d Avg</span>
         </div>
@@ -437,7 +460,7 @@ export function renderTrends(mergedLogData) {
     const adherenceSection = buildCollapsibleSection('adherence-section', 'Compliance Overview', adherenceHtml, true);
 
     // 5. Duration Tool
-    const durationHtml = `<div class="kpi-card bg-slate-800/20 border-t-4 border-t-text-blue-500"><div class="kpi-header border-b border-slate-700 pb-2 mb-4"><i class="fa-solid fa-filter text-text-blue-500 text-xl"></i><span class="kpi-title ml-2 text-text-blue-500">Duration Analysis Tool</span></div><div class="flex flex-col sm:flex-row gap-4 mb-8"><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Sport Filter</label><select id="kpi-sport-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Sports</option><option value="Bike">Bike</option><option value="Run">Run</option><option value="Swim">Swim</option></select></div><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Day Filter</label><select id="kpi-day-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Days</option><option value="Weekday">Weekday (Mon-Fri)</option><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option></select></div><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Time Period</label><select id="kpi-time-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Time</option><option value="30">Last 30 Days</option><option value="60">Last 60 Days</option><option value="90">Last 90 Days</option></select></div></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Planned</div><div id="kpi-analysis-planned" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Actual</div><div id="kpi-analysis-actual" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Difference</div><div id="kpi-analysis-diff" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Adherence</div><div id="kpi-analysis-pct" class="text-xl font-bold text-white">--</div></div></div><div class="border-t border-slate-700 pt-4"><h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Detailed Log (Matches Filters)</h4><div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-700 rounded-lg"><table id="kpi-debug-table" class="w-full text-left text-sm text-slate-300"><thead class="bg-slate-900 sticky top-0"><tr><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Date</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Day</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Type</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Plan</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th></tr></thead><tbody class="divide-y divide-slate-700"></tbody></table></div></div></div><div class="mt-8 text-center text-xs text-slate-500 italic">* 'h' in duration column denotes hours, otherwise minutes assumed.</div>`;
+    const durationHtml = `<div class="kpi-card bg-slate-800/20 border-t-4 border-t-purple-500"><div class="kpi-header border-b border-slate-700 pb-2 mb-4"><i class="fa-solid fa-filter text-purple-500 text-xl"></i><span class="kpi-title ml-2 text-purple-400">Duration Analysis Tool</span></div><div class="flex flex-col sm:flex-row gap-4 mb-8"><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Sport Filter</label><select id="kpi-sport-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Sports</option><option value="Bike">Bike</option><option value="Run">Run</option><option value="Swim">Swim</option></select></div><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Day Filter</label><select id="kpi-day-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Days</option><option value="Weekday">Weekday (Mon-Fri)</option><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option></select></div><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Time Period</label><select id="kpi-time-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Time</option><option value="30">Last 30 Days</option><option value="60">Last 60 Days</option><option value="90">Last 90 Days</option></select></div></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Planned</div><div id="kpi-analysis-planned" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Actual</div><div id="kpi-analysis-actual" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Difference</div><div id="kpi-analysis-diff" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Adherence</div><div id="kpi-analysis-pct" class="text-xl font-bold text-white">--</div></div></div><div class="border-t border-slate-700 pt-4"><h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Detailed Log (Matches Filters)</h4><div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-700 rounded-lg"><table id="kpi-debug-table" class="w-full text-left text-sm text-slate-300"><thead class="bg-slate-900 sticky top-0"><tr><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Date</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Day</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Type</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Plan</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th></tr></thead><tbody class="divide-y divide-slate-700"></tbody></table></div></div></div><div class="mt-8 text-center text-xs text-slate-500 italic">* 'h' in duration column denotes hours, otherwise minutes assumed.</div>`;
     const durationSection = buildCollapsibleSection('duration-section', 'Deep Dive Analysis', durationHtml, true);
 
     setTimeout(() => renderDynamicCharts(), 0);
