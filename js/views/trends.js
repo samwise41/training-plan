@@ -45,10 +45,13 @@ window.showTrendTooltip = (evt, date, label, value, color) => {
         </div>
     `;
 
-    // Position based on Page Coordinates
+    // Position: Fixed relative to viewport to avoid container scrolling issues
+    const x = evt.clientX;
+    const y = evt.clientY;
+
     tooltip.style.position = 'fixed';
-    tooltip.style.left = `${evt.clientX + 10}px`; 
-    tooltip.style.top = `${evt.clientY - 40}px`;  
+    tooltip.style.left = `${x + 15}px`; 
+    tooltip.style.top = `${y - 40}px`;  
     
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
     
@@ -67,7 +70,7 @@ const chartState = {
     timeRange: '6m' 
 };
 
-// UPDATED COLOR MAP: All is now Purple
+// Colors
 const colorMap = { All: '#a855f7', Bike: '#3b82f6', Run: '#10b981', Swim: '#06b6d4' };
 
 // --- HELPER FUNCTIONS ---
@@ -141,7 +144,8 @@ const getRollingPoints = (data, typeFilter, isCount) => {
                     }
                 }
             });
-            return plan > 0 ? Math.round((act / plan) * 100) : 0; 
+            // Cap at 300% to prevent outliers from breaking the graph
+            return plan > 0 ? Math.min(Math.round((act / plan) * 100), 300) : 0; 
         };
         points.push({ label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`, val30: getStats(30), val60: getStats(60) });
     }
@@ -179,14 +183,11 @@ const buildTrendChart = (title, isCount) => {
     const getY = (val) => padding.top + chartH - ((val - domainMin) / (domainMax - domainMin)) * chartH;
     const getX = (idx, total) => padding.left + (idx / (total - 1)) * chartW;
 
-    // --- GRID LINES (Updated Colors) ---
-    // 100% = White (#ffffff)
-    // 80%  = Yellow (#eab308)
-    // 60%  = Red (#ef4444)
+    // --- GRID LINES ---
     const gridLinesDef = [
-        { val: 100, color: '#ffffff' },
-        { val: 80, color: '#eab308' },
-        { val: 60, color: '#ef4444' }
+        { val: 100, color: '#ffffff' }, // White
+        { val: 80, color: '#eab308' },  // Yellow
+        { val: 60, color: '#ef4444' }   // Red
     ];
 
     let gridHtml = '';
@@ -239,8 +240,9 @@ const buildTrendChart = (title, isCount) => {
         }
     });
 
+    // Added overflow-hidden to prevent outlier lines from leaving the box
     return `
-        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4 relative">
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4 relative overflow-hidden">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <i class="fa-solid fa-chart-line text-slate-400"></i> ${title}
@@ -281,7 +283,6 @@ const renderDynamicCharts = () => {
         return `<button onclick="window.toggleTrendTime('${range}')" class="${bg} ${text} ${border} border px-3 py-1 rounded text-xs transition-all hover:opacity-90">${label}</button>`;
     };
 
-    // Updated 'All' toggle to use bg-purple-500
     const controlsHtml = `
         <div class="flex flex-col sm:flex-row gap-4 mb-6">
             <div class="flex items-center gap-2 flex-wrap">
