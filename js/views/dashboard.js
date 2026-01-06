@@ -15,41 +15,48 @@ export function renderDashboard(planMd) {
     // 3. Prepare Data for Heatmaps (Full History + Events)
     const fullLogData = Parser.parseTrainingLog(planMd);
     
-    // Parse Events
+    // --- UPDATED EVENT PARSING ---
     const eventSection = Parser.getSection(planMd, "Event Schedule");
     const eventMap = {};
     if (eventSection) {
+        // Look for markdown table rows: | Date | Event | ...
         const lines = eventSection.split('\n');
         lines.forEach(line => {
+            // Regex to find YYYY-MM-DD
             if (line.includes('|') && !line.includes('---') && /\d{4}-\d{2}-\d{2}/.test(line)) {
                 const parts = line.split('|').map(p => p.trim());
+                // Assuming format: | Date | Event Name | ...
+                // parts[0] is usually empty due to leading pipe
+                // parts[1] is Date, parts[2] is Name
                 if (parts.length > 2) {
-                    const dateStr = parts[1];
+                    const dateStr = parts[1]; 
                     const evtName = parts[2];
-                    if (dateStr && evtName) eventMap[dateStr] = evtName;
+                    // Basic validation
+                    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        eventMap[dateStr] = evtName;
+                    }
                 }
             }
         });
     }
 
     // 4. Generate Two Heatmaps
-    // A. Trailing 6 Months (Focus View)
+    // A. Trailing 6 Months
     const today = new Date();
     today.setHours(0,0,0,0);
     
     // Calculate End of Current Week (Upcoming Sunday)
     const endOfWeek = new Date(today);
-    const dayOfWeek = endOfWeek.getDay(); // 0=Sun...6=Sat
-    const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); // Distance to next Sunday
-    endOfWeek.setDate(endOfWeek.getDate() + distToSunday); // Now it is next Sunday (or today if Sunday? usually standard is end of week)
-    // Actually standard ISO week ends Sunday. Let's aim for the upcoming Sunday.
-    if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); // If today is Sunday, show today
+    const dayOfWeek = endOfWeek.getDay(); // 0=Sun
+    const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); 
+    endOfWeek.setDate(endOfWeek.getDate() + distToSunday); 
+    if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); 
     
     // Start Date: 6 Months Prior
     const startTrailing = new Date(endOfWeek);
     startTrailing.setMonth(startTrailing.getMonth() - 6);
 
-    // B. Calendar Year (Big Picture)
+    // B. Calendar Year
     const startYear = new Date(today.getFullYear(), 0, 1);
     const endYear = new Date(today.getFullYear(), 11, 31);
 
@@ -165,255 +172,3 @@ export function renderDashboard(planMd) {
 }
 
 /**
- * Generic Heatmap Builder
- */
-function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title) {
-    if (!fullLog) fullLog = [];
-
-    // 1. Map Data
-    const dataMap = {};
-    fullLog.forEach(item => {
-        const dateKey = item.date.toISOString().split('T')[0];
-        if (!dataMap[dateKey]) dataMap[dateKey] = [];
-        dataMap[dateKey].push(item);
-    });
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
-    const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
-
-    // 2. Alignment Logic: Insert Empty Cells until Sunday
-    // Weekday: 0=Sun, 1=Mon...
-    const startDay = startDate.getDay(); // e.g., 3 (Wed)
-    // We need to insert 3 empty cells so Wed becomes the 4th cell (Row 4)
-    let cellsHtml = '';
-    
-    // Add Spacers
-    for (let i = 0; i < startDay; i++) {
-        cellsHtml += `<div class="w-2.5 h-2.5 m-[1px] opacity-0"></div>`;
-    }
-
-    // 3. Generate Cells
-    let currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-        const dateKey = currentDate.toISOString().split('T')[0];
-        const dayData = dataMap[dateKey];
-        const isEvent = eventMap && eventMap[dateKey];
-        
-        let colorClass = 'bg-slate-800'; 
-        let tooltip = `${dateKey}: Empty`;
-        let inlineStyle = ""; 
-
-        let totalPlan = 0;
-        let totalAct = 0;
-        let isRestType = false;
-
-        if (dayData && dayData.length > 0) {
-            dayData.forEach(d => {
-                totalPlan += (d.plannedDuration || 0);
-                totalAct += (d.actualDuration || 0);
-                if (d.type === 'Rest') isRestType = true;
-            });
-        }
-
-        // --- Logic Tree ---
-        if (isEvent) {
-            colorClass = 'bg-purple-500';
-            tooltip = `${dateKey}: 🏆 ${eventMap[dateKey]}`;
-        }
-        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) {
-            colorClass = 'bg-emerald-500';
-            inlineStyle = highContrastStripe;
-            tooltip = `${dateKey}: Unplanned Workout`;
-        }
-        else if (currentDate > today || (currentDate.getTime() === today.getTime() && totalAct === 0)) {
-             if (totalPlan > 0) {
-                 colorClass = 'bg-slate-700'; 
-                 tooltip = `${dateKey}: Planned`;
-             } else {
-                 colorClass = 'bg-slate-800';
-                 tooltip = `${dateKey}: Future`;
-             }
-        }
-        else {
-            if (totalPlan > 0) {
-                if (totalAct === 0) {
-                    colorClass = 'bg-red-500/80';
-                    tooltip = `${dateKey}: Missed`;
-                } else {
-                    const ratio = totalAct / totalPlan;
-                    if (ratio >= 0.95) {
-                        colorClass = 'bg-emerald-500';
-                        tooltip = `${dateKey}: Completed`;
-                    } else {
-                        colorClass = 'bg-yellow-500';
-                        tooltip = `${dateKey}: Partial (${Math.round(ratio*100)}%)`;
-                    }
-                }
-            } else {
-                colorClass = 'bg-emerald-500/50'; 
-                tooltip = `${dateKey}: Rest Day`;
-            }
-        }
-
-        cellsHtml += `<div class="w-2.5 h-2.5 rounded-sm ${colorClass} m-[1px]" style="${inlineStyle}" title="${tooltip}"></div>`;
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return `
-        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6">
-            <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-calendar-check text-slate-400"></i> ${title}
-            </h3>
-            
-            <div class="overflow-x-auto pb-2">
-                <div class="grid grid-rows-7 grid-flow-col gap-0 w-max">
-                    ${cellsHtml}
-                </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-4 mt-4 text-[10px] text-slate-400 font-mono">
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-purple-500"></div> Event</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500/50"></div> Rest</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-slate-700"></div> Planned</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Done</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500" style="${highContrastStripe}"></div> Unplanned</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-yellow-500"></div> Partial</div>
-                <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-sm bg-red-500/80"></div> Missed</div>
-            </div>
-        </div>
-    `;
-}
-
-
-// ... (Progress Widget Helper Remains Unchanged) ...
-function buildProgressWidget(workouts) {
-    const today = new Date();
-    today.setHours(23, 59, 59, 999); 
-
-    let totalPlanned = 0;
-    let totalActual = 0;
-    let expectedSoFar = 0;
-    const totalDailyMarkers = {};
-
-    const sportStats = {
-        Bike: { planned: 0, actual: 0, dailyMarkers: {} },
-        Run: { planned: 0, actual: 0, dailyMarkers: {} },
-        Swim: { planned: 0, actual: 0, dailyMarkers: {} }
-    };
-
-    workouts.forEach(w => {
-        const plan = w.plannedDuration || 0;
-        const act = w.actualDuration || 0;
-        const dateKey = w.date.toISOString().split('T')[0];
-
-        totalPlanned += plan;
-        totalActual += act;
-        if (w.date <= today) expectedSoFar += plan;
-        if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
-        totalDailyMarkers[dateKey] += plan;
-
-        if (sportStats[w.type]) {
-            sportStats[w.type].planned += plan;
-            sportStats[w.type].actual += act;
-            if (!sportStats[w.type].dailyMarkers[dateKey]) sportStats[w.type].dailyMarkers[dateKey] = 0;
-            sportStats[w.type].dailyMarkers[dateKey] += plan;
-        }
-    });
-
-    const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false) => {
-        const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0;
-        const displayPct = rawPct; 
-        const barWidth = Math.min(rawPct, 100); 
-
-        const actualHrs = (actual / 60).toFixed(1);
-        const plannedHrs = (planned / 60).toFixed(1);
-        
-        let markersHtml = '';
-        let runningTotal = 0;
-        const sortedDays = Object.keys(dailyMap).sort();
-        if (planned > 0) {
-            for (let i = 0; i < sortedDays.length - 1; i++) {
-                runningTotal += dailyMap[sortedDays[i]];
-                const pct = (runningTotal / planned) * 100;
-                markersHtml += `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 z-10" style="left: ${pct}%"></div>`;
-            }
-        }
-
-        const labelHtml = isMain ? `<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">${label}</span>` : '';
-        const iconHtml = iconClass ? `<i class="fa-solid ${iconClass} text-slate-500 mr-2 w-4 text-center"></i>` : '';
-        const heightClass = isMain ? 'h-3' : 'h-2.5';
-        const mbClass = isMain ? 'mb-4' : 'mb-3';
-        
-        const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
-
-        return `
-            <div class="flex-1 w-full ${mbClass}">
-                <div class="flex justify-between items-end mb-1">
-                    <div class="flex flex-col">
-                        ${labelHtml}
-                        <div class="flex items-center">
-                            ${iconHtml}
-                            <span class="text-sm font-bold text-white flex items-baseline gap-1">
-                                ${Math.round(actual)} / ${Math.round(planned)} mins
-                                <span class="text-xs text-slate-400 font-normal ml-1">(${actualHrs} / ${plannedHrs} hrs)</span>
-                            </span>
-                        </div>
-                    </div>
-                    <span class="text-xs font-bold ${pctColor}">${displayPct}%</span>
-                </div>
-                <div class="relative w-full ${heightClass} bg-slate-700 rounded-full overflow-hidden">
-                    ${markersHtml}
-                    <div class="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-1000 ease-out" style="width: ${barWidth}%"></div>
-                </div>
-            </div>
-        `;
-    };
-
-    const pacingDiff = totalActual - expectedSoFar;
-    let pacingLabel = "On Track";
-    let pacingColor = "text-slate-400";
-    let pacingIcon = "fa-check";
-
-    if (pacingDiff >= 15) {
-        pacingLabel = `${Math.round(pacingDiff)}m Ahead`;
-        pacingColor = "text-emerald-400";
-        pacingIcon = "fa-arrow-trend-up";
-    } else if (pacingDiff <= -15) {
-        pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`;
-        pacingColor = "text-orange-400";
-        pacingIcon = "fa-triangle-exclamation";
-    }
-
-    const totalActualHrsPacing = (totalActual / 60).toFixed(1);
-    const expectedHrs = (expectedSoFar / 60).toFixed(1);
-
-    return `
-        <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm">
-            <div class="flex-1 w-full">
-                ${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true)}
-                ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers)}
-                ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}
-                ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}
-            </div>
-            <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1 self-center">
-                <div>
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid ${pacingIcon} ${pacingColor}"></i>
-                        <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
-                    </div>
-                </div>
-                <div class="text-right md:text-left flex flex-col items-end md:items-start mt-2">
-                    <span class="text-[10px] text-slate-300 font-mono mb-0.5">
-                        Actual: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span>
-                    </span>
-                    <span class="text-[10px] text-slate-500 font-mono">
-                        Target: ${Math.round(expectedSoFar)}m <span class="text-slate-600">(${expectedHrs}h)</span>
-                    </span>
-                </div>
-            </div>
-        </div>
-    `;
-}
