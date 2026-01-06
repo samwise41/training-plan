@@ -257,7 +257,8 @@
                         content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                     }
                     else {
-                        const html = this.getStatsBar() + renderDashboard(this.planMd);
+                        // Pass the merged logData to the dashboard
+                        const html = this.getStatsBar() + renderDashboard(this.planMd, this.logData);
                         content.innerHTML = html;
                         this.updateStats();
                     }
