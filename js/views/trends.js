@@ -67,7 +67,10 @@ const chartState = {
     Bike: false,
     Run: false,
     Swim: false,
-    timeRange: '60d' 
+    timeRange: '60d',
+    showWeekly: true, // Default ON
+    show30d: true,    // Default ON
+    show60d: false    // Default OFF
 };
 
 // Colors - Updated to use CSS Variables so they match your styles.css
@@ -122,6 +125,13 @@ window.toggleTrendTime = (range) => {
     renderDynamicCharts();
 };
 
+window.toggleTrendLine = (lineType) => {
+    if (chartState.hasOwnProperty(lineType)) {
+        chartState[lineType] = !chartState[lineType];
+        renderDynamicCharts();
+    }
+};
+
 // --- DATA CALCULATION ---
 const getRollingPoints = (data, typeFilter, isCount) => {
     const points = [];
@@ -132,7 +142,7 @@ const getRollingPoints = (data, typeFilter, isCount) => {
     if (chartState.timeRange === '30d') weeksBack = 4;
     else if (chartState.timeRange === '60d') weeksBack = 8;
     else if (chartState.timeRange === '90d') weeksBack = 13;
-    else if (chartState.timeRange === '1y') weeksBack = 52; // Support for 1 Year
+    else if (chartState.timeRange === '1y') weeksBack = 52; 
 
     for (let i = weeksBack; i >= 0; i--) {
         const anchorDate = new Date(today);
@@ -152,10 +162,8 @@ const getRollingPoints = (data, typeFilter, isCount) => {
                     }
                 }
             });
-            // Cap at 300% to prevent outliers from breaking the graph
             return plan > 0 ? Math.min(Math.round((act / plan) * 100), 300) : 0; 
         };
-        // ADDED val7 for Weekly Adherence
         points.push({ 
             label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`, 
             val7: getStats(7),
@@ -172,16 +180,15 @@ const buildTrendChart = (title, isCount) => {
     const padding = { top: 20, bottom: 30, left: 40, right: 20 };
     const chartW = width - padding.left - padding.right; const chartH = height - padding.top - padding.bottom;
 
-    const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange'); 
+    const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange' && !k.startsWith('show')); 
     let allValues = [];
     
     activeTypes.forEach(type => {
         const pts = getRollingPoints(logData, type, isCount);
         pts.forEach(p => {
-            // Collect all values to determine scale
-            if(p.val7 > 0) allValues.push(p.val7);
-            if(p.val30 > 0) allValues.push(p.val30);
-            if(p.val60 > 0) allValues.push(p.val60);
+            if(chartState.showWeekly && p.val7 > 0) allValues.push(p.val7);
+            if(chartState.show30d && p.val30 > 0) allValues.push(p.val30);
+            if(chartState.show60d && p.val60 > 0) allValues.push(p.val60);
         });
     });
 
@@ -222,7 +229,7 @@ const buildTrendChart = (title, isCount) => {
 
     activeTypes.forEach(type => {
         const dataPoints = getRollingPoints(logData, type, isCount);
-        const color = colorMap[type]; // Now returns var(--color-x)
+        const color = colorMap[type]; 
         if (dataPoints.length < 2) return;
 
         let d7 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val7)}`;
@@ -239,22 +246,29 @@ const buildTrendChart = (title, isCount) => {
             d30 += ` L ${x} ${y30}`;
             d60 += ` L ${x} ${y60}`;
 
-            // Weekly (7d) Dots - Small, slightly transparent
-            circlesHtml += `<circle cx="${x}" cy="${y7}" r="2" fill="${color}" stroke="none" opacity="0.5" class="cursor-pointer hover:r-4 hover:opacity-100 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', 'Weekly (${type})', ${p.val7}, '${color}')"></circle>`;
-            
-            // 30d Dots - Main
-            circlesHtml += `<circle cx="${x}" cy="${y30}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '30d (${type})', ${p.val30}, '${color}')"></circle>`;
-            
-            // 60d Dots - Ghosted
-            circlesHtml += `<circle cx="${x}" cy="${y60}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" opacity="0.3" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
+            // Weekly Dots
+            if (chartState.showWeekly) {
+                circlesHtml += `<circle cx="${x}" cy="${y7}" r="2" fill="${color}" stroke="none" opacity="0.5" class="cursor-pointer hover:r-4 hover:opacity-100 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', 'Weekly (${type})', ${p.val7}, '${color}')"></circle>`;
+            }
+            // 30d Dots
+            if (chartState.show30d) {
+                circlesHtml += `<circle cx="${x}" cy="${y30}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '30d (${type})', ${p.val30}, '${color}')"></circle>`;
+            }
+            // 60d Dots
+            if (chartState.show60d) {
+                circlesHtml += `<circle cx="${x}" cy="${y60}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" opacity="0.3" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
+            }
         });
 
-        // Weekly Line (Thin, Dotted)
-        pathsHtml += `<path d="${d7}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="2,2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5" />`;
-        // 30d Line (Solid, Thick)
-        pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
-        // 60d Line (Dashed)
-        pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />`;
+        if (chartState.showWeekly) {
+            pathsHtml += `<path d="${d7}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="2,2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5" />`;
+        }
+        if (chartState.show30d) {
+            pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
+        }
+        if (chartState.show60d) {
+            pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />`;
+        }
     });
 
     const axisPoints = getRollingPoints(logData, 'All', isCount);
@@ -297,7 +311,6 @@ const renderDynamicCharts = () => {
     const container = document.getElementById('trend-charts-container');
     if (!container) return;
 
-    // Toggle Button Builder using new 'bg-icon-x' classes
     const buildSportToggle = (type, label, colorClass) => {
         const isActive = chartState[type];
         const bg = isActive ? colorClass : 'bg-slate-800';
@@ -314,31 +327,41 @@ const renderDynamicCharts = () => {
         return `<button onclick="window.toggleTrendTime('${range}')" class="${bg} ${text} ${border} border px-3 py-1 rounded text-xs transition-all hover:opacity-90">${label}</button>`;
     };
 
+    const buildLineToggle = (lineType, label) => {
+        const isActive = chartState[lineType];
+        const bg = isActive ? 'bg-slate-600' : 'bg-slate-800';
+        const text = isActive ? 'text-white font-bold' : 'text-slate-400';
+        const border = isActive ? 'border-transparent' : 'border-slate-600';
+        return `<button onclick="window.toggleTrendLine('${lineType}')" class="${bg} ${text} ${border} border px-3 py-1 rounded text-xs transition-all hover:opacity-90">${label}</button>`;
+    };
+
     const controlsHtml = `
-        <div class="flex flex-col sm:flex-row gap-4 mb-6">
-            <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Sports:</span>
-                ${buildSportToggle('All', 'All', 'bg-icon-all')}
-                ${buildSportToggle('Bike', 'Bike', 'bg-icon-bike')}
-                ${buildSportToggle('Run', 'Run', 'bg-icon-run')}
-                ${buildSportToggle('Swim', 'Swim', 'bg-icon-swim')}
+        <div class="flex flex-col gap-4 mb-6">
+            <div class="flex flex-col sm:flex-row gap-4 justify-between">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Sports:</span>
+                    ${buildSportToggle('All', 'All', 'bg-icon-all')}
+                    ${buildSportToggle('Bike', 'Bike', 'bg-icon-bike')}
+                    ${buildSportToggle('Run', 'Run', 'bg-icon-run')}
+                    ${buildSportToggle('Swim', 'Swim', 'bg-icon-swim')}
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Range:</span>
+                    ${buildTimeToggle('30d', '30d')}
+                    ${buildTimeToggle('60d', '60d')}
+                    ${buildTimeToggle('90d', '90d')}
+                    ${buildTimeToggle('6m', '6m')}
+                    ${buildTimeToggle('1y', '1y')}
+                </div>
             </div>
-            <div class="flex items-center gap-2 flex-wrap sm:ml-auto">
-                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Range:</span>
-                ${buildTimeToggle('30d', '30d')}
-                ${buildTimeToggle('60d', '60d')}
-                ${buildTimeToggle('90d', '90d')}
-                ${buildTimeToggle('6m', '6m')}
-                ${buildTimeToggle('1y', '1y')}
+            <div class="flex items-center gap-2 flex-wrap border-t border-slate-700 pt-3">
+                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Lines:</span>
+                ${buildLineToggle('showWeekly', 'Weekly (7d)')}
+                ${buildLineToggle('show30d', '30d Avg')}
+                ${buildLineToggle('show60d', '60d Avg')}
             </div>
         </div>
         <div id="trend-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity"></div>
-        
-        <div class="flex gap-4 text-[10px] text-slate-400 font-mono justify-end mb-2">
-            <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400 border-b border-dotted border-white opacity-50"></div> Weekly</span>
-            <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400"></div> 30d Avg</span>
-            <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400 border-b border-dashed"></div> 60d Avg</span>
-        </div>
     `;
 
     container.innerHTML = `${controlsHtml}${buildTrendChart("Rolling Adherence (Duration Based)", false)}${buildTrendChart("Rolling Adherence (Count Based)", true)}`;
