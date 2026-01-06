@@ -97,9 +97,9 @@ const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
 };
 
 const getIconForType = (type) => {
-    if (type === 'Bike') return '<i class="fa-solid fa-bicycle text-blue-500 text-xl"></i>';
-    if (type === 'Run') return '<i class="fa-solid fa-person-running text-emerald-500 text-xl"></i>';
-    if (type === 'Swim') return '<i class="fa-solid fa-person-swimming text-cyan-500 text-xl"></i>';
+    if (type === 'Bike') return '<i class="fa-solid fa-bicycle icon-bike text-xl"></i>';
+    if (type === 'Run') return '<i class="fa-solid fa-person-running icon-run text-xl"></i>';
+    if (type === 'Swim') return '<i class="fa-solid fa-person-swimming icon-swim text-xl"></i>';
     return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
 };
 
@@ -376,7 +376,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             const colorMap = {'bg-emerald-500': '#10b981', 'bg-yellow-500': '#eab308', 'bg-red-500': '#ef4444', 'bg-slate-600': '#475569', 'bg-blue-500': '#3b82f6'}; const planHex = colorMap[planColorClass] || '#3b82f6'; const planBarStyle = `background: repeating-linear-gradient(45deg, ${planHex}20, ${planHex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${planHex}40;`; const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80'; const planHrs = (b.plannedMins / 60).toFixed(1); const actHrs = (b.actualMins / 60).toFixed(1);
             barsHtml += `<div class="flex flex-col items-center gap-1 flex-1 group relative"><div class="relative w-full bg-slate-800/30 rounded-t-sm h-32 flex items-end justify-center"><div class="absolute -top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap text-center pointer-events-none shadow-xl"><div class="mb-1 leading-tight"><div>Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m</div><div class="text-[10px] text-slate-400 font-normal mt-0.5">Plan: ${planHrs}h | Act: ${actHrs}h</div></div><div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1">Growth: ${growthLabel}</div></div><div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div><div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualColorClass} ${actualOpacity} rounded-t-sm"></div></div><span class="text-[9px] text-slate-500 font-mono text-center leading-none mt-1">${b.label}${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400 font-bold">NEXT</span>' : ''}</span></div>`;
         });
-        let iconHtml = '<i class="fa-solid fa-chart-column text-blue-500"></i>'; if (sportType === 'Bike') iconHtml = '<i class="fa-solid fa-bicycle text-blue-500"></i>'; if (sportType === 'Run') iconHtml = '<i class="fa-solid fa-person-running text-emerald-500"></i>'; if (sportType === 'Swim') iconHtml = '<i class="fa-solid fa-person-swimming text-cyan-500"></i>';
+        let iconHtml = '<i class="fa-solid fa-chart-column text-blue-500"></i>'; if (sportType === 'Bike') iconHtml = '<i class="fa-solid fa-bicycle icon-bike"></i>'; if (sportType === 'Run') iconHtml = '<i class="fa-solid fa-person-running icon-run"></i>'; if (sportType === 'Swim') iconHtml = '<i class="fa-solid fa-person-swimming icon-swim"></i>';
         return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4"><div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2"><h3 class="text-sm font-bold text-white flex items-center gap-2">${iconHtml} ${title}</h3></div><div class="flex items-start justify-between gap-1 w-full">${barsHtml}</div></div>`;
     } catch (e) { return `<div class="p-4 text-red-400">Chart Error: ${e.message}</div>`; }
 };
