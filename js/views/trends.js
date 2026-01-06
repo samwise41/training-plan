@@ -105,7 +105,7 @@ const getIconForType = (type) => {
     if (type === 'Bike') return '<i class="fa-solid fa-bicycle icon-bike text-xl"></i>';
     if (type === 'Run') return '<i class="fa-solid fa-person-running icon-run text-xl"></i>';
     if (type === 'Swim') return '<i class="fa-solid fa-person-swimming icon-swim text-xl"></i>';
-    return '<i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>';
+    return '<i class="fa-solid fa-chart-line icon-all text-xl"></i>';
 };
 
 window.toggleTrendSeries = (type) => {
@@ -292,10 +292,10 @@ const renderDynamicCharts = () => {
         <div class="flex flex-col sm:flex-row gap-4 mb-6">
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Sports:</span>
-                ${buildSportToggle('All', 'All', 'bg-purple-500')}
-                ${buildSportToggle('Bike', 'Bike', 'bg-blue-500')}
-                ${buildSportToggle('Run', 'Run', 'bg-emerald-500')}
-                ${buildSportToggle('Swim', 'Swim', 'bg-cyan-500')}
+                ${buildSportToggle('All', 'All', 'icon-all')}
+                ${buildSportToggle('Bike', 'Bike', 'icon-bike')}
+                ${buildSportToggle('Run', 'Run', 'icon-run')}
+                ${buildSportToggle('Swim', 'Swim', 'icon-swim')}
             </div>
             <div class="flex items-center gap-2 flex-wrap sm:ml-auto">
                 <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Range:</span>
