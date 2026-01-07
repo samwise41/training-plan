@@ -67,12 +67,13 @@ const chartState = {
     Bike: false,
     Run: false,
     Swim: false,
-    timeRange: '60d' 
+    timeRange: '60d',
+    showWeekly: true, // Default ON
+    show30d: true,    // Default ON
+    show60d: false    // Default OFF
 };
 
-// Colors - Updated to use CSS Variables so they match your styles.css
-// Note: We use getComputedStyle logic or just raw vars if your graph library supports it.
-// Since this is custom SVG, we can inject var(--x) directly into the stroke attributes.
+// --- UPDATED COLORS TO USE CSS VARIABLES ---
 const colorMap = { 
     All: 'var(--color-all)', 
     Bike: 'var(--color-bike)',
@@ -124,6 +125,13 @@ window.toggleTrendTime = (range) => {
     renderDynamicCharts();
 };
 
+window.toggleTrendLine = (lineType) => {
+    if (chartState.hasOwnProperty(lineType)) {
+        chartState[lineType] = !chartState[lineType];
+        renderDynamicCharts();
+    }
+};
+
 // --- DATA CALCULATION ---
 const getRollingPoints = (data, typeFilter, isCount) => {
     const points = [];
@@ -134,6 +142,7 @@ const getRollingPoints = (data, typeFilter, isCount) => {
     if (chartState.timeRange === '30d') weeksBack = 4;
     else if (chartState.timeRange === '60d') weeksBack = 8;
     else if (chartState.timeRange === '90d') weeksBack = 13;
+    else if (chartState.timeRange === '1y') weeksBack = 52; 
 
     for (let i = weeksBack; i >= 0; i--) {
         const anchorDate = new Date(today);
@@ -153,10 +162,14 @@ const getRollingPoints = (data, typeFilter, isCount) => {
                     }
                 }
             });
-            // Cap at 300% to prevent outliers from breaking the graph
             return plan > 0 ? Math.min(Math.round((act / plan) * 100), 300) : 0; 
         };
-        points.push({ label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`, val30: getStats(30), val60: getStats(60) });
+        points.push({ 
+            label: `${anchorDate.getMonth()+1}/${anchorDate.getDate()}`, 
+            val7: getStats(7),
+            val30: getStats(30), 
+            val60: getStats(60) 
+        });
     }
     return points;
 };
@@ -167,14 +180,15 @@ const buildTrendChart = (title, isCount) => {
     const padding = { top: 20, bottom: 30, left: 40, right: 20 };
     const chartW = width - padding.left - padding.right; const chartH = height - padding.top - padding.bottom;
 
-    const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange'); 
+    const activeTypes = Object.keys(chartState).filter(k => chartState[k] && k !== 'timeRange' && !k.startsWith('show')); 
     let allValues = [];
     
     activeTypes.forEach(type => {
         const pts = getRollingPoints(logData, type, isCount);
         pts.forEach(p => {
-            if(p.val30 > 0) allValues.push(p.val30);
-            if(p.val60 > 0) allValues.push(p.val60);
+            if(chartState.showWeekly && p.val7 > 0) allValues.push(p.val7);
+            if(chartState.show30d && p.val30 > 0) allValues.push(p.val30);
+            if(chartState.show60d && p.val60 > 0) allValues.push(p.val60);
         });
     });
 
@@ -192,7 +206,7 @@ const buildTrendChart = (title, isCount) => {
     const getY = (val) => padding.top + chartH - ((val - domainMin) / (domainMax - domainMin)) * chartH;
     const getX = (idx, total) => padding.left + (idx / (total - 1)) * chartW;
 
-    // --- GRID LINES ---
+    // --- GRID LINES (Long Dash 8,8) ---
     const gridLinesDef = [
         { val: 100, color: '#ffffff' }, // White
         { val: 80, color: '#eab308' },  // Yellow
@@ -204,8 +218,8 @@ const buildTrendChart = (title, isCount) => {
         if (line.val <= domainMax && line.val >= domainMin) {
             const y = getY(line.val);
             gridHtml += `
-                <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="${line.color}" stroke-width="1" stroke-dasharray="4" opacity="0.6" />
-                <text x="${padding.left - 5}" y="${y + 3}" text-anchor="end" font-size="9" fill="${line.color}" font-weight="bold">${line.val}%</text>
+                <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="${line.color}" stroke-width="1" stroke-dasharray="8,8" opacity="0.3" />
+                <text x="${padding.left - 5}" y="${y + 3}" text-anchor="end" font-size="9" fill="${line.color}" font-weight="bold" opacity="0.8">${line.val}%</text>
             `;
         }
     });
@@ -215,26 +229,49 @@ const buildTrendChart = (title, isCount) => {
 
     activeTypes.forEach(type => {
         const dataPoints = getRollingPoints(logData, type, isCount);
-        const color = colorMap[type]; // Now returns var(--color-x)
+        const color = colorMap[type]; 
         if (dataPoints.length < 2) return;
 
+        let d7 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val7)}`;
         let d30 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val30)}`;
         let d60 = `M ${getX(0, dataPoints.length)} ${getY(dataPoints[0].val60)}`;
         
         dataPoints.forEach((p, i) => {
             const x = getX(i, dataPoints.length);
+            const y7 = getY(p.val7);
             const y30 = getY(p.val30);
             const y60 = getY(p.val60);
 
+            d7 += ` L ${x} ${y7}`;
             d30 += ` L ${x} ${y30}`;
             d60 += ` L ${x} ${y60}`;
 
-            circlesHtml += `<circle cx="${x}" cy="${y30}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '30d (${type})', ${p.val30}, '${color}')"></circle>`;
-            circlesHtml += `<circle cx="${x}" cy="${y60}" r="3" fill="${color}" stroke="#1e293b" stroke-width="1" opacity="0.6" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
+            // Weekly Dots (Solid Focus)
+            if (chartState.showWeekly) {
+                circlesHtml += `<circle cx="${x}" cy="${y7}" r="2.5" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-4 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', 'Weekly (${type})', ${p.val7}, '${color}')"></circle>`;
+            }
+            // 30d Dots
+            if (chartState.show30d) {
+                circlesHtml += `<circle cx="${x}" cy="${y30}" r="2" fill="${color}" stroke="none" opacity="0.6" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '30d (${type})', ${p.val30}, '${color}')"></circle>`;
+            }
+            // 60d Dots
+            if (chartState.show60d) {
+                circlesHtml += `<circle cx="${x}" cy="${y60}" r="2" fill="${color}" stroke="none" opacity="0.3" class="cursor-pointer hover:r-5 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', '60d (${type})', ${p.val60}, '${color}')"></circle>`;
+            }
         });
 
-        pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`;
-        pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />`;
+        // Weekly Line (Solid)
+        if (chartState.showWeekly) {
+            pathsHtml += `<path d="${d7}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />`;
+        }
+        // 30d Line (Dashed 4,4)
+        if (chartState.show30d) {
+            pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" />`;
+        }
+        // 60d Line (Dotted 2,2)
+        if (chartState.show60d) {
+            pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="2,2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />`;
+        }
     });
 
     const axisPoints = getRollingPoints(logData, 'All', isCount);
@@ -242,6 +279,8 @@ const buildTrendChart = (title, isCount) => {
     let modVal = 4;
     if (chartState.timeRange === '30d') modVal = 1;
     else if (chartState.timeRange === '60d') modVal = 2;
+    else if (chartState.timeRange === '90d') modVal = 3;
+    else if (chartState.timeRange === '1y') modVal = 8;
     
     axisPoints.forEach((p, i) => {
         if (i % modVal === 0 || i === axisPoints.length - 1) {
@@ -249,7 +288,6 @@ const buildTrendChart = (title, isCount) => {
         }
     });
 
-    // Added overflow-hidden to prevent outlier lines from leaving the box
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4 relative overflow-hidden">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
@@ -276,7 +314,6 @@ const renderDynamicCharts = () => {
     const container = document.getElementById('trend-charts-container');
     if (!container) return;
 
-    // Toggle Button Builder using new 'bg-icon-x' classes
     const buildSportToggle = (type, label, colorClass) => {
         const isActive = chartState[type];
         const bg = isActive ? colorClass : 'bg-slate-800';
@@ -293,32 +330,53 @@ const renderDynamicCharts = () => {
         return `<button onclick="window.toggleTrendTime('${range}')" class="${bg} ${text} ${border} border px-3 py-1 rounded text-xs transition-all hover:opacity-90">${label}</button>`;
     };
 
+    const buildLineToggle = (lineType, label) => {
+        const isActive = chartState[lineType];
+        const bg = isActive ? 'bg-slate-600' : 'bg-slate-800';
+        const text = isActive ? 'text-white font-bold' : 'text-slate-400';
+        const border = isActive ? 'border-transparent' : 'border-slate-600';
+        return `<button onclick="window.toggleTrendLine('${lineType}')" class="${bg} ${text} ${border} border px-3 py-1 rounded text-xs transition-all hover:opacity-90">${label}</button>`;
+    };
+
     const controlsHtml = `
-        <div class="flex flex-col sm:flex-row gap-4 mb-6">
-            <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Sports:</span>
-                ${buildSportToggle('All', 'All', 'bg-icon-all')}
-                ${buildSportToggle('Bike', 'Bike', 'bg-icon-bike')}
-                ${buildSportToggle('Run', 'Run', 'bg-icon-run')}
-                ${buildSportToggle('Swim', 'Swim', 'bg-icon-swim')}
+        <div class="flex flex-col gap-4 mb-6">
+            <div class="flex flex-col sm:flex-row gap-4 justify-between">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Sports:</span>
+                    ${buildSportToggle('All', 'All', 'bg-icon-all')}
+                    ${buildSportToggle('Bike', 'Bike', 'bg-icon-bike')}
+                    ${buildSportToggle('Run', 'Run', 'bg-icon-run')}
+                    ${buildSportToggle('Swim', 'Swim', 'bg-icon-swim')}
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Range:</span>
+                    ${buildTimeToggle('30d', '30d')}
+                    ${buildTimeToggle('60d', '60d')}
+                    ${buildTimeToggle('90d', '90d')}
+                    ${buildTimeToggle('6m', '6m')}
+                    ${buildTimeToggle('1y', '1y')}
+                </div>
             </div>
-            <div class="flex items-center gap-2 flex-wrap sm:ml-auto">
-                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Range:</span>
-                ${buildTimeToggle('30d', '30d')}
-                ${buildTimeToggle('60d', '60d')}
-                ${buildTimeToggle('90d', '90d')}
-                ${buildTimeToggle('6m', '6m')}
+            <div class="flex items-center gap-2 flex-wrap border-t border-slate-700 pt-3">
+                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Lines:</span>
+                ${buildLineToggle('showWeekly', 'Weekly')}
+                ${buildLineToggle('show30d', '30d Avg')}
+                ${buildLineToggle('show60d', '60d Avg')}
             </div>
         </div>
         <div id="trend-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity"></div>
-        
+    `;
+
+    // Updated LEGEND to reflect new styles
+    const legendHtml = `
         <div class="flex gap-4 text-[10px] text-slate-400 font-mono justify-end mb-2">
-            <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400"></div> 30d Avg</span>
-            <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400 border-b border-dashed"></div> 60d Avg</span>
+            <span class="flex items-center gap-1"><div class="w-4 h-0.5 bg-slate-400"></div> Weekly</span>
+            <span class="flex items-center gap-1"><div class="w-4 h-0.5 border-t-2 border-dashed border-slate-400"></div> 30d Avg</span>
+            <span class="flex items-center gap-1"><div class="w-4 h-0.5 border-t-2 border-dotted border-slate-400"></div> 60d Avg</span>
         </div>
     `;
 
-    container.innerHTML = `${controlsHtml}${buildTrendChart("Rolling Adherence (Duration Based)", false)}${buildTrendChart("Rolling Adherence (Count Based)", true)}`;
+    container.innerHTML = `${controlsHtml}${legendHtml}${buildTrendChart("Rolling Adherence (Duration Based)", false)}${buildTrendChart("Rolling Adherence (Count Based)", true)}`;
 };
 
 const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
@@ -372,23 +430,29 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             if (bucket) { bucket.actualMins += (item.actualDuration || 0); bucket.plannedMins += (item.plannedDuration || 0); }
         });
         let barsHtml = ''; const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
+        
+        // Use sport color for the PLAN bar
+        const sportColorVar = colorMap[sportType] || colorMap.All;
+        
         buckets.forEach((b, idx) => {
             const isCurrentWeek = (idx === buckets.length - 1); const hActual = Math.round((b.actualMins / maxVol) * 100); const hPlan = Math.round((b.plannedMins / maxVol) * 100); const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
-            let actualColorClass = 'bg-blue-500'; let planColorClass = 'bg-blue-500'; let growthLabel = "--"; let growthColor = "text-slate-400";
+            let actualColorClass = 'bg-blue-500'; let growthLabel = "--"; let growthColor = "text-slate-400";
             if (idx > 0 && prevActual > 0) {
-                const actualGrowth = (b.actualMins - prevActual) / prevActual; const planGrowth = (b.plannedMins - prevActual) / prevActual;
+                const actualGrowth = (b.actualMins - prevActual) / prevActual;
                 let limitRed = 0.15; let limitYellow = 0.10; if (sportType === 'Run') { limitRed = 0.10; limitYellow = 0.05; } else if (sportType === 'Bike' || sportType === 'Swim') { limitRed = 0.20; limitYellow = 0.15; }
                 const getColor = (pct) => { if (pct > limitRed) return 'bg-red-500'; if (pct > limitYellow) return 'bg-yellow-500'; if (pct < -0.20) return 'bg-slate-600'; return 'bg-emerald-500'; };
-                actualColorClass = getColor(actualGrowth); planColorClass = getColor(planGrowth);
-                const displayGrowth = isCurrentWeek ? planGrowth : actualGrowth; const sign = displayGrowth > 0 ? '▲' : (displayGrowth < 0 ? '▼' : ''); growthLabel = `${sign} ${Math.round(displayGrowth * 100)}%`;
+                actualColorClass = getColor(actualGrowth);
+                const displayGrowth = isCurrentWeek ? ((b.plannedMins - prevActual) / prevActual) : actualGrowth; const sign = displayGrowth > 0 ? '▲' : (displayGrowth < 0 ? '▼' : ''); growthLabel = `${sign} ${Math.round(displayGrowth * 100)}%`;
                 if (displayGrowth > limitRed) growthColor = "text-red-400"; else if (displayGrowth > limitYellow) growthColor = "text-yellow-400"; else if (displayGrowth < -0.20) growthColor = "text-slate-500"; else growthColor = "text-emerald-400";
             }
-            // Updated Volume Chart Icons to use your new classes
-            const colorMap = {'bg-emerald-500': '#10b981', 'bg-yellow-500': '#eab308', 'bg-red-500': '#ef4444', 'bg-slate-600': '#475569', 'bg-blue-500': '#3b82f6'}; const planHex = colorMap[planColorClass] || '#3b82f6'; const planBarStyle = `background: repeating-linear-gradient(45deg, ${planHex}20, ${planHex}20 4px, transparent 4px, transparent 8px); border: 1px solid ${planHex}40;`; const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80'; const planHrs = (b.plannedMins / 60).toFixed(1); const actHrs = (b.actualMins / 60).toFixed(1);
+            
+            // Apply sport color dynamically to the Plan Bar
+            const planBarStyle = `background: repeating-linear-gradient(45deg, ${sportColorVar} 0, ${sportColorVar} 4px, transparent 4px, transparent 8px); border: 1px solid ${sportColorVar}; opacity: 0.2;`;
+            const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80'; const planHrs = (b.plannedMins / 60).toFixed(1); const actHrs = (b.actualMins / 60).toFixed(1);
+            
             barsHtml += `<div class="flex flex-col items-center gap-1 flex-1 group relative"><div class="relative w-full bg-slate-800/30 rounded-t-sm h-32 flex items-end justify-center"><div class="absolute -top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap text-center pointer-events-none shadow-xl"><div class="mb-1 leading-tight"><div>Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m</div><div class="text-[10px] text-slate-400 font-normal mt-0.5">Plan: ${planHrs}h | Act: ${actHrs}h</div></div><div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1">Growth: ${growthLabel}</div></div><div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div><div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualColorClass} ${actualOpacity} rounded-t-sm"></div></div><span class="text-[9px] text-slate-500 font-mono text-center leading-none mt-1">${b.label}${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400 font-bold">NEXT</span>' : ''}</span></div>`;
         });
         
-        // Updated Icons with new classes
         let iconHtml = '<i class="fa-solid fa-chart-column icon-all"></i>'; 
         if (sportType === 'Bike') iconHtml = '<i class="fa-solid fa-bicycle icon-bike"></i>'; 
         if (sportType === 'Run') iconHtml = '<i class="fa-solid fa-person-running icon-run"></i>'; 
@@ -437,7 +501,7 @@ export function renderTrends(mergedLogData) {
     const adherenceSection = buildCollapsibleSection('adherence-section', 'Compliance Overview', adherenceHtml, true);
 
     // 5. Duration Tool
-    const durationHtml = `<div class="kpi-card bg-slate-800/20 border-t-4 border-t-text-blue-500"><div class="kpi-header border-b border-slate-700 pb-2 mb-4"><i class="fa-solid fa-filter text-text-blue-500 text-xl"></i><span class="kpi-title ml-2 text-text-blue-500">Duration Analysis Tool</span></div><div class="flex flex-col sm:flex-row gap-4 mb-8"><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Sport Filter</label><select id="kpi-sport-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Sports</option><option value="Bike">Bike</option><option value="Run">Run</option><option value="Swim">Swim</option></select></div><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Day Filter</label><select id="kpi-day-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Days</option><option value="Weekday">Weekday (Mon-Fri)</option><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option></select></div><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Time Period</label><select id="kpi-time-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Time</option><option value="30">Last 30 Days</option><option value="60">Last 60 Days</option><option value="90">Last 90 Days</option></select></div></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Planned</div><div id="kpi-analysis-planned" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Actual</div><div id="kpi-analysis-actual" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Difference</div><div id="kpi-analysis-diff" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Adherence</div><div id="kpi-analysis-pct" class="text-xl font-bold text-white">--</div></div></div><div class="border-t border-slate-700 pt-4"><h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Detailed Log (Matches Filters)</h4><div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-700 rounded-lg"><table id="kpi-debug-table" class="w-full text-left text-sm text-slate-300"><thead class="bg-slate-900 sticky top-0"><tr><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Date</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Day</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Type</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Plan</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th></tr></thead><tbody class="divide-y divide-slate-700"></tbody></table></div></div></div><div class="mt-8 text-center text-xs text-slate-500 italic">* 'h' in duration column denotes hours, otherwise minutes assumed.</div>`;
+    const durationHtml = `<div class="kpi-card bg-slate-800/20 border-t-4 border-t-purple-500"><div class="kpi-header border-b border-slate-700 pb-2 mb-4"><i class="fa-solid fa-filter text-purple-500 text-xl"></i><span class="kpi-title ml-2 text-purple-400">Duration Analysis Tool</span></div><div class="flex flex-col sm:flex-row gap-4 mb-8"><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Sport Filter</label><select id="kpi-sport-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Sports</option><option value="Bike">Bike</option><option value="Run">Run</option><option value="Swim">Swim</option></select></div><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Day Filter</label><select id="kpi-day-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Days</option><option value="Weekday">Weekday (Mon-Fri)</option><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option></select></div><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Time Period</label><select id="kpi-time-select" onchange="window.App.updateDurationAnalysis()" class="gear-select"><option value="All">All Time</option><option value="30">Last 30 Days</option><option value="60">Last 60 Days</option><option value="90">Last 90 Days</option></select></div></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Planned</div><div id="kpi-analysis-planned" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Actual</div><div id="kpi-analysis-actual" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Difference</div><div id="kpi-analysis-diff" class="text-xl font-bold text-white">--</div></div><div class="bg-slate-800/50 p-4 rounded-lg text-center border border-slate-700 shadow-sm"><div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Adherence</div><div id="kpi-analysis-pct" class="text-xl font-bold text-white">--</div></div></div><div class="border-t border-slate-700 pt-4"><h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Detailed Log (Matches Filters)</h4><div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-700 rounded-lg"><table id="kpi-debug-table" class="w-full text-left text-sm text-slate-300"><thead class="bg-slate-900 sticky top-0"><tr><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Date</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Day</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500">Type</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Plan</th><th class="py-2 px-2 text-xs font-bold uppercase text-slate-500 text-center">Act</th></tr></thead><tbody class="divide-y divide-slate-700"></tbody></table></div></div></div><div class="mt-8 text-center text-xs text-slate-500 italic">* 'h' in duration column denotes hours, otherwise minutes assumed.</div>`;
     const durationSection = buildCollapsibleSection('duration-section', 'Deep Dive Analysis', durationHtml, true);
 
     setTimeout(() => renderDynamicCharts(), 0);
