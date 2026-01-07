@@ -125,6 +125,17 @@
 
         async init() {
             this.checkSecurity();
+            // --- FIX STARTS HERE ---
+            // Immediately highlight the correct tab based on the URL hash 
+            // so the user doesn't see the "Dashboard" default.
+            const initialHash = window.location.hash.substring(1);
+            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness'];
+            const startView = validViews.includes(initialHash) ? initialHash : 'dashboard';
+    
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            const initialNavBtn = document.getElementById(`nav-${startView}`);
+            if (initialNavBtn) initialNavBtn.classList.add('active');
+            // --- FIX ENDS HERE ---
             try {
                 const [planRes, gearRes, archiveRes] = await Promise.all([
                     fetch(`./${CONFIG.PLAN_FILE}?t=${cacheBuster}`),
