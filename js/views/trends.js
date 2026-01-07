@@ -456,7 +456,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
         
-        // --- 1. PARSE LIMITS FROM MARKDOWN (Preserved) ---
+        // --- 1. PARSE LIMITS ---
         const md = window.App?.planMd || "";
         const getCap = (keyword) => {
             const regex = new RegExp(`\\*\\*${keyword} Cap:\\*\\*\\s*\\[(\\d+)%\\]`, 'i');
@@ -468,7 +468,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         let limitRed = getCap(sportType) !== null ? getCap(sportType) : (defaults[sportType] || 0.15);
         let limitYellow = Math.max(0, limitRed - 0.05);
 
-        // --- 2. PREPARE BUCKETS ---
+        // --- 2. PREPARE BUCKETS (12 WEEKS) ---
         const buckets = []; 
         const now = new Date(); 
         const day = now.getDay(); 
@@ -477,6 +477,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         endOfCurrentWeek.setDate(now.getDate() + distToSat); 
         endOfCurrentWeek.setHours(23, 59, 59, 999);
 
+        // Loop 11 = 12 weeks total
         for (let i = 11; i >= 0; i--) {
             const end = new Date(endOfCurrentWeek); 
             end.setDate(end.getDate() - (i * 7)); 
@@ -486,26 +487,19 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             buckets.push({ start, end, label: `${end.getMonth()+1}/${end.getDate()}`, actualMins: 0, plannedMins: 0 });
         }
 
-        // --- 3. AGGREGATE DATA (FIXED LOGIC) ---
+        // --- 3. AGGREGATE DATA ---
         data.forEach(item => {
             if (!item.date) return; 
-
-            // Find the correct week bucket for this item
             const t = item.date.getTime(); 
             const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
             
             if (bucket) { 
-                // A. Handle PLANNED Volume
-                // Only add to Plan if the PLANNED type matches the filter
+                // Plan Check
                 if (sportType === 'All' || item.type === sportType) {
                     bucket.plannedMins += (item.plannedDuration || 0); 
                 }
-
-                // B. Handle ACTUAL Volume
-                // Only add to Actual if the ACTUAL type matches the filter
-                // (Fallback to item.type if actualType is missing/undefined, though usually actualType is set on completion)
+                // Actual Check
                 const executedType = item.actualType || item.type;
-                
                 if (sportType === 'All' || executedType === sportType) {
                     bucket.actualMins += (item.actualDuration || 0);
                 }
@@ -515,7 +509,6 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         let barsHtml = ''; 
         const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
 
-        // --- 4. COLOR HELPER ---
         const getStatusColor = (pctChange) => {
             if (pctChange > limitRed) return ['bg-red-500', '#ef4444'];
             if (pctChange > limitYellow) return ['bg-yellow-500', '#eab308'];
@@ -523,15 +516,15 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             return ['bg-emerald-500', '#10b981'];
         };
 
-        // --- 5. RENDER BARS ---
+        // --- 4. RENDER BARS ---
         buckets.forEach((b, idx) => {
             const isCurrentWeek = (idx === buckets.length - 1); 
+
             const hActual = Math.round((b.actualMins / maxVol) * 100); 
             const hPlan = Math.round((b.plannedMins / maxVol) * 100); 
-            
             const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
 
-            let actualGrowth = 0;
+            let actualGrowth = 0; 
             let plannedGrowth = 0;
 
             if (prevActual > 0) {
@@ -539,7 +532,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
                 plannedGrowth = (b.plannedMins - prevActual) / prevActual;
             }
 
-            const [actualClass, _] = getStatusColor(actualGrowth);
+            const [actualClass, actualHex] = getStatusColor(actualGrowth);
             const [__, planHex] = getStatusColor(plannedGrowth);
 
             const displayGrowth = actualGrowth; 
@@ -553,36 +546,27 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
 
             const planBarStyle = `
                 background: repeating-linear-gradient(
-                    45deg, 
-                    ${planHex} 0, 
-                    ${planHex} 4px, 
-                    transparent 4px, 
-                    transparent 8px
-                ); 
-                border: 1px solid ${planHex}; 
-                opacity: 0.3;
-            `;
+                    45deg, ${planHex} 0, ${planHex} 4px, transparent 4px, transparent 8px
+                ); border: 1px solid ${planHex}; opacity: 0.3;`;
 
             const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80'; 
-            const planHrs = (b.plannedMins / 60).toFixed(1); 
-            const actHrs = (b.actualMins / 60).toFixed(1);
             
+            // --- JS TOOLTIP LOGIC ---
+            // We pass the data into showTrendTooltip so it handles the positioning
+            // Args: evt, date, label, value, color, footer, footerColor
+            const tooltipValue = `Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m`;
+            const tooltipFooter = `vs Prior Act: ${growthLabel} (Limit: ${Math.round(limitRed*100)}%)`;
+            
+            // Note: We escape the strings to ensure valid HTML
+            const clickAttr = `onclick="window.showTrendTooltip(event, '${b.label}', 'Volume Summary', '${tooltipValue}', '${actualHex}', '${tooltipFooter}', '${growthColor}')"`;
+
             barsHtml += `
-                <div class="flex flex-col items-center gap-1 flex-1 group relative">
-                    <div class="relative w-full bg-slate-800/30 rounded-t-sm h-32 flex items-end justify-center">
-                        <div class="absolute -top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap text-center pointer-events-none shadow-xl">
-                            <div class="mb-1 leading-tight">
-                                <div>Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m</div>
-                                <div class="text-[10px] text-slate-400 font-normal mt-0.5">Plan: ${planHrs}h | Act: ${actHrs}h</div>
-                            </div>
-                            <div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1">
-                                vs Prior Act: ${growthLabel} (Limit: ${Math.round(limitRed*100)}%)
-                            </div>
-                        </div>
+                <div class="flex flex-col items-center gap-1 flex-1 group relative cursor-pointer" ${clickAttr}>
+                    <div class="relative w-full bg-slate-800/30 rounded-t-sm h-32 flex items-end justify-center pointer-events-none">
                         <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div>
                         <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualClass} ${actualOpacity} rounded-t-sm"></div>
                     </div>
-                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none mt-1">
+                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none mt-1 pointer-events-none">
                         ${b.label}
                         ${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400 font-bold">NEXT</span>' : ''}
                     </span>
