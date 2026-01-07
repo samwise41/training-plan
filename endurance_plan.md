@@ -237,7 +237,7 @@ Use these mathematical rules to generate the specific duration and intensity for
 | COMPLETED | Thu | Rest | | |  | | 2026-01-01 |
 | COMPLETED | Wed | [BIKE] Steady State | 60 | [BIKE] Zwift - Zone 2 - 71% on Lutscher CCW in Innsbruck 62 minutes | 62 | Durat 60 mins. Zone 2 (134W - 180W). Focus: Smooth. | 2025-12-31 |
 | COMPLETED | Tue | [RUN] Aerobic Base | 45 | [RUN] Morning Run 50:00 | 50 | Durat 45 mins. Zone 2 (HR: 140-152 bpm). Focus: Aerobic Base. | 2025-12-30 |
-| COMPLETED | Mon | [SWIM] Technique Focus | 30 min | | 10 | ~500m - 800m. Zone 1 (RPE 3-4). Catch & Pull drills. | 2025-12-29 |
+| MISSED | Mon | [SWIM] Technique Focus | 30 min | | | ~500m - 800m. Zone 1 (RPE 3-4). Catch & Pull drills. | 2025-12-29 |
 | COMPLETED | Sun | Rest | | | | Weekly Planning Check-in. | 2025-12-28 |
 | COMPLETED | Sat | Long Ride [BIKE] | 180 | [BIKE] 1h Bike + 40m Swim | 60.5833 | Swapped Long Ride for Brick. | 2025-12-27 |
 | COMPLETED | Fri | Run Test [RUN] | 30 | [RUN] LTHR Test | 60.3 | 30m TT. Result: 171 bpm. | 2025-12-26 |
