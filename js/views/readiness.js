@@ -134,9 +134,9 @@ export function renderReadiness(mergedLogData, planMd) {
 
     // 3. Configuration using Semantic Classes (Brand Colors)
     const sportConfig = {
-        swim: { color: 'text-swim', icon: 'fa-person-swimming', label: 'Swim' },
-        bike: { color: 'text-bike', icon: 'fa-person-biking', label: 'Bike' },
-        run:  { color: 'text-run',  icon: 'fa-person-running',  label: 'Run' }
+        swim: { color: 'icon-swim', icon: 'fa-person-swimming', label: 'Swim' },
+        bike: { color: 'icon-bike', icon: 'fa-person-biking', label: 'Bike' },
+        run:  { color: 'icon-run',  icon: 'fa-person-running',  label: 'Run' }
     };
 
     // 4. Build HTML
