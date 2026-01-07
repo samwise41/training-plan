@@ -80,143 +80,6 @@ const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     `;
 };
 
-// --- NEW: Compact Event Banner Widget ---
-function buildNextEventBanner(planMd, fullLogData) {
-    // 1. Find the next event
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    
-    const lines = planMd.split('\n');
-    let nextEvent = null;
-    let inTable = false;
-
-    // Robust Event Parsing (matches readiness.js)
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line.includes('| **Date** |')) { inTable = true; continue; }
-        if (inTable && line.startsWith('| :---')) continue;
-        if (inTable && line.startsWith('|')) {
-            const cleanLine = line.replace(/^\||\|$/g, '');
-            const cols = cleanLine.split('|').map(c => c.trim());
-            
-            if (cols.length >= 2) {
-                const d = new Date(cols[0]);
-                if (!isNaN(d.getTime()) && d >= today) {
-                    nextEvent = {
-                        date: d,
-                        name: cols[1],
-                        priority: cols[3] || 'C',
-                        swimGoal: cols[7] || '',
-                        bikeGoal: cols[9] || '',
-                        runGoal: cols[11] || ''
-                    };
-                    break; // Stop at first upcoming event
-                }
-            }
-        } else if (inTable && line === '') inTable = false;
-    }
-
-    if (!nextEvent) return ''; // No widget if no event
-
-    // 2. Calculate Readiness Score
-    const parseDur = (str) => {
-        if (!str || str === '-' || str.toLowerCase() === 'n/a' || str.includes('km') || str.includes('mi')) return 0;
-        if (!isNaN(str) && str.trim() !== '') return parseInt(str);
-        let mins = 0;
-        if (str.includes('h')) {
-            const hParts = str.split('h');
-            mins += parseInt(hParts[0]) * 60;
-            if (hParts[1] && hParts[1].includes('m')) mins += parseInt(hParts[1]);
-        } else if (str.includes('m')) mins += parseInt(str);
-        else if (str.includes(':')) {
-            const parts = str.split(':');
-            mins += parseInt(parts[0]) * 60 + parseInt(parts[1]);
-        }
-        return Math.round(mins);
-    };
-
-    const lookbackDate = new Date();
-    lookbackDate.setDate(lookbackDate.getDate() - 30);
-    
-    let maxSwim = 0, maxBike = 0, maxRun = 0;
-    if (fullLogData && fullLogData.length > 0) {
-        fullLogData.forEach(d => {
-            const entryDate = new Date(d.date);
-            if (entryDate >= lookbackDate) {
-                let dur = 0;
-                if (typeof d.actualDuration === 'number') dur = d.actualDuration;
-                else if (typeof d.duration === 'string') dur = parseDur(d.duration);
-
-                if (d.type === 'Swim') maxSwim = Math.max(maxSwim, dur);
-                if (d.type === 'Bike') maxBike = Math.max(maxBike, dur);
-                if (d.type === 'Run') maxRun = Math.max(maxRun, dur);
-            }
-        });
-    }
-
-    const tgtSwim = parseDur(nextEvent.swimGoal);
-    const tgtBike = parseDur(nextEvent.bikeGoal);
-    const tgtRun  = parseDur(nextEvent.runGoal);
-
-    const getPct = (curr, tgt) => tgt > 0 ? Math.min(Math.round((curr/tgt)*100), 100) : 0;
-    
-    const swimPct = getPct(maxSwim, tgtSwim);
-    const bikePct = getPct(maxBike, tgtBike);
-    const runPct  = getPct(maxRun, tgtRun);
-
-    // Active percentages
-    const activePcts = [];
-    if (tgtSwim > 0) activePcts.push(swimPct);
-    if (tgtBike > 0) activePcts.push(bikePct);
-    if (tgtRun > 0)  activePcts.push(runPct);
-    
-    const readinessScore = activePcts.length > 0 ? Math.min(...activePcts) : 0;
-
-    // 3. UI Config (Matching Screenshot)
-    let scoreColor = "text-red-500";
-    let borderColor = "border-red-500/50";
-    let scoreLabel = "WARNING";
-    
-    if (readinessScore >= 85) { 
-        scoreColor = "text-emerald-500"; 
-        borderColor = "border-emerald-500/50";
-        scoreLabel = "READY"; 
-    } else if (readinessScore >= 60) { 
-        scoreColor = "text-yellow-500"; 
-        borderColor = "border-yellow-500/50";
-        scoreLabel = "BUILD"; 
-    }
-
-    const daysDiff = Math.ceil((nextEvent.date - today) / (1000 * 60 * 60 * 24));
-    const weeks = Math.floor(daysDiff / 7);
-    const days = daysDiff % 7;
-    const timeString = `${weeks}W ${days}D TO GO`;
-
-    return `
-    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mb-8 shadow-lg flex justify-between items-center relative overflow-hidden group">
-        <div class="absolute right-0 top-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-bl-full pointer-events-none"></div>
-
-        <div class="z-10">
-            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</div>
-            <h2 class="text-2xl md:text-3xl font-bold text-emerald-400 tracking-tight leading-none">${nextEvent.name}</h2>
-            <div class="text-xs font-mono text-slate-400 mt-2 flex items-center gap-2">
-                 <span class="bg-slate-700/50 px-2 py-0.5 rounded text-slate-300 uppercase">${timeString}</span>
-                 <span class="text-slate-600">|</span>
-                 <span>${nextEvent.date.toLocaleDateString()}</span>
-            </div>
-        </div>
-
-        <div class="flex flex-col items-center justify-center pl-6 border-l border-slate-700/50 z-10">
-             <div class="text-5xl font-black ${scoreColor} leading-none tracking-tighter drop-shadow-sm">${readinessScore}%</div>
-             <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Readiness</div>
-             <div class="mt-1 px-2 py-0.5 rounded bg-slate-900 border ${borderColor} ${scoreColor} text-[9px] font-bold uppercase tracking-wider font-mono shadow-sm">
-                ${scoreLabel}
-             </div>
-        </div>
-    </div>
-    `;
-}
-
 // Updated main render function
 export function renderDashboard(planMd, mergedLogData) {
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
@@ -228,7 +91,6 @@ export function renderDashboard(planMd, mergedLogData) {
     const fullLogData = mergedLogData || Parser.parseTrainingLog(planMd);
 
     // --- WIDGET CONSTRUCTION ---
-    const nextEventHtml = buildNextEventBanner(planMd, fullLogData); // The new banner
     const progressHtml = buildProgressWidget(workouts, fullLogData); // The existing weekly progress
     
     // --- SMART EVENT MAP (For Heatmap) ---
@@ -355,7 +217,6 @@ export function renderDashboard(planMd, mergedLogData) {
     }, 50);
 
     return `
-        ${nextEventHtml}
         ${progressHtml}
         ${plannedWorkoutsSection}
         <div class="grid grid-cols-1 gap-8 mt-8">${heatmapTrailingHtml}${heatmapYearHtml}</div>
