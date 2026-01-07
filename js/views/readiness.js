@@ -25,16 +25,17 @@ export function renderReadiness(mergedLogData, planMd) {
         // Process Data Rows
         if (inTable && line.startsWith('|')) {
             const cols = line.split('|').map(c => c.trim()).filter(c => c !== '');
-            // Relaxed check: As long as we have Date and Name, we accept it.
+            // Strict check: We need the basic columns
             if (cols.length >= 2) {
                 events.push({
                     dateStr: cols[0],
                     name: cols[1],
                     priority: cols[3] || 'C',
-                    // Raw columns (might be shifted if user missed pipes)
-                    col7: cols[7] || '',
-                    col9: cols[9] || '',
-                    col11: cols[11] || ''
+                    // STRICT MAPPING: No guessing. 
+                    // Col 7 = Swim Goal, Col 9 = Bike Goal, Col 11 = Run Goal
+                    swimGoal: cols[7] || '',
+                    bikeGoal: cols[9] || '',
+                    runGoal: cols[11] || ''
                 });
             }
         } else if (inTable && line === '') {
@@ -106,7 +107,7 @@ export function renderReadiness(mergedLogData, planMd) {
         });
     }
 
-    // 3. Configuration using Semantic Classes (matches styles.css)
+    // 3. Configuration using Semantic Classes (Brand Colors)
     const sportConfig = {
         swim: { color: 'text-swim', icon: 'fa-person-swimming', label: 'Swim' },
         bike: { color: 'text-bike', icon: 'fa-person-biking', label: 'Bike' },
@@ -119,39 +120,10 @@ export function renderReadiness(mergedLogData, planMd) {
     upcomingEvents.forEach(e => {
         const raceDate = new Date(e.dateStr);
 
-        // --- SMART COLUMN FIX ---
-        // Heuristic: If event name implies a single sport but data is in the wrong column 
-        // (common markdown error where "||" is missing), we shift it.
-        let sGoal = e.col7;
-        let bGoal = e.col9;
-        let rGoal = e.col11;
-
-        const nameLower = e.name.toLowerCase();
-        const isTri = nameLower.includes('tri') || nameLower.includes('iron');
-        
-        if (!isTri) {
-            // Fix Century/Bike Rides showing as Swim
-            if ((nameLower.includes('ride') || nameLower.includes('century') || nameLower.includes('cycling') || nameLower.includes('gravel'))) {
-                // If Bike goal is empty but Swim (col7) has data, assume it shifted left
-                if (!bGoal && sGoal) {
-                    bGoal = sGoal;
-                    sGoal = '';
-                }
-            }
-            // Fix Marathons/Runs showing as Swim
-            if ((nameLower.includes('marathon') || nameLower.includes('run') || nameLower.includes('5k'))) {
-                // If Run goal is empty but Swim (col7) has data
-                if (!rGoal && sGoal) {
-                    rGoal = sGoal;
-                    sGoal = '';
-                }
-            }
-        }
-
-        // Parse goals after smart fix
-        const tgtSwim = parseDur(sGoal);
-        const tgtBike = parseDur(bGoal);
-        const tgtRun  = parseDur(rGoal);
+        // Parse goals directly from the strictly mapped columns
+        const tgtSwim = parseDur(e.swimGoal);
+        const tgtBike = parseDur(e.bikeGoal);
+        const tgtRun  = parseDur(e.runGoal);
 
         // Percentages
         const getPct = (curr, tgt) => tgt > 0 ? Math.min(Math.round((curr/tgt)*100), 100) : 0;
@@ -192,7 +164,7 @@ export function renderReadiness(mergedLogData, planMd) {
             
             const config = sportConfig[type];
             
-            // Dynamic Bar Color (Traffic Light) based on Readiness
+            // Logic: Icon = Brand Color. Bar = Readiness Status Color (Traffic Light).
             const barColor = pct >= 85 ? 'bg-emerald-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-red-500');
             
             return `
