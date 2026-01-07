@@ -419,45 +419,157 @@ const buildFTPChart = () => {
 const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend') => {
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
-        const buckets = []; const now = new Date(); const day = now.getDay(); const distToSat = 6 - day; const endOfCurrentWeek = new Date(now); endOfCurrentWeek.setDate(now.getDate() + distToSat); endOfCurrentWeek.setHours(23, 59, 59, 999);
+        
+        const buckets = []; 
+        const now = new Date(); 
+        const day = now.getDay(); 
+        const distToSat = 6 - day; 
+        const endOfCurrentWeek = new Date(now); 
+        endOfCurrentWeek.setDate(now.getDate() + distToSat); 
+        endOfCurrentWeek.setHours(23, 59, 59, 999);
+
         for (let i = 7; i >= 0; i--) {
-            const end = new Date(endOfCurrentWeek); end.setDate(end.getDate() - (i * 7)); const start = new Date(end); start.setDate(start.getDate() - 6); start.setHours(0,0,0,0);
+            const end = new Date(endOfCurrentWeek); 
+            end.setDate(end.getDate() - (i * 7)); 
+            const start = new Date(end); 
+            start.setDate(start.getDate() - 6); 
+            start.setHours(0,0,0,0);
             buckets.push({ start, end, label: `${end.getMonth()+1}/${end.getDate()}`, actualMins: 0, plannedMins: 0 });
         }
+
         data.forEach(item => {
-            if (!item.date) return; if (sportType !== 'All' && item.type !== sportType) return;
-            const t = item.date.getTime(); const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
-            if (bucket) { bucket.actualMins += (item.actualDuration || 0); bucket.plannedMins += (item.plannedDuration || 0); }
-        });
-        let barsHtml = ''; const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
-        
-        // Use sport color for the PLAN bar
-        const sportColorVar = colorMap[sportType] || colorMap.All;
-        
-        buckets.forEach((b, idx) => {
-            const isCurrentWeek = (idx === buckets.length - 1); const hActual = Math.round((b.actualMins / maxVol) * 100); const hPlan = Math.round((b.plannedMins / maxVol) * 100); const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
-            let actualColorClass = 'bg-blue-500'; let growthLabel = "--"; let growthColor = "text-slate-400";
-            if (idx > 0 && prevActual > 0) {
-                const actualGrowth = (b.actualMins - prevActual) / prevActual;
-                let limitRed = 0.15; let limitYellow = 0.10; if (sportType === 'Run') { limitRed = 0.10; limitYellow = 0.05; } else if (sportType === 'Bike' || sportType === 'Swim') { limitRed = 0.20; limitYellow = 0.15; }
-                const getColor = (pct) => { if (pct > limitRed) return 'bg-red-500'; if (pct > limitYellow) return 'bg-yellow-500'; if (pct < -0.20) return 'bg-slate-600'; return 'bg-emerald-500'; };
-                actualColorClass = getColor(actualGrowth);
-                const displayGrowth = isCurrentWeek ? ((b.plannedMins - prevActual) / prevActual) : actualGrowth; const sign = displayGrowth > 0 ? '▲' : (displayGrowth < 0 ? '▼' : ''); growthLabel = `${sign} ${Math.round(displayGrowth * 100)}%`;
-                if (displayGrowth > limitRed) growthColor = "text-red-400"; else if (displayGrowth > limitYellow) growthColor = "text-yellow-400"; else if (displayGrowth < -0.20) growthColor = "text-slate-500"; else growthColor = "text-emerald-400";
+            if (!item.date) return; 
+            if (sportType !== 'All' && item.type !== sportType) return;
+            const t = item.date.getTime(); 
+            const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
+            if (bucket) { 
+                bucket.actualMins += (item.actualDuration || 0); 
+                bucket.plannedMins += (item.plannedDuration || 0); 
             }
+        });
+
+        let barsHtml = ''; 
+        const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
+        
+        // --- 1. DEFINE LIMITS BASED ON SPORT ---
+        let limitRed = 0.15;   // Default (All)
+        let limitYellow = 0.10; // Default (All)
+
+        if (sportType === 'Run') { 
+            limitRed = 0.10; 
+            limitYellow = 0.05; 
+        } else if (sportType === 'Bike' || sportType === 'Swim') { 
+            limitRed = 0.20; 
+            limitYellow = 0.15; 
+        }
+
+        // --- HELPER: Get Hex Color for Gradient/Fill ---
+        // Returns [Tailwind Class, Hex Code]
+        const getStatusColor = (pctChange) => {
+            // Check for dangerous increase
+            if (pctChange > limitRed) return ['bg-red-500', '#ef4444'];
+            if (pctChange > limitYellow) return ['bg-yellow-500', '#eab308'];
+            // Check for huge drop-off (optional visual cue, or just keep green)
+            if (pctChange < -0.20) return ['bg-slate-600', '#475569']; 
+            return ['bg-emerald-500', '#10b981'];
+        };
+
+        buckets.forEach((b, idx) => {
+            const isCurrentWeek = (idx === buckets.length - 1); 
+            const hActual = Math.round((b.actualMins / maxVol) * 100); 
+            const hPlan = Math.round((b.plannedMins / maxVol) * 100); 
             
-            // Apply sport color dynamically to the Plan Bar
-            const planBarStyle = `background: repeating-linear-gradient(45deg, ${sportColorVar} 0, ${sportColorVar} 4px, transparent 4px, transparent 8px); border: 1px solid ${sportColorVar}; opacity: 0.2;`;
-            const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80'; const planHrs = (b.plannedMins / 60).toFixed(1); const actHrs = (b.actualMins / 60).toFixed(1);
+            // Get Previous Week's Actual
+            const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
+
+            // --- 2. CALCULATE GROWTH METRICS ---
+            // Prevent division by zero: if prev is 0, treat growth as 0 (safe) unless current is huge? 
+            // Standard practice: if starting from 0, it's technically infinite, but we'll default to Green (safe start).
             
-            barsHtml += `<div class="flex flex-col items-center gap-1 flex-1 group relative"><div class="relative w-full bg-slate-800/30 rounded-t-sm h-32 flex items-end justify-center"><div class="absolute -top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap text-center pointer-events-none shadow-xl"><div class="mb-1 leading-tight"><div>Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m</div><div class="text-[10px] text-slate-400 font-normal mt-0.5">Plan: ${planHrs}h | Act: ${actHrs}h</div></div><div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1">Growth: ${growthLabel}</div></div><div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div><div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualColorClass} ${actualOpacity} rounded-t-sm"></div></div><span class="text-[9px] text-slate-500 font-mono text-center leading-none mt-1">${b.label}${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400 font-bold">NEXT</span>' : ''}</span></div>`;
+            let actualGrowth = 0;
+            let plannedGrowth = 0;
+
+            if (prevActual > 0) {
+                actualGrowth = (b.actualMins - prevActual) / prevActual;
+                plannedGrowth = (b.plannedMins - prevActual) / prevActual; // Plan vs Prev Actual
+            }
+
+            // --- 3. DETERMINE COLORS ---
+            const [actualClass, _] = getStatusColor(actualGrowth);
+            const [__, planHex] = getStatusColor(plannedGrowth);
+
+            // --- 4. DETERMINE LABELS ---
+            // We usually show the Actual growth in text, or the Plan growth if it's the future?
+            // Let's show Actual growth text.
+            const displayGrowth = actualGrowth; 
+            const sign = displayGrowth > 0 ? '▲' : (displayGrowth < 0 ? '▼' : ''); 
+            const growthLabel = prevActual > 0 ? `${sign} ${Math.round(Math.abs(displayGrowth) * 100)}%` : '--';
+            
+            // Text color matches the Actual status
+            let growthColor = "text-emerald-400";
+            if (displayGrowth > limitRed) growthColor = "text-red-400";
+            else if (displayGrowth > limitYellow) growthColor = "text-yellow-400";
+            else if (displayGrowth < -0.20) growthColor = "text-slate-500";
+
+            // --- 5. STYLE THE BARS ---
+            // Striped Bar (Plan): Uses the PLAN logic color (planHex)
+            const planBarStyle = `
+                background: repeating-linear-gradient(
+                    45deg, 
+                    ${planHex} 0, 
+                    ${planHex} 4px, 
+                    transparent 4px, 
+                    transparent 8px
+                ); 
+                border: 1px solid ${planHex}; 
+                opacity: 0.3;
+            `;
+
+            const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80'; 
+            const planHrs = (b.plannedMins / 60).toFixed(1); 
+            const actHrs = (b.actualMins / 60).toFixed(1);
+            
+            barsHtml += `
+                <div class="flex flex-col items-center gap-1 flex-1 group relative">
+                    <div class="relative w-full bg-slate-800/30 rounded-t-sm h-32 flex items-end justify-center">
+                        <div class="absolute -top-20 left-1/2 -translate-x-1/2 bg-slate-900 text-xs font-bold text-white px-3 py-2 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap text-center pointer-events-none shadow-xl">
+                            <div class="mb-1 leading-tight">
+                                <div>Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m</div>
+                                <div class="text-[10px] text-slate-400 font-normal mt-0.5">Plan: ${planHrs}h | Act: ${actHrs}h</div>
+                            </div>
+                            <div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1">
+                                vs Prior Act: ${growthLabel}
+                            </div>
+                        </div>
+
+                        <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div>
+                        
+                        <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualClass} ${actualOpacity} rounded-t-sm"></div>
+                    </div>
+                    
+                    <span class="text-[9px] text-slate-500 font-mono text-center leading-none mt-1">
+                        ${b.label}
+                        ${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400 font-bold">NEXT</span>' : ''}
+                    </span>
+                </div>
+            `;
         });
         
         let iconHtml = '<i class="fa-solid fa-chart-column icon-all"></i>'; 
         if (sportType === 'Bike') iconHtml = '<i class="fa-solid fa-bicycle icon-bike"></i>'; 
         if (sportType === 'Run') iconHtml = '<i class="fa-solid fa-person-running icon-run"></i>'; 
         if (sportType === 'Swim') iconHtml = '<i class="fa-solid fa-person-swimming icon-swim"></i>';
-        return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4"><div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2"><h3 class="text-sm font-bold text-white flex items-center gap-2">${iconHtml} ${title}</h3></div><div class="flex items-start justify-between gap-1 w-full">${barsHtml}</div></div>`;
+
+        return `
+            <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">${iconHtml} ${title}</h3>
+                </div>
+                <div class="flex items-start justify-between gap-1 w-full">
+                    ${barsHtml}
+                </div>
+            </div>
+        `;
     } catch (e) { return `<div class="p-4 text-red-400">Chart Error: ${e.message}</div>`; }
 };
 
