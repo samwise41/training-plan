@@ -1,6 +1,5 @@
 import { Parser } from '../parser.js';
 
-// --- DASHBOARD TOOLTIP HANDLER (UPDATED WITH SPORT TYPE) ---
 window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) => {
     let tooltip = document.getElementById('dashboard-tooltip-popup');
     
@@ -31,12 +30,11 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) =>
         </div>
     `;
 
-    // Position Logic (Smart Edge Detection)
     const x = evt.clientX;
     const y = evt.clientY;
     const viewportWidth = window.innerWidth;
     
-    tooltip.style.top = `${y - 75}px`; // Moved up slightly to accommodate extra line
+    tooltip.style.top = `${y - 75}px`; 
     tooltip.style.left = '';
     tooltip.style.right = '';
 
@@ -58,7 +56,6 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) =>
     }, 3000);
 };
 
-// ---  Local Copy of Collapsible Builder  ---
 const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     const contentClasses = isOpen 
         ? "max-h-[5000px] opacity-100 py-4 mb-8" 
@@ -80,7 +77,154 @@ const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     `;
 };
 
-// Updated to accept merged history data
+// --- NEW WIDGET: NEXT RACE CARD ---
+const buildNextRaceWidget = (planMd, logData) => {
+    if (!planMd) return '';
+
+    // 1. Parse Event Table (Same logic as Trends)
+    const lines = planMd.split('\n');
+    let inTable = false;
+    let events = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.includes('| **Date** |')) {
+            inTable = true;
+            continue; 
+        }
+        if (inTable && line.startsWith('| :---')) continue; 
+        if (inTable && line.startsWith('|')) {
+            const cols = line.split('|').map(c => c.trim()).filter(c => c !== '');
+            // We need columns up to Run Goal (index 11)
+            if (cols.length >= 10) {
+                events.push({
+                    dateStr: cols[0],
+                    name: cols[1],
+                    priority: cols[3],
+                    swimGoal: cols[7],
+                    bikeGoal: cols[9],
+                    runGoal: cols[11]
+                });
+            }
+        } else if (inTable && line === '') {
+            inTable = false; 
+        }
+    }
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    let nextRace = null;
+    let minDiff = Infinity;
+
+    events.forEach(e => {
+        if (!e.priority.toLowerCase().includes('a-race')) return;
+        const d = new Date(e.dateStr);
+        if (isNaN(d.getTime())) return;
+        if (d >= today) {
+            const diff = d - today;
+            if (diff < minDiff) {
+                minDiff = diff;
+                nextRace = { ...e, dateObj: d };
+            }
+        }
+    });
+
+    if (!nextRace) return ''; 
+
+    // 2. Calculate Readiness Score
+    const parseDur = (str) => {
+        if (!str) return 0;
+        const parts = str.split(':');
+        let mins = 0;
+        if (parts.length === 3) {
+            mins = parseInt(parts[0])*60 + parseInt(parts[1]) + parseInt(parts[2])/60;
+        } else if (parts.length === 2) {
+            mins = parseInt(parts[0])*60 + parseInt(parts[1]); 
+        }
+        return Math.round(mins);
+    };
+
+    const targetSwim = parseDur(nextRace.swimGoal);
+    const targetBike = parseDur(nextRace.bikeGoal);
+    const targetRun = parseDur(nextRace.runGoal);
+
+    // Lookback 30d
+    const lookbackDate = new Date();
+    lookbackDate.setDate(lookbackDate.getDate() - 30);
+    
+    let maxSwim = 0, maxBike = 0, maxRun = 0;
+    if (logData && logData.length > 0) {
+        logData.forEach(d => {
+            if (d.date >= lookbackDate) {
+                const dur = d.actualDuration || 0;
+                if (d.type === 'Swim') maxSwim = Math.max(maxSwim, dur);
+                if (d.type === 'Bike') maxBike = Math.max(maxBike, dur);
+                if (d.type === 'Run') maxRun = Math.max(maxRun, dur);
+            }
+        });
+    }
+
+    // Calculate Percentages
+    const getPct = (curr, tgt) => tgt > 0 ? Math.min((curr/tgt)*100, 100) : 0;
+    const swimPct = getPct(maxSwim, targetSwim);
+    const bikePct = getPct(maxBike, targetBike);
+    const runPct = getPct(maxRun, targetRun);
+
+    // Composite Score (Simple Average of non-zero targets)
+    let totalPct = 0;
+    let count = 0;
+    if (targetSwim > 0) { totalPct += swimPct; count++; }
+    if (targetBike > 0) { totalPct += bikePct; count++; }
+    if (targetRun > 0) { totalPct += runPct; count++; }
+    
+    const readinessScore = count > 0 ? Math.round(totalPct / count) : 0;
+    
+    // Color Logic
+    let scoreColor = "text-red-500";
+    if (readinessScore >= 90) scoreColor = "text-emerald-500";
+    else if (readinessScore >= 70) scoreColor = "text-yellow-500";
+    else if (readinessScore >= 50) scoreColor = "text-orange-500";
+
+    const daysAway = Math.ceil((nextRace.dateObj - today) / (1000 * 60 * 60 * 24));
+
+    return `
+    <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700 rounded-xl p-6 mb-8 shadow-lg relative overflow-hidden group">
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <i class="fa-solid fa-flag-checkered text-9xl text-white"></i>
+        </div>
+        
+        <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Upcoming A-Race</div>
+                <h2 class="text-2xl font-bold text-white mb-1">${nextRace.name}</h2>
+                <div class="flex items-center gap-4 text-sm text-slate-400 font-mono">
+                    <span><i class="fa-regular fa-calendar mr-2"></i>${nextRace.dateObj.toLocaleDateString()}</span>
+                    <span><i class="fa-solid fa-hourglass-half mr-2"></i>${daysAway} Days Out</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <div class="text-center">
+                    <div class="text-4xl font-bold ${scoreColor}">${readinessScore}%</div>
+                    <div class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Readiness</div>
+                </div>
+                
+                <div class="hidden sm:flex flex-col gap-1 w-32">
+                    <div class="flex justify-between text-[9px] text-slate-400 font-bold uppercase"><span>Swim</span><span>${Math.round(swimPct)}%</span></div>
+                    <div class="w-full bg-slate-700 h-1.5 rounded-full"><div class="bg-blue-500 h-1.5 rounded-full" style="width: ${swimPct}%"></div></div>
+                    
+                    <div class="flex justify-between text-[9px] text-slate-400 font-bold uppercase mt-1"><span>Bike</span><span>${Math.round(bikePct)}%</span></div>
+                    <div class="w-full bg-slate-700 h-1.5 rounded-full"><div class="bg-orange-500 h-1.5 rounded-full" style="width: ${bikePct}%"></div></div>
+
+                    <div class="flex justify-between text-[9px] text-slate-400 font-bold uppercase mt-1"><span>Run</span><span>${Math.round(runPct)}%</span></div>
+                    <div class="w-full bg-slate-700 h-1.5 rounded-full"><div class="bg-green-500 h-1.5 rounded-full" style="width: ${runPct}%"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+};
+
 export function renderDashboard(planMd, mergedLogData) {
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
     if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
@@ -88,13 +232,13 @@ export function renderDashboard(planMd, mergedLogData) {
     const workouts = Parser._parseTableBlock(scheduleSection);
     workouts.sort((a, b) => a.date - b.date);
 
-    // 2. Weekly Cards Grid
     const fullLogData = mergedLogData || Parser.parseTrainingLog(planMd);
 
-    // 1. Progress Widget (Top, Uncollapsed)
     const progressHtml = buildProgressWidget(workouts, fullLogData);
     
-    // --- SMART EVENT PARSING ---
+    // INSERTED: Next Race Widget
+    const nextRaceHtml = buildNextRaceWidget(planMd, fullLogData);
+    
     const eventMap = {};
     const lines = planMd.split('\n');
     let inEventSection = false;
@@ -116,12 +260,11 @@ export function renderDashboard(planMd, mergedLogData) {
         }
     });
 
-    // --- HELPER: Get Sport Color Variable ---
     const getSportColorVar = (type) => {
         if (type === 'Bike') return 'var(--color-bike)';
         if (type === 'Run') return 'var(--color-run)';
         if (type === 'Swim') return 'var(--color-swim)';
-        if (type === 'Strength') return 'var(--color-strength, #a855f7)';
+        if (type === 'Strength') return 'var(--color-strength, #a855f7)'; 
         return 'var(--color-all)';
     };
 
@@ -215,7 +358,9 @@ export function renderDashboard(planMd, mergedLogData) {
         }
     }, 50);
 
+    // Added nextRaceHtml to the return string
     return `
+        ${nextRaceHtml}
         ${progressHtml}
         ${plannedWorkoutsSection}
         <div class="grid grid-cols-1 gap-8 mt-8">${heatmapTrailingHtml}${heatmapYearHtml}</div>
@@ -229,7 +374,6 @@ const toLocalYMD = (dateInput) => {
     return `${year}-${month}-${day}`;
 };
 
-// Updated to match the new tooltip structure
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
     const dataMap = {}; 
@@ -248,7 +392,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         if (cls.includes('red-500')) return '#ef4444';
         if (cls.includes('purple-500')) return '#a855f7';
         if (cls.includes('slate-700')) return '#334155';
-        return '#94a3b8'; // Default text color for others
+        return '#94a3b8'; 
     };
 
     const startDay = startDate.getDay(); 
@@ -273,7 +417,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         
         let totalPlan = 0; let totalAct = 0; let isRestType = false; 
         
-        // --- CALCULATE SPORT TYPE STRING ---
         let sportLabel = "--";
         const uniqueTypes = new Set();
 
@@ -285,7 +428,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
                 if (d.type && d.type !== 'Rest') uniqueTypes.add(d.type);
             }); 
             
-            // Convert Set to String (e.g. "Run" or "Swim + Bike")
             if (uniqueTypes.size > 0) {
                 sportLabel = Array.from(uniqueTypes).join(' + ');
             } else if (isRestType) {
@@ -319,7 +461,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 
         const hexColor = getHexColor(colorClass);
         
-        // Pass Sport Label to Tooltip
         const clickAttr = hasActivity || isFuture ? 
             `onclick="window.showDashboardTooltip(event, '${dateKey}', ${totalPlan}, ${totalAct}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}', '${sportLabel}')"` : '';
             
@@ -372,7 +513,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// ... (Rest of Streak Logic remains unchanged) ...
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
     const today = new Date(); today.setHours(0,0,0,0);
