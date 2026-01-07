@@ -81,46 +81,132 @@ const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
 const buildNextRaceWidget = (planMd, logData) => {
     if (!planMd) return '';
 
-    // ... (Event Parsing Logic: Same as raceReadiness.js) ...
-    // ... (Find Next A-Race Logic) ...
-    // Assume we found 'nextRace'
+    // 1. Parse Event Table (Same logic as Trends)
+    const lines = planMd.split('\n');
+    let inTable = false;
+    let events = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.includes('| **Date** |')) {
+            inTable = true;
+            continue; 
+        }
+        if (inTable && line.startsWith('| :---')) continue; 
+        if (inTable && line.startsWith('|')) {
+            const cols = line.split('|').map(c => c.trim()).filter(c => c !== '');
+            // We need columns up to Run Goal (index 11)
+            if (cols.length >= 10) {
+                events.push({
+                    dateStr: cols[0],
+                    name: cols[1],
+                    priority: cols[3],
+                    swimGoal: cols[7],
+                    bikeGoal: cols[9],
+                    runGoal: cols[11]
+                });
+            }
+        } else if (inTable && line === '') {
+            inTable = false; 
+        }
+    }
 
-    // ... (Durations Calculation: maxSwim, maxBike, maxRun) ...
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    let nextRace = null;
+    let minDiff = Infinity;
+
+    events.forEach(e => {
+        if (!e.priority.toLowerCase().includes('a-race')) return;
+        const d = new Date(e.dateStr);
+        if (isNaN(d.getTime())) return;
+        if (d >= today) {
+            const diff = d - today;
+            if (diff < minDiff) {
+                minDiff = diff;
+                nextRace = { ...e, dateObj: d };
+            }
+        }
+    });
+
+    if (!nextRace) return ''; 
+
+    // 2. Calculate Readiness Score
+    const parseDur = (str) => {
+        if (!str) return 0;
+        const parts = str.split(':');
+        let mins = 0;
+        if (parts.length === 3) {
+            mins = parseInt(parts[0])*60 + parseInt(parts[1]) + parseInt(parts[2])/60;
+        } else if (parts.length === 2) {
+            mins = parseInt(parts[0])*60 + parseInt(parts[1]); 
+        }
+        return Math.round(mins);
+    };
+
+    const targetSwim = parseDur(nextRace.swimGoal);
+    const targetBike = parseDur(nextRace.bikeGoal);
+    const targetRun = parseDur(nextRace.runGoal);
+
+    // Lookback 30d
+    const lookbackDate = new Date();
+    lookbackDate.setDate(lookbackDate.getDate() - 30);
+    
+    let maxSwim = 0, maxBike = 0, maxRun = 0;
+    if (logData && logData.length > 0) {
+        logData.forEach(d => {
+            if (d.date >= lookbackDate) {
+                const dur = d.actualDuration || 0;
+                if (d.type === 'Swim') maxSwim = Math.max(maxSwim, dur);
+                if (d.type === 'Bike') maxBike = Math.max(maxBike, dur);
+                if (d.type === 'Run') maxRun = Math.max(maxRun, dur);
+            }
+        });
+    }
 
     // Calculate Percentages
-    const getPct = (curr, tgt) => tgt > 0 ? Math.min(Math.round((curr/tgt)*100), 100) : 0;
+    const getPct = (curr, tgt) => tgt > 0 ? Math.min((curr/tgt)*100, 100) : 0;
     const swimPct = getPct(maxSwim, targetSwim);
     const bikePct = getPct(maxBike, targetBike);
     const runPct = getPct(maxRun, targetRun);
 
-    // --- UPDATED LOGIC: WEAKEST LINK ---
-    const activePcts = [];
-    if (targetSwim > 0) activePcts.push(swimPct);
-    if (targetBike > 0) activePcts.push(bikePct);
-    if (targetRun > 0) activePcts.push(runPct);
+    // Composite Score (Simple Average of non-zero targets)
+    let totalPct = 0;
+    let count = 0;
+    if (targetSwim > 0) { totalPct += swimPct; count++; }
+    if (targetBike > 0) { totalPct += bikePct; count++; }
+    if (targetRun > 0) { totalPct += runPct; count++; }
     
-    // Default to 0 if no goals, otherwise take MIN
-    const readinessScore = activePcts.length > 0 ? Math.min(...activePcts) : 0;
+    const readinessScore = count > 0 ? Math.round(totalPct / count) : 0;
     
-    // --- UPDATED TIERS ---
+    // Color Logic
     let scoreColor = "text-red-500";
-    if (readinessScore >= 85) scoreColor = "text-emerald-500";
-    else if (readinessScore >= 60) scoreColor = "text-yellow-500";
+    if (readinessScore >= 90) scoreColor = "text-emerald-500";
+    else if (readinessScore >= 70) scoreColor = "text-yellow-500";
+    else if (readinessScore >= 50) scoreColor = "text-orange-500";
 
     const daysAway = Math.ceil((nextRace.dateObj - today) / (1000 * 60 * 60 * 24));
 
-    // ... (Return HTML - updated visual) ...
     return `
     <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-700 rounded-xl p-6 mb-8 shadow-lg relative overflow-hidden group">
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <i class="fa-solid fa-flag-checkered text-9xl text-white"></i>
+        </div>
+        
         <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-                 </div>
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Upcoming A-Race</div>
+                <h2 class="text-2xl font-bold text-white mb-1">${nextRace.name}</h2>
+                <div class="flex items-center gap-4 text-sm text-slate-400 font-mono">
+                    <span><i class="fa-regular fa-calendar mr-2"></i>${nextRace.dateObj.toLocaleDateString()}</span>
+                    <span><i class="fa-solid fa-hourglass-half mr-2"></i>${daysAway} Days Out</span>
+                </div>
+            </div>
 
             <div class="flex items-center gap-6">
                 <div class="text-center">
                     <div class="text-4xl font-bold ${scoreColor}">${readinessScore}%</div>
                     <div class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Readiness</div>
-                    <div class="text-[9px] text-slate-600 mt-0.5">${readinessScore >= 85 ? 'Race Ready' : (readinessScore >= 60 ? 'Developing' : 'Warning')}</div>
                 </div>
                 
                 <div class="hidden sm:flex flex-col gap-1 w-32">
