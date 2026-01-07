@@ -114,10 +114,11 @@ These templates define the "default" week structure.
 
 Use these mathematical rules to generate the specific duration and intensity for future weeks.
 
-#### 1. The 10% Volume Rule (Sport Specific)
-  * **Global Cap:** Total weekly duration (all sports combined) should not increase by more than **15%** week-over-week.
-  * **Run Cap (Impact):** Total running duration must **strictly** adhere to the 10% rule. Do not increase running time by >10% week-over-week to protect the IT Band.
-  * **Bike/Swim Cap (Aerobic):** Cycling and Swimming duration may increase by up to **20%** week-over-week, provided the global cap is respected. This allows for faster aerobic scaling due to lower impact forces.
+#### 1. The Volume Increase Rules
+  * **All Cap:** [15%] - Total weekly duration (all sports combined) limit week-over-week.
+  * **Run Cap:** [10%] - Total running duration limit. Strict adherence.
+  * **Bike Cap:** [20%] - Cycling duration limit. Allows for faster aerobic scaling due to lower impact forces.
+  * **Swim Cap:** [20%] - Swimming duration limit. Allows for faster aerobic scaling due to lower impact forces.
 
 #### 2. The "Long Session" Step-Ladder
   * **Logic:** The Saturday Long Bike is the primary driver of endurance.
