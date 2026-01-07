@@ -1,10 +1,14 @@
-// js/views/raceReadiness.js
+// js/views/readiness.js
 
-export function renderRaceReadiness(planMd, mergedLogData) {
+export function renderReadiness(mergedLogData, planMd) {
     // 1. Parse Event Schedule
     if (!planMd) return '<div class="p-8 text-slate-500 italic">No plan data found.</div>';
 
-    const lines = planMd.split('\n');
+    // Handle case where planMd might be passed as object or wrong type
+    const safePlan = typeof planMd === 'string' ? planMd : '';
+    if (!safePlan) return '<div class="p-8 text-slate-500 italic">Invalid plan format.</div>';
+
+    const lines = safePlan.split('\n');
     let inTable = false;
     let events = [];
     
@@ -38,7 +42,7 @@ export function renderRaceReadiness(planMd, mergedLogData) {
     // Sort events by date
     events.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
 
-    // Filter out past events (optional, but keeps the tab clean)
+    // Filter out past events
     const today = new Date();
     today.setHours(0,0,0,0);
     const upcomingEvents = events.filter(e => {
@@ -53,12 +57,16 @@ export function renderRaceReadiness(planMd, mergedLogData) {
     // 2. Helper Functions
     const parseDur = (str) => {
         if (!str) return 0;
-        const parts = str.split(':');
+        // Clean string
+        const clean = str.replace(/[^\d:]/g, ''); 
+        const parts = clean.split(':');
         let mins = 0;
         if (parts.length === 3) {
             mins = parseInt(parts[0])*60 + parseInt(parts[1]) + parseInt(parts[2])/60;
         } else if (parts.length === 2) {
             mins = parseInt(parts[0])*60 + parseInt(parts[1]); 
+        } else {
+             mins = parseInt(clean) || 0;
         }
         return Math.round(mins);
     };
@@ -68,10 +76,26 @@ export function renderRaceReadiness(planMd, mergedLogData) {
     lookbackDate.setDate(lookbackDate.getDate() - 30);
     
     let maxSwim = 0, maxBike = 0, maxRun = 0;
-    if (mergedLogData && mergedLogData.length > 0) {
-        mergedLogData.forEach(d => {
-            if (d.date >= lookbackDate) {
-                const dur = d.actualDuration || 0;
+    
+    // Safety check for array
+    const safeLog = Array.isArray(mergedLogData) ? mergedLogData : [];
+
+    if (safeLog.length > 0) {
+        safeLog.forEach(d => {
+            const entryDate = new Date(d.date);
+            if (entryDate >= lookbackDate) {
+                // Parse duration from log entry (usually "1h 30m" format or minutes)
+                let dur = 0;
+                if (typeof d.actualDuration === 'number') {
+                    dur = d.actualDuration;
+                } else if (typeof d.duration === 'string') {
+                     // Parse "1h 30m" string to minutes
+                    let m = 0;
+                    if(d.duration.includes('h')) m += parseInt(d.duration.split('h')[0]) * 60;
+                    if(d.duration.includes('m')) m += parseInt(d.duration.split('m')[0].split(' ').pop());
+                    dur = m;
+                }
+
                 if (d.type === 'Swim') maxSwim = Math.max(maxSwim, dur);
                 if (d.type === 'Bike') maxBike = Math.max(maxBike, dur);
                 if (d.type === 'Run') maxRun = Math.max(maxRun, dur);
@@ -90,7 +114,7 @@ export function renderRaceReadiness(planMd, mergedLogData) {
         const tgtBike = parseDur(e.bikeGoal);
         const tgtRun = parseDur(e.runGoal);
 
-        // Percentages (Capped at 100% for visual, but calc logic handles raw)
+        // Percentages
         const getPct = (curr, tgt) => tgt > 0 ? Math.min(Math.round((curr/tgt)*100), 100) : 0;
         
         const swimPct = getPct(maxSwim, tgtSwim);
@@ -98,7 +122,6 @@ export function renderRaceReadiness(planMd, mergedLogData) {
         const runPct = getPct(maxRun, tgtRun);
 
         // --- WEAKEST LINK LOGIC ---
-        // Score is the lowest percentage among the sports required for this specific race.
         const activePcts = [];
         if (tgtSwim > 0) activePcts.push(swimPct);
         if (tgtBike > 0) activePcts.push(bikePct);
@@ -107,17 +130,13 @@ export function renderRaceReadiness(planMd, mergedLogData) {
         const readinessScore = activePcts.length > 0 ? Math.min(...activePcts) : 0;
 
         // --- TIER LOGIC ---
-        // 85-100: Race Ready (Green)
-        // 60-84:  Developing (Yellow)
-        // <60:    Warning (Red)
         let scoreColor = "text-red-500";
         let scoreLabel = "Warning";
-        let cardBorder = "border-slate-700"; // Default border
+        let cardBorder = "border-slate-700";
 
         if (readinessScore >= 85) {
             scoreColor = "text-emerald-500";
             scoreLabel = "Race Ready";
-            cardBorder = "border-slate-700"; // Keep subtle or make green? Sticking to subtle for now.
         } else if (readinessScore >= 60) {
             scoreColor = "text-yellow-500";
             scoreLabel = "Developing";
@@ -131,10 +150,7 @@ export function renderRaceReadiness(planMd, mergedLogData) {
 
         // Bar Builder
         const buildBar = (label, current, target, pct) => {
-            if (!target || target === 0) return ''; // Don't show bar if no goal
-            // Bar Color Logic: Only Green if near 100? Or gradient?
-            // User requested visual: "Green bars". 
-            // We can color the BAR based on its own specific readiness, independent of the total score.
+            if (!target || target === 0) return ''; 
             const barColor = pct >= 85 ? 'bg-emerald-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-red-500');
             
             return `
@@ -195,9 +211,20 @@ export function renderRaceReadiness(planMd, mergedLogData) {
                 </div>
 
             </div>
+            
+            <div class="px-6 pb-6 w-full">
+                <canvas id="chart-${e.dateStr}" class="w-full h-16"></canvas>
+            </div>
         </div>
         `;
     });
 
     return html;
+}
+
+// Added this function so App.js doesn't crash when it calls it
+export function renderReadinessChart(logData) {
+    // This is optional if you want a global chart. 
+    // The main visualization is now inside the HTML generated above.
+    console.log("Readiness charts are rendered inline.");
 }
