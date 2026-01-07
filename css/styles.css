@@ -8,12 +8,11 @@
 
 /* Activity Icon Theme Colors */
 :root {
-
     
-    --color-all:  #eb4034; 
-    --color-bike: #ebc634; 
-    --color-run:  #62eb34; 
-    --color-swim: #34ebe8; 
+    --color-all:  #14b8a6; 
+    --color-bike: #8b5cf6; 
+    --color-run:  #ec4899; 
+    --color-swim: #0ea5e9;  
 }
 
 /* You can still use your classes for icons */
