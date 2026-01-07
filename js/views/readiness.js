@@ -25,16 +25,16 @@ export function renderReadiness(mergedLogData, planMd) {
         // Process Data Rows
         if (inTable && line.startsWith('|')) {
             const cols = line.split('|').map(c => c.trim()).filter(c => c !== '');
-            // We need at least the Date and Name (index 0 and 1)
+            // Relaxed check: As long as we have Date and Name, we accept it.
             if (cols.length >= 2) {
-                // Safe access to columns (handle missing columns for single-sport events)
                 events.push({
                     dateStr: cols[0],
                     name: cols[1],
-                    priority: cols[3] || 'C', // Default to C priority if missing
-                    swimGoal: cols[7] || '',
-                    bikeGoal: cols[9] || '',
-                    runGoal: cols[11] || ''
+                    priority: cols[3] || 'C',
+                    // Raw columns (might be shifted if user missed pipes)
+                    col7: cols[7] || '',
+                    col9: cols[9] || '',
+                    col11: cols[11] || ''
                 });
             }
         } else if (inTable && line === '') {
@@ -59,15 +59,13 @@ export function renderReadiness(mergedLogData, planMd) {
 
     // 2. Helper Functions
     
-    // Parse Duration (handles "1h 30m", "45m", "-", "N/A")
+    // Parse Duration
     const parseDur = (str) => {
         if (!str || str === '-' || str.toLowerCase() === 'n/a') return 0;
-        
-        // If it's just a number, assume minutes
+        if (str.includes('km') || str.includes('mi')) return 0; // Ignore distances
         if (!isNaN(str)) return parseInt(str);
 
         let mins = 0;
-        // Parse "1h 30m" format
         if (str.includes('h')) {
             const hParts = str.split('h');
             mins += parseInt(hParts[0]) * 60;
@@ -77,7 +75,6 @@ export function renderReadiness(mergedLogData, planMd) {
         } else if (str.includes('m')) {
             mins += parseInt(str);
         } else if (str.includes(':')) {
-            // Parse "1:30" format
             const parts = str.split(':');
             mins += parseInt(parts[0]) * 60 + parseInt(parts[1]);
         }
@@ -89,7 +86,6 @@ export function renderReadiness(mergedLogData, planMd) {
     lookbackDate.setDate(lookbackDate.getDate() - 30);
     
     let maxSwim = 0, maxBike = 0, maxRun = 0;
-    
     const safeLog = Array.isArray(mergedLogData) ? mergedLogData : [];
 
     if (safeLog.length > 0) {
@@ -110,11 +106,11 @@ export function renderReadiness(mergedLogData, planMd) {
         });
     }
 
-    // 3. Configuration for Colors & Icons
+    // 3. Configuration using Semantic Classes (matches styles.css)
     const sportConfig = {
-        swim: { color: 'text-cyan-400', barBg: 'bg-cyan-500', icon: 'fa-person-swimming', label: 'Swim' },
-        bike: { color: 'text-purple-400', barBg: 'bg-purple-500', icon: 'fa-person-biking', label: 'Bike' },
-        run:  { color: 'text-pink-400', barBg: 'bg-pink-500', icon: 'fa-person-running', label: 'Run' }
+        swim: { color: 'text-swim', icon: 'fa-person-swimming', label: 'Swim' },
+        bike: { color: 'text-bike', icon: 'fa-person-biking', label: 'Bike' },
+        run:  { color: 'text-run',  icon: 'fa-person-running',  label: 'Run' }
     };
 
     // 4. Build HTML
@@ -122,27 +118,54 @@ export function renderReadiness(mergedLogData, planMd) {
 
     upcomingEvents.forEach(e => {
         const raceDate = new Date(e.dateStr);
+
+        // --- SMART COLUMN FIX ---
+        // Heuristic: If event name implies a single sport but data is in the wrong column 
+        // (common markdown error where "||" is missing), we shift it.
+        let sGoal = e.col7;
+        let bGoal = e.col9;
+        let rGoal = e.col11;
+
+        const nameLower = e.name.toLowerCase();
+        const isTri = nameLower.includes('tri') || nameLower.includes('iron');
         
-        // Goals
-        const tgtSwim = parseDur(e.swimGoal);
-        const tgtBike = parseDur(e.bikeGoal);
-        const tgtRun = parseDur(e.runGoal);
+        if (!isTri) {
+            // Fix Century/Bike Rides showing as Swim
+            if ((nameLower.includes('ride') || nameLower.includes('century') || nameLower.includes('cycling') || nameLower.includes('gravel'))) {
+                // If Bike goal is empty but Swim (col7) has data, assume it shifted left
+                if (!bGoal && sGoal) {
+                    bGoal = sGoal;
+                    sGoal = '';
+                }
+            }
+            // Fix Marathons/Runs showing as Swim
+            if ((nameLower.includes('marathon') || nameLower.includes('run') || nameLower.includes('5k'))) {
+                // If Run goal is empty but Swim (col7) has data
+                if (!rGoal && sGoal) {
+                    rGoal = sGoal;
+                    sGoal = '';
+                }
+            }
+        }
+
+        // Parse goals after smart fix
+        const tgtSwim = parseDur(sGoal);
+        const tgtBike = parseDur(bGoal);
+        const tgtRun  = parseDur(rGoal);
 
         // Percentages
         const getPct = (curr, tgt) => tgt > 0 ? Math.min(Math.round((curr/tgt)*100), 100) : 0;
         
         const swimPct = getPct(maxSwim, tgtSwim);
         const bikePct = getPct(maxBike, tgtBike);
-        const runPct = getPct(maxRun, tgtRun);
+        const runPct  = getPct(maxRun, tgtRun);
 
         // --- READINESS SCORE LOGIC ---
-        // Only include sports that have a target > 0
         const activePcts = [];
         if (tgtSwim > 0) activePcts.push(swimPct);
         if (tgtBike > 0) activePcts.push(bikePct);
-        if (tgtRun > 0) activePcts.push(runPct);
+        if (tgtRun > 0)  activePcts.push(runPct);
         
-        // If no sports found (e.g. data error), default to 0
         const readinessScore = activePcts.length > 0 ? Math.min(...activePcts) : 0;
 
         // --- TIER LOGIC ---
@@ -169,6 +192,9 @@ export function renderReadiness(mergedLogData, planMd) {
             
             const config = sportConfig[type];
             
+            // Dynamic Bar Color (Traffic Light) based on Readiness
+            const barColor = pct >= 85 ? 'bg-emerald-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-red-500');
+            
             return `
                 <div class="mb-5 last:mb-0">
                     <div class="flex justify-between items-end mb-1">
@@ -181,7 +207,7 @@ export function renderReadiness(mergedLogData, planMd) {
                         </div>
                     </div>
                     <div class="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden relative">
-                        <div class="${config.barBg} h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(0,0,0,0.3)]" style="width: ${pct}%"></div>
+                        <div class="${barColor} h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(0,0,0,0.3)]" style="width: ${pct}%"></div>
                     </div>
                 </div>
             `;
