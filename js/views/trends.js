@@ -30,7 +30,7 @@ if (!window.toggleSection) {
     };
 }
 
-// --- TOOLTIP HANDLER ---
+// --- TOOLTIP HANDLER (Smart Edge Detection) ---
 window.showTrendTooltip = (evt, date, label, value, color) => {
     const tooltip = document.getElementById('trend-tooltip-popup');
     if (!tooltip) return;
@@ -45,13 +45,29 @@ window.showTrendTooltip = (evt, date, label, value, color) => {
         </div>
     `;
 
-    // Position: Fixed relative to viewport to avoid container scrolling issues
+    // Position Logic
     const x = evt.clientX;
     const y = evt.clientY;
-
+    const viewportWidth = window.innerWidth;
+    
     tooltip.style.position = 'fixed';
-    tooltip.style.left = `${x + 15}px`; 
-    tooltip.style.top = `${y - 40}px`;  
+    tooltip.style.top = `${y - 40}px`; 
+    
+    // Clear previous specific styling
+    tooltip.style.left = '';
+    tooltip.style.right = '';
+
+    // Smart Horizontal Positioning
+    if (x > viewportWidth * 0.60) {
+        // If on the right side of screen, anchor tooltip to the left of the cursor
+        // We set 'right' relative to the window edge
+        tooltip.style.right = `${viewportWidth - x + 10}px`;
+        tooltip.style.left = 'auto';
+    } else {
+        // If on left side, anchor to right of cursor
+        tooltip.style.left = `${x + 15}px`;
+        tooltip.style.right = 'auto';
+    }
     
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
     
