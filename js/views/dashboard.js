@@ -1,25 +1,33 @@
 import { Parser } from '../parser.js';
 
-// --- DASHBOARD TOOLTIP HANDLER ---
-// Defined globally so the HTML onclick events can find it
-window.showDashboardTooltip = (evt, date, label, value, color) => {
+// --- DASHBOARD TOOLTIP HANDLER (UPDATED STYLE) ---
+window.showDashboardTooltip = (evt, date, plan, act, label, color) => {
     let tooltip = document.getElementById('dashboard-tooltip-popup');
     
-    // Safety: Create if missing (though renderDashboard adds it)
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'dashboard-tooltip-popup';
-        tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed';
+        // Matches the volume chart style: Slate-900 bg, border, shadow
+        tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[140px]';
         document.body.appendChild(tooltip);
     }
 
-    // Content
+    // Determine footer color class based on the hex passed
+    // We use inline style for the specific color to ensure it matches the heatmap square
+    
     tooltip.innerHTML = `
-        <div class="font-bold text-white mb-1 border-b border-slate-600 pb-1">${date}</div>
-        <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span>
-            <span class="text-slate-300 text-xs">${label}:</span>
-            <span class="text-white font-mono font-bold">${value}</span>
+        <div class="text-center">
+            <div class="text-white font-bold text-sm mb-0.5 whitespace-nowrap">
+                Plan: ${Math.round(plan)}m | Act: ${Math.round(act)}m
+            </div>
+            
+            <div class="text-[10px] text-slate-400 font-normal mb-1">
+                ${date}
+            </div>
+
+            <div class="text-[11px] font-bold border-t border-slate-700 pt-2 mt-1 uppercase tracking-wide" style="color: ${color}">
+                ${label}
+            </div>
         </div>
     `;
 
@@ -28,7 +36,8 @@ window.showDashboardTooltip = (evt, date, label, value, color) => {
     const y = evt.clientY;
     const viewportWidth = window.innerWidth;
     
-    tooltip.style.top = `${y - 40}px`; 
+    // Position slightly above the cursor
+    tooltip.style.top = `${y - 60}px`; 
     tooltip.style.left = '';
     tooltip.style.right = '';
 
@@ -36,14 +45,15 @@ window.showDashboardTooltip = (evt, date, label, value, color) => {
         tooltip.style.right = `${viewportWidth - x + 10}px`;
         tooltip.style.left = 'auto';
     } else {
-        tooltip.style.left = `${x + 15}px`;
+        tooltip.style.left = `${x - 70}px`; // Center align relative to click roughly
         tooltip.style.right = 'auto';
     }
     
-    // Show
+    // Fallback: If centering puts it off screen left
+    if (parseInt(tooltip.style.left) < 10) tooltip.style.left = '10px';
+
     tooltip.classList.remove('opacity-0');
     
-    // Auto-hide after 3 seconds
     if (window.dashTooltipTimer) clearTimeout(window.dashTooltipTimer);
     window.dashTooltipTimer = setTimeout(() => {
         tooltip.classList.add('opacity-0');
@@ -113,7 +123,7 @@ export function renderDashboard(planMd, mergedLogData) {
         if (type === 'Bike') return 'var(--color-bike)';
         if (type === 'Run') return 'var(--color-run)';
         if (type === 'Swim') return 'var(--color-swim)';
-        if (type === 'Strength') return 'var(--color-strength, #a855f7)'; // Fallback purple if not defined
+        if (type === 'Strength') return 'var(--color-strength, #a855f7)';
         return 'var(--color-all)';
     };
 
@@ -146,7 +156,6 @@ export function renderDashboard(planMd, mergedLogData) {
             let statusColorClass = "text-white"; 
             let cardBorder = 'border border-slate-700 hover:border-slate-600'; 
             
-            // Determine Status & Border Colors
             if (w.completed) { 
                 statusText = "COMPLETED"; 
                 statusColorClass = "text-emerald-500"; 
@@ -164,7 +173,6 @@ export function renderDashboard(planMd, mergedLogData) {
                 statusColorClass = "text-slate-500"; 
             }
 
-            // Sport Title Color
             const titleStyle = `style="color: ${getSportColorVar(w.type)}"`;
 
             cardsHtml += `
@@ -193,20 +201,15 @@ export function renderDashboard(planMd, mergedLogData) {
     });
 
     const cardsContainerHtml = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-0 p-2">${cardsHtml}</div>`;
-    
-    // --- COLLAPSIBLE SECTION FOR PLANNED WORKOUTS ---
     const plannedWorkoutsSection = buildCollapsibleSection('planned-workouts-section', 'Planned Workouts', cardsContainerHtml, true);
 
-    // 3. Heatmaps
     const endOfWeek = new Date(today); const dayOfWeek = endOfWeek.getDay(); const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); endOfWeek.setDate(endOfWeek.getDate() + distToSunday); if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); 
     const startTrailing = new Date(endOfWeek); startTrailing.setMonth(startTrailing.getMonth() - 6);
     const startYear = new Date(today.getFullYear(), 0, 1); const endYear = new Date(today.getFullYear(), 11, 31);
     
-    // Pass 'heatmap-trailing-scroll' ID to the trailing chart so we can scroll it
     const heatmapTrailingHtml = buildGenericHeatmap(fullLogData, eventMap, startTrailing, endOfWeek, "Recent Consistency (Trailing 6 Months)", toLocalYMD, "heatmap-trailing-scroll");
     const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`, toLocalYMD, null);
 
-    // --- AUTO SCROLL LOGIC ---
     setTimeout(() => {
         const scrollContainer = document.getElementById('heatmap-trailing-scroll');
         if (scrollContainer) {
@@ -214,8 +217,6 @@ export function renderDashboard(planMd, mergedLogData) {
         }
     }, 50);
 
-    // --- RETURN FINAL HTML ---
-    // Added tooltip container at the bottom
     return `
         ${progressHtml}
         ${plannedWorkoutsSection}
@@ -224,15 +225,13 @@ export function renderDashboard(planMd, mergedLogData) {
     `;
 }
 
-// ... (Rest of Helpers: toLocalYMD) ...
-
 const toLocalYMD = (dateInput) => {
     const d = new Date(dateInput);
     const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 };
 
-// Updated to accept containerId
+// Updated to match the new tooltip structure
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
     const dataMap = {}; 
@@ -251,7 +250,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         if (cls.includes('red-500')) return '#ef4444';
         if (cls.includes('purple-500')) return '#a855f7';
         if (cls.includes('slate-700')) return '#334155';
-        return '#1e293b'; 
+        return '#94a3b8'; // Default text color for others
     };
 
     const startDay = startDate.getDay(); 
@@ -286,8 +285,8 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         const hasActivity = (totalPlan > 0 || totalAct > 0 || isRestType || eventName); 
         const isFuture = currentDate > today;
 
-        if (eventName) { colorClass = 'bg-purple-500'; statusLabel = `Event: ${eventName}`; }
-        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) { colorClass = 'bg-emerald-500'; inlineStyle = highContrastStripe; statusLabel = "Unplanned Workout"; }
+        if (eventName) { colorClass = 'bg-purple-500'; statusLabel = `${eventName}`; }
+        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) { colorClass = 'bg-emerald-500'; inlineStyle = highContrastStripe; statusLabel = "Unplanned"; }
         else if (isFuture) { 
             if (totalPlan > 0) { colorClass = 'bg-slate-700'; statusLabel = "Planned"; } 
             else { colorClass = 'bg-slate-800'; statusLabel = "Future"; } 
@@ -307,9 +306,9 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 
         const hexColor = getHexColor(colorClass);
         
-        // Use local tooltip function
+        // Pass Plan and Actual metrics to the new tooltip function
         const clickAttr = hasActivity || isFuture ? 
-            `onclick="window.showDashboardTooltip(event, '${dateKey}', 'Status', '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}')"` : '';
+            `onclick="window.showDashboardTooltip(event, '${dateKey}', ${totalPlan}, ${totalAct}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}')"` : '';
             
         const cursorClass = (hasActivity || isFuture) ? 'cursor-pointer hover:opacity-80' : '';
 
@@ -317,7 +316,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // --- Build Month Header Row ---
     let monthsHtml = '';
     let loopDate = new Date(startDate);
     loopDate.setDate(loopDate.getDate() - loopDate.getDay());
@@ -361,110 +359,57 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// --- STREAK 1: BEHAVIOR STREAK (Showing Up) ---
+// ... (Rest of Streak Logic remains unchanged) ...
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
     const dayOfWeek = today.getDay(); 
-    const currentWeekStart = new Date(today);
-    currentWeekStart.setDate(today.getDate() - dayOfWeek);
-
+    const currentWeekStart = new Date(today); currentWeekStart.setDate(today.getDate() - dayOfWeek);
     const weeksMap = {};
-
     fullLogData.forEach(item => {
         if (!item.date) return;
-        
-        const d = new Date(item.date);
-        d.setHours(0,0,0,0);
-        const day = d.getDay();
-        const weekStart = new Date(d);
-        weekStart.setDate(d.getDate() - day);
-        
+        const d = new Date(item.date); d.setHours(0,0,0,0);
+        const day = d.getDay(); const weekStart = new Date(d); weekStart.setDate(d.getDate() - day);
         if (weekStart >= currentWeekStart) return;
-
         const key = weekStart.toISOString().split('T')[0];
-        
         if (!weeksMap[key]) weeksMap[key] = { failed: false };
-
         if (item.plannedDuration > 0) {
             const statusStr = (item.status || '').toUpperCase();
             const isCompleted = item.completed === true || statusStr === 'COMPLETED';
             const hasDuration = (item.actualDuration || 0) > 0;
-            
-            if (!isCompleted && !hasDuration) {
-                weeksMap[key].failed = true;
-            }
+            if (!isCompleted && !hasDuration) weeksMap[key].failed = true;
         }
     });
-
-    let streak = 0;
-    let checkDate = new Date(currentWeekStart);
-    checkDate.setDate(checkDate.getDate() - 7);
-
+    let streak = 0; let checkDate = new Date(currentWeekStart); checkDate.setDate(checkDate.getDate() - 7);
     for (let i = 0; i < 260; i++) { 
-        const key = checkDate.toISOString().split('T')[0];
-        const weekData = weeksMap[key];
-        if (!weekData) break; 
-        if (weekData.failed) break; 
-        
-        streak++;
-        checkDate.setDate(checkDate.getDate() - 7);
+        const key = checkDate.toISOString().split('T')[0]; const weekData = weeksMap[key];
+        if (!weekData) break; if (weekData.failed) break; 
+        streak++; checkDate.setDate(checkDate.getDate() - 7);
     }
     return streak;
 }
 
-// --- STREAK 2: VOLUME STREAK (Performance) ---
 function calculateVolumeStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const dayOfWeek = today.getDay(); 
-    const currentWeekStart = new Date(today);
-    currentWeekStart.setDate(today.getDate() - dayOfWeek);
-
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dayOfWeek = today.getDay(); const currentWeekStart = new Date(today); currentWeekStart.setDate(today.getDate() - dayOfWeek);
     const weeksMap = {};
-
     fullLogData.forEach(item => {
         if (!item.date) return;
-        
-        const d = new Date(item.date);
-        d.setHours(0,0,0,0);
-        const day = d.getDay();
-        const weekStart = new Date(d);
-        weekStart.setDate(d.getDate() - day);
-        
+        const d = new Date(item.date); d.setHours(0,0,0,0);
+        const day = d.getDay(); const weekStart = new Date(d); weekStart.setDate(d.getDate() - day);
         if (weekStart >= currentWeekStart) return;
-
         const key = weekStart.toISOString().split('T')[0];
-        
         if (!weeksMap[key]) weeksMap[key] = { planned: 0, actual: 0 };
         weeksMap[key].planned += (item.plannedDuration || 0);
         weeksMap[key].actual += (item.actualDuration || 0);
     });
-
-    let streak = 0;
-    let checkDate = new Date(currentWeekStart);
-    checkDate.setDate(checkDate.getDate() - 7); 
-
+    let streak = 0; let checkDate = new Date(currentWeekStart); checkDate.setDate(checkDate.getDate() - 7); 
     for (let i = 0; i < 260; i++) { 
-        const key = checkDate.toISOString().split('T')[0];
-        const stats = weeksMap[key];
-        
+        const key = checkDate.toISOString().split('T')[0]; const stats = weeksMap[key];
         if (!stats) break;
-
-        if (stats.planned === 0) {
-            streak++; 
-        } else {
-            const ratio = stats.actual / stats.planned;
-            if (ratio >= 0.95) {
-                streak++;
-            } else {
-                break; 
-            }
-        }
+        if (stats.planned === 0) streak++; 
+        else { const ratio = stats.actual / stats.planned; if (ratio >= 0.95) streak++; else break; }
         checkDate.setDate(checkDate.getDate() - 7);
     }
     return streak;
@@ -480,7 +425,6 @@ function buildProgressWidget(workouts, fullLogData) {
         if (sportStats[w.type]) { sportStats[w.type].planned += plan; sportStats[w.type].actual += act; if (!sportStats[w.type].dailyMarkers[dateKey]) sportStats[w.type].dailyMarkers[dateKey] = 0; sportStats[w.type].dailyMarkers[dateKey] += plan; }
     });
 
-    // --- HELPER: Get Sport Color Variable ---
     const getSportColorVar = (type) => {
         if (type === 'Bike') return 'var(--color-bike)';
         if (type === 'Run') return 'var(--color-run)';
@@ -493,14 +437,9 @@ function buildProgressWidget(workouts, fullLogData) {
         let markersHtml = ''; let runningTotal = 0; const sortedDays = Object.keys(dailyMap).sort();
         if (planned > 0) { for (let i = 0; i < sortedDays.length - 1; i++) { runningTotal += dailyMap[sortedDays[i]]; const pct = (runningTotal / planned) * 100; markersHtml += `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 z-10" style="left: ${pct}%"></div>`; } }
         const labelHtml = isMain ? `<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">${label}</span>` : ''; 
-        
-        // Use variable for icon color
         const colorStyle = `style="color: ${getSportColorVar(sportType)}"`;
         const iconHtml = iconClass ? `<i class="fa-solid ${iconClass} mr-2 w-4 text-center" ${colorStyle}></i>` : ''; 
-        
         const heightClass = isMain ? 'h-3' : 'h-2.5'; const mbClass = isMain ? 'mb-4' : 'mb-3'; const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
-        
-        // Use variable for bar background
         const barBgStyle = `style="width: ${barWidth}%; background-color: ${getSportColorVar(sportType)}"`;
 
         return `<div class="flex-1 w-full ${mbClass}"><div class="flex justify-between items-end mb-1"><div class="flex flex-col">${labelHtml}<div class="flex items-center">${iconHtml}<span class="text-sm font-bold text-white flex items-baseline gap-1">${Math.round(actual)} / ${Math.round(planned)} mins<span class="text-xs text-slate-400 font-normal ml-1">(${actualHrs} / ${plannedHrs} hrs)</span></span></div></div><span class="text-xs font-bold ${pctColor}">${displayPct}%</span></div><div class="relative w-full ${heightClass} bg-slate-700 rounded-full overflow-hidden">${markersHtml}<div class="absolute top-0 left-0 h-full transition-all duration-1000 ease-out" ${barBgStyle}></div></div></div>`;
@@ -510,7 +449,6 @@ function buildProgressWidget(workouts, fullLogData) {
     if (pacingDiff >= 15) { pacingLabel = `${Math.round(pacingDiff)}m Ahead`; pacingColor = "text-emerald-400"; pacingIcon = "fa-arrow-trend-up"; } else if (pacingDiff <= -15) { pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`; pacingColor = "text-orange-400"; pacingIcon = "fa-triangle-exclamation"; }
     const totalActualHrsPacing = (totalActual / 60).toFixed(1); const expectedHrs = (expectedSoFar / 60).toFixed(1);
 
-    // --- STREAK CALCULATIONS ---
     const dailyStreak = calculateDailyStreak(fullLogData);
     const volumeStreak = calculateVolumeStreak(fullLogData);
 
@@ -528,9 +466,7 @@ function buildProgressWidget(workouts, fullLogData) {
             ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers, false, 'Run')}
             ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers, false, 'Swim')}
         </div>
-        
         <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-6 md:gap-4 self-center">
-            
             <div>
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
                 <div class="flex items-center gap-2">
@@ -542,7 +478,6 @@ function buildProgressWidget(workouts, fullLogData) {
                     <span class="text-[10px] text-slate-300 font-mono">Tgt: ${Math.round(expectedSoFar)}m <span class="text-slate-500">(${expectedHrs}h)</span></span>
                 </div>
             </div>
-
             <div>
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Daily Streak</span>
                 <div class="flex items-center gap-2" title="Consecutive weeks where every single workout was Completed">
@@ -550,7 +485,6 @@ function buildProgressWidget(workouts, fullLogData) {
                     <span class="text-lg font-bold ${getStreakColor(dailyStreak)}">${dailyStreak} Wks</span>
                 </div>
             </div>
-
             <div>
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Volume Streak</span>
                 <div class="flex items-center gap-2" title="Consecutive weeks where total volume was >95%">
@@ -558,7 +492,6 @@ function buildProgressWidget(workouts, fullLogData) {
                     <span class="text-lg font-bold ${getStreakColor(volumeStreak)}">${volumeStreak} Wks</span>
                 </div>
             </div>
-
         </div>
     </div>`;
 }
