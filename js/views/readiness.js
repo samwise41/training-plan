@@ -1,238 +1,203 @@
-// js/views/readiness.js
+// js/views/raceReadiness.js
 
-export function renderReadiness(logData, planMd) {
-    // 1. Find the next event from the markdown
-    const eventLines = (planMd.match(/\| \d{4}-\d{2}-\d{2} \| [^|]+ \|/g) || [])
-        .filter(l => !l.includes('---') && !l.toLowerCase().includes('date'));
+export function renderRaceReadiness(planMd, mergedLogData) {
+    // 1. Parse Event Schedule
+    if (!planMd) return '<div class="p-8 text-slate-500 italic">No plan data found.</div>';
+
+    const lines = planMd.split('\n');
+    let inTable = false;
+    let events = [];
     
-    let nextEvent = { name: "No Event Scheduled", date: null, daysLeft: 0 };
-    
-    if (eventLines.length > 0) {
-        const parts = eventLines[0].split('|').map(p => p.trim()).filter(p => p);
-        if (parts.length >= 2) {
-            const d = new Date(parts[0]);
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const diff = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
-            nextEvent = { name: parts[1], date: d, daysLeft: diff };
+    // Parse the Markdown Table for Events
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.includes('| **Date** |')) {
+            inTable = true;
+            continue; 
+        }
+        if (inTable && line.startsWith('| :---')) continue; 
+        if (inTable && line.startsWith('|')) {
+            const cols = line.split('|').map(c => c.trim()).filter(c => c !== '');
+            // Ensure we have enough columns (up to Run Goal index 11)
+            if (cols.length >= 10) {
+                events.push({
+                    dateStr: cols[0],
+                    name: cols[1],
+                    goal: cols[2],
+                    priority: cols[3],
+                    swimGoal: cols[7],
+                    bikeGoal: cols[9],
+                    runGoal: cols[11]
+                });
+            }
+        } else if (inTable && line === '') {
+            inTable = false; 
         }
     }
 
-    // 2. Calculate Consistency (Last 4 Weeks)
+    // Sort events by date
+    events.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
+
+    // Filter out past events (optional, but keeps the tab clean)
     const today = new Date();
-    const fourWeeksAgo = new Date();
-    fourWeeksAgo.setDate(today.getDate() - 28);
-    
-    const recentLogs = logData.filter(entry => {
-        const d = new Date(entry.date);
-        return d >= fourWeeksAgo && d <= today;
+    today.setHours(0,0,0,0);
+    const upcomingEvents = events.filter(e => {
+        const d = new Date(e.dateStr);
+        return !isNaN(d.getTime()) && d >= today;
     });
 
-    const completed = recentLogs.filter(l => l.completed).length;
-    // Estimate consistency: if you log completed workouts, you are consistent.
-    // If we assume ~4 workouts/week is "perfect" (16 total), we can gauge it.
-    // Or simpler: count "green" (completed) vs "red" (missed) if your parser captures missed.
-    // Here we'll use a simple heuristic based on volume vs arbitrary target if 'planned' isn't fully parsed.
-    // Assuming the log contains both completed and skipped if parsed that way.
-    const totalLogged = recentLogs.length || 1; 
-    const consistencyScore = Math.round((completed / totalLogged) * 100) || 0;
+    if (upcomingEvents.length === 0) {
+        return '<div class="p-8 text-center text-slate-500 text-lg">No upcoming events found in your plan.</div>';
+    }
 
-    // 3. Longest Session (Last 8 weeks)
-    const eightWeeksAgo = new Date();
-    eightWeeksAgo.setDate(today.getDate() - 56);
-    
-    const longLogs = logData.filter(entry => {
-        const d = new Date(entry.date);
-        return d >= eightWeeksAgo && d <= today;
-    });
-
-    // Parse duration "1h 30m" -> minutes
+    // 2. Helper Functions
     const parseDur = (str) => {
-        if(!str) return 0;
-        let m = 0;
-        if(str.includes('h')) m += parseInt(str.split('h')[0]) * 60;
-        if(str.includes('m')) m += parseInt(str.split('m')[0].split(' ').pop());
-        return m;
+        if (!str) return 0;
+        const parts = str.split(':');
+        let mins = 0;
+        if (parts.length === 3) {
+            mins = parseInt(parts[0])*60 + parseInt(parts[1]) + parseInt(parts[2])/60;
+        } else if (parts.length === 2) {
+            mins = parseInt(parts[0])*60 + parseInt(parts[1]); 
+        }
+        return Math.round(mins);
     };
 
-    let longestMin = 0;
-    longLogs.forEach(l => {
-        const dur = parseDur(l.duration);
-        if (dur > longestMin) longestMin = dur;
-    });
+    // Calculate Max Duration in last 30 days per sport
+    const lookbackDate = new Date();
+    lookbackDate.setDate(lookbackDate.getDate() - 30);
     
-    const longestHrs = Math.floor(longestMin / 60);
-    const longestMinsRemainder = longestMin % 60;
-    const longestStr = `${longestHrs}h ${longestMinsRemainder}m`;
+    let maxSwim = 0, maxBike = 0, maxRun = 0;
+    if (mergedLogData && mergedLogData.length > 0) {
+        mergedLogData.forEach(d => {
+            if (d.date >= lookbackDate) {
+                const dur = d.actualDuration || 0;
+                if (d.type === 'Swim') maxSwim = Math.max(maxSwim, dur);
+                if (d.type === 'Bike') maxBike = Math.max(maxBike, dur);
+                if (d.type === 'Run') maxRun = Math.max(maxRun, dur);
+            }
+        });
+    }
 
-    return `
-        <div class="space-y-6">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-700 pb-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-white">Race Readiness</h2>
-                    <p class="text-slate-400 text-sm">Event Prep Analysis</p>
+    // 3. Build Widgets
+    let html = '';
+
+    upcomingEvents.forEach(e => {
+        const raceDate = new Date(e.dateStr);
+        
+        // Goals
+        const tgtSwim = parseDur(e.swimGoal);
+        const tgtBike = parseDur(e.bikeGoal);
+        const tgtRun = parseDur(e.runGoal);
+
+        // Percentages (Capped at 100% for visual, but calc logic handles raw)
+        const getPct = (curr, tgt) => tgt > 0 ? Math.min(Math.round((curr/tgt)*100), 100) : 0;
+        
+        const swimPct = getPct(maxSwim, tgtSwim);
+        const bikePct = getPct(maxBike, tgtBike);
+        const runPct = getPct(maxRun, tgtRun);
+
+        // --- WEAKEST LINK LOGIC ---
+        // Score is the lowest percentage among the sports required for this specific race.
+        const activePcts = [];
+        if (tgtSwim > 0) activePcts.push(swimPct);
+        if (tgtBike > 0) activePcts.push(bikePct);
+        if (tgtRun > 0) activePcts.push(runPct);
+        
+        const readinessScore = activePcts.length > 0 ? Math.min(...activePcts) : 0;
+
+        // --- TIER LOGIC ---
+        // 85-100: Race Ready (Green)
+        // 60-84:  Developing (Yellow)
+        // <60:    Warning (Red)
+        let scoreColor = "text-red-500";
+        let scoreLabel = "Warning";
+        let cardBorder = "border-slate-700"; // Default border
+
+        if (readinessScore >= 85) {
+            scoreColor = "text-emerald-500";
+            scoreLabel = "Race Ready";
+            cardBorder = "border-slate-700"; // Keep subtle or make green? Sticking to subtle for now.
+        } else if (readinessScore >= 60) {
+            scoreColor = "text-yellow-500";
+            scoreLabel = "Developing";
+        }
+
+        // Time to Go
+        const daysDiff = Math.ceil((raceDate - today) / (1000 * 60 * 60 * 24));
+        const weeks = Math.floor(daysDiff / 7);
+        const days = daysDiff % 7;
+        const timeString = `${weeks}W ${days}D TO GO`;
+
+        // Bar Builder
+        const buildBar = (label, current, target, pct) => {
+            if (!target || target === 0) return ''; // Don't show bar if no goal
+            // Bar Color Logic: Only Green if near 100? Or gradient?
+            // User requested visual: "Green bars". 
+            // We can color the BAR based on its own specific readiness, independent of the total score.
+            const barColor = pct >= 85 ? 'bg-emerald-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-red-500');
+            
+            return `
+                <div class="mb-5 last:mb-0">
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-xs font-bold text-slate-400">${label}</span>
+                        <div class="text-right">
+                             <span class="text-xs font-bold text-white">${current}m / ${target}m</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden relative">
+                        <div class="${barColor} h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.3)]" style="width: ${pct}%"></div>
+                    </div>
+                    <div class="text-right mt-0.5">
+                        <span class="text-[10px] font-bold ${pct >= 85 ? 'text-emerald-500' : (pct >= 60 ? 'text-yellow-500' : 'text-red-500')}">${pct}%</span>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <div class="text-xl font-bold text-emerald-400">${nextEvent.name}</div>
-                    <div class="text-sm text-slate-400">${nextEvent.daysLeft} days to go</div>
+            `;
+        };
+
+        html += `
+        <div class="bg-slate-800 border ${cardBorder} rounded-xl p-0 mb-8 overflow-hidden shadow-lg relative max-w-5xl mx-auto">
+            
+            <div class="bg-slate-900/50 border-b border-slate-700 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-flag-checkered text-white bg-slate-700 p-2 rounded-lg"></i>
+                    <div>
+                        <h3 class="text-lg font-bold text-white leading-none">${e.name}</h3>
+                        <div class="text-xs text-slate-500 font-mono mt-1">${e.priority} Event</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 text-xs font-mono text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/50">
+                    <div class="flex items-center gap-2"><i class="fa-regular fa-calendar"></i> ${raceDate.toLocaleDateString()}</div>
+                    <div class="w-px h-3 bg-slate-600"></div>
+                    <div class="flex items-center gap-2 font-bold text-white"><i class="fa-solid fa-hourglass-half"></i> ${timeString}</div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-                            <i class="fa-solid fa-calendar-check"></i>
-                        </div>
-                        <h3 class="font-bold text-slate-300">Consistency (4w)</h3>
-                    </div>
-                    <div class="text-3xl font-bold text-white">${consistencyScore}%</div>
-                    <p class="text-xs text-slate-500 mt-1">Workouts completed vs logged</p>
-                </div>
-
-                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="p-2 bg-purple-500/20 rounded-lg text-purple-400">
-                            <i class="fa-solid fa-stopwatch"></i>
-                        </div>
-                        <h3 class="font-bold text-slate-300">Longest Session</h3>
-                    </div>
-                    <div class="text-3xl font-bold text-white">${longestStr}</div>
-                    <p class="text-xs text-slate-500 mt-1">Peak duration (Last 8w)</p>
-                </div>
-
-                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="p-2 bg-orange-500/20 rounded-lg text-orange-400">
-                            <i class="fa-solid fa-battery-full"></i>
-                        </div>
-                        <h3 class="font-bold text-slate-300">Taper Status</h3>
-                    </div>
-                    <div class="text-3xl font-bold text-white">
-                        ${nextEvent.daysLeft <= 14 && nextEvent.daysLeft >= 0 ? 'Active' : 'Building'}
-                    </div>
-                    <p class="text-xs text-slate-500 mt-1">Based on event proximity</p>
-                </div>
-            </div>
-
-            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                <h3 class="text-lg font-bold text-white mb-4">Volume Trend (Last 12 Weeks)</h3>
-                <div class="h-64 relative w-full">
-                    <canvas id="readinessChart"></canvas>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                    <h3 class="font-bold text-white mb-4"><i class="fa-solid fa-list-check mr-2 text-blue-500"></i>Pre-Race Checklist</h3>
-                    <ul class="space-y-3">
-                        <li class="flex items-center gap-3 text-slate-300">
-                            <i class="fa-regular fa-square text-slate-500"></i>
-                            <span>Bike Service / Tune-up</span>
-                        </li>
-                        <li class="flex items-center gap-3 text-slate-300">
-                            <i class="fa-regular fa-square text-slate-500"></i>
-                            <span>Nutrition Plan Finalized</span>
-                        </li>
-                        <li class="flex items-center gap-3 text-slate-300">
-                            <i class="fa-regular fa-square text-slate-500"></i>
-                            <span>Race Route Downloaded</span>
-                        </li>
-                        <li class="flex items-center gap-3 text-slate-300">
-                            <i class="fa-regular fa-square text-slate-500"></i>
-                            <span>Kit & Weather Check</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                    <h3 class="font-bold text-white mb-4"><i class="fa-solid fa-bolt mr-2 text-yellow-500"></i>Readiness Assessment</h3>
-                    <div class="text-sm text-slate-400">
-                        <p class="mb-2">Based on your recent consistency of <strong>${consistencyScore}%</strong> and peak volume of <strong>${longestStr}</strong>:</p>
-                        <div class="p-3 bg-slate-900/50 rounded border border-slate-700 text-slate-300 italic">
-                            "${consistencyScore > 80 ? 'You are showing strong consistency. Trust your training.' : 'Consistency has been variable. Focus on rest and mental prep now.'}"
-                        </div>
+            <div class="p-6 flex flex-col md:flex-row gap-8 items-center">
+                
+                <div class="md:w-1/4 flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r border-slate-700 pb-6 md:pb-0 md:pr-6 w-full">
+                    <div class="text-6xl font-black ${scoreColor} tracking-tighter drop-shadow-sm">${readinessScore}%</div>
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Readiness</div>
+                    <div class="text-[10px] font-mono ${scoreColor} mt-1 border border-slate-700/50 px-2 py-0.5 rounded bg-slate-900/30">
+                        ${scoreLabel}
                     </div>
                 </div>
+
+                <div class="md:w-3/4 w-full">
+                    ${buildBar('Swim Longest Session (30d)', maxSwim, tgtSwim, swimPct)}
+                    ${buildBar('Bike Longest Session (30d)', maxBike, tgtBike, bikePct)}
+                    ${buildBar('Run Longest Session (30d)', maxRun, tgtRun, runPct)}
+                    
+                    <div class="mt-6 pt-4 border-t border-slate-700/50 text-[10px] text-slate-500 italic flex items-start gap-2">
+                        <i class="fa-solid fa-circle-info mt-0.5"></i>
+                        <span>Score is determined by your <strong>weakest discipline</strong>. Even if your total volume is high, falling behind on the specific Long Session duration for any single sport will drag your readiness score down to prevent injury risks.</span>
+                    </div>
+                </div>
+
             </div>
         </div>
-    `;
-}
-
-export function renderReadinessChart(logData) {
-    const ctx = document.getElementById('readinessChart');
-    if (!ctx) return;
-
-    // Helper to parse duration
-    const parseDur = (str) => {
-        if(!str) return 0;
-        let m = 0;
-        if(str.includes('h')) m += parseInt(str.split('h')[0]) * 60;
-        if(str.includes('m')) m += parseInt(str.split('m')[0].split(' ').pop());
-        return m;
-    };
-
-    // Aggregate by Week (Last 12 weeks)
-    const weeks = {};
-    const today = new Date();
-    
-    // Initialize last 12 weeks
-    for(let i=11; i>=0; i--) {
-        const d = new Date();
-        d.setDate(today.getDate() - (i*7));
-        const weekKey = `${d.getFullYear()}-W${getWeekNumber(d)}`;
-        weeks[weekKey] = { label: `Week -${i}`, volume: 0 };
-    }
-
-    logData.forEach(entry => {
-        const d = new Date(entry.date);
-        const weekKey = `${d.getFullYear()}-W${getWeekNumber(d)}`;
-        if (weeks[weekKey]) {
-            weeks[weekKey].volume += parseDur(entry.duration);
-        }
+        `;
     });
 
-    const labels = Object.values(weeks).map(w => w.label);
-    const dataPoints = Object.values(weeks).map(w => Math.round(w.volume / 60)); // Hours
-
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Weekly Volume (Hours)',
-                data: dataPoints,
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                borderColor: '#3b82f6',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: '#334155' },
-                    ticks: { color: '#94a3b8' }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#94a3b8' }
-                }
-            },
-            plugins: {
-                legend: { display: false }
-            }
-        }
-    });
-}
-
-function getWeekNumber(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-    var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-    var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
-    return weekNo;
+    return html;
 }
