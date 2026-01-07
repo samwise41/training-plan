@@ -30,7 +30,7 @@ if (!window.toggleSection) {
     };
 }
 
-// --- TOOLTIP HANDLER (Smart Edge Detection) ---
+// --- TOOLTIP HANDLER ---
 window.showTrendTooltip = (evt, date, label, value, color) => {
     const tooltip = document.getElementById('trend-tooltip-popup');
     if (!tooltip) return;
