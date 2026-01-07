@@ -92,8 +92,19 @@ export function renderDashboard(planMd, mergedLogData) {
     const endOfWeek = new Date(today); const dayOfWeek = endOfWeek.getDay(); const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); endOfWeek.setDate(endOfWeek.getDate() + distToSunday); if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); 
     const startTrailing = new Date(endOfWeek); startTrailing.setMonth(startTrailing.getMonth() - 6);
     const startYear = new Date(today.getFullYear(), 0, 1); const endYear = new Date(today.getFullYear(), 11, 31);
-    const heatmapTrailingHtml = buildGenericHeatmap(fullLogData, eventMap, startTrailing, endOfWeek, "Recent Consistency (Trailing 6 Months)", toLocalYMD);
-    const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`, toLocalYMD);
+    
+    // Pass 'heatmap-trailing-scroll' ID to the trailing chart so we can scroll it
+    const heatmapTrailingHtml = buildGenericHeatmap(fullLogData, eventMap, startTrailing, endOfWeek, "Recent Consistency (Trailing 6 Months)", toLocalYMD, "heatmap-trailing-scroll");
+    const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`, toLocalYMD, null);
+
+    // --- AUTO SCROLL LOGIC ---
+    // Execute after a brief delay to ensure DOM is painted
+    setTimeout(() => {
+        const scrollContainer = document.getElementById('heatmap-trailing-scroll');
+        if (scrollContainer) {
+            scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+        }
+    }, 50);
 
     // --- RETURN FINAL HTML ---
     return `${progressHtml}${plannedWorkoutsSection}<div class="grid grid-cols-1 gap-8 mt-8">${heatmapTrailingHtml}${heatmapYearHtml}</div>`;
@@ -107,7 +118,8 @@ const toLocalYMD = (dateInput) => {
     return `${year}-${month}-${day}`;
 };
 
-function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn) {
+// Updated to accept containerId
+function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
     const dataMap = {}; fullLog.forEach(item => { const dateKey = dateToKeyFn(item.date); if (!dataMap[dateKey]) dataMap[dateKey] = []; dataMap[dateKey].push(item); });
     const today = new Date(); today.setHours(0,0,0,0);
@@ -151,12 +163,15 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         loopDate.setDate(loopDate.getDate() + 7);
     }
 
+    // Inject ID if provided
+    const idAttr = containerId ? `id="${containerId}"` : '';
+
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6">
             <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
                 <i class="fa-solid fa-calendar-check text-slate-400"></i> ${title}
             </h3>
-            <div class="overflow-x-auto pb-4">
+            <div ${idAttr} class="overflow-x-auto pb-4">
                 <div class="grid grid-rows-1 grid-flow-col gap-1 w-max mx-auto mb-1">
                     ${monthsHtml}
                 </div>
