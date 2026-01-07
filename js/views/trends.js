@@ -376,6 +376,152 @@ const buildTrendChart = (title, isCount) => {
     `;
 };
 
+// --- NEW FUNCTION: RACE READINESS CHART ---
+const renderRaceReadinessChart = () => {
+    // 1. Parse Event Schedule from MD
+    const md = window.App?.planMd || "";
+    if (!md) return '';
+
+    // Simple Table Parser tailored for the user's specific format
+    const lines = md.split('\n');
+    let inTable = false;
+    let events = [];
+    
+    // Headers we expect: Date, Event Type, Goal, Priority, ..., Swim Goal, ..., Bike Goal, ..., Run Goal
+    // We will do a simple fuzzy finding because column indices might shift if user edits
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.includes('| **Date** |')) {
+            inTable = true;
+            continue; // skip header
+        }
+        if (inTable && line.startsWith('| :---')) continue; // skip separator
+        if (inTable && line.startsWith('|')) {
+            const cols = line.split('|').map(c => c.trim()).filter(c => c !== '');
+            // We need at least enough columns. Based on user sample:
+            // 0: Date, 1: Type, 2: Goal, 3: Priority, 4: Profile, 5: Implication, 6: SwimDist, 7: SwimGoal, 8: BikeDist, 9: BikeGoal, 10: RunDist, 11: RunGoal
+            if (cols.length >= 10) {
+                events.push({
+                    dateStr: cols[0],
+                    name: cols[1],
+                    priority: cols[3], // "**A-Race**"
+                    swimGoal: cols[7], // "00:40:00"
+                    bikeGoal: cols[9], // "1:10:00"
+                    runGoal: cols[11]  // "00:50:00"
+                });
+            }
+        } else if (inTable && line === '') {
+            inTable = false; // End of table
+        }
+    }
+
+    // 2. Find Next A-Race
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    let nextRace = null;
+    let minDiff = Infinity;
+
+    events.forEach(e => {
+        if (!e.priority.toLowerCase().includes('a-race')) return;
+        const d = new Date(e.dateStr);
+        if (isNaN(d.getTime())) return;
+        
+        if (d >= today) {
+            const diff = d - today;
+            if (diff < minDiff) {
+                minDiff = diff;
+                nextRace = { ...e, dateObj: d };
+            }
+        }
+    });
+
+    if (!nextRace) return '<div class="p-4 text-slate-500 italic">No upcoming A-Race found in plan.</div>';
+
+    // 3. Helper to parse duration "HH:MM:SS" -> Minutes
+    const parseDur = (str) => {
+        if (!str) return 0;
+        const parts = str.split(':');
+        let mins = 0;
+        if (parts.length === 3) {
+            mins = parseInt(parts[0])*60 + parseInt(parts[1]) + parseInt(parts[2])/60;
+        } else if (parts.length === 2) {
+            mins = parseInt(parts[0])*60 + parseInt(parts[1]); // Assume HH:MM or MM:SS? Context implies HH:MM for long stuff usually, but let's stick to standard HH:MM:SS logic. User said "00:50:00" -> 50m.
+        }
+        return Math.round(mins);
+    };
+
+    const targetSwim = parseDur(nextRace.swimGoal);
+    const targetBike = parseDur(nextRace.bikeGoal);
+    const targetRun = parseDur(nextRace.runGoal);
+
+    // 4. Find Longest Session in Last 30 Days
+    const lookbackDate = new Date();
+    lookbackDate.setDate(lookbackDate.getDate() - 30);
+    
+    let maxSwim = 0;
+    let maxBike = 0;
+    let maxRun = 0;
+
+    logData.forEach(d => {
+        if (d.date >= lookbackDate) {
+            const dur = d.actualDuration || 0;
+            if (d.type === 'Swim') maxSwim = Math.max(maxSwim, dur);
+            if (d.type === 'Bike') maxBike = Math.max(maxBike, dur);
+            if (d.type === 'Run') maxRun = Math.max(maxRun, dur);
+        }
+    });
+
+    // 5. Build Visualization (Progress Bars)
+    const buildBar = (label, current, target, colorClass) => {
+        if (!target || target === 0) return '';
+        const pct = Math.min(Math.round((current / target) * 100), 100);
+        const isReady = pct >= 90; // Threshold green
+        const barColor = isReady ? 'bg-emerald-500' : (pct > 50 ? 'bg-yellow-500' : 'bg-red-500');
+        
+        return `
+            <div class="mb-4 last:mb-0">
+                <div class="flex justify-between text-xs font-bold text-slate-400 mb-1">
+                    <span>${label}</span>
+                    <span>${Math.round(current)}m / ${target}m</span>
+                </div>
+                <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden relative">
+                    <div class="${barColor} h-full rounded-full transition-all duration-1000" style="width: ${pct}%"></div>
+                    <div class="absolute top-0 right-2 h-full flex items-center text-[9px] font-bold text-white shadow-sm drop-shadow-md">
+                        ${pct}%
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
+    const swimHtml = buildBar('Swim Longest Session', maxSwim, targetSwim, 'bg-blue-500');
+    const bikeHtml = buildBar('Bike Longest Session', maxBike, targetBike, 'bg-orange-500');
+    const runHtml = buildBar('Run Longest Session', maxRun, targetRun, 'bg-green-500');
+    
+    // Fallback if no goals
+    if (!swimHtml && !bikeHtml && !runHtml) return '';
+
+    return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-4">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-flag-checkered text-emerald-400"></i> Race Readiness: ${nextRace.name}
+                </h3>
+                <span class="text-xs text-slate-500 font-mono">${nextRace.dateObj.toLocaleDateString()}</span>
+            </div>
+            <div class="p-2">
+                ${swimHtml}
+                ${bikeHtml}
+                ${runHtml}
+                <div class="mt-4 text-[10px] text-slate-500 italic text-center">
+                    * Comparison: Longest session (last 30d) vs. Race Goal Duration.
+                </div>
+            </div>
+        </div>
+    `;
+};
 
 
 const renderDynamicCharts = () => {
@@ -443,7 +589,9 @@ const renderDynamicCharts = () => {
         </div>
     `;
 
-    };
+    // INSERTED: renderRaceReadinessChart() at the top
+    container.innerHTML = `${controlsHtml}${renderRaceReadinessChart()}${legendHtml}${buildTrendChart("Rolling Adherence (Duration Based)", false)}${buildTrendChart("Rolling Adherence (Count Based)", true)}`;
+};
 
 const buildConcentricChart = (stats30, stats60, centerLabel = "Trend") => {
     const r1 = 15.9155; const c1 = 100; const dash1 = `${stats30.pct} ${100 - stats30.pct}`; const color1 = stats30.pct >= 80 ? '#22c55e' : (stats30.pct >= 50 ? '#eab308' : '#ef4444');
