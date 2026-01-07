@@ -1,20 +1,16 @@
 import { Parser } from '../parser.js';
 
-// --- DASHBOARD TOOLTIP HANDLER (UPDATED STYLE) ---
-window.showDashboardTooltip = (evt, date, plan, act, label, color) => {
+// --- DASHBOARD TOOLTIP HANDLER (UPDATED WITH SPORT TYPE) ---
+window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) => {
     let tooltip = document.getElementById('dashboard-tooltip-popup');
     
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'dashboard-tooltip-popup';
-        // Matches the volume chart style: Slate-900 bg, border, shadow
         tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[140px]';
         document.body.appendChild(tooltip);
     }
 
-    // Determine footer color class based on the hex passed
-    // We use inline style for the specific color to ensure it matches the heatmap square
-    
     tooltip.innerHTML = `
         <div class="text-center">
             <div class="text-white font-bold text-sm mb-0.5 whitespace-nowrap">
@@ -25,7 +21,11 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color) => {
                 ${date}
             </div>
 
-            <div class="text-[11px] font-bold border-t border-slate-700 pt-2 mt-1 uppercase tracking-wide" style="color: ${color}">
+            <div class="text-[10px] text-slate-200 font-mono font-bold border-b border-slate-700 pb-1 mb-1">
+                ${sportType}
+            </div>
+
+            <div class="text-[11px] font-bold mt-1 uppercase tracking-wide" style="color: ${color}">
                 ${label}
             </div>
         </div>
@@ -36,8 +36,7 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color) => {
     const y = evt.clientY;
     const viewportWidth = window.innerWidth;
     
-    // Position slightly above the cursor
-    tooltip.style.top = `${y - 60}px`; 
+    tooltip.style.top = `${y - 75}px`; // Moved up slightly to accommodate extra line
     tooltip.style.left = '';
     tooltip.style.right = '';
 
@@ -45,11 +44,10 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color) => {
         tooltip.style.right = `${viewportWidth - x + 10}px`;
         tooltip.style.left = 'auto';
     } else {
-        tooltip.style.left = `${x - 70}px`; // Center align relative to click roughly
+        tooltip.style.left = `${x - 70}px`; 
         tooltip.style.right = 'auto';
     }
     
-    // Fallback: If centering puts it off screen left
     if (parseInt(tooltip.style.left) < 10) tooltip.style.left = '10px';
 
     tooltip.classList.remove('opacity-0');
@@ -274,14 +272,29 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         let inlineStyle = ""; 
         
         let totalPlan = 0; let totalAct = 0; let isRestType = false; 
+        
+        // --- CALCULATE SPORT TYPE STRING ---
+        let sportLabel = "--";
+        const uniqueTypes = new Set();
+
         if (dayData && dayData.length > 0) { 
             dayData.forEach(d => { 
                 totalPlan += (d.plannedDuration || 0); 
                 totalAct += (d.actualDuration || 0); 
-                if (d.type === 'Rest') isRestType = true; 
+                if (d.type === 'Rest') isRestType = true;
+                if (d.type && d.type !== 'Rest') uniqueTypes.add(d.type);
             }); 
+            
+            // Convert Set to String (e.g. "Run" or "Swim + Bike")
+            if (uniqueTypes.size > 0) {
+                sportLabel = Array.from(uniqueTypes).join(' + ');
+            } else if (isRestType) {
+                sportLabel = "Rest Day";
+            }
         }
         
+        if (eventName) sportLabel = "Event";
+
         const hasActivity = (totalPlan > 0 || totalAct > 0 || isRestType || eventName); 
         const isFuture = currentDate > today;
 
@@ -306,9 +319,9 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 
         const hexColor = getHexColor(colorClass);
         
-        // Pass Plan and Actual metrics to the new tooltip function
+        // Pass Sport Label to Tooltip
         const clickAttr = hasActivity || isFuture ? 
-            `onclick="window.showDashboardTooltip(event, '${dateKey}', ${totalPlan}, ${totalAct}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}')"` : '';
+            `onclick="window.showDashboardTooltip(event, '${dateKey}', ${totalPlan}, ${totalAct}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}', '${sportLabel}')"` : '';
             
         const cursorClass = (hasActivity || isFuture) ? 'cursor-pointer hover:opacity-80' : '';
 
