@@ -1,5 +1,55 @@
 import { Parser } from '../parser.js';
 
+// --- DASHBOARD TOOLTIP HANDLER ---
+// Defined globally so the HTML onclick events can find it
+window.showDashboardTooltip = (evt, date, label, value, color) => {
+    let tooltip = document.getElementById('dashboard-tooltip-popup');
+    
+    // Safety: Create if missing (though renderDashboard adds it)
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'dashboard-tooltip-popup';
+        tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed';
+        document.body.appendChild(tooltip);
+    }
+
+    // Content
+    tooltip.innerHTML = `
+        <div class="font-bold text-white mb-1 border-b border-slate-600 pb-1">${date}</div>
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span>
+            <span class="text-slate-300 text-xs">${label}:</span>
+            <span class="text-white font-mono font-bold">${value}</span>
+        </div>
+    `;
+
+    // Position Logic (Smart Edge Detection)
+    const x = evt.clientX;
+    const y = evt.clientY;
+    const viewportWidth = window.innerWidth;
+    
+    tooltip.style.top = `${y - 40}px`; 
+    tooltip.style.left = '';
+    tooltip.style.right = '';
+
+    if (x > viewportWidth * 0.60) {
+        tooltip.style.right = `${viewportWidth - x + 10}px`;
+        tooltip.style.left = 'auto';
+    } else {
+        tooltip.style.left = `${x + 15}px`;
+        tooltip.style.right = 'auto';
+    }
+    
+    // Show
+    tooltip.classList.remove('opacity-0');
+    
+    // Auto-hide after 3 seconds
+    if (window.dashTooltipTimer) clearTimeout(window.dashTooltipTimer);
+    window.dashTooltipTimer = setTimeout(() => {
+        tooltip.classList.add('opacity-0');
+    }, 3000);
+};
+
 // ---  Local Copy of Collapsible Builder  ---
 const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     const contentClasses = isOpen 
@@ -165,10 +215,16 @@ export function renderDashboard(planMd, mergedLogData) {
     }, 50);
 
     // --- RETURN FINAL HTML ---
-    return `${progressHtml}${plannedWorkoutsSection}<div class="grid grid-cols-1 gap-8 mt-8">${heatmapTrailingHtml}${heatmapYearHtml}</div>`;
+    // Added tooltip container at the bottom
+    return `
+        ${progressHtml}
+        ${plannedWorkoutsSection}
+        <div class="grid grid-cols-1 gap-8 mt-8">${heatmapTrailingHtml}${heatmapYearHtml}</div>
+        <div id="dashboard-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed"></div>
+    `;
 }
 
-// ... (Rest of Helpers: toLocalYMD, buildGenericHeatmap, buildProgressWidget) ...
+// ... (Rest of Helpers: toLocalYMD) ...
 
 const toLocalYMD = (dateInput) => {
     const d = new Date(dateInput);
@@ -179,8 +235,6 @@ const toLocalYMD = (dateInput) => {
 // Updated to accept containerId
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
-    
-    // 1. Prepare Data Map
     const dataMap = {}; 
     fullLog.forEach(item => { 
         const dateKey = dateToKeyFn(item.date); 
@@ -191,29 +245,24 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     const today = new Date(); today.setHours(0,0,0,0);
     const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
     
-    // --- COLOR MAPPING FOR TOOLTIP ---
-    // We need hex codes for the tooltip function, but we use classes for the squares.
     const getHexColor = (cls) => {
         if (cls.includes('emerald-500')) return '#10b981';
         if (cls.includes('yellow-500')) return '#eab308';
         if (cls.includes('red-500')) return '#ef4444';
         if (cls.includes('purple-500')) return '#a855f7';
         if (cls.includes('slate-700')) return '#334155';
-        return '#1e293b'; // Default Slate-800
+        return '#1e293b'; 
     };
 
     const startDay = startDate.getDay(); 
     let cellsHtml = ''; 
-    
-    // Empty cells for offset
     for (let i = 0; i < startDay; i++) { 
         cellsHtml += `<div class="w-3 h-3 m-[1px] opacity-0"></div>`; 
     }
     
     let currentDate = new Date(startDate);
     const maxLoops = 400; let loops = 0;
-
-    // --- MAIN LOOP ---
+    
     while (currentDate <= endDate && loops < maxLoops) {
         loops++; 
         const dateKey = dateToKeyFn(currentDate); 
@@ -221,13 +270,11 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         const dayData = dataMap[dateKey]; 
         const eventName = eventMap && eventMap[dateKey];
         
-        // Default State
         let colorClass = 'bg-slate-800'; 
         let statusLabel = "Empty"; 
         let inlineStyle = ""; 
         
         let totalPlan = 0; let totalAct = 0; let isRestType = false; 
-        
         if (dayData && dayData.length > 0) { 
             dayData.forEach(d => { 
                 totalPlan += (d.plannedDuration || 0); 
@@ -239,68 +286,38 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         const hasActivity = (totalPlan > 0 || totalAct > 0 || isRestType || eventName); 
         const isFuture = currentDate > today;
 
-        // --- DETERMINE COLOR & STATUS ---
-        if (eventName) { 
-            colorClass = 'bg-purple-500'; 
-            statusLabel = `Event: ${eventName}`; 
-        }
-        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) { 
-            colorClass = 'bg-emerald-500'; 
-            inlineStyle = highContrastStripe; 
-            statusLabel = "Unplanned Workout"; 
-        }
+        if (eventName) { colorClass = 'bg-purple-500'; statusLabel = `Event: ${eventName}`; }
+        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) { colorClass = 'bg-emerald-500'; inlineStyle = highContrastStripe; statusLabel = "Unplanned Workout"; }
         else if (isFuture) { 
-            if (totalPlan > 0) { 
-                colorClass = 'bg-slate-700'; 
-                statusLabel = "Planned"; 
-            } else { 
-                colorClass = 'bg-slate-800'; 
-                statusLabel = "Future"; 
-            } 
+            if (totalPlan > 0) { colorClass = 'bg-slate-700'; statusLabel = "Planned"; } 
+            else { colorClass = 'bg-slate-800'; statusLabel = "Future"; } 
         }
         else { 
             if (totalPlan > 0) { 
-                if (totalAct === 0) { 
-                    colorClass = 'bg-red-500/80'; 
-                    statusLabel = "Missed"; 
-                } else { 
+                if (totalAct === 0) { colorClass = 'bg-red-500/80'; statusLabel = "Missed"; } 
+                else { 
                     const ratio = totalAct / totalPlan; 
-                    if (ratio >= 0.95) { 
-                        colorClass = 'bg-emerald-500'; 
-                        statusLabel = "Completed"; 
-                    } else { 
-                        colorClass = 'bg-yellow-500'; 
-                        statusLabel = `Partial (${Math.round(ratio*100)}%)`; 
-                    } 
+                    if (ratio >= 0.95) { colorClass = 'bg-emerald-500'; statusLabel = "Completed"; } 
+                    else { colorClass = 'bg-yellow-500'; statusLabel = `Partial (${Math.round(ratio*100)}%)`; } 
                 } 
-            } else { 
-                colorClass = 'bg-emerald-500/50'; 
-                statusLabel = "Rest Day"; 
-            } 
+            } else { colorClass = 'bg-emerald-500/50'; statusLabel = "Rest Day"; } 
         }
 
-        // Hide empty Sundays if needed (optional logic from your original code)
-        if (dayOfWeek === 0 && !hasActivity && !eventName) { 
-            colorClass = ''; 
-            inlineStyle = 'opacity: 0;'; 
-        }
+        if (dayOfWeek === 0 && !hasActivity && !eventName) { colorClass = ''; inlineStyle = 'opacity: 0;'; }
 
         const hexColor = getHexColor(colorClass);
-
-        // --- CLICK HANDLER REPLACEMENT ---
-        // Instead of title="..." we use onclick to trigger your custom tooltip
-        // Note: We pass ' ' for the value to avoid "undefined%" showing up if your tooltip expects a number
+        
+        // Use local tooltip function
         const clickAttr = hasActivity || isFuture ? 
-            `onclick="window.showTrendTooltip(event, '${dateKey}', 'Status', '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}')"` : '';
+            `onclick="window.showDashboardTooltip(event, '${dateKey}', 'Status', '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}')"` : '';
             
         const cursorClass = (hasActivity || isFuture) ? 'cursor-pointer hover:opacity-80' : '';
 
         cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" ${clickAttr}></div>`;
-        
         currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // --- Build Month Header Row (Unchanged) ---
+    // --- Build Month Header Row ---
     let monthsHtml = '';
     let loopDate = new Date(startDate);
     loopDate.setDate(loopDate.getDate() - loopDate.getDay());
@@ -503,7 +520,6 @@ function buildProgressWidget(workouts, fullLogData) {
         return "text-slate-500";
     };
     
-    // UPDATED: Now displaying both streaks side-by-side
     return `
     <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm">
         <div class="flex-1 w-full">
