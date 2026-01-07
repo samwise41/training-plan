@@ -7,17 +7,18 @@
     const cacheBuster = Date.now();
 
     // 2. Dynamic Imports (Replaces the top static imports)
-    // We append ?t=${cacheBuster} to every file so the browser fetches a new copy
     const { Parser } = await import(`./parser.js?t=${cacheBuster}`);
     const { renderTrends, updateDurationAnalysis } = await import(`./views/trends.js?t=${cacheBuster}`);
     const { renderGear, updateGearResult } = await import(`./views/gear.js?t=${cacheBuster}`);
     const { renderZones } = await import(`./views/zones.js?t=${cacheBuster}`);
     const { renderRoadmap } = await import(`./views/roadmap.js?t=${cacheBuster}`);
     const { renderDashboard } = await import(`./views/dashboard.js?t=${cacheBuster}`);
+    // NEW: Import the readiness module
+    const { renderReadiness, renderReadinessChart } = await import(`./views/readiness.js?t=${cacheBuster}`);
 
     console.log(`📦 Modules loaded with ID: ${cacheBuster}`);
 
-    // 3. Define Config & App Logic (Same as before, just wrapped inside this function)
+    // 3. Define Config & App Logic
     const CONFIG = {
         PLAN_FILE: "endurance_plan.md",
         GEAR_FILE: "Gear.md",
@@ -132,7 +133,8 @@
                 'nav-logbook': 'logbook',
                 'nav-roadmap': 'roadmap',
                 'nav-gear': 'gear',
-                'nav-zones': 'zones'
+                'nav-zones': 'zones',
+                'nav-readiness': 'readiness' // Added readiness map
             };
 
             Object.keys(navMap).forEach(id => {
@@ -202,7 +204,7 @@
 
         handleHashChange() {
             const hash = window.location.hash.substring(1); 
-            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones'];
+            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness'];
             const view = validViews.includes(hash) ? hash : 'dashboard';
             this.renderView(view);
         },
@@ -218,7 +220,8 @@
                 logbook: 'Logbook', 
                 roadmap: 'Season Roadmap',
                 gear: 'Gear Choice',
-                zones: 'Training Zones'
+                zones: 'Training Zones',
+                readiness: 'Race Readiness' // Title map update
             };
             const titleEl = document.getElementById('header-title-dynamic');
             if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
@@ -248,6 +251,12 @@
                     } 
                     else if (view === 'roadmap') {
                         content.innerHTML = renderRoadmap(this.planMd);
+                    }
+                    else if (view === 'readiness') {
+                        // NEW: Readiness Render Logic
+                        const html = renderReadiness(this.logData, this.planMd);
+                        content.innerHTML = html;
+                        renderReadinessChart(this.logData);
                     }
                     else if (view === 'logbook') {
                         const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
