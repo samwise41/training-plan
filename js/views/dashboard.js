@@ -187,29 +187,34 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// --- NEW HELPER: CALCULATE STREAK ---
+// --- NEW HELPER: CALCULATE STREAK (Sun-Sat) ---
 function calculateStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
     
-    // Group by Week (ISO Week YYYY-Www)
-    const getWeekKey = (d) => {
+    // Group by Week (Sunday Start)
+    const getSunSatKey = (d) => {
         const date = new Date(d);
         date.setHours(0, 0, 0, 0);
-        // Thursday in current week decides the year.
-        date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-        const week1 = new Date(date.getFullYear(), 0, 4);
-        const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-        return `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+        const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+        // If today is Sunday (0), subtract 0. If Monday (1), subtract 1.
+        // This makes Sunday the anchor.
+        const diff = date.getDate() - day; 
+        const weekStart = new Date(date.setDate(diff));
+        return weekStart.toISOString().split('T')[0]; // Returns "YYYY-MM-DD" of the Sunday
     };
 
     const weeklyStats = {};
     const today = new Date();
-    const currentWeekKey = getWeekKey(today);
+    // Identify the current week's key to exclude it (since it's not finished)
+    const currentWeekKey = getSunSatKey(today);
 
     fullLogData.forEach(item => {
-        const wKey = getWeekKey(item.date);
-        // Only count weeks strictly BEFORE the current week to finalize the "streak"
-        // (Optional: You can include current week if you want, but streaks usually imply 'completed' periods)
+        // Safety check for valid dates
+        if (!item.date) return;
+        
+        const wKey = getSunSatKey(item.date);
+        
+        // Skip Future Weeks and the Current Unfinished Week
         if (wKey >= currentWeekKey) return;
 
         if (!weeklyStats[wKey]) weeklyStats[wKey] = { planned: 0, actual: 0 };
@@ -217,21 +222,27 @@ function calculateStreak(fullLogData) {
         weeklyStats[wKey].actual += (item.actualDuration || 0);
     });
 
-    const sortedWeeks = Object.keys(weeklyStats).sort().reverse(); // Newest first
+    // Sort weeks descending (Newest completed week first)
+    const sortedWeeks = Object.keys(weeklyStats).sort().reverse();
     let streak = 0;
 
     for (const weekKey of sortedWeeks) {
         const stats = weeklyStats[weekKey];
-        // If Plan is 0 (Rest Week), we consider it adherence (streak continues)
-        // If Plan > 0, we check for >= 95%
+        
+        // 1. If it was a Rest Week (0 planned), streak stays alive (optional: or counts as +1)
         if (stats.planned === 0) {
-            streak++;
-        } else {
+            streak++; 
+        } 
+        // 2. Normal Week: Check 95% Threshold
+        else {
+            // Cap adherence at 100% for calculation so extra credit doesn't mask missed days?
+            // Usually simple division is fine: 300/300 = 1.0
             const adherence = stats.actual / stats.planned;
             if (adherence >= 0.95) {
                 streak++;
             } else {
-                break; // Streak broken
+                // Streak broken. Stop counting.
+                break; 
             }
         }
     }
