@@ -3,22 +3,35 @@
 (async function initApp() {
     console.log("🚀 Booting App (Always Fresh Mode)...");
 
-    // 1. Generate a unique timestamp for this session
     const cacheBuster = Date.now();
+    const safeImport = async (path, name) => {
+        try {
+            return await import(`${path}?t=${cacheBuster}`);
+        } catch (e) {
+            console.error(`⚠️ Failed to load module: ${name}`, e);
+            return null;
+        }
+    };
 
-    // 2. Dynamic Imports (Replaces the top static imports)
-    const { Parser } = await import(`./parser.js?t=${cacheBuster}`);
-    const { renderTrends, updateDurationAnalysis } = await import(`./views/trends.js?t=${cacheBuster}`);
-    const { renderGear, updateGearResult } = await import(`./views/gear.js?t=${cacheBuster}`);
-    const { renderZones } = await import(`./views/zones.js?t=${cacheBuster}`);
-    const { renderRoadmap } = await import(`./views/roadmap.js?t=${cacheBuster}`);
-    const { renderDashboard } = await import(`./views/dashboard.js?t=${cacheBuster}`);
-    // NEW: Import the readiness module
-    const { renderReadiness, renderReadinessChart } = await import(`./views/readiness.js?t=${cacheBuster}`);
+    const parserMod = await safeImport('./parser.js', 'Parser');
+    const trendsMod = await safeImport('./views/trends.js', 'Trends');
+    const gearMod = await safeImport('./views/gear.js', 'Gear');
+    const zonesMod = await safeImport('./views/zones.js', 'Zones');
+    const roadmapMod = await safeImport('./views/roadmap.js', 'Roadmap');
+    const dashMod = await safeImport('./views/dashboard.js', 'Dashboard');
+    const readinessMod = await safeImport('./views/readiness.js', 'Readiness');
+
+    const Parser = parserMod?.Parser || { parseTrainingLog: () => [], getSection: () => "" };
+    const { renderTrends, updateDurationAnalysis } = trendsMod || { renderTrends: () => ({html: ''}) };
+    const { renderGear, updateGearResult } = gearMod || { renderGear: () => ({html: ''}) };
+    const { renderZones } = zonesMod || { renderZones: () => '' };
+    const { renderRoadmap } = roadmapMod || { renderRoadmap: () => '' };
+    const { renderDashboard } = dashMod || { renderDashboard: () => '' };
+    const { renderReadiness } = readinessMod || { renderReadiness: () => '' };
+    const renderReadinessChart = readinessMod?.renderReadinessChart || (() => {});
 
     console.log(`📦 Modules loaded with ID: ${cacheBuster}`);
 
-    // 3. Define Config & App Logic
     const CONFIG = {
         PLAN_FILE: "endurance_plan.md",
         GEAR_FILE: "Gear.md",
@@ -54,8 +67,7 @@
 
             if (btn && input) {
                 const unlock = () => {
-                    const code = input.value.trim();
-                    if (code === 'training2026') { 
+                    if (input.value.trim() === 'training2026') { 
                         document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
                         curtain.style.opacity = '0';
                         setTimeout(() => curtain.classList.add('hidden'), 500);
@@ -68,29 +80,37 @@
                 };
                 btn.onclick = unlock; 
                 input.onkeypress = (e) => { if (e.key === 'Enter') unlock(); };
-                input.oninput = () => {
-                    if (errorMsg) errorMsg.classList.add('hidden');
-                    input.classList.remove('border-red-500');
-                    input.classList.add('border-slate-700');
-                }
+                input.oninput = () => { if (errorMsg) errorMsg.classList.add('hidden'); input.classList.remove('border-red-500'); input.classList.add('border-slate-700'); }
             }
         },
 
+        // UPDATED: Stats Bar now includes columns for Readiness Score
         getStatsBar() {
             return `
-                <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-                    <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg flex flex-col justify-center">
+                <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                    <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex flex-col justify-center shadow-lg">
                         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</p>
                         <div class="flex flex-col">
                             <span class="text-lg font-bold text-blue-500 leading-tight" id="stat-phase">--</span>
-                            <span class="text-lg font-bold text-white leading-tight" id="stat-week">--</span>
+                            <span class="text-sm font-bold text-white leading-tight mt-1" id="stat-week">--</span>
                         </div>
                     </div>
-                    <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-lg">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
-                        <div id="stat-event">
-                            <p class="text-lg font-semibold text-emerald-400 leading-tight" id="stat-event-name">--</p>
-                            <p class="text-[10px] font-normal text-slate-400 mt-1 uppercase" id="stat-event-countdown">--</p>
+                    
+                    <div class="bg-slate-800 border border-slate-700 p-0 rounded-xl relative group overflow-hidden shadow-lg">
+                        <div class="absolute right-0 top-0 w-24 h-24 bg-gradient-to-br from-white/5 to-transparent rounded-bl-full pointer-events-none"></div>
+                        <div class="p-4 flex justify-between items-center relative z-10 h-full">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
+                                <div id="stat-event">
+                                    <p class="text-lg font-bold text-white leading-tight" id="stat-event-name">--</p>
+                                    <p class="text-[10px] font-mono text-slate-400 mt-1 uppercase" id="stat-event-countdown">--</p>
+                                </div>
+                            </div>
+                            <div class="text-right border-l border-slate-700/50 pl-4" id="stat-readiness-box" style="display:none;">
+                                <div class="text-3xl font-black text-slate-200 leading-none tracking-tighter" id="stat-readiness-val">--%</div>
+                                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Readiness</div>
+                                <div id="stat-readiness-badge" class="mt-1 px-1.5 py-0.5 rounded bg-slate-900 border text-[8px] font-bold uppercase tracking-wider inline-block">--</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -100,7 +120,6 @@
         async init() {
             this.checkSecurity();
             try {
-                // Also cache-bust the Markdown files!
                 const [planRes, gearRes, archiveRes] = await Promise.all([
                     fetch(`./${CONFIG.PLAN_FILE}?t=${cacheBuster}`),
                     fetch(`./${CONFIG.GEAR_FILE}?t=${cacheBuster}`),
@@ -128,24 +147,16 @@
 
         setupEventListeners() {
             const navMap = {
-                'nav-dashboard': 'dashboard',
-                'nav-trends': 'trends',
-                'nav-logbook': 'logbook',
-                'nav-roadmap': 'roadmap',
-                'nav-gear': 'gear',
-                'nav-zones': 'zones',
-                'nav-readiness': 'readiness' // Added readiness map
+                'nav-dashboard': 'dashboard', 'nav-trends': 'trends', 'nav-logbook': 'logbook',
+                'nav-roadmap': 'roadmap', 'nav-gear': 'gear', 'nav-zones': 'zones', 'nav-readiness': 'readiness'
             };
-
             Object.keys(navMap).forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.addEventListener('click', () => this.navigate(navMap[id]));
             });
-
             const btnOpen = document.getElementById('btn-sidebar-open');
             const btnClose = document.getElementById('btn-sidebar-close');
             const overlay = document.getElementById('sidebar-overlay');
-
             if (btnOpen) btnOpen.addEventListener('click', () => this.toggleSidebar());
             if (btnClose) btnClose.addEventListener('click', () => this.toggleSidebar());
             if (overlay) overlay.addEventListener('click', () => this.toggleSidebar());
@@ -165,11 +176,10 @@
                     document.getElementById('weather-info').innerText = `${this.currentTemp}°F • ${condition[0]}`;
                     document.getElementById('weather-icon-top').innerText = condition[1];
                 }
-            } catch (e) {
-                console.error("Weather unavailable", e);
-            }
+            } catch (e) { console.error("Weather unavailable", e); }
         },
 
+        // UPDATED: Now calculates and injects Readiness Score
         updateStats() {
             if (!this.planMd) return;
             const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
@@ -182,21 +192,89 @@
             const weekEl = document.getElementById('stat-week');
             if (weekEl) weekEl.innerText = currentWeek;
             
-            const eventSection = Parser.getSection(this.planMd, "Event Schedule");
-            if (eventSection) {
-                const eventLines = eventSection.split('\n').filter(l => l.includes('|') && !l.toLowerCase().includes('date') && !l.includes('---'));
-                const nameEl = document.getElementById('stat-event-name');
-                const countdownEl = document.getElementById('stat-event-countdown');
-                if (eventLines.length > 0 && nameEl) {
-                    const parts = eventLines[0].split('|').map(p => p.trim()).filter(p => p.length > 0);
-                    if (parts.length >= 2) {
-                        const eventDate = new Date(parts[0]);
-                        nameEl.innerText = parts[1];
-                        if (!isNaN(eventDate)) {
-                            const today = new Date(); today.setHours(0,0,0,0);
-                            const diff = Math.ceil((eventDate - today) / 86400000);
-                            countdownEl.innerText = diff < 0 ? "Completed" : (diff === 0 ? "Today!" : `${Math.floor(diff/7)}w ${diff%7}d to go`);
+            // Event Parsing
+            const lines = this.planMd.split('\n');
+            let nextEvent = null;
+            let inTable = false;
+            const today = new Date(); today.setHours(0,0,0,0);
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.includes('| **Date** |')) { inTable = true; continue; }
+                if (inTable && line.startsWith('| :---')) continue;
+                if (inTable && line.startsWith('|')) {
+                    const clean = line.replace(/^\||\|$/g, '');
+                    const cols = clean.split('|').map(c => c.trim());
+                    if (cols.length >= 2) {
+                        const d = new Date(cols[0]);
+                        if (!isNaN(d.getTime()) && d >= today) {
+                            nextEvent = { 
+                                date: d, name: cols[1], 
+                                swimGoal: cols[7]||'', bikeGoal: cols[9]||'', runGoal: cols[11]||'' 
+                            };
+                            break; 
                         }
+                    }
+                } else if (inTable && line === '') inTable = false;
+            }
+
+            if (nextEvent) {
+                document.getElementById('stat-event-name').innerText = nextEvent.name;
+                const diff = Math.ceil((nextEvent.date - today) / 86400000);
+                const timeStr = diff < 0 ? "Completed" : (diff === 0 ? "Today!" : `${Math.floor(diff/7)}w ${diff%7}d to go`);
+                document.getElementById('stat-event-countdown').innerHTML = `<i class="fa-solid fa-hourglass-half mr-1"></i> ${timeStr}`;
+
+                // --- Calculate Readiness ---
+                if (this.logData.length > 0) {
+                    const parseDur = (str) => {
+                        if(!str || str.includes('km') || str.includes('mi')) return 0;
+                        if(!isNaN(str)) return parseInt(str);
+                        let m=0;
+                        if(str.includes('h')) { const p=str.split('h'); m+=parseInt(p[0])*60; if(p[1]) m+=parseInt(p[1]); }
+                        else if(str.includes(':')) { const p=str.split(':'); m+=parseInt(p[0])*60 + parseInt(p[1]); }
+                        else if(str.includes('m')) m+=parseInt(str);
+                        return m;
+                    };
+
+                    const lookback = new Date(); lookback.setDate(lookback.getDate()-30);
+                    let mS=0, mB=0, mR=0;
+                    this.logData.forEach(d => {
+                        if(new Date(d.date) >= lookback) {
+                            let dur = typeof d.actualDuration === 'number' ? d.actualDuration : parseDur(d.duration);
+                            if(d.type==='Swim') mS=Math.max(mS,dur);
+                            if(d.type==='Bike') mB=Math.max(mB,dur);
+                            if(d.type==='Run') mR=Math.max(mR,dur);
+                        }
+                    });
+
+                    const tS = parseDur(nextEvent.swimGoal);
+                    const tB = parseDur(nextEvent.bikeGoal);
+                    const tR = parseDur(nextEvent.runGoal);
+                    
+                    const pcts = [];
+                    if(tS>0) pcts.push(Math.min(Math.round((mS/tS)*100),100));
+                    if(tB>0) pcts.push(Math.min(Math.round((mB/tB)*100),100));
+                    if(tR>0) pcts.push(Math.min(Math.round((mR/tR)*100),100));
+
+                    if(pcts.length > 0) {
+                        const score = Math.min(...pcts);
+                        const box = document.getElementById('stat-readiness-box');
+                        const val = document.getElementById('stat-readiness-val');
+                        const badge = document.getElementById('stat-readiness-badge');
+                        
+                        box.style.display = 'block';
+                        val.innerText = `${score}%`;
+                        
+                        let color = "text-red-500"; 
+                        let bColor = "border-red-500/50";
+                        let label = "WARNING";
+                        
+                        if(score >= 85) { color="text-emerald-500"; bColor="border-emerald-500/50"; label="READY"; }
+                        else if(score >= 60) { color="text-yellow-500"; bColor="border-yellow-500/50"; label="BUILD"; }
+
+                        val.className = `text-3xl font-black ${color} leading-none tracking-tighter`;
+                        badge.innerText = label;
+                        badge.className = `mt-1 px-1.5 py-0.5 rounded bg-slate-900 border ${bColor} ${color} text-[8px] font-bold uppercase tracking-wider inline-block`;
                     }
                 }
             }
@@ -209,20 +287,10 @@
             this.renderView(view);
         },
 
-        navigate(view) {
-            window.location.hash = view;
-        },
+        navigate(view) { window.location.hash = view; },
 
         renderView(view) {
-            const titles = { 
-                dashboard: 'Weekly Schedule', 
-                trends: 'Trends & KPIs', 
-                logbook: 'Logbook', 
-                roadmap: 'Season Roadmap',
-                gear: 'Gear Choice',
-                zones: 'Training Zones',
-                readiness: 'Race Readiness' // Title map update
-            };
+            const titles = { dashboard: 'Weekly Schedule', trends: 'Trends & KPIs', logbook: 'Logbook', roadmap: 'Season Roadmap', gear: 'Gear Choice', zones: 'Training Zones', readiness: 'Race Readiness' };
             const titleEl = document.getElementById('header-title-dynamic');
             if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
 
@@ -241,19 +309,14 @@
                         this.gearData = result.gearData;
                         this.updateGearResult(); 
                     } 
-                    else if (view === 'zones') {
-                        content.innerHTML = renderZones(this.planMd);
-                    } 
+                    else if (view === 'zones') content.innerHTML = renderZones(this.planMd);
                     else if (view === 'trends') {
                         const result = renderTrends(this.logData); 
                         content.innerHTML = result.html;
                         this.updateDurationAnalysis();
                     } 
-                    else if (view === 'roadmap') {
-                        content.innerHTML = renderRoadmap(this.planMd);
-                    }
+                    else if (view === 'roadmap') content.innerHTML = renderRoadmap(this.planMd);
                     else if (view === 'readiness') {
-                        // NEW: Readiness Render Logic
                         const html = renderReadiness(this.logData, this.planMd);
                         content.innerHTML = html;
                         renderReadinessChart(this.logData);
@@ -266,17 +329,16 @@
                         content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                     }
                     else {
-                        // Pass the merged logData to the dashboard
+                        // Pass merged logData
                         const html = this.getStatsBar() + renderDashboard(this.planMd, this.logData);
                         content.innerHTML = html;
-                        this.updateStats();
+                        this.updateStats(); // This triggers the Readiness calc on the top card
                     }
                 } catch (err) {
                     console.error("Render error:", err);
                     content.innerHTML = `<p class="text-red-400">Error rendering view: ${err.message}</p>`;
                 }
                 content.classList.remove('opacity-0');
-                
                 if (window.innerWidth < 1024) {
                     const sidebar = document.getElementById('sidebar');
                     if (sidebar.classList.contains('sidebar-open')) this.toggleSidebar();
@@ -284,14 +346,8 @@
             }, 200);
         },
 
-        // Export helpers for HTML event handlers
-        updateDurationAnalysis(data) {
-            updateDurationAnalysis(data || this.logData);
-        },
-
-        updateGearResult() {
-            updateGearResult(this.gearData);
-        },
+        updateDurationAnalysis(data) { updateDurationAnalysis(data || this.logData); },
+        updateGearResult() { updateGearResult(this.gearData); },
 
         toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -302,10 +358,7 @@
         }
     };
 
-    // Attach to window so HTML event handlers (onclick) can find it
     window.App = App;
-    
-    // Start the App
     App.init();
 
 })();
