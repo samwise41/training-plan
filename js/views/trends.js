@@ -206,7 +206,7 @@ const buildTrendChart = (title, isCount) => {
     const getY = (val) => padding.top + chartH - ((val - domainMin) / (domainMax - domainMin)) * chartH;
     const getX = (idx, total) => padding.left + (idx / (total - 1)) * chartW;
 
-    // --- GRID LINES ---
+    // --- GRID LINES (UPDATED PATTERN) ---
     const gridLinesDef = [
         { val: 100, color: '#ffffff' }, // White
         { val: 80, color: '#eab308' },  // Yellow
@@ -217,9 +217,10 @@ const buildTrendChart = (title, isCount) => {
     gridLinesDef.forEach(line => {
         if (line.val <= domainMax && line.val >= domainMin) {
             const y = getY(line.val);
+            // Changed pattern to "8, 8" (Long Dash) and lowered opacity to 0.3
             gridHtml += `
-                <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="${line.color}" stroke-width="1" stroke-dasharray="4" opacity="0.6" />
-                <text x="${padding.left - 5}" y="${y + 3}" text-anchor="end" font-size="9" fill="${line.color}" font-weight="bold">${line.val}%</text>
+                <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="${line.color}" stroke-width="1" stroke-dasharray="8,8" opacity="0.3" />
+                <text x="${padding.left - 5}" y="${y + 3}" text-anchor="end" font-size="9" fill="${line.color}" font-weight="bold" opacity="0.8">${line.val}%</text>
             `;
         }
     });
@@ -246,7 +247,7 @@ const buildTrendChart = (title, isCount) => {
             d30 += ` L ${x} ${y30}`;
             d60 += ` L ${x} ${y60}`;
 
-            // Weekly Dots (Now Solid Focus)
+            // Weekly Dots (Solid Focus)
             if (chartState.showWeekly) {
                 circlesHtml += `<circle cx="${x}" cy="${y7}" r="2.5" fill="${color}" stroke="#1e293b" stroke-width="1" class="cursor-pointer hover:r-4 transition-all" onclick="window.showTrendTooltip(event, '${p.label}', 'Weekly (${type})', ${p.val7}, '${color}')"></circle>`;
             }
@@ -260,15 +261,15 @@ const buildTrendChart = (title, isCount) => {
             }
         });
 
-        // Weekly Line (Now Solid)
+        // Weekly Line (Solid)
         if (chartState.showWeekly) {
             pathsHtml += `<path d="${d7}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />`;
         }
-        // 30d Line (Now Dashed)
+        // 30d Line (Dashed 4,4)
         if (chartState.show30d) {
             pathsHtml += `<path d="${d30}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="4,4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" />`;
         }
-        // 60d Line (Now Dotted)
+        // 60d Line (Dotted 2,2)
         if (chartState.show60d) {
             pathsHtml += `<path d="${d60}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="2,2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />`;
         }
