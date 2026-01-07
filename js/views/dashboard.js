@@ -187,80 +187,110 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// --- NEW HELPER: CALCULATE STREAK (Strict Daily Compliance) ---
-function calculateStreak(fullLogData) {
+// --- STREAK 1: STRICT DAILY COMPLIANCE ---
+// A week only counts if ALL planned workouts were >95% completed
+function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
 
-    // 1. Identify "Current Week" Start (Sunday) to exclude it
     const today = new Date();
     today.setHours(0,0,0,0);
-    const dayOfWeek = today.getDay(); // 0=Sun, 6=Sat
+    const dayOfWeek = today.getDay(); 
     const currentWeekStart = new Date(today);
-    currentWeekStart.setDate(today.getDate() - dayOfWeek); // Back to Sunday
+    currentWeekStart.setDate(today.getDate() - dayOfWeek);
 
-    // 2. Group data by Week (Key: "YYYY-MM-DD" of Sunday)
     const weeksMap = {};
 
     fullLogData.forEach(item => {
         if (!item.date) return;
         
-        // Determine week start (Sunday) for this item
         const d = new Date(item.date);
         d.setHours(0,0,0,0);
         const day = d.getDay();
         const weekStart = new Date(d);
         weekStart.setDate(d.getDate() - day);
         
-        // Skip current/future weeks
         if (weekStart >= currentWeekStart) return;
 
         const key = weekStart.toISOString().split('T')[0];
         
-        // Initialize week entry if missing
-        if (!weeksMap[key]) {
-            weeksMap[key] = { failed: false };
-        }
+        if (!weeksMap[key]) weeksMap[key] = { failed: false };
 
-        // 3. STRICT CHECK: If ANY planned day is missed, the whole week fails
         if (item.plannedDuration > 0) {
             const actual = item.actualDuration || 0;
             const ratio = actual / item.plannedDuration;
-            
-            // If any single workout is below 95%, mark week as failed
-            if (ratio < 0.95) {
-                weeksMap[key].failed = true;
-            }
+            if (ratio < 0.95) weeksMap[key].failed = true;
         }
     });
 
-    // 4. Count backwards from "Last Week"
     let streak = 0;
-    // Start checking from the week immediately prior to currentWeekStart
     let checkDate = new Date(currentWeekStart);
-    checkDate.setDate(checkDate.getDate() - 7); // Previous Sunday
+    checkDate.setDate(checkDate.getDate() - 7); 
 
-    // Check up to 5 years back (safety limit)
     for (let i = 0; i < 260; i++) { 
         const key = checkDate.toISOString().split('T')[0];
         const weekData = weeksMap[key];
-
-        // If we run out of data history, stop
-        if (!weekData) {
-            break; 
-        }
-
-        // If the week is marked as failed, the streak breaks
-        if (weekData.failed) {
-            break; 
-        }
+        if (!weekData) break; 
+        if (weekData.failed) break; 
         
-        // If we get here, the week existed and had NO failures
         streak++;
-        
-        // Move back one week
         checkDate.setDate(checkDate.getDate() - 7);
     }
+    return streak;
+}
 
+// --- STREAK 2: AGGREGATE VOLUME COMPLIANCE ---
+// A week counts if TOTAL Actual Duration >= 95% of TOTAL Planned Duration
+function calculateVolumeStreak(fullLogData) {
+    if (!fullLogData || fullLogData.length === 0) return 0;
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const dayOfWeek = today.getDay(); 
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setDate(today.getDate() - dayOfWeek);
+
+    const weeksMap = {};
+
+    fullLogData.forEach(item => {
+        if (!item.date) return;
+        
+        const d = new Date(item.date);
+        d.setHours(0,0,0,0);
+        const day = d.getDay();
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - day);
+        
+        if (weekStart >= currentWeekStart) return;
+
+        const key = weekStart.toISOString().split('T')[0];
+        
+        if (!weeksMap[key]) weeksMap[key] = { planned: 0, actual: 0 };
+        weeksMap[key].planned += (item.plannedDuration || 0);
+        weeksMap[key].actual += (item.actualDuration || 0);
+    });
+
+    let streak = 0;
+    let checkDate = new Date(currentWeekStart);
+    checkDate.setDate(checkDate.getDate() - 7); 
+
+    for (let i = 0; i < 260; i++) { 
+        const key = checkDate.toISOString().split('T')[0];
+        const stats = weeksMap[key];
+        
+        if (!stats) break; // No data for this week, streak ends
+
+        if (stats.planned === 0) {
+            streak++; // Rest week keeps streak alive
+        } else {
+            const ratio = stats.actual / stats.planned;
+            if (ratio >= 0.95) {
+                streak++;
+            } else {
+                break; // Volume target missed
+            }
+        }
+        checkDate.setDate(checkDate.getDate() - 7);
+    }
     return streak;
 }
 
@@ -284,12 +314,17 @@ function buildProgressWidget(workouts, fullLogData) {
     if (pacingDiff >= 15) { pacingLabel = `${Math.round(pacingDiff)}m Ahead`; pacingColor = "text-emerald-400"; pacingIcon = "fa-arrow-trend-up"; } else if (pacingDiff <= -15) { pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`; pacingColor = "text-orange-400"; pacingIcon = "fa-triangle-exclamation"; }
     const totalActualHrsPacing = (totalActual / 60).toFixed(1); const expectedHrs = (expectedSoFar / 60).toFixed(1);
 
-    // --- NEW STREAK CALCULATION ---
-    const streakWeeks = calculateStreak(fullLogData);
-    let streakColor = "text-slate-500";
-    if (streakWeeks >= 3) streakColor = "text-orange-400"; // Heating up
-    if (streakWeeks >= 8) streakColor = "text-red-500";    // On Fire
+    // --- STREAK CALCULATIONS ---
+    const dailyStreak = calculateDailyStreak(fullLogData);
+    const volumeStreak = calculateVolumeStreak(fullLogData);
+
+    const getStreakColor = (val) => {
+        if (val >= 8) return "text-red-500";
+        if (val >= 3) return "text-orange-400";
+        return "text-slate-500";
+    };
     
+    // UPDATED: Now displaying both streaks side-by-side
     return `
     <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm">
         <div class="flex-1 w-full">
@@ -298,6 +333,7 @@ function buildProgressWidget(workouts, fullLogData) {
             ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}
             ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}
         </div>
+        
         <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-6 md:gap-4 self-center">
             
             <div>
@@ -313,10 +349,18 @@ function buildProgressWidget(workouts, fullLogData) {
             </div>
 
             <div>
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">95% Streak</span>
-                <div class="flex items-center gap-2" title="Consecutive completed weeks with >95% adherence">
-                    <i class="fa-solid fa-fire ${streakColor}"></i>
-                    <span class="text-lg font-bold ${streakColor}">${streakWeeks} Weeks</span>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Daily Streak</span>
+                <div class="flex items-center gap-2" title="Consecutive weeks where every single workout was >95%">
+                    <i class="fa-solid fa-calendar-day ${getStreakColor(dailyStreak)}"></i>
+                    <span class="text-lg font-bold ${getStreakColor(dailyStreak)}">${dailyStreak} Wks</span>
+                </div>
+            </div>
+
+            <div>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Volume Streak</span>
+                <div class="flex items-center gap-2" title="Consecutive weeks where total volume was >95%">
+                    <i class="fa-solid fa-fire ${getStreakColor(volumeStreak)}"></i>
+                    <span class="text-lg font-bold ${getStreakColor(volumeStreak)}">${volumeStreak} Wks</span>
                 </div>
             </div>
 
