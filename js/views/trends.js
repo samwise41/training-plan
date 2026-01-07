@@ -224,11 +224,22 @@ window.toggleTrendLine = (lineType) => {
     }
 };
 
-// --- NEW RESET FUNCTION ---
+// --- NEW RESET FUNCTION: Resets Sports, Range, and Lines ---
 window.resetTrendDefaults = () => {
+    // Reset Sport Selection
+    chartState.All = true;
+    chartState.Bike = false;
+    chartState.Run = false;
+    chartState.Swim = false;
+    
+    // Reset Time Range
+    chartState.timeRange = '60d';
+    
+    // Reset Line Visibility
     chartState.showWeekly = true;
     chartState.show30d = true;
-    chartState.show60d = false; // Reset to default state
+    chartState.show60d = false; 
+    
     renderDynamicCharts();
 };
 
@@ -447,6 +458,11 @@ const renderDynamicCharts = () => {
                     ${buildSportToggle('Bike', 'Bike', 'bg-icon-bike')}
                     ${buildSportToggle('Run', 'Run', 'bg-icon-run')}
                     ${buildSportToggle('Swim', 'Swim', 'bg-icon-swim')}
+                    
+                    <div class="w-px h-4 bg-slate-700 mx-1"></div>
+                    <button onclick="window.resetTrendDefaults()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-600 px-3 py-1 rounded text-xs transition-all shadow-sm" title="Reset to Defaults">
+                        <i class="fa-solid fa-rotate-left text-[10px]"></i> Default
+                    </button>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Range:</span>
@@ -465,10 +481,6 @@ const renderDynamicCharts = () => {
                     ${buildLineToggle('show30d', '30d Avg')}
                     ${buildLineToggle('show60d', '60d Avg')}
                 </div>
-                
-                <button onclick="window.resetTrendDefaults()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-600 px-3 py-1 rounded text-xs transition-all shadow-sm">
-                    <i class="fa-solid fa-rotate-left text-[10px]"></i> Default
-                </button>
             </div>
         </div>
         <div id="trend-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity"></div>
