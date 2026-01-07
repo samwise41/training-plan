@@ -30,12 +30,12 @@ export function renderDashboard(planMd, mergedLogData) {
     const workouts = Parser._parseTableBlock(scheduleSection);
     workouts.sort((a, b) => a.date - b.date);
 
-    // 1. Progress Widget (Top, Uncollapsed)
-    const progressHtml = buildProgressWidget(workouts);
-
     // 2. Weekly Cards Grid
     // Use the merged data passed from App, or fallback to parsing the plan
     const fullLogData = mergedLogData || Parser.parseTrainingLog(planMd);
+
+    // 1. Progress Widget (Top, Uncollapsed) - NOW PASSING FULL LOG DATA
+    const progressHtml = buildProgressWidget(workouts, fullLogData);
     
     // --- SMART EVENT PARSING ---
     const eventMap = {};
@@ -98,7 +98,6 @@ export function renderDashboard(planMd, mergedLogData) {
     const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`, toLocalYMD, null);
 
     // --- AUTO SCROLL LOGIC ---
-    // Execute after a brief delay to ensure DOM is painted
     setTimeout(() => {
         const scrollContainer = document.getElementById('heatmap-trailing-scroll');
         if (scrollContainer) {
@@ -146,15 +145,12 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 
     // --- Build Month Header Row ---
     let monthsHtml = '';
-    // Align header loop to Sunday so columns match the grid
     let loopDate = new Date(startDate);
     loopDate.setDate(loopDate.getDate() - loopDate.getDay());
     let lastMonth = -1;
-    // Iterate week by week
     while (loopDate <= endDate) {
         const m = loopDate.getMonth();
         let label = "";
-        // Simple logic: if month changed since last column, show label
         if (m !== lastMonth) {
             label = loopDate.toLocaleDateString('en-US', { month: 'short' });
             lastMonth = m;
@@ -163,7 +159,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         loopDate.setDate(loopDate.getDate() + 7);
     }
 
-    // Inject ID if provided
     const idAttr = containerId ? `id="${containerId}"` : '';
 
     return `
@@ -192,7 +187,58 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-function buildProgressWidget(workouts) {
+// --- NEW HELPER: CALCULATE STREAK ---
+function calculateStreak(fullLogData) {
+    if (!fullLogData || fullLogData.length === 0) return 0;
+    
+    // Group by Week (ISO Week YYYY-Www)
+    const getWeekKey = (d) => {
+        const date = new Date(d);
+        date.setHours(0, 0, 0, 0);
+        // Thursday in current week decides the year.
+        date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+        const week1 = new Date(date.getFullYear(), 0, 4);
+        const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+        return `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+    };
+
+    const weeklyStats = {};
+    const today = new Date();
+    const currentWeekKey = getWeekKey(today);
+
+    fullLogData.forEach(item => {
+        const wKey = getWeekKey(item.date);
+        // Only count weeks strictly BEFORE the current week to finalize the "streak"
+        // (Optional: You can include current week if you want, but streaks usually imply 'completed' periods)
+        if (wKey >= currentWeekKey) return;
+
+        if (!weeklyStats[wKey]) weeklyStats[wKey] = { planned: 0, actual: 0 };
+        weeklyStats[wKey].planned += (item.plannedDuration || 0);
+        weeklyStats[wKey].actual += (item.actualDuration || 0);
+    });
+
+    const sortedWeeks = Object.keys(weeklyStats).sort().reverse(); // Newest first
+    let streak = 0;
+
+    for (const weekKey of sortedWeeks) {
+        const stats = weeklyStats[weekKey];
+        // If Plan is 0 (Rest Week), we consider it adherence (streak continues)
+        // If Plan > 0, we check for >= 95%
+        if (stats.planned === 0) {
+            streak++;
+        } else {
+            const adherence = stats.actual / stats.planned;
+            if (adherence >= 0.95) {
+                streak++;
+            } else {
+                break; // Streak broken
+            }
+        }
+    }
+    return streak;
+}
+
+function buildProgressWidget(workouts, fullLogData) {
     const today = new Date(); today.setHours(23, 59, 59, 999); 
     let totalPlanned = 0; let totalActual = 0; let expectedSoFar = 0; const totalDailyMarkers = {};
     const sportStats = { Bike: { planned: 0, actual: 0, dailyMarkers: {} }, Run: { planned: 0, actual: 0, dailyMarkers: {} }, Swim: { planned: 0, actual: 0, dailyMarkers: {} } };
@@ -211,7 +257,43 @@ function buildProgressWidget(workouts) {
     const pacingDiff = totalActual - expectedSoFar; let pacingLabel = "On Track"; let pacingColor = "text-slate-400"; let pacingIcon = "fa-check";
     if (pacingDiff >= 15) { pacingLabel = `${Math.round(pacingDiff)}m Ahead`; pacingColor = "text-emerald-400"; pacingIcon = "fa-arrow-trend-up"; } else if (pacingDiff <= -15) { pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`; pacingColor = "text-orange-400"; pacingIcon = "fa-triangle-exclamation"; }
     const totalActualHrsPacing = (totalActual / 60).toFixed(1); const expectedHrs = (expectedSoFar / 60).toFixed(1);
+
+    // --- NEW STREAK CALCULATION ---
+    const streakWeeks = calculateStreak(fullLogData);
+    let streakColor = "text-slate-500";
+    if (streakWeeks >= 3) streakColor = "text-orange-400"; // Heating up
+    if (streakWeeks >= 8) streakColor = "text-red-500";    // On Fire
     
-    // UPDATED: Made Target Text color match Actual Text color
-    return `<div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm"><div class="flex-1 w-full">${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true)}${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers)}${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}</div><div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-4 md:gap-1 self-center"><div><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span><div class="flex items-center gap-2"><i class="fa-solid ${pacingIcon} ${pacingColor}"></i><span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span></div></div><div class="text-right md:text-left flex flex-col items-end md:items-start mt-2"><span class="text-[10px] text-slate-300 font-mono mb-0.5">Actual: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span></span><span class="text-[10px] text-slate-300 font-mono">Target: ${Math.round(expectedSoFar)}m <span class="text-slate-500">(${expectedHrs}h)</span></span></div></div></div>`;
+    return `
+    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm">
+        <div class="flex-1 w-full">
+            ${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true)}
+            ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers)}
+            ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers)}
+            ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers)}
+        </div>
+        <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-6 md:gap-4 self-center">
+            
+            <div>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid ${pacingIcon} ${pacingColor}"></i>
+                    <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
+                </div>
+                <div class="text-right md:text-left flex flex-col items-end md:items-start mt-1">
+                    <span class="text-[10px] text-slate-300 font-mono">Act: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span></span>
+                    <span class="text-[10px] text-slate-300 font-mono">Tgt: ${Math.round(expectedSoFar)}m <span class="text-slate-500">(${expectedHrs}h)</span></span>
+                </div>
+            </div>
+
+            <div>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">95% Streak</span>
+                <div class="flex items-center gap-2" title="Consecutive completed weeks with >95% adherence">
+                    <i class="fa-solid fa-fire ${streakColor}"></i>
+                    <span class="text-lg font-bold ${streakColor}">${streakWeeks} Weeks</span>
+                </div>
+            </div>
+
+        </div>
+    </div>`;
 }
