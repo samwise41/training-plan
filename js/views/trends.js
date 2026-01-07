@@ -420,6 +420,32 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
         
+        // --- 1. PARSE LIMITS FROM MARKDOWN ---
+        const md = window.App?.planMd || "";
+        
+        // Helper to extract limit. Default returns null if not found.
+        const getCap = (keyword) => {
+            // Regex matches: **Key Cap:** [15%]
+            const regex = new RegExp(`\\*\\*${keyword} Cap:\\*\\*\\s*\\[(\\d+)%\\]`, 'i');
+            const match = md.match(regex);
+            return match ? parseInt(match[1], 10) / 100 : null;
+        };
+
+        // Define defaults just in case parsing fails
+        const defaults = {
+            'Run': 0.01,
+            'Bike': 0.01,
+            'Swim': 0.01,
+            'All': 0.01
+        };
+
+        // Try to find the specific limit, fallback to default
+        let limitRed = getCap(sportType) !== null ? getCap(sportType) : (defaults[sportType] || 0.15);
+        
+        // Define Yellow limit as 5% (0.05) less than the Red limit
+        let limitYellow = Math.max(0, limitRed - 0.05);
+
+        // --- 2. PREPARE BUCKETS ---
         const buckets = []; 
         const now = new Date(); 
         const day = now.getDay(); 
@@ -450,69 +476,43 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
 
         let barsHtml = ''; 
         const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
-        
-        // --- 1. DEFINE LIMITS BASED ON SPORT ---
-        let limitRed = 0.15;   // Default (All)
-        let limitYellow = 0.10; // Default (All)
 
-        if (sportType === 'Run') { 
-            limitRed = 0.10; 
-            limitYellow = 0.05; 
-        } else if (sportType === 'Bike' || sportType === 'Swim') { 
-            limitRed = 0.20; 
-            limitYellow = 0.15; 
-        }
-
-        // --- HELPER: Get Hex Color for Gradient/Fill ---
-        // Returns [Tailwind Class, Hex Code]
+        // --- 3. HELPER: COLOR LOGIC ---
         const getStatusColor = (pctChange) => {
-            // Check for dangerous increase
             if (pctChange > limitRed) return ['bg-red-500', '#ef4444'];
             if (pctChange > limitYellow) return ['bg-yellow-500', '#eab308'];
-            // Check for huge drop-off (optional visual cue, or just keep green)
             if (pctChange < -0.20) return ['bg-slate-600', '#475569']; 
             return ['bg-emerald-500', '#10b981'];
         };
 
+        // --- 4. RENDER BARS ---
         buckets.forEach((b, idx) => {
             const isCurrentWeek = (idx === buckets.length - 1); 
             const hActual = Math.round((b.actualMins / maxVol) * 100); 
             const hPlan = Math.round((b.plannedMins / maxVol) * 100); 
             
-            // Get Previous Week's Actual
             const prevActual = idx > 0 ? buckets[idx - 1].actualMins : 0;
 
-            // --- 2. CALCULATE GROWTH METRICS ---
-            // Prevent division by zero: if prev is 0, treat growth as 0 (safe) unless current is huge? 
-            // Standard practice: if starting from 0, it's technically infinite, but we'll default to Green (safe start).
-            
             let actualGrowth = 0;
             let plannedGrowth = 0;
 
             if (prevActual > 0) {
                 actualGrowth = (b.actualMins - prevActual) / prevActual;
-                plannedGrowth = (b.plannedMins - prevActual) / prevActual; // Plan vs Prev Actual
+                plannedGrowth = (b.plannedMins - prevActual) / prevActual;
             }
 
-            // --- 3. DETERMINE COLORS ---
             const [actualClass, _] = getStatusColor(actualGrowth);
             const [__, planHex] = getStatusColor(plannedGrowth);
 
-            // --- 4. DETERMINE LABELS ---
-            // We usually show the Actual growth in text, or the Plan growth if it's the future?
-            // Let's show Actual growth text.
             const displayGrowth = actualGrowth; 
             const sign = displayGrowth > 0 ? '▲' : (displayGrowth < 0 ? '▼' : ''); 
             const growthLabel = prevActual > 0 ? `${sign} ${Math.round(Math.abs(displayGrowth) * 100)}%` : '--';
             
-            // Text color matches the Actual status
             let growthColor = "text-emerald-400";
             if (displayGrowth > limitRed) growthColor = "text-red-400";
             else if (displayGrowth > limitYellow) growthColor = "text-yellow-400";
             else if (displayGrowth < -0.20) growthColor = "text-slate-500";
 
-            // --- 5. STYLE THE BARS ---
-            // Striped Bar (Plan): Uses the PLAN logic color (planHex)
             const planBarStyle = `
                 background: repeating-linear-gradient(
                     45deg, 
@@ -538,15 +538,12 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
                                 <div class="text-[10px] text-slate-400 font-normal mt-0.5">Plan: ${planHrs}h | Act: ${actHrs}h</div>
                             </div>
                             <div class="text-[10px] ${growthColor} border-t border-slate-700 pt-1 mt-1">
-                                vs Prior Act: ${growthLabel}
+                                vs Prior Act: ${growthLabel} (Limit: ${Math.round(limitRed*100)}%)
                             </div>
                         </div>
-
                         <div style="height: ${hPlan}%; ${planBarStyle}" class="absolute bottom-0 w-full rounded-t-sm z-0"></div>
-                        
                         <div style="height: ${hActual}%;" class="relative z-10 w-2/3 ${actualClass} ${actualOpacity} rounded-t-sm"></div>
                     </div>
-                    
                     <span class="text-[9px] text-slate-500 font-mono text-center leading-none mt-1">
                         ${b.label}
                         ${isCurrentWeek ? '<br><span class="text-[8px] text-blue-400 font-bold">NEXT</span>' : ''}
