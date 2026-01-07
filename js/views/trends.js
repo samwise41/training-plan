@@ -30,6 +30,62 @@ if (!window.toggleSection) {
     };
 }
 
+// --- SPECIALIZED VOLUME TOOLTIP ---
+window.showVolumeTooltip = (evt, date, planMins, planLabel, planColor, actMins, actLabel, actColor, limitLabel) => {
+    const tooltip = document.getElementById('trend-tooltip-popup');
+    if (!tooltip) return;
+
+    // Layout: Date -> Plan (Big) -> Plan Var (Small) -> Act (Big) -> Act Var (Small)
+    tooltip.innerHTML = `
+        <div class="text-center min-w-[140px]">
+            <div class="font-bold text-white mb-2 border-b border-slate-600 pb-1">${date}</div>
+            
+            <div class="mb-3">
+                <div class="text-lg font-bold text-white leading-none">Plan: ${planMins}m</div>
+                <div class="text-[10px] ${planColor} font-mono mt-1 opacity-90">
+                    vs Prior Act: ${planLabel} <span class="text-slate-500">(${limitLabel})</span>
+                </div>
+            </div>
+
+            <div>
+                <div class="text-lg font-bold text-white leading-none">Act: ${actMins}m</div>
+                <div class="text-[10px] ${actColor} font-mono mt-1 opacity-90">
+                    vs Prior Act: ${actLabel} <span class="text-slate-500">(${limitLabel})</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Position Logic (Smart Edge Detection)
+    const x = evt.clientX;
+    const y = evt.clientY;
+    const viewportWidth = window.innerWidth;
+    
+    tooltip.style.position = 'fixed';
+    tooltip.style.top = `${y - 100}px`; // Moved higher to accommodate taller tooltip
+    tooltip.style.left = '';
+    tooltip.style.right = '';
+
+    // If on right side of screen, anchor left
+    if (x > viewportWidth * 0.60) {
+        tooltip.style.right = `${viewportWidth - x + 10}px`;
+        tooltip.style.left = 'auto';
+    } else {
+        tooltip.style.left = `${x - 70}px`; // Center over finger
+        tooltip.style.right = 'auto';
+    }
+    
+    // Safety check for left edge
+    if (parseInt(tooltip.style.left) < 10) tooltip.style.left = '10px';
+
+    tooltip.classList.remove('opacity-0', 'pointer-events-none');
+    
+    if (window.tooltipTimer) clearTimeout(window.tooltipTimer);
+    window.tooltipTimer = setTimeout(() => {
+        tooltip.classList.add('opacity-0', 'pointer-events-none');
+    }, 4000); // Slightly longer timeout for reading
+};
+
 // --- TOOLTIP HANDLER (Smart Edge Detection & Rich Content) ---
 window.showTrendTooltip = (evt, date, label, value, color, footer = null, footerColor = 'text-gray-400') => {
     const tooltip = document.getElementById('trend-tooltip-popup');
@@ -477,7 +533,6 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         endOfCurrentWeek.setDate(now.getDate() + distToSat); 
         endOfCurrentWeek.setHours(23, 59, 59, 999);
 
-        // Loop 11 = 12 weeks total
         for (let i = 11; i >= 0; i--) {
             const end = new Date(endOfCurrentWeek); 
             end.setDate(end.getDate() - (i * 7)); 
@@ -509,11 +564,12 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         let barsHtml = ''; 
         const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
 
+        // Helper: Returns [BG Class, Hex Color, Text Class]
         const getStatusColor = (pctChange) => {
-            if (pctChange > limitRed) return ['bg-red-500', '#ef4444'];
-            if (pctChange > limitYellow) return ['bg-yellow-500', '#eab308'];
-            if (pctChange < -0.20) return ['bg-slate-600', '#475569']; 
-            return ['bg-emerald-500', '#10b981'];
+            if (pctChange > limitRed) return ['bg-red-500', '#ef4444', 'text-red-400'];
+            if (pctChange > limitYellow) return ['bg-yellow-500', '#eab308', 'text-yellow-400'];
+            if (pctChange < -0.20) return ['bg-slate-600', '#475569', 'text-slate-500']; 
+            return ['bg-emerald-500', '#10b981', 'text-emerald-400'];
         };
 
         // --- 4. RENDER BARS ---
@@ -527,22 +583,25 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             let actualGrowth = 0; 
             let plannedGrowth = 0;
 
+            // Calculate Variance for both Plan and Actual against Prior Actual
             if (prevActual > 0) {
                 actualGrowth = (b.actualMins - prevActual) / prevActual;
                 plannedGrowth = (b.plannedMins - prevActual) / prevActual;
             }
 
-            const [actualClass, actualHex] = getStatusColor(actualGrowth);
-            const [__, planHex] = getStatusColor(plannedGrowth);
+            // Get Colors and Text Classes
+            const [actualClass, _, actualTextClass] = getStatusColor(actualGrowth);
+            const [__, planHex, planTextClass] = getStatusColor(plannedGrowth);
 
-            const displayGrowth = actualGrowth; 
-            const sign = displayGrowth > 0 ? '▲' : (displayGrowth < 0 ? '▼' : ''); 
-            const growthLabel = prevActual > 0 ? `${sign} ${Math.round(Math.abs(displayGrowth) * 100)}%` : '--';
+            // Format Labels (e.g., "▼ 10%")
+            const formatLabel = (val) => {
+                const sign = val > 0 ? '▲' : (val < 0 ? '▼' : '');
+                return prevActual > 0 ? `${sign} ${Math.round(Math.abs(val) * 100)}%` : '--';
+            };
             
-            let growthColor = "text-emerald-400";
-            if (displayGrowth > limitRed) growthColor = "text-red-400";
-            else if (displayGrowth > limitYellow) growthColor = "text-yellow-400";
-            else if (displayGrowth < -0.20) growthColor = "text-slate-500";
+            const actLabel = formatLabel(actualGrowth);
+            const planLabel = formatLabel(plannedGrowth);
+            const limitLabel = `Limit: ${Math.round(limitRed*100)}%`;
 
             const planBarStyle = `
                 background: repeating-linear-gradient(
@@ -551,14 +610,9 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
 
             const actualOpacity = isCurrentWeek ? 'opacity-90' : 'opacity-80'; 
             
-            // --- JS TOOLTIP LOGIC ---
-            // We pass the data into showTrendTooltip so it handles the positioning
-            // Args: evt, date, label, value, color, footer, footerColor
-            const tooltipValue = `Plan: ${Math.round(b.plannedMins)}m | Act: ${Math.round(b.actualMins)}m`;
-            const tooltipFooter = `vs Prior Act: ${growthLabel} (Limit: ${Math.round(limitRed*100)}%)`;
-            
-            // Note: We escape the strings to ensure valid HTML
-            const clickAttr = `onclick="window.showTrendTooltip(event, '${b.label}', 'Volume Summary', '${tooltipValue}', '${actualHex}', '${tooltipFooter}', '${growthColor}')"`;
+            // --- UPDATED TOOLTIP CALL ---
+            // We pass all 4 data points: Plan Value, Plan Var, Act Value, Act Var
+            const clickAttr = `onclick="window.showVolumeTooltip(event, '${b.label}', ${Math.round(b.plannedMins)}, '${planLabel}', '${planTextClass}', ${Math.round(b.actualMins)}, '${actLabel}', '${actualTextClass}', '${limitLabel}')"`;
 
             barsHtml += `
                 <div class="flex flex-col items-center gap-1 flex-1 group relative cursor-pointer" ${clickAttr}>
