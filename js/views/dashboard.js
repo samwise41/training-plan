@@ -253,6 +253,62 @@ function calculateDailyStreak(fullLogData) {
     return streak;
 }
 
+// --- STREAK 2: VOLUME STREAK (Performance) ---
+// A week counts if TOTAL Actual Duration >= 95% of TOTAL Planned Duration
+function calculateVolumeStreak(fullLogData) {
+    if (!fullLogData || fullLogData.length === 0) return 0;
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const dayOfWeek = today.getDay(); 
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setDate(today.getDate() - dayOfWeek);
+
+    const weeksMap = {};
+
+    fullLogData.forEach(item => {
+        if (!item.date) return;
+        
+        const d = new Date(item.date);
+        d.setHours(0,0,0,0);
+        const day = d.getDay();
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - day);
+        
+        if (weekStart >= currentWeekStart) return;
+
+        const key = weekStart.toISOString().split('T')[0];
+        
+        if (!weeksMap[key]) weeksMap[key] = { planned: 0, actual: 0 };
+        weeksMap[key].planned += (item.plannedDuration || 0);
+        weeksMap[key].actual += (item.actualDuration || 0);
+    });
+
+    let streak = 0;
+    let checkDate = new Date(currentWeekStart);
+    checkDate.setDate(checkDate.getDate() - 7); 
+
+    for (let i = 0; i < 260; i++) { 
+        const key = checkDate.toISOString().split('T')[0];
+        const stats = weeksMap[key];
+        
+        if (!stats) break;
+
+        if (stats.planned === 0) {
+            streak++; // Rest week keeps streak alive
+        } else {
+            const ratio = stats.actual / stats.planned;
+            if (ratio >= 0.95) {
+                streak++;
+            } else {
+                break; 
+            }
+        }
+        checkDate.setDate(checkDate.getDate() - 7);
+    }
+    return streak;
+}
+
 function buildProgressWidget(workouts, fullLogData) {
     const today = new Date(); today.setHours(23, 59, 59, 999); 
     let totalPlanned = 0; let totalActual = 0; let expectedSoFar = 0; const totalDailyMarkers = {};
@@ -309,7 +365,7 @@ function buildProgressWidget(workouts, fullLogData) {
 
             <div>
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Daily Streak</span>
-                <div class="flex items-center gap-2" title="Consecutive weeks where every single workout was >95%">
+                <div class="flex items-center gap-2" title="Consecutive weeks where every single workout was Completed">
                     <i class="fa-solid fa-calendar-day ${getStreakColor(dailyStreak)}"></i>
                     <span class="text-lg font-bold ${getStreakColor(dailyStreak)}">${dailyStreak} Wks</span>
                 </div>
