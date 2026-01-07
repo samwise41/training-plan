@@ -25,25 +25,9 @@ export function renderReadiness(mergedLogData, planMd) {
         
         // Process Data Rows
         if (inTable && line.startsWith('|')) {
-            // FIX: Do NOT filter empty strings. Preserve empty columns to keep alignment.
-            // 1. Remove leading/trailing pipes to avoid empty first/last elements
+            // Remove leading/trailing pipes to avoid empty first/last elements
             const cleanLine = line.replace(/^\||\|$/g, '');
-            // 2. Split by pipe and trim whitespace
             const cols = cleanLine.split('|').map(c => c.trim());
-
-            // We expect standard columns based on your header:
-            // 0: Date
-            // 1: Event Type
-            // 2: Goal
-            // 3: Priority
-            // 4: Profile
-            // 5: Implication
-            // 6: Swim Dist
-            // 7: Swim Goal  <-- Target
-            // 8: Bike Dist
-            // 9: Bike Goal  <-- Target
-            // 10: Run Dist
-            // 11: Run Goal  <-- Target
 
             if (cols.length >= 2) {
                 events.push({
@@ -51,7 +35,6 @@ export function renderReadiness(mergedLogData, planMd) {
                     name: cols[1],
                     priority: cols[3] || 'C',
                     // Strictly access the correct index. 
-                    // If the column is empty (e.g. Century Ride Swim), it returns ""
                     swimGoal: cols[7] || '',
                     bikeGoal: cols[9] || '',
                     runGoal: cols[11] || ''
@@ -79,11 +62,10 @@ export function renderReadiness(mergedLogData, planMd) {
 
     // 2. Helper Functions
     
-    // Parse Duration
+    // Parse Duration to Minutes
     const parseDur = (str) => {
         if (!str || str === '-' || str.toLowerCase() === 'n/a') return 0;
         if (str.includes('km') || str.includes('mi')) return 0; // Ignore distances
-        // If just a number (e.g. "45"), treat as minutes
         if (!isNaN(str) && str.trim() !== '') return parseInt(str);
 
         let mins = 0;
@@ -96,15 +78,22 @@ export function renderReadiness(mergedLogData, planMd) {
         } else if (str.includes('m')) {
             mins += parseInt(str);
         } else if (str.includes(':')) {
-            // Handles "5:30:00" or "1:10"
             const parts = str.split(':');
             if (parts.length === 3) {
-                mins += parseInt(parts[0]) * 60 + parseInt(parts[1]); // H:M:S -> ignore S
+                mins += parseInt(parts[0]) * 60 + parseInt(parts[1]); 
             } else {
                 mins += parseInt(parts[0]) * 60 + parseInt(parts[1]);
             }
         }
         return Math.round(mins);
+    };
+
+    // NEW: Format Minutes to HH:MM
+    const formatTime = (mins) => {
+        const h = Math.floor(mins / 60);
+        const m = Math.round(mins % 60);
+        // Returns "5:30" or "0:45"
+        return `${h}:${m.toString().padStart(2, '0')}`;
     };
 
     // Calculate Max Duration in last 30 days per sport
@@ -134,9 +123,9 @@ export function renderReadiness(mergedLogData, planMd) {
 
     // 3. Configuration using Semantic Classes (Brand Colors)
     const sportConfig = {
-        swim: { color: 'icon-swim', icon: 'fa-person-swimming', label: 'Swim' },
-        bike: { color: 'icon-bike', icon: 'fa-person-biking', label: 'Bike' },
-        run:  { color: 'icon-run',  icon: 'fa-person-running',  label: 'Run' }
+        swim: { color: 'text-swim', icon: 'fa-person-swimming', label: 'Swim' },
+        bike: { color: 'text-bike', icon: 'fa-person-biking', label: 'Bike' },
+        run:  { color: 'text-run',  icon: 'fa-person-running',  label: 'Run' }
     };
 
     // 4. Build HTML
@@ -184,10 +173,9 @@ export function renderReadiness(mergedLogData, planMd) {
 
         // Bar Builder Helper
         const buildBar = (type, current, target, pct) => {
-            if (!target || target === 0) return ''; // Hide bar if not part of event
+            if (!target || target === 0) return ''; 
             
             const config = sportConfig[type];
-            
             // Icon = Brand Color. Bar = Readiness Status Color (Traffic Light).
             const barColor = pct >= 85 ? 'bg-emerald-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-red-500');
             
@@ -199,7 +187,7 @@ export function renderReadiness(mergedLogData, planMd) {
                             <span class="text-xs font-bold text-slate-400">${config.label}</span>
                         </div>
                         <div class="text-right">
-                             <span class="text-xs font-bold text-white">${current}m / ${target}m</span>
+                             <span class="text-xs font-bold text-white">${formatTime(current)} / ${formatTime(target)}</span>
                         </div>
                     </div>
                     <div class="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden relative">
