@@ -14,6 +14,7 @@ export function renderReadiness(mergedLogData, planMd) {
     // Parse the Markdown Table for Events
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
+        
         // Detect table start
         if (line.includes('| **Date** |')) {
             inTable = true;
@@ -24,15 +25,33 @@ export function renderReadiness(mergedLogData, planMd) {
         
         // Process Data Rows
         if (inTable && line.startsWith('|')) {
-            const cols = line.split('|').map(c => c.trim()).filter(c => c !== '');
-            // Strict check: We need the basic columns
+            // FIX: Do NOT filter empty strings. Preserve empty columns to keep alignment.
+            // 1. Remove leading/trailing pipes to avoid empty first/last elements
+            const cleanLine = line.replace(/^\||\|$/g, '');
+            // 2. Split by pipe and trim whitespace
+            const cols = cleanLine.split('|').map(c => c.trim());
+
+            // We expect standard columns based on your header:
+            // 0: Date
+            // 1: Event Type
+            // 2: Goal
+            // 3: Priority
+            // 4: Profile
+            // 5: Implication
+            // 6: Swim Dist
+            // 7: Swim Goal  <-- Target
+            // 8: Bike Dist
+            // 9: Bike Goal  <-- Target
+            // 10: Run Dist
+            // 11: Run Goal  <-- Target
+
             if (cols.length >= 2) {
                 events.push({
                     dateStr: cols[0],
                     name: cols[1],
                     priority: cols[3] || 'C',
-                    // STRICT MAPPING: No guessing. 
-                    // Col 7 = Swim Goal, Col 9 = Bike Goal, Col 11 = Run Goal
+                    // Strictly access the correct index. 
+                    // If the column is empty (e.g. Century Ride Swim), it returns ""
                     swimGoal: cols[7] || '',
                     bikeGoal: cols[9] || '',
                     runGoal: cols[11] || ''
@@ -64,7 +83,8 @@ export function renderReadiness(mergedLogData, planMd) {
     const parseDur = (str) => {
         if (!str || str === '-' || str.toLowerCase() === 'n/a') return 0;
         if (str.includes('km') || str.includes('mi')) return 0; // Ignore distances
-        if (!isNaN(str)) return parseInt(str);
+        // If just a number (e.g. "45"), treat as minutes
+        if (!isNaN(str) && str.trim() !== '') return parseInt(str);
 
         let mins = 0;
         if (str.includes('h')) {
@@ -76,8 +96,13 @@ export function renderReadiness(mergedLogData, planMd) {
         } else if (str.includes('m')) {
             mins += parseInt(str);
         } else if (str.includes(':')) {
+            // Handles "5:30:00" or "1:10"
             const parts = str.split(':');
-            mins += parseInt(parts[0]) * 60 + parseInt(parts[1]);
+            if (parts.length === 3) {
+                mins += parseInt(parts[0]) * 60 + parseInt(parts[1]); // H:M:S -> ignore S
+            } else {
+                mins += parseInt(parts[0]) * 60 + parseInt(parts[1]);
+            }
         }
         return Math.round(mins);
     };
@@ -120,7 +145,6 @@ export function renderReadiness(mergedLogData, planMd) {
     upcomingEvents.forEach(e => {
         const raceDate = new Date(e.dateStr);
 
-        // Parse goals directly from the strictly mapped columns
         const tgtSwim = parseDur(e.swimGoal);
         const tgtBike = parseDur(e.bikeGoal);
         const tgtRun  = parseDur(e.runGoal);
@@ -164,7 +188,7 @@ export function renderReadiness(mergedLogData, planMd) {
             
             const config = sportConfig[type];
             
-            // Logic: Icon = Brand Color. Bar = Readiness Status Color (Traffic Light).
+            // Icon = Brand Color. Bar = Readiness Status Color (Traffic Light).
             const barColor = pct >= 85 ? 'bg-emerald-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-red-500');
             
             return `
