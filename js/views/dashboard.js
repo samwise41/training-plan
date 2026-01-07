@@ -1,5 +1,4 @@
 import { Parser } from '../parser.js';
-import { renderReadiness } from './readiness.js'; // Import logic to reuse calculation
 
 // --- DASHBOARD TOOLTIP HANDLER ---
 window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) => {
@@ -81,17 +80,17 @@ const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     `;
 };
 
-// --- NEW: Next Event Widget with Readiness ---
-function buildNextEventWidget(planMd, fullLogData) {
+// --- NEW: Compact Event Banner Widget ---
+function buildNextEventBanner(planMd, fullLogData) {
     // 1. Find the next event
     const today = new Date();
     today.setHours(0,0,0,0);
     
-    // Quick Event Parse (reusing logic from readiness.js simplified)
     const lines = planMd.split('\n');
     let nextEvent = null;
     let inTable = false;
 
+    // Robust Event Parsing (matches readiness.js)
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line.includes('| **Date** |')) { inTable = true; continue; }
@@ -99,6 +98,7 @@ function buildNextEventWidget(planMd, fullLogData) {
         if (inTable && line.startsWith('|')) {
             const cleanLine = line.replace(/^\||\|$/g, '');
             const cols = cleanLine.split('|').map(c => c.trim());
+            
             if (cols.length >= 2) {
                 const d = new Date(cols[0]);
                 if (!isNaN(d.getTime()) && d >= today) {
@@ -118,7 +118,7 @@ function buildNextEventWidget(planMd, fullLogData) {
 
     if (!nextEvent) return ''; // No widget if no event
 
-    // 2. Calculate Readiness Score (Same logic as readiness.js)
+    // 2. Calculate Readiness Score
     const parseDur = (str) => {
         if (!str || str === '-' || str.toLowerCase() === 'n/a' || str.includes('km') || str.includes('mi')) return 0;
         if (!isNaN(str) && str.trim() !== '') return parseInt(str);
@@ -164,7 +164,7 @@ function buildNextEventWidget(planMd, fullLogData) {
     const bikePct = getPct(maxBike, tgtBike);
     const runPct  = getPct(maxRun, tgtRun);
 
-    // Active percentages (only sports in event)
+    // Active percentages
     const activePcts = [];
     if (tgtSwim > 0) activePcts.push(swimPct);
     if (tgtBike > 0) activePcts.push(bikePct);
@@ -172,78 +172,52 @@ function buildNextEventWidget(planMd, fullLogData) {
     
     const readinessScore = activePcts.length > 0 ? Math.min(...activePcts) : 0;
 
-    // 3. UI Config
+    // 3. UI Config (Matching Screenshot)
     let scoreColor = "text-red-500";
-    let scoreLabel = "Warning";
-    if (readinessScore >= 85) { scoreColor = "text-emerald-500"; scoreLabel = "Ready"; }
-    else if (readinessScore >= 60) { scoreColor = "text-yellow-500"; scoreLabel = "Build"; }
+    let borderColor = "border-red-500/50";
+    let scoreLabel = "WARNING";
+    
+    if (readinessScore >= 85) { 
+        scoreColor = "text-emerald-500"; 
+        borderColor = "border-emerald-500/50";
+        scoreLabel = "READY"; 
+    } else if (readinessScore >= 60) { 
+        scoreColor = "text-yellow-500"; 
+        borderColor = "border-yellow-500/50";
+        scoreLabel = "BUILD"; 
+    }
 
     const daysDiff = Math.ceil((nextEvent.date - today) / (1000 * 60 * 60 * 24));
     const weeks = Math.floor(daysDiff / 7);
     const days = daysDiff % 7;
-
-    const buildMiniBar = (type, current, target, pct) => {
-        if (!target || target === 0) return '';
-        // Colors from style guide
-        const colors = {
-            swim: { text: 'text-swim', bg: 'bg-swim', icon: 'fa-person-swimming', label: 'Swim' },
-            bike: { text: 'text-bike', bg: 'bg-bike', icon: 'fa-person-biking', label: 'Bike' },
-            run:  { text: 'text-run',  bg: 'bg-run',  icon: 'fa-person-running',  label: 'Run' }
-        };
-        const c = colors[type];
-        
-        return `
-            <div class="mb-2 last:mb-0">
-                <div class="flex justify-between items-end mb-1 text-[10px]">
-                    <div class="flex items-center gap-1 font-bold text-slate-400">
-                        <i class="fa-solid ${c.icon} ${c.text}"></i> ${c.label}
-                    </div>
-                    <div class="font-mono text-slate-300">${current}m / ${target}m</div>
-                </div>
-                <div class="w-full bg-slate-700/50 rounded-full h-1.5 overflow-hidden">
-                    <div class="${c.bg} h-full rounded-full" style="width: ${pct}%"></div>
-                </div>
-            </div>
-        `;
-    };
+    const timeString = `${weeks}W ${days}D TO GO`;
 
     return `
-    <div class="bg-slate-800 border border-slate-700 rounded-xl p-0 mb-8 overflow-hidden shadow-lg">
-        <div class="bg-slate-900/50 border-b border-slate-700 p-3 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-slate-700 p-1.5 rounded text-white text-xs">
-                    <i class="fa-solid fa-flag-checkered"></i>
-                </div>
-                <div>
-                    <h3 class="text-sm font-bold text-white leading-none">${nextEvent.name}</h3>
-                    <div class="text-[10px] text-slate-500 font-mono mt-0.5">**${nextEvent.priority}-Race** Event</div>
-                </div>
-            </div>
-            <div class="text-[10px] font-mono font-bold text-slate-400 bg-slate-800 border border-slate-700 rounded px-2 py-1">
-                <i class="fa-regular fa-calendar mr-1"></i> ${nextEvent.date.toLocaleDateString()} <span class="mx-1 text-slate-600">|</span> <i class="fa-solid fa-hourglass-half mr-1"></i> ${weeks}W ${days}D TO GO
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mb-8 shadow-lg flex justify-between items-center relative overflow-hidden group">
+        <div class="absolute right-0 top-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-bl-full pointer-events-none"></div>
+
+        <div class="z-10">
+            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</div>
+            <h2 class="text-2xl md:text-3xl font-bold text-emerald-400 tracking-tight leading-none">${nextEvent.name}</h2>
+            <div class="text-xs font-mono text-slate-400 mt-2 flex items-center gap-2">
+                 <span class="bg-slate-700/50 px-2 py-0.5 rounded text-slate-300 uppercase">${timeString}</span>
+                 <span class="text-slate-600">|</span>
+                 <span>${nextEvent.date.toLocaleDateString()}</span>
             </div>
         </div>
-        
-        <div class="p-4 flex flex-row items-center gap-6">
-            <div class="flex flex-col items-center justify-center min-w-[80px]">
-                <div class="text-5xl font-black ${scoreColor} leading-none tracking-tighter">${readinessScore}%</div>
-                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Readiness</div>
-                <div class="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 ${scoreColor} mt-1 uppercase font-mono">${scoreLabel}</div>
-            </div>
 
-            <div class="flex-1 border-l border-slate-700 pl-6">
-                ${buildMiniBar('swim', maxSwim, tgtSwim, swimPct)}
-                ${buildMiniBar('bike', maxBike, tgtBike, bikePct)}
-                ${buildMiniBar('run', maxRun, tgtRun, runPct)}
-                <div class="mt-2 text-[9px] text-slate-500 italic"><i class="fa-solid fa-circle-info mr-1"></i>Score based on your <strong>weakest discipline</strong> vs target (Longest session in last 30d).</div>
-            </div>
+        <div class="flex flex-col items-center justify-center pl-6 border-l border-slate-700/50 z-10">
+             <div class="text-5xl font-black ${scoreColor} leading-none tracking-tighter drop-shadow-sm">${readinessScore}%</div>
+             <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Readiness</div>
+             <div class="mt-1 px-2 py-0.5 rounded bg-slate-900 border ${borderColor} ${scoreColor} text-[9px] font-bold uppercase tracking-wider font-mono shadow-sm">
+                ${scoreLabel}
+             </div>
         </div>
     </div>
     `;
 }
 
-
-// Updated to accept merged history data
+// Updated main render function
 export function renderDashboard(planMd, mergedLogData) {
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
     if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
@@ -251,14 +225,13 @@ export function renderDashboard(planMd, mergedLogData) {
     const workouts = Parser._parseTableBlock(scheduleSection);
     workouts.sort((a, b) => a.date - b.date);
 
-    // 2. Weekly Cards Grid
     const fullLogData = mergedLogData || Parser.parseTrainingLog(planMd);
 
-    // BUILD WIDGETS
-    const nextEventWidget = buildNextEventWidget(planMd, fullLogData); // NEW
-    const progressHtml = buildProgressWidget(workouts, fullLogData);
+    // --- WIDGET CONSTRUCTION ---
+    const nextEventHtml = buildNextEventBanner(planMd, fullLogData); // The new banner
+    const progressHtml = buildProgressWidget(workouts, fullLogData); // The existing weekly progress
     
-    // --- SMART EVENT PARSING ---
+    // --- SMART EVENT MAP (For Heatmap) ---
     const eventMap = {};
     const lines = planMd.split('\n');
     let inEventSection = false;
@@ -280,7 +253,7 @@ export function renderDashboard(planMd, mergedLogData) {
         }
     });
 
-    // --- HELPER: Get Sport Color Variable ---
+    // --- HELPER: Sport Colors ---
     const getSportColorVar = (type) => {
         if (type === 'Bike') return 'var(--color-bike)';
         if (type === 'Run') return 'var(--color-run)';
@@ -298,6 +271,7 @@ export function renderDashboard(planMd, mergedLogData) {
         return `<i class="fa-solid fa-stopwatch text-slate-500 text-xl opacity-80"></i>`; 
     };
 
+    // --- WORKOUT CARDS ---
     let cardsHtml = '';
     const grouped = {};
     workouts.forEach(w => { const key = toLocalYMD(w.date); if (!grouped[key]) grouped[key] = []; grouped[key].push(w); });
@@ -365,6 +339,7 @@ export function renderDashboard(planMd, mergedLogData) {
     const cardsContainerHtml = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-0 p-2">${cardsHtml}</div>`;
     const plannedWorkoutsSection = buildCollapsibleSection('planned-workouts-section', 'Planned Workouts', cardsContainerHtml, true);
 
+    // --- HEATMAPS ---
     const endOfWeek = new Date(today); const dayOfWeek = endOfWeek.getDay(); const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); endOfWeek.setDate(endOfWeek.getDate() + distToSunday); if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); 
     const startTrailing = new Date(endOfWeek); startTrailing.setMonth(startTrailing.getMonth() - 6);
     const startYear = new Date(today.getFullYear(), 0, 1); const endYear = new Date(today.getFullYear(), 11, 31);
@@ -380,7 +355,7 @@ export function renderDashboard(planMd, mergedLogData) {
     }, 50);
 
     return `
-        ${nextEventWidget} 
+        ${nextEventHtml}
         ${progressHtml}
         ${plannedWorkoutsSection}
         <div class="grid grid-cols-1 gap-8 mt-8">${heatmapTrailingHtml}${heatmapYearHtml}</div>
@@ -388,13 +363,16 @@ export function renderDashboard(planMd, mergedLogData) {
     `;
 }
 
+// --- UTILS ---
 const toLocalYMD = (dateInput) => {
     const d = new Date(dateInput);
     const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 };
 
-// Updated to match the new tooltip structure
+// ... (Rest of buildGenericHeatmap, calculateDailyStreak, etc. remains unchanged below)
+// Make sure to retain all the functions below this line from the previous file to ensure everything works!
+
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
     const dataMap = {}; 
@@ -437,8 +415,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         let inlineStyle = ""; 
         
         let totalPlan = 0; let totalAct = 0; let isRestType = false; 
-        
-        // --- CALCULATE SPORT TYPE STRING ---
         let sportLabel = "--";
         const uniqueTypes = new Set();
 
@@ -449,8 +425,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
                 if (d.type === 'Rest') isRestType = true;
                 if (d.type && d.type !== 'Rest') uniqueTypes.add(d.type);
             }); 
-            
-            // Convert Set to String (e.g. "Run" or "Swim + Bike")
             if (uniqueTypes.size > 0) {
                 sportLabel = Array.from(uniqueTypes).join(' + ');
             } else if (isRestType) {
@@ -483,11 +457,8 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         if (dayOfWeek === 0 && !hasActivity && !eventName) { colorClass = ''; inlineStyle = 'opacity: 0;'; }
 
         const hexColor = getHexColor(colorClass);
-        
-        // Pass Sport Label to Tooltip
         const clickAttr = hasActivity || isFuture ? 
             `onclick="window.showDashboardTooltip(event, '${dateKey}', ${totalPlan}, ${totalAct}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}', '${sportLabel}')"` : '';
-            
         const cursorClass = (hasActivity || isFuture) ? 'cursor-pointer hover:opacity-80' : '';
 
         cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" ${clickAttr}></div>`;
@@ -537,7 +508,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// ... (Rest of Streak Logic remains unchanged) ...
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
     const today = new Date(); today.setHours(0,0,0,0);
