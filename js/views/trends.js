@@ -30,47 +30,67 @@ if (!window.toggleSection) {
     };
 }
 
-// --- TOOLTIP HANDLER ---
-window.showTrendTooltip = (evt, date, label, value, color) => {
+// --- TOOLTIP HANDLER (Smart Edge Detection & Rich Content) ---
+window.showTrendTooltip = (evt, date, label, value, color, footer = null, footerColor = 'text-gray-400') => {
     const tooltip = document.getElementById('trend-tooltip-popup');
     if (!tooltip) return;
 
-    // Content
-    tooltip.innerHTML = `
-        <div class="font-bold text-white mb-1 border-b border-slate-600 pb-1">${date}</div>
-        <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span>
-            <span class="text-slate-300 text-xs">${label}:</span>
-            <span class="text-white font-mono font-bold">${value}%</span>
-        </div>
-    `;
+    // --- 1. Generate Content ---
+    // If a footer is provided, use the "Volume Chart" rich layout
+    if (footer) {
+        tooltip.innerHTML = `
+            <div class="text-center min-w-[120px]">
+                <div class="font-bold text-white mb-1 border-b border-slate-600 pb-1">${date}</div>
+                <div class="text-xs text-slate-300 mb-1">${label}</div>
+                <div class="text-sm font-bold text-white mb-1 whitespace-nowrap">${value}</div>
+                <div class="text-[10px] ${footerColor} border-t border-slate-700 pt-1 mt-1 font-mono">
+                    ${footer}
+                </div>
+            </div>
+        `;
+    } 
+    // Otherwise, use the "Line Chart" simple layout
+    else {
+        tooltip.innerHTML = `
+            <div class="font-bold text-white mb-1 border-b border-slate-600 pb-1">${date}</div>
+            <div class="flex items-center gap-2 whitespace-nowrap">
+                <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span>
+                <span class="text-slate-300 text-xs">${label}:</span>
+                <span class="text-white font-mono font-bold">${value}</span>
+            </div>
+        `;
+    }
 
-    // Position Logic
+    // --- 2. Position Logic (Smart Edge Detection) ---
     const x = evt.clientX;
     const y = evt.clientY;
     const viewportWidth = window.innerWidth;
     
+    // Position vertically (above finger/cursor)
     tooltip.style.position = 'fixed';
-    tooltip.style.top = `${y - 40}px`; 
+    tooltip.style.top = `${y - 60}px`; 
     
-    // Clear previous specific styling
+    // Reset Horizontal
     tooltip.style.left = '';
     tooltip.style.right = '';
 
-    // Smart Horizontal Positioning
+    // Logic: If click is on the right 40% of screen, anchor tooltip to the Left.
+    // Otherwise, anchor to the Right.
     if (x > viewportWidth * 0.60) {
-        // If on the right side of screen, anchor tooltip to the left of the cursor
-        // We set 'right' relative to the window edge
         tooltip.style.right = `${viewportWidth - x + 10}px`;
         tooltip.style.left = 'auto';
     } else {
-        // If on left side, anchor to right of cursor
-        tooltip.style.left = `${x + 15}px`;
+        tooltip.style.left = `${x - 20}px`; // Slight offset to center over finger
         tooltip.style.right = 'auto';
     }
     
+    // Prevent going off left edge
+    if (x < 40) tooltip.style.left = '10px';
+
+    // Show Tooltip
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
     
+    // Auto-hide after 3 seconds (Crucial for mobile experience)
     if (window.tooltipTimer) clearTimeout(window.tooltipTimer);
     window.tooltipTimer = setTimeout(() => {
         tooltip.classList.add('opacity-0', 'pointer-events-none');
