@@ -179,30 +179,128 @@ const toLocalYMD = (dateInput) => {
 // Updated to accept containerId
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
-    const dataMap = {}; fullLog.forEach(item => { const dateKey = dateToKeyFn(item.date); if (!dataMap[dateKey]) dataMap[dateKey] = []; dataMap[dateKey].push(item); });
+    
+    // 1. Prepare Data Map
+    const dataMap = {}; 
+    fullLog.forEach(item => { 
+        const dateKey = dateToKeyFn(item.date); 
+        if (!dataMap[dateKey]) dataMap[dateKey] = []; 
+        dataMap[dateKey].push(item); 
+    });
+    
     const today = new Date(); today.setHours(0,0,0,0);
     const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
+    
+    // --- COLOR MAPPING FOR TOOLTIP ---
+    // We need hex codes for the tooltip function, but we use classes for the squares.
+    const getHexColor = (cls) => {
+        if (cls.includes('emerald-500')) return '#10b981';
+        if (cls.includes('yellow-500')) return '#eab308';
+        if (cls.includes('red-500')) return '#ef4444';
+        if (cls.includes('purple-500')) return '#a855f7';
+        if (cls.includes('slate-700')) return '#334155';
+        return '#1e293b'; // Default Slate-800
+    };
+
     const startDay = startDate.getDay(); 
-    let cellsHtml = ''; for (let i = 0; i < startDay; i++) { cellsHtml += `<div class="w-3 h-3 m-[1px] opacity-0"></div>`; }
+    let cellsHtml = ''; 
+    
+    // Empty cells for offset
+    for (let i = 0; i < startDay; i++) { 
+        cellsHtml += `<div class="w-3 h-3 m-[1px] opacity-0"></div>`; 
+    }
+    
     let currentDate = new Date(startDate);
     const maxLoops = 400; let loops = 0;
+
+    // --- MAIN LOOP ---
     while (currentDate <= endDate && loops < maxLoops) {
-        loops++; const dateKey = dateToKeyFn(currentDate); const dayOfWeek = currentDate.getDay(); const dayData = dataMap[dateKey]; const eventName = eventMap && eventMap[dateKey];
-        let colorClass = 'bg-slate-800'; let tooltip = `${dateKey}: Empty`; let inlineStyle = ""; let clickDetails = `Date: ${dateKey}\\nStatus: No Data`;
-        let totalPlan = 0; let totalAct = 0; let isRestType = false; let workoutDetails = "";
-        if (dayData && dayData.length > 0) { dayData.forEach(d => { totalPlan += (d.plannedDuration || 0); totalAct += (d.actualDuration || 0); if (d.type === 'Rest') isRestType = true; workoutDetails += `\\n• ${d.type}: ${d.plannedDuration}m Plan / ${d.actualDuration}m Act`; }); }
-        const hasActivity = (totalPlan > 0 || totalAct > 0 || isRestType || eventName); const isFuture = currentDate > today;
-        if (eventName) { colorClass = 'bg-purple-500'; tooltip = `${dateKey}: 🏆 ${eventName}`; clickDetails = `Date: ${dateKey}\\nEvent: ${eventName}${workoutDetails}`; }
-        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) { colorClass = 'bg-emerald-500'; inlineStyle = highContrastStripe; tooltip = `${dateKey}: Unplanned Workout`; clickDetails = `Date: ${dateKey}\\nStatus: Unplanned Workout${workoutDetails}`; }
-        else if (isFuture) { if (totalPlan > 0) { colorClass = 'bg-slate-700'; tooltip = `${dateKey}: Planned`; clickDetails = `Date: ${dateKey}\\nStatus: Planned (Future)${workoutDetails}`; } else { colorClass = 'bg-slate-800'; tooltip = `${dateKey}: Future`; clickDetails = `Date: ${dateKey}\\nStatus: Future (Empty)`; } }
-        else { if (totalPlan > 0) { if (totalAct === 0) { colorClass = 'bg-red-500/80'; tooltip = `${dateKey}: Missed`; clickDetails = `Date: ${dateKey}\\nStatus: Missed Workout${workoutDetails}`; } else { const ratio = totalAct / totalPlan; if (ratio >= 0.95) { colorClass = 'bg-emerald-500'; tooltip = `${dateKey}: Completed`; clickDetails = `Date: ${dateKey}\\nStatus: Completed${workoutDetails}`; } else { colorClass = 'bg-yellow-500'; tooltip = `${dateKey}: Partial (${Math.round(ratio*100)}%)`; clickDetails = `Date: ${dateKey}\\nStatus: Partial Completion${workoutDetails}`; } } } else { colorClass = 'bg-emerald-500/50'; tooltip = `${dateKey}: Rest Day`; clickDetails = `Date: ${dateKey}\\nStatus: Rest Day`; } }
-        if (dayOfWeek === 0 && !hasActivity && !eventName) { colorClass = ''; inlineStyle = 'opacity: 0;'; clickDetails = ''; }
-        const clickAttr = clickDetails ? `onclick="alert('${clickDetails}')" cursor-pointer` : ''; const cursorClass = clickDetails ? 'cursor-pointer hover:opacity-80' : '';
-        cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" title="${tooltip}" ${clickAttr}></div>`;
+        loops++; 
+        const dateKey = dateToKeyFn(currentDate); 
+        const dayOfWeek = currentDate.getDay(); 
+        const dayData = dataMap[dateKey]; 
+        const eventName = eventMap && eventMap[dateKey];
+        
+        // Default State
+        let colorClass = 'bg-slate-800'; 
+        let statusLabel = "Empty"; 
+        let inlineStyle = ""; 
+        
+        let totalPlan = 0; let totalAct = 0; let isRestType = false; 
+        
+        if (dayData && dayData.length > 0) { 
+            dayData.forEach(d => { 
+                totalPlan += (d.plannedDuration || 0); 
+                totalAct += (d.actualDuration || 0); 
+                if (d.type === 'Rest') isRestType = true; 
+            }); 
+        }
+        
+        const hasActivity = (totalPlan > 0 || totalAct > 0 || isRestType || eventName); 
+        const isFuture = currentDate > today;
+
+        // --- DETERMINE COLOR & STATUS ---
+        if (eventName) { 
+            colorClass = 'bg-purple-500'; 
+            statusLabel = `Event: ${eventName}`; 
+        }
+        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) { 
+            colorClass = 'bg-emerald-500'; 
+            inlineStyle = highContrastStripe; 
+            statusLabel = "Unplanned Workout"; 
+        }
+        else if (isFuture) { 
+            if (totalPlan > 0) { 
+                colorClass = 'bg-slate-700'; 
+                statusLabel = "Planned"; 
+            } else { 
+                colorClass = 'bg-slate-800'; 
+                statusLabel = "Future"; 
+            } 
+        }
+        else { 
+            if (totalPlan > 0) { 
+                if (totalAct === 0) { 
+                    colorClass = 'bg-red-500/80'; 
+                    statusLabel = "Missed"; 
+                } else { 
+                    const ratio = totalAct / totalPlan; 
+                    if (ratio >= 0.95) { 
+                        colorClass = 'bg-emerald-500'; 
+                        statusLabel = "Completed"; 
+                    } else { 
+                        colorClass = 'bg-yellow-500'; 
+                        statusLabel = `Partial (${Math.round(ratio*100)}%)`; 
+                    } 
+                } 
+            } else { 
+                colorClass = 'bg-emerald-500/50'; 
+                statusLabel = "Rest Day"; 
+            } 
+        }
+
+        // Hide empty Sundays if needed (optional logic from your original code)
+        if (dayOfWeek === 0 && !hasActivity && !eventName) { 
+            colorClass = ''; 
+            inlineStyle = 'opacity: 0;'; 
+        }
+
+        const hexColor = getHexColor(colorClass);
+
+        // --- CLICK HANDLER REPLACEMENT ---
+        // Instead of title="..." we use onclick to trigger your custom tooltip
+        // Note: We pass ' ' for the value to avoid "undefined%" showing up if your tooltip expects a number
+        const clickAttr = hasActivity || isFuture ? 
+            `onclick="window.showTrendTooltip(event, '${dateKey}', 'Status', '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}')"` : '';
+            
+        const cursorClass = (hasActivity || isFuture) ? 'cursor-pointer hover:opacity-80' : '';
+
+        cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" ${clickAttr}></div>`;
+        
         currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // --- Build Month Header Row ---
+    // --- Build Month Header Row (Unchanged) ---
     let monthsHtml = '';
     let loopDate = new Date(startDate);
     loopDate.setDate(loopDate.getDate() - loopDate.getDay());
