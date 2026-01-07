@@ -84,7 +84,7 @@
             }
         },
 
-        // UPDATED: Stats Bar now includes columns for Readiness Score
+        // UPDATED: Removed background arch, added Date slot, added Weakest Link slot
         getStatsBar() {
             return `
                 <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -96,20 +96,27 @@
                         </div>
                     </div>
                     
-                    <div class="bg-slate-800 border border-slate-700 p-0 rounded-xl relative group overflow-hidden shadow-lg">
-                        <div class="absolute right-0 top-0 w-24 h-24 bg-gradient-to-br from-white/5 to-transparent rounded-bl-full pointer-events-none"></div>
-                        <div class="p-4 flex justify-between items-center relative z-10 h-full">
-                            <div>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
-                                <div id="stat-event">
-                                    <p class="text-lg font-bold text-white leading-tight" id="stat-event-name">--</p>
-                                    <p class="text-[10px] font-mono text-slate-400 mt-1 uppercase" id="stat-event-countdown">--</p>
+                    <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex justify-between items-center shadow-lg relative overflow-hidden">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Next Event</p>
+                            <div id="stat-event">
+                                <p class="text-lg font-bold text-white leading-tight" id="stat-event-name">--</p>
+                                <div class="flex items-center gap-3 mt-1 text-[10px] font-mono text-slate-400">
+                                    <span id="stat-event-date" class="border-r border-slate-600 pr-3 text-slate-300">--</span>
+                                    <span id="stat-event-countdown" class="uppercase">--</span>
                                 </div>
                             </div>
-                            <div class="text-right border-l border-slate-700/50 pl-4" id="stat-readiness-box" style="display:none;">
-                                <div class="text-3xl font-black text-slate-200 leading-none tracking-tighter" id="stat-readiness-val">--%</div>
-                                <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Readiness</div>
-                                <div id="stat-readiness-badge" class="mt-1 px-1.5 py-0.5 rounded bg-slate-900 border text-[8px] font-bold uppercase tracking-wider inline-block">--</div>
+                        </div>
+
+                        <div class="text-right pl-4 border-l border-slate-700/50" id="stat-readiness-box" style="display:none;">
+                            <div class="text-3xl font-black text-slate-200 leading-none tracking-tighter" id="stat-readiness-val">--%</div>
+                            <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Readiness</div>
+                            
+                            <div class="flex flex-col items-end gap-1 mt-1">
+                                <div id="stat-readiness-badge" class="px-1.5 py-0.5 rounded bg-slate-900 border text-[8px] font-bold uppercase tracking-wider inline-block">--</div>
+                                <div id="stat-weakest-link" class="text-[9px] text-slate-500 font-mono hidden">
+                                    Limit: <span id="stat-weakest-name" class="font-bold">--</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -179,7 +186,7 @@
             } catch (e) { console.error("Weather unavailable", e); }
         },
 
-        // UPDATED: Now calculates and injects Readiness Score
+        // UPDATED: Populates Date and Weakest Link
         updateStats() {
             if (!this.planMd) return;
             const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
@@ -220,6 +227,11 @@
 
             if (nextEvent) {
                 document.getElementById('stat-event-name').innerText = nextEvent.name;
+                
+                // Set Date
+                const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+                document.getElementById('stat-event-date').innerText = nextEvent.date.toLocaleDateString('en-US', dateOptions);
+
                 const diff = Math.ceil((nextEvent.date - today) / 86400000);
                 const timeStr = diff < 0 ? "Completed" : (diff === 0 ? "Today!" : `${Math.floor(diff/7)}w ${diff%7}d to go`);
                 document.getElementById('stat-event-countdown').innerHTML = `<i class="fa-solid fa-hourglass-half mr-1"></i> ${timeStr}`;
@@ -251,30 +263,39 @@
                     const tB = parseDur(nextEvent.bikeGoal);
                     const tR = parseDur(nextEvent.runGoal);
                     
-                    const pcts = [];
-                    if(tS>0) pcts.push(Math.min(Math.round((mS/tS)*100),100));
-                    if(tB>0) pcts.push(Math.min(Math.round((mB/tB)*100),100));
-                    if(tR>0) pcts.push(Math.min(Math.round((mR/tR)*100),100));
+                    const scores = [];
+                    if(tS>0) scores.push({ type: 'Swim', val: Math.min(Math.round((mS/tS)*100),100), color: 'text-cyan-400' });
+                    if(tB>0) scores.push({ type: 'Bike', val: Math.min(Math.round((mB/tB)*100),100), color: 'text-purple-400' });
+                    if(tR>0) scores.push({ type: 'Run', val: Math.min(Math.round((mR/tR)*100),100), color: 'text-pink-400' });
 
-                    if(pcts.length > 0) {
-                        const score = Math.min(...pcts);
+                    if(scores.length > 0) {
+                        // Find minimum score
+                        const minScore = scores.reduce((prev, curr) => prev.val < curr.val ? prev : curr);
+                        
                         const box = document.getElementById('stat-readiness-box');
                         const val = document.getElementById('stat-readiness-val');
                         const badge = document.getElementById('stat-readiness-badge');
+                        const weakBox = document.getElementById('stat-weakest-link');
+                        const weakName = document.getElementById('stat-weakest-name');
                         
                         box.style.display = 'block';
-                        val.innerText = `${score}%`;
+                        val.innerText = `${minScore.val}%`;
                         
                         let color = "text-red-500"; 
                         let bColor = "border-red-500/50";
                         let label = "WARNING";
                         
-                        if(score >= 85) { color="text-emerald-500"; bColor="border-emerald-500/50"; label="READY"; }
-                        else if(score >= 60) { color="text-yellow-500"; bColor="border-yellow-500/50"; label="BUILD"; }
+                        if(minScore.val >= 85) { color="text-emerald-500"; bColor="border-emerald-500/50"; label="READY"; }
+                        else if(minScore.val >= 60) { color="text-yellow-500"; bColor="border-yellow-500/50"; label="BUILD"; }
 
                         val.className = `text-3xl font-black ${color} leading-none tracking-tighter`;
                         badge.innerText = label;
-                        badge.className = `mt-1 px-1.5 py-0.5 rounded bg-slate-900 border ${bColor} ${color} text-[8px] font-bold uppercase tracking-wider inline-block`;
+                        badge.className = `px-1.5 py-0.5 rounded bg-slate-900 border ${bColor} ${color} text-[8px] font-bold uppercase tracking-wider inline-block`;
+
+                        // Show Weakest Link
+                        weakBox.classList.remove('hidden');
+                        weakName.innerText = minScore.type;
+                        weakName.className = `font-bold ${minScore.color}`;
                     }
                 }
             }
@@ -329,10 +350,9 @@
                         content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                     }
                     else {
-                        // Pass merged logData
                         const html = this.getStatsBar() + renderDashboard(this.planMd, this.logData);
                         content.innerHTML = html;
-                        this.updateStats(); // This triggers the Readiness calc on the top card
+                        this.updateStats(); 
                     }
                 } catch (err) {
                     console.error("Render error:", err);
