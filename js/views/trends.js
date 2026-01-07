@@ -454,7 +454,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
         endOfCurrentWeek.setDate(now.getDate() + distToSat); 
         endOfCurrentWeek.setHours(23, 59, 59, 999);
 
-        for (let i = 7; i >= 0; i--) {
+        for (let i = 11; i >= 0; i--) {
             const end = new Date(endOfCurrentWeek); 
             end.setDate(end.getDate() - (i * 7)); 
             const start = new Date(end); 
