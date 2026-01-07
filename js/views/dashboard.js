@@ -187,14 +187,16 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// --- STREAK 1: STRICT DAILY COMPLIANCE ---
-// A week only counts if ALL planned workouts were >95% completed
+// --- STREAK 1: BEHAVIOR STREAK (Showing Up) ---
+// A week counts if every planned workout was attempted (Completed OR Duration > 0)
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
 
     const today = new Date();
     today.setHours(0,0,0,0);
-    const dayOfWeek = today.getDay(); 
+    const dayOfWeek = today.getDay(); // 0=Sun, 6=Sat
+    
+    // Identify current week start (Sunday) to exclude incomplete current week
     const currentWeekStart = new Date(today);
     currentWeekStart.setDate(today.getDate() - dayOfWeek);
 
@@ -203,92 +205,49 @@ function calculateDailyStreak(fullLogData) {
     fullLogData.forEach(item => {
         if (!item.date) return;
         
+        // Determine week bucket (Sunday start)
         const d = new Date(item.date);
         d.setHours(0,0,0,0);
         const day = d.getDay();
         const weekStart = new Date(d);
         weekStart.setDate(d.getDate() - day);
         
+        // Skip current/future weeks
         if (weekStart >= currentWeekStart) return;
 
         const key = weekStart.toISOString().split('T')[0];
         
         if (!weeksMap[key]) weeksMap[key] = { failed: false };
 
+        // Logic Change: If planned, did we show up?
         if (item.plannedDuration > 0) {
-            const actual = item.actualDuration || 0;
-            const ratio = actual / item.plannedDuration;
-            if (ratio < 0.95) weeksMap[key].failed = true;
+            // ROBUST CHECK: Handle boolean true OR text "COMPLETED"
+            const statusStr = (item.status || '').toUpperCase();
+            const isCompleted = item.completed === true || statusStr === 'COMPLETED';
+            const hasDuration = (item.actualDuration || 0) > 0;
+            
+            // Fail ONLY if not marked completed AND no time was logged
+            if (!isCompleted && !hasDuration) {
+                weeksMap[key].failed = true;
+            }
         }
     });
 
     let streak = 0;
     let checkDate = new Date(currentWeekStart);
-    checkDate.setDate(checkDate.getDate() - 7); 
+    checkDate.setDate(checkDate.getDate() - 7); // Start checking from previous week
 
-    for (let i = 0; i < 260; i++) { 
+    for (let i = 0; i < 260; i++) { // 5 year safety limit
         const key = checkDate.toISOString().split('T')[0];
         const weekData = weeksMap[key];
+
+        // Stop if no data found for this week (gap in history)
         if (!weekData) break; 
+        
+        // Stop if this specific week failed the check
         if (weekData.failed) break; 
         
         streak++;
-        checkDate.setDate(checkDate.getDate() - 7);
-    }
-    return streak;
-}
-
-// --- STREAK 2: AGGREGATE VOLUME COMPLIANCE ---
-// A week counts if TOTAL Actual Duration >= 95% of TOTAL Planned Duration
-function calculateVolumeStreak(fullLogData) {
-    if (!fullLogData || fullLogData.length === 0) return 0;
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const dayOfWeek = today.getDay(); 
-    const currentWeekStart = new Date(today);
-    currentWeekStart.setDate(today.getDate() - dayOfWeek);
-
-    const weeksMap = {};
-
-    fullLogData.forEach(item => {
-        if (!item.date) return;
-        
-        const d = new Date(item.date);
-        d.setHours(0,0,0,0);
-        const day = d.getDay();
-        const weekStart = new Date(d);
-        weekStart.setDate(d.getDate() - day);
-        
-        if (weekStart >= currentWeekStart) return;
-
-        const key = weekStart.toISOString().split('T')[0];
-        
-        if (!weeksMap[key]) weeksMap[key] = { planned: 0, actual: 0 };
-        weeksMap[key].planned += (item.plannedDuration || 0);
-        weeksMap[key].actual += (item.actualDuration || 0);
-    });
-
-    let streak = 0;
-    let checkDate = new Date(currentWeekStart);
-    checkDate.setDate(checkDate.getDate() - 7); 
-
-    for (let i = 0; i < 260; i++) { 
-        const key = checkDate.toISOString().split('T')[0];
-        const stats = weeksMap[key];
-        
-        if (!stats) break; // No data for this week, streak ends
-
-        if (stats.planned === 0) {
-            streak++; // Rest week keeps streak alive
-        } else {
-            const ratio = stats.actual / stats.planned;
-            if (ratio >= 0.95) {
-                streak++;
-            } else {
-                break; // Volume target missed
-            }
-        }
         checkDate.setDate(checkDate.getDate() - 7);
     }
     return streak;
