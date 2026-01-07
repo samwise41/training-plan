@@ -84,7 +84,6 @@
             }
         },
 
-        // UPDATED: Removed background arch, added Date slot, added Weakest Link slot
         getStatsBar() {
             return `
                 <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -186,7 +185,7 @@
             } catch (e) { console.error("Weather unavailable", e); }
         },
 
-        // UPDATED: Populates Date and Weakest Link
+        // UPDATED: Added logic to hide weakest link if score is 100%
         updateStats() {
             if (!this.planMd) return;
             const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
@@ -264,6 +263,7 @@
                     const tR = parseDur(nextEvent.runGoal);
                     
                     const scores = [];
+                    // Using Math.min(..., 100) ensures score never exceeds 100 in the UI
                     if(tS>0) scores.push({ type: 'Swim', val: Math.min(Math.round((mS/tS)*100),100), color: 'text-cyan-400' });
                     if(tB>0) scores.push({ type: 'Bike', val: Math.min(Math.round((mB/tB)*100),100), color: 'text-purple-400' });
                     if(tR>0) scores.push({ type: 'Run', val: Math.min(Math.round((mR/tR)*100),100), color: 'text-pink-400' });
@@ -292,10 +292,15 @@
                         badge.innerText = label;
                         badge.className = `px-1.5 py-0.5 rounded bg-slate-900 border ${bColor} ${color} text-[8px] font-bold uppercase tracking-wider inline-block`;
 
-                        // Show Weakest Link
-                        weakBox.classList.remove('hidden');
-                        weakName.innerText = minScore.type;
-                        weakName.className = `font-bold ${minScore.color}`;
+                        // UPDATED LOGIC:
+                        // Only show weakest link if the score is LESS than 100.
+                        if (minScore.val < 100) {
+                            weakBox.classList.remove('hidden');
+                            weakName.innerText = minScore.type;
+                            weakName.className = `font-bold ${minScore.color}`;
+                        } else {
+                            weakBox.classList.add('hidden');
+                        }
                     }
                 }
             }
