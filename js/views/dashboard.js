@@ -1,6 +1,6 @@
 import { Parser } from '../parser.js';
 
-// --- DASHBOARD TOOLTIP HANDLER (UPDATED WITH SPORT TYPE) ---
+// --- DASHBOARD TOOLTIP HANDLER ---
 window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) => {
     let tooltip = document.getElementById('dashboard-tooltip-popup');
     
@@ -31,12 +31,12 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) =>
         </div>
     `;
 
-    // Position Logic (Smart Edge Detection)
+    // Position Logic
     const x = evt.clientX;
     const y = evt.clientY;
     const viewportWidth = window.innerWidth;
     
-    tooltip.style.top = `${y - 75}px`; // Moved up slightly to accommodate extra line
+    tooltip.style.top = `${y - 75}px`; 
     tooltip.style.left = '';
     tooltip.style.right = '';
 
@@ -58,7 +58,7 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) =>
     }, 3000);
 };
 
-// ---  Local Copy of Collapsible Builder  ---
+// ---  Collapsible Builder  ---
 const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     const contentClasses = isOpen 
         ? "max-h-[5000px] opacity-100 py-4 mb-8" 
@@ -80,7 +80,7 @@ const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     `;
 };
 
-// Updated to accept merged history data
+// Updated main render function
 export function renderDashboard(planMd, mergedLogData) {
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
     if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
@@ -88,13 +88,12 @@ export function renderDashboard(planMd, mergedLogData) {
     const workouts = Parser._parseTableBlock(scheduleSection);
     workouts.sort((a, b) => a.date - b.date);
 
-    // 2. Weekly Cards Grid
     const fullLogData = mergedLogData || Parser.parseTrainingLog(planMd);
 
-    // 1. Progress Widget (Top, Uncollapsed)
-    const progressHtml = buildProgressWidget(workouts, fullLogData);
+    // --- WIDGET CONSTRUCTION ---
+    const progressHtml = buildProgressWidget(workouts, fullLogData); // The existing weekly progress
     
-    // --- SMART EVENT PARSING ---
+    // --- SMART EVENT MAP (For Heatmap) ---
     const eventMap = {};
     const lines = planMd.split('\n');
     let inEventSection = false;
@@ -116,7 +115,7 @@ export function renderDashboard(planMd, mergedLogData) {
         }
     });
 
-    // --- HELPER: Get Sport Color Variable ---
+    // --- HELPER: Sport Colors ---
     const getSportColorVar = (type) => {
         if (type === 'Bike') return 'var(--color-bike)';
         if (type === 'Run') return 'var(--color-run)';
@@ -134,6 +133,7 @@ export function renderDashboard(planMd, mergedLogData) {
         return `<i class="fa-solid fa-stopwatch text-slate-500 text-xl opacity-80"></i>`; 
     };
 
+    // --- WORKOUT CARDS ---
     let cardsHtml = '';
     const grouped = {};
     workouts.forEach(w => { const key = toLocalYMD(w.date); if (!grouped[key]) grouped[key] = []; grouped[key].push(w); });
@@ -201,6 +201,7 @@ export function renderDashboard(planMd, mergedLogData) {
     const cardsContainerHtml = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-0 p-2">${cardsHtml}</div>`;
     const plannedWorkoutsSection = buildCollapsibleSection('planned-workouts-section', 'Planned Workouts', cardsContainerHtml, true);
 
+    // --- HEATMAPS ---
     const endOfWeek = new Date(today); const dayOfWeek = endOfWeek.getDay(); const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); endOfWeek.setDate(endOfWeek.getDate() + distToSunday); if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); 
     const startTrailing = new Date(endOfWeek); startTrailing.setMonth(startTrailing.getMonth() - 6);
     const startYear = new Date(today.getFullYear(), 0, 1); const endYear = new Date(today.getFullYear(), 11, 31);
@@ -223,13 +224,16 @@ export function renderDashboard(planMd, mergedLogData) {
     `;
 }
 
+// --- UTILS ---
 const toLocalYMD = (dateInput) => {
     const d = new Date(dateInput);
     const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 };
 
-// Updated to match the new tooltip structure
+// ... (Rest of buildGenericHeatmap, calculateDailyStreak, etc. remains unchanged below)
+// Make sure to retain all the functions below this line from the previous file to ensure everything works!
+
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
     const dataMap = {}; 
@@ -272,8 +276,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         let inlineStyle = ""; 
         
         let totalPlan = 0; let totalAct = 0; let isRestType = false; 
-        
-        // --- CALCULATE SPORT TYPE STRING ---
         let sportLabel = "--";
         const uniqueTypes = new Set();
 
@@ -284,8 +286,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
                 if (d.type === 'Rest') isRestType = true;
                 if (d.type && d.type !== 'Rest') uniqueTypes.add(d.type);
             }); 
-            
-            // Convert Set to String (e.g. "Run" or "Swim + Bike")
             if (uniqueTypes.size > 0) {
                 sportLabel = Array.from(uniqueTypes).join(' + ');
             } else if (isRestType) {
@@ -318,11 +318,8 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         if (dayOfWeek === 0 && !hasActivity && !eventName) { colorClass = ''; inlineStyle = 'opacity: 0;'; }
 
         const hexColor = getHexColor(colorClass);
-        
-        // Pass Sport Label to Tooltip
         const clickAttr = hasActivity || isFuture ? 
             `onclick="window.showDashboardTooltip(event, '${dateKey}', ${totalPlan}, ${totalAct}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}', '${sportLabel}')"` : '';
-            
         const cursorClass = (hasActivity || isFuture) ? 'cursor-pointer hover:opacity-80' : '';
 
         cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" ${clickAttr}></div>`;
@@ -372,7 +369,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// ... (Rest of Streak Logic remains unchanged) ...
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
     const today = new Date(); today.setHours(0,0,0,0);
