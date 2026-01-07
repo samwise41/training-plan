@@ -224,6 +224,14 @@ window.toggleTrendLine = (lineType) => {
     }
 };
 
+// --- NEW RESET FUNCTION ---
+window.resetTrendDefaults = () => {
+    chartState.showWeekly = true;
+    chartState.show30d = true;
+    chartState.show60d = false; // Reset to default state
+    renderDynamicCharts();
+};
+
 // --- DATA CALCULATION ---
 const getRollingPoints = (data, typeFilter, isCount) => {
     const points = [];
@@ -449,11 +457,18 @@ const renderDynamicCharts = () => {
                     ${buildTimeToggle('1y', '1y')}
                 </div>
             </div>
-            <div class="flex items-center gap-2 flex-wrap border-t border-slate-700 pt-3">
-                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Lines:</span>
-                ${buildLineToggle('showWeekly', 'Weekly')}
-                ${buildLineToggle('show30d', '30d Avg')}
-                ${buildLineToggle('show60d', '60d Avg')}
+            
+            <div class="flex items-center justify-between border-t border-slate-700 pt-3 mt-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-2">Lines:</span>
+                    ${buildLineToggle('showWeekly', 'Weekly')}
+                    ${buildLineToggle('show30d', '30d Avg')}
+                    ${buildLineToggle('show60d', '60d Avg')}
+                </div>
+                
+                <button onclick="window.resetTrendDefaults()" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-600 px-3 py-1 rounded text-xs transition-all shadow-sm">
+                    <i class="fa-solid fa-rotate-left text-[10px]"></i> Default
+                </button>
             </div>
         </div>
         <div id="trend-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity"></div>
