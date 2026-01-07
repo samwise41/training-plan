@@ -4,7 +4,6 @@ export function renderReadiness(mergedLogData, planMd) {
     // 1. Parse Event Schedule
     if (!planMd) return '<div class="p-8 text-slate-500 italic">No plan data found.</div>';
 
-    // Handle case where planMd might be passed as object or wrong type
     const safePlan = typeof planMd === 'string' ? planMd : '';
     if (!safePlan) return '<div class="p-8 text-slate-500 italic">Invalid plan format.</div>';
 
@@ -15,23 +14,27 @@ export function renderReadiness(mergedLogData, planMd) {
     // Parse the Markdown Table for Events
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
+        // Detect table start
         if (line.includes('| **Date** |')) {
             inTable = true;
             continue; 
         }
+        // Skip separator lines
         if (inTable && line.startsWith('| :---')) continue; 
+        
+        // Process Data Rows
         if (inTable && line.startsWith('|')) {
             const cols = line.split('|').map(c => c.trim()).filter(c => c !== '');
-            // Ensure we have enough columns (up to Run Goal index 11)
-            if (cols.length >= 10) {
+            // We need at least the Date and Name (index 0 and 1)
+            if (cols.length >= 2) {
+                // Safe access to columns (handle missing columns for single-sport events)
                 events.push({
                     dateStr: cols[0],
                     name: cols[1],
-                    goal: cols[2],
-                    priority: cols[3],
-                    swimGoal: cols[7],
-                    bikeGoal: cols[9],
-                    runGoal: cols[11]
+                    priority: cols[3] || 'C', // Default to C priority if missing
+                    swimGoal: cols[7] || '',
+                    bikeGoal: cols[9] || '',
+                    runGoal: cols[11] || ''
                 });
             }
         } else if (inTable && line === '') {
@@ -55,18 +58,28 @@ export function renderReadiness(mergedLogData, planMd) {
     }
 
     // 2. Helper Functions
+    
+    // Parse Duration (handles "1h 30m", "45m", "-", "N/A")
     const parseDur = (str) => {
-        if (!str) return 0;
-        // Clean string
-        const clean = str.replace(/[^\d:]/g, ''); 
-        const parts = clean.split(':');
+        if (!str || str === '-' || str.toLowerCase() === 'n/a') return 0;
+        
+        // If it's just a number, assume minutes
+        if (!isNaN(str)) return parseInt(str);
+
         let mins = 0;
-        if (parts.length === 3) {
-            mins = parseInt(parts[0])*60 + parseInt(parts[1]) + parseInt(parts[2])/60;
-        } else if (parts.length === 2) {
-            mins = parseInt(parts[0])*60 + parseInt(parts[1]); 
-        } else {
-             mins = parseInt(clean) || 0;
+        // Parse "1h 30m" format
+        if (str.includes('h')) {
+            const hParts = str.split('h');
+            mins += parseInt(hParts[0]) * 60;
+            if (hParts[1] && hParts[1].includes('m')) {
+                mins += parseInt(hParts[1]);
+            }
+        } else if (str.includes('m')) {
+            mins += parseInt(str);
+        } else if (str.includes(':')) {
+            // Parse "1:30" format
+            const parts = str.split(':');
+            mins += parseInt(parts[0]) * 60 + parseInt(parts[1]);
         }
         return Math.round(mins);
     };
@@ -77,23 +90,17 @@ export function renderReadiness(mergedLogData, planMd) {
     
     let maxSwim = 0, maxBike = 0, maxRun = 0;
     
-    // Safety check for array
     const safeLog = Array.isArray(mergedLogData) ? mergedLogData : [];
 
     if (safeLog.length > 0) {
         safeLog.forEach(d => {
             const entryDate = new Date(d.date);
             if (entryDate >= lookbackDate) {
-                // Parse duration from log entry (usually "1h 30m" format or minutes)
                 let dur = 0;
                 if (typeof d.actualDuration === 'number') {
                     dur = d.actualDuration;
                 } else if (typeof d.duration === 'string') {
-                     // Parse "1h 30m" string to minutes
-                    let m = 0;
-                    if(d.duration.includes('h')) m += parseInt(d.duration.split('h')[0]) * 60;
-                    if(d.duration.includes('m')) m += parseInt(d.duration.split('m')[0].split(' ').pop());
-                    dur = m;
+                    dur = parseDur(d.duration);
                 }
 
                 if (d.type === 'Swim') maxSwim = Math.max(maxSwim, dur);
@@ -103,7 +110,14 @@ export function renderReadiness(mergedLogData, planMd) {
         });
     }
 
-    // 3. Build Widgets
+    // 3. Configuration for Colors & Icons
+    const sportConfig = {
+        swim: { color: 'text-cyan-400', barBg: 'bg-cyan-500', icon: 'fa-person-swimming', label: 'Swim' },
+        bike: { color: 'text-purple-400', barBg: 'bg-purple-500', icon: 'fa-person-biking', label: 'Bike' },
+        run:  { color: 'text-pink-400', barBg: 'bg-pink-500', icon: 'fa-person-running', label: 'Run' }
+    };
+
+    // 4. Build HTML
     let html = '';
 
     upcomingEvents.forEach(e => {
@@ -121,19 +135,20 @@ export function renderReadiness(mergedLogData, planMd) {
         const bikePct = getPct(maxBike, tgtBike);
         const runPct = getPct(maxRun, tgtRun);
 
-        // --- WEAKEST LINK LOGIC ---
+        // --- READINESS SCORE LOGIC ---
+        // Only include sports that have a target > 0
         const activePcts = [];
         if (tgtSwim > 0) activePcts.push(swimPct);
         if (tgtBike > 0) activePcts.push(bikePct);
         if (tgtRun > 0) activePcts.push(runPct);
         
+        // If no sports found (e.g. data error), default to 0
         const readinessScore = activePcts.length > 0 ? Math.min(...activePcts) : 0;
 
         // --- TIER LOGIC ---
         let scoreColor = "text-red-500";
         let scoreLabel = "Warning";
-        let cardBorder = "border-slate-700";
-
+        
         if (readinessScore >= 85) {
             scoreColor = "text-emerald-500";
             scoreLabel = "Race Ready";
@@ -148,35 +163,38 @@ export function renderReadiness(mergedLogData, planMd) {
         const days = daysDiff % 7;
         const timeString = `${weeks}W ${days}D TO GO`;
 
-        // Bar Builder
-        const buildBar = (label, current, target, pct) => {
-            if (!target || target === 0) return ''; 
-            const barColor = pct >= 85 ? 'bg-emerald-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-red-500');
+        // Bar Builder Helper
+        const buildBar = (type, current, target, pct) => {
+            if (!target || target === 0) return ''; // Hide bar if not part of event
+            
+            const config = sportConfig[type];
             
             return `
                 <div class="mb-5 last:mb-0">
                     <div class="flex justify-between items-end mb-1">
-                        <span class="text-xs font-bold text-slate-400">${label}</span>
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid ${config.icon} ${config.color}"></i>
+                            <span class="text-xs font-bold text-slate-400">${config.label}</span>
+                        </div>
                         <div class="text-right">
                              <span class="text-xs font-bold text-white">${current}m / ${target}m</span>
                         </div>
                     </div>
                     <div class="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden relative">
-                        <div class="${barColor} h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.3)]" style="width: ${pct}%"></div>
-                    </div>
-                    <div class="text-right mt-0.5">
-                        <span class="text-[10px] font-bold ${pct >= 85 ? 'text-emerald-500' : (pct >= 60 ? 'text-yellow-500' : 'text-red-500')}">${pct}%</span>
+                        <div class="${config.barBg} h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(0,0,0,0.3)]" style="width: ${pct}%"></div>
                     </div>
                 </div>
             `;
         };
 
         html += `
-        <div class="bg-slate-800 border ${cardBorder} rounded-xl p-0 mb-8 overflow-hidden shadow-lg relative max-w-5xl mx-auto">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-0 mb-8 overflow-hidden shadow-lg relative max-w-5xl mx-auto">
             
             <div class="bg-slate-900/50 border-b border-slate-700 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-flag-checkered text-white bg-slate-700 p-2 rounded-lg"></i>
+                    <div class="bg-slate-700 p-2 rounded-lg text-white">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
                     <div>
                         <h3 class="text-lg font-bold text-white leading-none">${e.name}</h3>
                         <div class="text-xs text-slate-500 font-mono mt-1">${e.priority} Event</div>
@@ -200,20 +218,16 @@ export function renderReadiness(mergedLogData, planMd) {
                 </div>
 
                 <div class="md:w-3/4 w-full">
-                    ${buildBar('Swim Longest Session (30d)', maxSwim, tgtSwim, swimPct)}
-                    ${buildBar('Bike Longest Session (30d)', maxBike, tgtBike, bikePct)}
-                    ${buildBar('Run Longest Session (30d)', maxRun, tgtRun, runPct)}
+                    ${buildBar('swim', maxSwim, tgtSwim, swimPct)}
+                    ${buildBar('bike', maxBike, tgtBike, bikePct)}
+                    ${buildBar('run', maxRun, tgtRun, runPct)}
                     
                     <div class="mt-6 pt-4 border-t border-slate-700/50 text-[10px] text-slate-500 italic flex items-start gap-2">
                         <i class="fa-solid fa-circle-info mt-0.5"></i>
-                        <span>Score is determined by your <strong>weakest discipline</strong>. Even if your total volume is high, falling behind on the specific Long Session duration for any single sport will drag your readiness score down to prevent injury risks.</span>
+                        <span>Score based on your <strong>weakest discipline</strong> vs target (Longest session in last 30d).</span>
                     </div>
                 </div>
 
-            </div>
-            
-            <div class="px-6 pb-6 w-full">
-                <canvas id="chart-${e.dateStr}" class="w-full h-16"></canvas>
             </div>
         </div>
         `;
@@ -222,9 +236,6 @@ export function renderReadiness(mergedLogData, planMd) {
     return html;
 }
 
-// Added this function so App.js doesn't crash when it calls it
 export function renderReadinessChart(logData) {
-    // This is optional if you want a global chart. 
-    // The main visualization is now inside the HTML generated above.
-    console.log("Readiness charts are rendered inline.");
+    // Placeholder to satisfy App.js import
 }
