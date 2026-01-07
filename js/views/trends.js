@@ -420,29 +420,16 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
     try {
         if (!data || data.length === 0) return '<div class="p-4 text-slate-500 italic">No data available</div>';
         
-        // --- 1. PARSE LIMITS FROM MARKDOWN ---
+        // --- 1. PARSE LIMITS FROM MARKDOWN (Preserved) ---
         const md = window.App?.planMd || "";
-        
-        // Helper to extract limit. Default returns null if not found.
         const getCap = (keyword) => {
-            // Regex matches: **Key Cap:** [15%]
             const regex = new RegExp(`\\*\\*${keyword} Cap:\\*\\*\\s*\\[(\\d+)%\\]`, 'i');
             const match = md.match(regex);
             return match ? parseInt(match[1], 10) / 100 : null;
         };
 
-        // Define defaults just in case parsing fails
-        const defaults = {
-            'Run': 0.10,
-            'Bike': 0.20,
-            'Swim': 0.20,
-            'All': 0.15
-        };
-
-        // Try to find the specific limit, fallback to default
+        const defaults = { 'Run': 0.10, 'Bike': 0.20, 'Swim': 0.20, 'All': 0.15 };
         let limitRed = getCap(sportType) !== null ? getCap(sportType) : (defaults[sportType] || 0.15);
-        
-        // Define Yellow limit as 5% (0.05) less than the Red limit
         let limitYellow = Math.max(0, limitRed - 0.05);
 
         // --- 2. PREPARE BUCKETS ---
@@ -463,21 +450,36 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             buckets.push({ start, end, label: `${end.getMonth()+1}/${end.getDate()}`, actualMins: 0, plannedMins: 0 });
         }
 
+        // --- 3. AGGREGATE DATA (FIXED LOGIC) ---
         data.forEach(item => {
             if (!item.date) return; 
-            if (sportType !== 'All' && item.type !== sportType) return;
+
+            // Find the correct week bucket for this item
             const t = item.date.getTime(); 
             const bucket = buckets.find(b => t >= b.start.getTime() && t <= b.end.getTime());
+            
             if (bucket) { 
-                bucket.actualMins += (item.actualDuration || 0); 
-                bucket.plannedMins += (item.plannedDuration || 0); 
+                // A. Handle PLANNED Volume
+                // Only add to Plan if the PLANNED type matches the filter
+                if (sportType === 'All' || item.type === sportType) {
+                    bucket.plannedMins += (item.plannedDuration || 0); 
+                }
+
+                // B. Handle ACTUAL Volume
+                // Only add to Actual if the ACTUAL type matches the filter
+                // (Fallback to item.type if actualType is missing/undefined, though usually actualType is set on completion)
+                const executedType = item.actualType || item.type;
+                
+                if (sportType === 'All' || executedType === sportType) {
+                    bucket.actualMins += (item.actualDuration || 0);
+                }
             }
         });
 
         let barsHtml = ''; 
         const maxVol = Math.max(...buckets.map(b => Math.max(b.actualMins, b.plannedMins))) || 1;
 
-        // --- 3. HELPER: COLOR LOGIC ---
+        // --- 4. COLOR HELPER ---
         const getStatusColor = (pctChange) => {
             if (pctChange > limitRed) return ['bg-red-500', '#ef4444'];
             if (pctChange > limitYellow) return ['bg-yellow-500', '#eab308'];
@@ -485,7 +487,7 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
             return ['bg-emerald-500', '#10b981'];
         };
 
-        // --- 4. RENDER BARS ---
+        // --- 5. RENDER BARS ---
         buckets.forEach((b, idx) => {
             const isCurrentWeek = (idx === buckets.length - 1); 
             const hActual = Math.round((b.actualMins / maxVol) * 100); 
