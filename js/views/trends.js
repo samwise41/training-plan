@@ -433,10 +433,10 @@ const renderVolumeChart = (data, sportType = 'All', title = 'Weekly Volume Trend
 
         // Define defaults just in case parsing fails
         const defaults = {
-            'Run': 0.01,
-            'Bike': 0.01,
-            'Swim': 0.01,
-            'All': 0.01
+            'Run': 0.10,
+            'Bike': 0.20,
+            'Swim': 0.20,
+            'All': 0.15
         };
 
         // Try to find the specific limit, fallback to default
