@@ -35,7 +35,8 @@
     const CONFIG = {
         PLAN_FILE: "endurance_plan.md",
         GEAR_FILE: "Gear.md",
-        HISTORY_FILE: "history_archive.md", 
+        // UPDATED: Points to the new Master Database with Garmin Data
+        HISTORY_FILE: "MASTER_TRAINING_DATABASE.md", 
         WEATHER_MAP: {
             0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
             45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"], 51: ["Drizzle", "🌦️"], 61: ["Rain", "🌧️"], 63: ["Rain", "🌧️"],
@@ -125,17 +126,16 @@
 
         async init() {
             this.checkSecurity();
-            // --- FIX STARTS HERE ---
+            
             // Immediately highlight the correct tab based on the URL hash 
-            // so the user doesn't see the "Dashboard" default.
             const initialHash = window.location.hash.substring(1);
-            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness'];
+            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness', 'metrics'];
             const startView = validViews.includes(initialHash) ? initialHash : 'dashboard';
     
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             const initialNavBtn = document.getElementById(`nav-${startView}`);
             if (initialNavBtn) initialNavBtn.classList.add('active');
-            // --- FIX ENDS HERE ---
+            
             try {
                 const [planRes, gearRes, archiveRes] = await Promise.all([
                     fetch(`./${CONFIG.PLAN_FILE}?t=${cacheBuster}`),
@@ -148,9 +148,12 @@
                 this.gearMd = await gearRes.text();
                 this.archiveMd = archiveRes.ok ? await archiveRes.text() : "";
 
-                const currentLog = Parser.parseTrainingLog(this.planMd);
-                const archiveLog = Parser.parseTrainingLog(this.archiveMd);
-                this.logData = [...currentLog, ...archiveLog]; 
+                // --- DATA SOURCE SPLIT ---
+                // 1. Dashboard uses ONLY the current week's plan (Section 5)
+                this.currentWeekData = Parser.parseTrainingLog(this.planMd); 
+                
+                // 2. Trends & Readiness use the Full Master Garmin Database
+                this.logData = Parser.parseTrainingLog(this.archiveMd); 
                 
                 this.setupEventListeners();
                 window.addEventListener('hashchange', () => this.handleHashChange());
@@ -165,7 +168,8 @@
         setupEventListeners() {
             const navMap = {
                 'nav-dashboard': 'dashboard', 'nav-trends': 'trends', 'nav-logbook': 'logbook',
-                'nav-roadmap': 'roadmap', 'nav-gear': 'gear', 'nav-zones': 'zones', 'nav-readiness': 'readiness'
+                'nav-roadmap': 'roadmap', 'nav-gear': 'gear', 'nav-zones': 'zones', 
+                'nav-readiness': 'readiness', 'nav-metrics': 'metrics'
             };
             Object.keys(navMap).forEach(id => {
                 const el = document.getElementById(id);
@@ -196,7 +200,6 @@
             } catch (e) { console.error("Weather unavailable", e); }
         },
 
-        // UPDATED: Added logic to hide weakest link if score is 100%
         updateStats() {
             if (!this.planMd) return;
             const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
@@ -209,7 +212,6 @@
             const weekEl = document.getElementById('stat-week');
             if (weekEl) weekEl.innerText = currentWeek;
             
-            // Event Parsing
             const lines = this.planMd.split('\n');
             let nextEvent = null;
             let inTable = false;
@@ -238,7 +240,6 @@
             if (nextEvent) {
                 document.getElementById('stat-event-name').innerText = nextEvent.name;
                 
-                // Set Date
                 const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
                 document.getElementById('stat-event-date').innerText = nextEvent.date.toLocaleDateString('en-US', dateOptions);
 
@@ -246,7 +247,6 @@
                 const timeStr = diff < 0 ? "Completed" : (diff === 0 ? "Today!" : `${Math.floor(diff/7)}w ${diff%7}d to go`);
                 document.getElementById('stat-event-countdown').innerHTML = `<i class="fa-solid fa-hourglass-half mr-1"></i> ${timeStr}`;
 
-                // --- Calculate Readiness ---
                 if (this.logData.length > 0) {
                     const parseDur = (str) => {
                         if(!str || str.includes('km') || str.includes('mi')) return 0;
@@ -274,13 +274,11 @@
                     const tR = parseDur(nextEvent.runGoal);
                     
                     const scores = [];
-                    // Using Math.min(..., 100) ensures score never exceeds 100 in the UI
                     if(tS>0) scores.push({ type: 'Swim', val: Math.min(Math.round((mS/tS)*100),100), color: 'text-cyan-400' });
                     if(tB>0) scores.push({ type: 'Bike', val: Math.min(Math.round((mB/tB)*100),100), color: 'text-purple-400' });
                     if(tR>0) scores.push({ type: 'Run', val: Math.min(Math.round((mR/tR)*100),100), color: 'text-pink-400' });
 
                     if(scores.length > 0) {
-                        // Find minimum score
                         const minScore = scores.reduce((prev, curr) => prev.val < curr.val ? prev : curr);
                         
                         const box = document.getElementById('stat-readiness-box');
@@ -303,8 +301,6 @@
                         badge.innerText = label;
                         badge.className = `px-1.5 py-0.5 rounded bg-slate-900 border ${bColor} ${color} text-[8px] font-bold uppercase tracking-wider inline-block`;
 
-                        // UPDATED LOGIC:
-                        // Only show weakest link if the score is LESS than 100.
                         if (minScore.val < 100) {
                             weakBox.classList.remove('hidden');
                             weakName.innerText = minScore.type;
@@ -319,7 +315,7 @@
 
         handleHashChange() {
             const hash = window.location.hash.substring(1); 
-            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness'];
+            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness', 'metrics'];
             const view = validViews.includes(hash) ? hash : 'dashboard';
             this.renderView(view);
         },
@@ -327,7 +323,16 @@
         navigate(view) { window.location.hash = view; },
 
         renderView(view) {
-            const titles = { dashboard: 'Weekly Schedule', trends: 'Trends & KPIs', logbook: 'Logbook', roadmap: 'Season Roadmap', gear: 'Gear Choice', zones: 'Training Zones', readiness: 'Race Readiness' };
+            const titles = { 
+                dashboard: 'Weekly Schedule', 
+                trends: 'Trends & KPIs', 
+                logbook: 'Logbook', 
+                roadmap: 'Season Roadmap', 
+                gear: 'Gear Choice', 
+                zones: 'Training Zones', 
+                readiness: 'Race Readiness',
+                metrics: 'Metrics Explorer'
+            };
             const titleEl = document.getElementById('header-title-dynamic');
             if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
 
@@ -358,14 +363,31 @@
                         content.innerHTML = html;
                         renderReadinessChart(this.logData);
                     }
+                    else if (view === 'metrics') {
+                        content.innerHTML = `
+                            <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl">
+                                <h2 class="text-xl font-bold text-white mb-4">Maturity & Efficiency Trends</h2>
+                                <p class="text-slate-400 text-sm mb-6">Analyzing Power-to-HR (Cycling) and Speed-to-HR (Running) from Garmin Master Data.</p>
+                                <div id="metrics-view-container" class="space-y-6">
+                                    <p class="text-slate-500 italic">Historical Garmin Data Analysis Loading...</p>
+                                </div>
+                            </div>
+                        `;
+                    }
                     else if (view === 'logbook') {
                         const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
                         const archive = Parser.getSection(this.archiveMd, "Training History");
-                        const mdContent = (recent || "") + "\n\n" + (archive || "");
+                        // Fallback: If archiveMd is the Master DB (pure table), use it directly
+                        const finalArchive = archive || (this.archiveMd.includes('|') ? this.archiveMd : "");
+                        
+                        const mdContent = (recent || "") + "\n\n" + (finalArchive || "");
                         const safeMarked = window.marked ? window.marked.parse : (t) => t;
                         content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                     }
                     else {
+                        // Dashboard View
+                        // Usage: renderDashboard(planMd, logData)
+                        // We pass this.logData (the Master DB) as the second argument so the Heatmap works
                         const html = this.getStatsBar() + renderDashboard(this.planMd, this.logData);
                         content.innerHTML = html;
                         this.updateStats(); 
