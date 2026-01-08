@@ -87,33 +87,29 @@ const METRIC_DEFINITIONS = {
         title: "Aerobic Efficiency",
         icon: "fa-bicycle", 
         styleClass: "icon-bike",
-        keywords: ["long", "steady", "endurance", "base", "z2", "zone 2", "recovery"],
-        description: "<strong>The Engine Check.</strong><br>Are you producing more Power for the same Heart Rate?<br><br>📈 <strong>Trend UP:</strong> Good. Your heart is working less to do the same work.<br>📉 <strong>Trend DOWN:</strong> Fatigue or Cardiac Drift.",
-        improvement: "<strong>How to Improve:</strong><br>• <strong>Z2 Volume:</strong> Long, steady rides (2-4hrs) without coasting.<br>• <strong>Pacing:</strong> Do not surge on hills. Keep effort flat.<br>• <strong>Consistency:</strong> Stack back-to-back aerobic days."
+        description: "<strong>The Engine Check.</strong><br>Calculated as Watts per Heartbeat. This chart filters for <strong>AEROBIC_BASE</strong> and <strong>RECOVERY</strong> sessions to track efficiency trends.<br><br>📈 <strong>Trend UP:</strong> Improving. Your heart is working less to produce the same power.<br>📉 <strong>Trend DOWN:</strong> Potential fatigue or overtraining.",
+        improvement: "<strong>How to Improve:</strong><br>• Focus on Zone 2 volume.<br>• Maintain steady effort without surges."
     },
     strength: {
         title: "Strength & Torque",
         icon: "fa-bicycle",
         styleClass: "icon-bike",
-        keywords: ["strength", "hill", "climb", "torque", "force", "alpe", "ftp", "race", "test", "threshold", "tempo", "sweet spot", "interval"],
-        description: "<strong>The Muscle Check.</strong><br>Measures Watts per Revolution. High values mean you are pushing bigger gears (Force) rather than just spinning fast (Cardio).<br><br>🎯 <strong>Goal:</strong> Steady increase during 'Hill' blocks.",
-        improvement: "<strong>How to Improve:</strong><br>• <strong>Low Cadence Intervals:</strong> 3x10min @ Sweet Spot at 50-60 RPM.<br>• <strong>Hill Repeats:</strong> Seated climbing on steep gradients.<br>• <strong>Gym:</strong> Heavy squats and deadlifts."
+        description: "<strong>The Muscle Check.</strong><br>Measures Watts per Revolution (Torque). This chart filters for <strong>LACTATE_THRESHOLD, VO2MAX,</strong> and <strong>TEMPO</strong> sessions.<br><br>🎯 <strong>Goal:</strong> Stable or increasing values during high-intensity blocks.",
+        improvement: "<strong>How to Improve:</strong><br>• Low cadence intervals (50-60 RPM).<br>• Seated hill repeats."
     },
     run: {
         title: "Running Economy",
         icon: "fa-person-running",
         styleClass: "icon-run",
-        keywords: ["tempo", "threshold", "speed", "interval", "fartlek", "long", "base", "z2"],
-        description: "<strong>The Efficiency Check.</strong><br>How fast do you run per heartbeat?<br><br>📈 <strong>Trend UP:</strong> You are getting faster at the same physiological cost.",
-        improvement: "<strong>How to Improve:</strong><br>• <strong>Strides:</strong> 6x20sec fast bursts after easy runs.<br>• <strong>Hill Sprints:</strong> Short, max effort sprints (10-15s) to recruit muscle.<br>• <strong>Plyometrics:</strong> Box jumps and jump rope."
+        description: "<strong>The Efficiency Check.</strong><br>Speed per heartbeat. Filters for <strong>TEMPO, THRESHOLD,</strong> and <strong>VO2MAX</strong> runs.<br><br>📈 <strong>Trend UP:</strong> You are getting faster for the same physiological cost.",
+        improvement: "<strong>How to Improve:</strong><br>• Post-run strides.<br>• Short hill sprints (10-15s)."
     },
     mechanical: {
         title: "Mechanical Efficiency",
         icon: "fa-person-running",
         styleClass: "icon-run",
-        keywords: ["run", "tempo", "threshold", "speed", "interval", "long", "base", "z2"],
-        description: "<strong>The Form Check.</strong><br>Speed vs. Power. Are you converting raw Watts into actual Speed?<br><br>📈 <strong>Trend UP:</strong> Good form (stiffness).<br>📉 <strong>Trend DOWN:</strong> Sloppy form (bouncing up/down).",
-        improvement: "<strong>How to Improve:</strong><br>• <strong>Cadence:</strong> Aim for 170-180 spm to reduce ground contact time.<br>• <strong>Drills:</strong> A-Skips, B-Skips, and High Knees.<br>• <strong>Core:</strong> Planks and stability work to stop energy leaks."
+        description: "<strong>The Form Check.</strong><br>Compares Speed to raw Power. High values indicate better 'stiffness' and less energy waste (bouncing).<br><br>📉 <strong>Trend DOWN:</strong> Form is likely breaking down due to fatigue.",
+        improvement: "<strong>How to Improve:</strong><br>• Increase cadence to 170-180 spm.<br>• Core stability and running drills (A-Skips)."
     }
 };
 
@@ -215,36 +211,58 @@ const updateMetricsCharts = () => {
     
     const filteredData = cachedData.filter(d => d.date >= cutoff);
 
-    const hasKeyword = (item, keywords) => {
-        if (!item.planName && !item.actualName) return false;
-        const text = ((item.planName || "") + " " + (item.actualName || "")).toLowerCase();
-        return keywords.some(k => text.includes(k));
+    // --- NEW HELPER: CATEGORIZE BY GARMIN TRAINING EFFECT LABEL ---
+    const hasIntensity = (item, intensityTypes) => {
+        const label = (item.trainingEffectLabel || "").toUpperCase();
+        return intensityTypes.some(type => label.includes(type));
     };
 
-    // --- CRITICAL CHANGE: USING 'actualType' ONLY ---
-    
-    // A. ENDURANCE
+    // A. ENDURANCE (Aerobic Base / Recovery)
     const efData = filteredData
-        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.endurance.keywords))
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr: ${Math.round(d.avgPower)}W / HR: ${Math.round(d.avgHR)}` }))
+        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && hasIntensity(d, ['AEROBIC_BASE', 'RECOVERY']))
+        .map(d => ({ 
+            date: d.date, 
+            dateStr: d.date.toISOString().split('T')[0], 
+            name: d.planName || d.actualName, 
+            val: d.avgPower / d.avgHR, 
+            breakdown: `Pwr: ${Math.round(d.avgPower)}W / HR: ${Math.round(d.avgHR)}` 
+        }))
         .sort((a,b) => a.date - b.date);
 
-    // B. STRENGTH
+    // B. STRENGTH / HIGH INTENSITY
     const torqueData = filteredData
-        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && hasKeyword(d, METRIC_DEFINITIONS.strength.keywords))
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr: ${Math.round(d.avgPower)}W / RPM: ${Math.round(d.avgCadence)}` }))
+        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && hasIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC', 'SPEED']))
+        .map(d => ({ 
+            date: d.date, 
+            dateStr: d.date.toISOString().split('T')[0], 
+            name: d.planName || d.actualName, 
+            val: d.avgPower / d.avgCadence, 
+            breakdown: `Pwr: ${Math.round(d.avgPower)}W / RPM: ${Math.round(d.avgCadence)}` 
+        }))
         .sort((a,b) => a.date - b.date);
 
-    // C. ECONOMY
+    // C. RUN ECONOMY (Quality Runs)
     const runEconData = filteredData
-        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.run.keywords))
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace: ${Math.round(d.avgSpeed * 60)} m/m / HR: ${Math.round(d.avgHR)}` }))
+        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 && hasIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'SPEED']))
+        .map(d => ({ 
+            date: d.date, 
+            dateStr: d.date.toISOString().split('T')[0], 
+            name: d.planName || d.actualName, 
+            val: (d.avgSpeed * 60) / d.avgHR, 
+            breakdown: `Pace: ${Math.round(d.avgSpeed * 60)} m/m / HR: ${Math.round(d.avgHR)}` 
+        }))
         .sort((a,b) => a.date - b.date);
 
-    // D. MECHANICS
+    // D. RUN MECHANICS (Form checks)
     const mechData = filteredData
-        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 && hasKeyword(d, METRIC_DEFINITIONS.mechanical.keywords))
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W` }))
+        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 && !hasIntensity(d, ['RECOVERY']))
+        .map(d => ({ 
+            date: d.date, 
+            dateStr: d.date.toISOString().split('T')[0], 
+            name: d.planName || d.actualName, 
+            val: (d.avgSpeed * 100) / d.avgPower, 
+            breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W` 
+        }))
         .sort((a,b) => a.date - b.date);
 
     const chartEndurance = document.getElementById('metric-chart-endurance');
@@ -282,7 +300,7 @@ export function renderMetrics(allData) {
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-microchip text-blue-500"></i> Performance Metrics</h2>
-                    <p class="text-xs text-slate-400 mt-1">Analyzing physiological trends based on Garmin data.</p>
+                    <p class="text-xs text-slate-400 mt-1">Analyzing physiological trends based on Garmin training effect labels.</p>
                 </div>
                 <div class="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-800">
                     ${buildToggle('30d', '30 Days')}${buildToggle('60d', '60 Days')}${buildToggle('90d', '90 Days')}${buildToggle('6m', '6 Months')}
