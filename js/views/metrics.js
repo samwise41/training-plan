@@ -221,27 +221,27 @@ const updateMetricsCharts = () => {
         return keywords.some(k => text.includes(k));
     };
 
-    // --- UPDATED FILTERS TO USE 'actualType' ---
+    // --- CRITICAL CHANGE: USING 'actualType' ONLY ---
     
-    // A. ENDURANCE (Actual Bike)
+    // A. ENDURANCE
     const efData = filteredData
         .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.endurance.keywords))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr: ${Math.round(d.avgPower)}W / HR: ${Math.round(d.avgHR)}` }))
         .sort((a,b) => a.date - b.date);
 
-    // B. STRENGTH (Actual Bike)
+    // B. STRENGTH
     const torqueData = filteredData
         .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && hasKeyword(d, METRIC_DEFINITIONS.strength.keywords))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr: ${Math.round(d.avgPower)}W / RPM: ${Math.round(d.avgCadence)}` }))
         .sort((a,b) => a.date - b.date);
 
-    // C. ECONOMY (Actual Run)
+    // C. ECONOMY
     const runEconData = filteredData
         .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.run.keywords))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace: ${Math.round(d.avgSpeed * 60)} m/m / HR: ${Math.round(d.avgHR)}` }))
         .sort((a,b) => a.date - b.date);
 
-    // D. MECHANICS (Actual Run)
+    // D. MECHANICS
     const mechData = filteredData
         .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 && hasKeyword(d, METRIC_DEFINITIONS.mechanical.keywords))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W` }))
