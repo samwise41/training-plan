@@ -31,21 +31,23 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     positionTooltip(evt, tooltip);
 };
 
-// 2. DESCRIPTION TOOLTIP (NEW)
+// 2. DESCRIPTION TOOLTIP (Expanded with Improvement Advice)
 window.showInfoTooltip = (evt, title, desc) => {
     let tooltip = document.getElementById('metric-info-popup');
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'metric-info-popup';
-        tooltip.className = 'z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity fixed max-w-[280px] pointer-events-none text-left';
+        tooltip.className = 'z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity fixed max-w-[300px] pointer-events-none text-left';
         document.body.appendChild(tooltip);
     }
 
     tooltip.innerHTML = `
-        <h4 class="text-white font-bold mb-2 flex items-center gap-2">
+        <h4 class="text-white font-bold mb-3 flex items-center gap-2 border-b border-slate-700 pb-2">
             <i class="fa-solid fa-circle-info text-blue-400"></i> ${title}
         </h4>
-        <p class="text-slate-300 leading-relaxed">${desc}</p>
+        <div class="text-slate-300 leading-relaxed space-y-3">
+            ${desc}
+        </div>
     `;
     positionTooltip(evt, tooltip);
 };
@@ -73,38 +75,45 @@ const positionTooltip = (evt, el) => {
     
     el.classList.remove('opacity-0');
     
-    // Auto-hide after 4 seconds
     if (window.metricTooltipTimer) clearTimeout(window.metricTooltipTimer);
     window.metricTooltipTimer = setTimeout(() => {
         el.classList.add('opacity-0');
-    }, 4000);
+    }, 6000); // Longer timeout for reading advice
 };
 
-// --- DEFINITIONS (Added Icons) ---
+// --- DEFINITIONS (With Icons, Colors, and Actionable Advice) ---
 const METRIC_DEFINITIONS = {
     endurance: {
         title: "Aerobic Efficiency",
-        icon: "fa-bicycle", // Bike
+        icon: "fa-bicycle", 
+        styleClass: "icon-bike", // Matches styles.css color
         keywords: ["long", "steady", "endurance", "base", "z2", "zone 2", "recovery"],
-        description: "<strong>The Engine Check.</strong><br>Are you producing more Power for the same Heart Rate?<br><br>📈 <strong>Trend UP:</strong> Good. Your heart is working less to do the same work.<br>📉 <strong>Trend DOWN:</strong> Fatigue or Cardiac Drift."
+        description: "<strong>The Engine Check.</strong><br>Are you producing more Power for the same Heart Rate?<br><br>📈 <strong>Trend UP:</strong> Good. Your heart is working less to do the same work.<br>📉 <strong>Trend DOWN:</strong> Fatigue or Cardiac Drift.",
+        improvement: "<strong>How to Improve:</strong><br>• <strong>Z2 Volume:</strong> Long, steady rides (2-4hrs) without coasting.<br>• <strong>Pacing:</strong> Do not surge on hills. Keep effort flat.<br>• <strong>Consistency:</strong> Stack back-to-back aerobic days."
     },
     strength: {
         title: "Strength & Torque",
-        icon: "fa-bicycle", // Bike
+        icon: "fa-bicycle",
+        styleClass: "icon-bike", // Matches styles.css color
         keywords: ["strength", "hill", "climb", "torque", "force", "alpe", "ftp", "race", "test", "threshold", "tempo", "sweet spot", "interval"],
-        description: "<strong>The Muscle Check.</strong><br>Measures Watts per Revolution. High values mean you are pushing bigger gears (Force) rather than just spinning fast (Cardio).<br><br>🎯 <strong>Goal:</strong> steady increase during 'Hill' blocks."
+        description: "<strong>The Muscle Check.</strong><br>Measures Watts per Revolution. High values mean you are pushing bigger gears (Force) rather than just spinning fast (Cardio).<br><br>🎯 <strong>Goal:</strong> Steady increase during 'Hill' blocks.",
+        improvement: "<strong>How to Improve:</strong><br>• <strong>Low Cadence Intervals:</strong> 3x10min @ Sweet Spot at 50-60 RPM.<br>• <strong>Hill Repeats:</strong> Seated climbing on steep gradients.<br>• <strong>Gym:</strong> Heavy squats and deadlifts."
     },
     run: {
         title: "Running Economy",
-        icon: "fa-person-running", // Run
+        icon: "fa-person-running",
+        styleClass: "icon-run", // Matches styles.css color
         keywords: ["tempo", "threshold", "speed", "interval", "fartlek", "long", "base", "z2"],
-        description: "<strong>The Efficiency Check.</strong><br>How fast do you run per heartbeat?<br><br>📈 <strong>Trend UP:</strong> You are getting faster at the same physiological cost."
+        description: "<strong>The Efficiency Check.</strong><br>How fast do you run per heartbeat?<br><br>📈 <strong>Trend UP:</strong> You are getting faster at the same physiological cost.",
+        improvement: "<strong>How to Improve:</strong><br>• <strong>Strides:</strong> 6x20sec fast bursts after easy runs.<br>• <strong>Hill Sprints:</strong> Short, max effort sprints (10-15s) to recruit muscle.<br>• <strong>Plyometrics:</strong> Box jumps and jump rope."
     },
     mechanical: {
         title: "Mechanical Efficiency",
-        icon: "fa-person-running", // Run
+        icon: "fa-person-running",
+        styleClass: "icon-run", // Matches styles.css color
         keywords: ["run", "tempo", "threshold", "speed", "interval", "long", "base", "z2"],
-        description: "<strong>The Form Check.</strong><br>Speed vs. Power. Are you converting raw Watts into actual Speed?<br><br>📈 <strong>Trend UP:</strong> Good form (stiffness).<br>📉 <strong>Trend DOWN:</strong> Sloppy form (bouncing up/down)."
+        description: "<strong>The Form Check.</strong><br>Speed vs. Power. Are you converting raw Watts into actual Speed?<br><br>📈 <strong>Trend UP:</strong> Good form (stiffness).<br>📉 <strong>Trend DOWN:</strong> Sloppy form (bouncing up/down).",
+        improvement: "<strong>How to Improve:</strong><br>• <strong>Cadence:</strong> Aim for 170-180 spm to reduce ground contact time.<br>• <strong>Drills:</strong> A-Skips, B-Skips, and High Knees.<br>• <strong>Core:</strong> Planks and stability work to stop energy leaks."
     }
 };
 
@@ -116,7 +125,7 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
         return `
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-6 flex flex-col items-center justify-center min-h-[200px] h-full">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
-                    <i class="fa-solid ${def.icon} text-slate-500"></i> ${def.title}
+                    <i class="fa-solid ${def.icon} ${def.styleClass}"></i> ${def.title}
                 </h3>
                 <p class="text-xs text-slate-500 italic">Not enough data in this range.</p>
             </div>`;
@@ -153,20 +162,23 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
     const avg = values.reduce((a, b) => a + b, 0) / values.length;
     const avgY = getY(avg);
 
+    // Prepare Tooltip Content (Description + Improvement)
+    const tooltipContent = `${def.description}<div class='border-t border-slate-600 my-2'></div>${def.improvement}`.replace(/'/g, "\\'").replace(/\n/g, "");
+
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-6 h-full flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-300">
-                        <i class="fa-solid ${def.icon}"></i>
+                    <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center">
+                        <i class="fa-solid ${def.icon} ${def.styleClass} text-lg"></i>
                     </div>
                     
                     <div class="flex flex-col">
                         <h3 class="text-sm font-bold text-white flex items-center gap-2">
                             ${def.title}
                             <i class="fa-solid fa-circle-info text-slate-500 hover:text-blue-400 cursor-pointer text-xs"
-                               onmouseenter="window.showInfoTooltip(event, '${def.title}', '${def.description.replace(/'/g, "\\'").replace(/\n/g, "")}')"
-                               onclick="window.showInfoTooltip(event, '${def.title}', '${def.description.replace(/'/g, "\\'").replace(/\n/g, "")}')"
+                               onmouseenter="window.showInfoTooltip(event, '${def.title}', '${tooltipContent}')"
+                               onclick="window.showInfoTooltip(event, '${def.title}', '${tooltipContent}')"
                                onmouseleave="window.hideInfoTooltip()"></i>
                         </h3>
                         <span class="text-[10px] text-slate-500 font-mono">${values.length} sessions</span>
@@ -295,6 +307,7 @@ export function renderMetrics(allData) {
                 <div id="metric-chart-mechanics" class="h-full"></div>
             </div>
         </div>
+        
         <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[150px]"></div>
     `;
 }
