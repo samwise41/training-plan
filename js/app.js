@@ -1,7 +1,7 @@
 // js/app.js - Auto-Busting Cache Version
 
 (async function initApp() {
-    console.log("🚀 Booting App (Always Fresh Mode)...");
+    console.log("🚀 Booting App (Unified Data Mode)...");
 
     const cacheBuster = Date.now();
     const safeImport = async (path, name) => {
@@ -35,7 +35,6 @@
     const CONFIG = {
         PLAN_FILE: "endurance_plan.md",
         GEAR_FILE: "Gear.md",
-        // UPDATED: Points to the new Master Database with Garmin Data
         HISTORY_FILE: "MASTER_TRAINING_DATABASE.md", 
         WEATHER_MAP: {
             0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
@@ -48,7 +47,7 @@
         planMd: "",
         gearMd: "",
         archiveMd: "", 
-        logData: [],
+        allData: [], // Unified Dataset
         gearData: null,
         currentTemp: null,
         hourlyWeather: null,
@@ -127,7 +126,6 @@
         async init() {
             this.checkSecurity();
             
-            // Immediately highlight the correct tab based on the URL hash 
             const initialHash = window.location.hash.substring(1);
             const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness', 'metrics'];
             const startView = validViews.includes(initialHash) ? initialHash : 'dashboard';
@@ -148,13 +146,37 @@
                 this.gearMd = await gearRes.text();
                 this.archiveMd = archiveRes.ok ? await archiveRes.text() : "";
 
-                // --- DATA SOURCE SPLIT ---
-                // 1. Dashboard uses ONLY the current week's plan (Section 5)
-                this.currentWeekData = Parser.parseTrainingLog(this.planMd); 
-                
-                // 2. Trends & Readiness use the Full Master Garmin Database
-                this.logData = Parser.parseTrainingLog(this.archiveMd); 
-                
+                // --- DATA UNIFICATION STRATEGY ---
+                const masterLog = Parser.parseTrainingLog(this.archiveMd); // High Fidelity Garmin Data
+                const planLog = Parser.parseTrainingLog(this.planMd);      // Current/Future Plan
+
+                // 1. Map Master Data (Priority)
+                // Key: YYYY-MM-DD_SportType
+                const dataMap = new Map();
+                masterLog.forEach(item => {
+                    if (item.date) {
+                        const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
+                        dataMap.set(key, item);
+                    }
+                });
+
+                // 2. Merge Plan Data
+                // Only add if the key DOES NOT exist in Master.
+                // This ensures we keep the rich Garmin data if a workout is completed,
+                // but still see planned workouts that haven't been logged yet.
+                planLog.forEach(item => {
+                    if (item.date) {
+                        const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
+                        if (!dataMap.has(key)) {
+                            dataMap.set(key, item);
+                        }
+                    }
+                });
+
+                // 3. Convert back to array & Sort
+                this.allData = Array.from(dataMap.values()).sort((a,b) => b.date - a.date);
+                this.logData = this.allData; // Alias for backward compatibility if needed
+
                 this.setupEventListeners();
                 window.addEventListener('hashchange', () => this.handleHashChange());
                 this.handleHashChange(); 
@@ -247,7 +269,8 @@
                 const timeStr = diff < 0 ? "Completed" : (diff === 0 ? "Today!" : `${Math.floor(diff/7)}w ${diff%7}d to go`);
                 document.getElementById('stat-event-countdown').innerHTML = `<i class="fa-solid fa-hourglass-half mr-1"></i> ${timeStr}`;
 
-                if (this.logData.length > 0) {
+                // --- Calculate Readiness using UNIFIED Data ---
+                if (this.allData.length > 0) {
                     const parseDur = (str) => {
                         if(!str || str.includes('km') || str.includes('mi')) return 0;
                         if(!isNaN(str)) return parseInt(str);
@@ -260,7 +283,7 @@
 
                     const lookback = new Date(); lookback.setDate(lookback.getDate()-30);
                     let mS=0, mB=0, mR=0;
-                    this.logData.forEach(d => {
+                    this.allData.forEach(d => {
                         if(new Date(d.date) >= lookback) {
                             let dur = typeof d.actualDuration === 'number' ? d.actualDuration : parseDur(d.duration);
                             if(d.type==='Swim') mS=Math.max(mS,dur);
@@ -345,6 +368,7 @@
             
             setTimeout(() => {
                 try {
+                    // --- PASSING UNIFIED DATA TO ALL VIEWS ---
                     if (view === 'gear') {
                         const result = renderGear(this.gearMd, this.currentTemp, this.hourlyWeather);
                         content.innerHTML = result.html;
@@ -353,15 +377,15 @@
                     } 
                     else if (view === 'zones') content.innerHTML = renderZones(this.planMd);
                     else if (view === 'trends') {
-                        const result = renderTrends(this.logData); 
+                        const result = renderTrends(this.allData); // Unified Data
                         content.innerHTML = result.html;
                         this.updateDurationAnalysis();
                     } 
                     else if (view === 'roadmap') content.innerHTML = renderRoadmap(this.planMd);
                     else if (view === 'readiness') {
-                        const html = renderReadiness(this.logData, this.planMd);
+                        const html = renderReadiness(this.allData, this.planMd); // Unified Data
                         content.innerHTML = html;
-                        renderReadinessChart(this.logData);
+                        renderReadinessChart(this.allData); // Unified Data
                     }
                     else if (view === 'metrics') {
                         content.innerHTML = `
@@ -386,9 +410,8 @@
                     }
                     else {
                         // Dashboard View
-                        // Usage: renderDashboard(planMd, logData)
-                        // We pass this.logData (the Master DB) as the second argument so the Heatmap works
-                        const html = this.getStatsBar() + renderDashboard(this.planMd, this.logData);
+                        // renderDashboard(planMd, unifiedLogData)
+                        const html = this.getStatsBar() + renderDashboard(this.planMd, this.allData);
                         content.innerHTML = html;
                         this.updateStats(); 
                     }
@@ -404,7 +427,7 @@
             }, 200);
         },
 
-        updateDurationAnalysis(data) { updateDurationAnalysis(data || this.logData); },
+        updateDurationAnalysis(data) { updateDurationAnalysis(data || this.allData); },
         updateGearResult() { updateGearResult(this.gearData); },
 
         toggleSidebar() {
