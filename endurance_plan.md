@@ -157,7 +157,7 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 | COMPLETED | Monday | [BIKE] Strength / Hill Focus | 60 mins | [BIKE] Zwift sweet spot | 60 | Zone 3 / Sweet Spot (181-226W). Focus on low cadence (60-70 rpm) to build force. | 2026-01-05 |
 | COMPLETED | Tuesday | [SWIM] Technique Focus | 30 mins | morning swim | 37 | Zone 1 (RPE 3-4). Drills: Catch & Pull. Focus on smooth rotation. | 2026-01-06 |
 | COMPLETED | Wednesday | [RUN] Tempo / Threshold | 45 mins | Tempo run | 46 | Zone 3 (153-161 bpm) to low Zone 4. Build durability at speed. | 2026-01-07 |
-| CONPLETED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | Zone 2 | 86 min | **Winter Strategy Applied.** Full volume restored. Zone 2 (134-180W). | 2026-01-08 |
+| COMPLETED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | Zone 2 | 86 min | **Winter Strategy Applied.** Full volume restored. Zone 2 (134-180W). | 2026-01-08 |
 | PLANNED | Friday | [RUN] Aerobic Maintenance | 45 mins | | | Zone 2 (140-152 bpm). Easy aerobic miles. | 2026-01-09 |
 | PLANNED | Saturday | [BIKE] Long Steady Distance | 2.0 Hours | | | Zone 2 (134-180W). **Winter Cap Applied.** Practice fueling every 45m. | 2026-01-10 |
 | PLANNED | Sunday | Rest | - | | | Total Recovery. No active training. | 2026-01-11 |
