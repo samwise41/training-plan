@@ -62,7 +62,7 @@ export const Parser = {
     _getType(str) {
         if (!str) return 'Other';
         const lower = str.toLowerCase();
-        if (lower.match(/bike|cycle|zwift|ride|spin|peloton/)) return 'Bike';
+        if (lower.match(/bike|cycle|zwift|ride|spin|peloton|cycling/)) return 'Bike';
         if (lower.match(/run|jog|treadmill/)) return 'Run';
         if (lower.match(/swim|pool/)) return 'Swim';
         if (lower.match(/strength|lift|gym|core/)) return 'Strength';
@@ -90,7 +90,7 @@ export const Parser = {
         let speedIdx = -1;
         let tssIdx = -1;
         let activityIdIdx = -1;
-        let cadenceIdx = -1; // <--- NEW: Stores the index for Biking Cadence
+        let cadenceIdx = -1; 
 
         let data = [];
 
@@ -117,8 +117,6 @@ export const Parser = {
                         else if (h.includes('averagespeed')) speedIdx = index;
                         else if (h.includes('trainingstressscore')) tssIdx = index;
                         else if (h.includes('activityid')) activityIdIdx = index;
-                        
-                        // FIX: Look specifically for "averageBikingCadence" to avoid grabbing Run cadence
                         else if (h.includes('averagebikingcadence')) cadenceIdx = index;
                     });
                     
@@ -159,11 +157,11 @@ export const Parser = {
             const avgPower = parseFloat(getCol(powerIdx)) || 0;
             const avgSpeed = parseFloat(getCol(speedIdx)) || 0;
             const tss = parseFloat(getCol(tssIdx)) || 0;
-            const avgCadence = parseFloat(getCol(cadenceIdx)) || 0; // <--- Capture the value
+            const avgCadence = parseFloat(getCol(cadenceIdx)) || 0; 
             const activityId = getCol(activityIdIdx);
 
+            // --- DATE LOGIC ---
             let date = null;
-            // Force Noon to avoid UTC shift
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
             if (ymdMatch) {
                 const year = parseInt(ymdMatch[1]);
@@ -176,12 +174,23 @@ export const Parser = {
             }
 
             if (date && !isNaN(date.getTime())) {
-                const type = this._getType(planStr);
+                // --- FIX: PRIORITIZE ACTUAL WORKOUT FOR TYPE ---
+                // If Actual exists (and isn't just "Rest"), use it. Otherwise fallback to Plan.
+                let type = 'Other';
                 const actualType = this._getType(actualWorkoutStr);
+                const planType = this._getType(planStr);
+
+                if (actualType !== 'Other') {
+                    type = actualType;
+                } else {
+                    type = planType;
+                }
+
+                // Smart Completion Logic
+                const actDurVal = this._parseTime(actDurStr);
+                const isCompleted = statusStr.match(/completed|done|yes|x|exact|found/) || (actDurVal > 0);
 
                 // Calculate Efficiency Factor (EF)
-                // Bike: Power / HR
-                // Run: Speed / HR (Note: Speed in m/s usually, simple ratio for trending)
                 let ef = 0;
                 if (avgHR > 0) {
                     if (type === 'Bike') ef = avgPower / avgHR;
@@ -191,13 +200,13 @@ export const Parser = {
                 data.push({
                     date: date,
                     dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
-                    type: type,
+                    type: type, // Now correctly reflects ACTUAL sport
                     planName: planStr,
                     actualName: actualWorkoutStr,
                     actualType: actualType,
-                    completed: statusStr.match(/completed|done|yes|x|exact|found/),
+                    completed: isCompleted,
                     plannedDuration: this._parseTime(planDurStr),
-                    actualDuration: this._parseTime(actDurStr),
+                    actualDuration: actDurVal,
                     notes: notesStr,
                     // Garmin Fields
                     avgHR,
@@ -205,7 +214,7 @@ export const Parser = {
                     avgSpeed,
                     tss,
                     ef,
-                    avgCadence, // <--- Pass it to the view
+                    avgCadence, 
                     activityId
                 });
             }
@@ -214,22 +223,17 @@ export const Parser = {
     },
 
     parseTrainingLog(md) {
-        this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, firstRowRaw: "" };
-        
         let historySection = this.getSection(md, "Appendix C: Training History Log") || this.getSection(md, "Training History");
         const scheduleSection = this.getSection(md, "Weekly Schedule");
 
         if (!historySection && md.includes('|')) {
-            historySection = md; // Assume entire file is a table (Master DB)
+            historySection = md; 
         }
 
         const historyData = this._parseTableBlock(historySection);
         const scheduleData = this._parseTableBlock(scheduleSection);
 
-        const merged = [...historyData, ...scheduleData];
-
-        this.lastDebugInfo.rowsParsed = merged.length;
-        return merged;
+        return [...historyData, ...scheduleData];
     },
 
     parseGearMatrix(md) {
