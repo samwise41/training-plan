@@ -1,6 +1,15 @@
 // js/views/metrics.js
 
-// --- GLOBAL TOOLTIP HANDLER FOR METRICS ---
+// --- STATE MANAGEMENT ---
+let metricsState = { timeRange: '6m' }; // Default to 6 months
+let cachedData = [];
+
+// --- GLOBAL HANDLERS ---
+window.toggleMetricsTime = (range) => {
+    metricsState.timeRange = range;
+    updateMetricsCharts();
+};
+
 window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     let tooltip = document.getElementById('metric-tooltip-popup');
     if (!tooltip) {
@@ -31,7 +40,7 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     const y = evt.clientY;
     const viewportWidth = window.innerWidth;
     
-    // Position above the cursor
+    // Position above cursor
     tooltip.style.top = `${y - 100}px`; 
     
     // Smart horizontal positioning
@@ -55,21 +64,21 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
 const METRIC_DEFINITIONS = {
     endurance: {
         title: "Aerobic Efficiency",
-        purpose: "Cardiovascular Engine",
+        purpose: "Base Building & Cardiac Drift",
         keywords: ["long", "steady", "endurance", "base", "z2", "zone 2", "recovery"],
-        description: "Power vs. Heart Rate. Are you producing more watts for the same cardiac cost?"
+        description: "Workouts focused on mitochondrial density. We want to see Power staying high while Heart Rate stays low."
     },
     strength: {
         title: "Strength & Power",
-        purpose: "Muscular Force",
+        purpose: "Force Production & Threshold",
         keywords: ["strength", "hill", "climb", "torque", "force", "alpe", "ftp", "race", "test", "threshold", "tempo", "sweet spot", "interval"],
-        description: "Power vs. Cadence. Tracks your ability to push big gears (Torque) without spiking HR."
+        description: "High-load sessions. Includes Hill Climbs (Alpe du Zwift), FTP Tests, and Races. Tracks 'Torque' (Power per Revolution)."
     },
     run: {
         title: "Running Economy",
-        purpose: "Metabolic Cost",
+        purpose: "Speed Efficiency",
         keywords: ["tempo", "threshold", "speed", "interval", "fartlek", "long", "base", "z2"],
-        description: "Speed vs. Heart Rate. Are you running faster at the same heart rate?"
+        description: "Measures how fast you run for every heartbeat. Includes both fast Tempo runs and steady Long Runs."
     },
     mechanical: {
         title: "Mechanical Efficiency",
@@ -87,12 +96,11 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
                 <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
                     <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span> ${title}
                 </h3>
-                <p class="text-xs text-slate-500 italic">Not enough data.</p>
-                <p class="text-[10px] text-slate-600 mt-1">Need 2+ matching workouts.</p>
+                <p class="text-xs text-slate-500 italic">Not enough data in this range.</p>
+                <p class="text-[10px] text-slate-600 mt-1">Try selecting a longer time period.</p>
             </div>`;
     }
 
-    // Responsive Dimensions
     const width = 800;
     const height = 200;
     const pad = { t: 20, b: 30, l: 40, r: 20 };
@@ -154,18 +162,31 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
     `;
 };
 
-// --- MAIN RENDER ---
-export function renderMetrics(allData) {
-    if (!allData || allData.length === 0) return '<div class="p-8 text-center text-slate-500">No data available yet. Please complete more workouts.</div>';
+// --- DATA UPDATE & FILTERING ---
+const updateMetricsCharts = () => {
+    if (!cachedData || cachedData.length === 0) return;
 
+    // 1. Time Filter
+    const now = new Date();
+    const cutoff = new Date();
+    
+    if (metricsState.timeRange === '30d') cutoff.setDate(now.getDate() - 30);
+    else if (metricsState.timeRange === '60d') cutoff.setDate(now.getDate() - 60);
+    else if (metricsState.timeRange === '90d') cutoff.setDate(now.getDate() - 90);
+    else if (metricsState.timeRange === '6m') cutoff.setMonth(now.getMonth() - 6);
+    // 'All' fallback if extended later
+    
+    const filteredData = cachedData.filter(d => d.date >= cutoff);
+
+    // 2. Data Preparation
     const hasKeyword = (item, keywords) => {
         if (!item.planName && !item.actualName) return false;
         const text = ((item.planName || "") + " " + (item.actualName || "")).toLowerCase();
         return keywords.some(k => text.includes(k));
     };
 
-    // 1. ENDURANCE (Aerobic Efficiency: Bike)
-    const efData = allData
+    // A. ENDURANCE
+    const efData = filteredData
         .filter(d => 
             d.type === 'Bike' && d.avgPower > 0 && d.avgHR > 0 &&
             hasKeyword(d, METRIC_DEFINITIONS.endurance.keywords)
@@ -179,8 +200,8 @@ export function renderMetrics(allData) {
         }))
         .sort((a,b) => a.date - b.date);
 
-    // 2. STRENGTH (Torque: Bike)
-    const torqueData = allData
+    // B. STRENGTH
+    const torqueData = filteredData
         .filter(d => 
             d.type === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 &&
             hasKeyword(d, METRIC_DEFINITIONS.strength.keywords)
@@ -194,8 +215,8 @@ export function renderMetrics(allData) {
         }))
         .sort((a,b) => a.date - b.date);
 
-    // 3. RUN ECONOMY (Physiological: Run)
-    const runEconData = allData
+    // C. ECONOMY
+    const runEconData = filteredData
         .filter(d => 
             d.type === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 &&
             hasKeyword(d, METRIC_DEFINITIONS.run.keywords)
@@ -209,8 +230,8 @@ export function renderMetrics(allData) {
         }))
         .sort((a,b) => a.date - b.date);
 
-    // 4. MECHANICAL EFFICIENCY (Biomechanical: Run)
-    const mechData = allData
+    // D. MECHANICS
+    const mechData = filteredData
         .filter(d => 
             d.type === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 &&
             hasKeyword(d, METRIC_DEFINITIONS.mechanical.keywords)
@@ -219,15 +240,67 @@ export function renderMetrics(allData) {
             date: d.date,
             dateStr: d.date.toISOString().split('T')[0],
             name: d.planName || d.actualName,
-            // Metric: Speed / Power.  (Multiplying by 100 for readability)
-            // If you run FASTER (Speed up) for same Watts, this Score goes UP.
             val: (d.avgSpeed * 100) / d.avgPower,
             breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W`
         }))
         .sort((a,b) => a.date - b.date);
 
+    // 3. Inject Charts
+    const chartEndurance = document.getElementById('metric-chart-endurance');
+    const chartStrength = document.getElementById('metric-chart-strength');
+    const chartEconomy = document.getElementById('metric-chart-economy');
+    const chartMechanics = document.getElementById('metric-chart-mechanics');
+
+    if(chartEndurance) chartEndurance.innerHTML = buildMetricChart(efData, "Efficiency Factor (Watts/BPM)", "#10b981", "EF");
+    if(chartStrength) chartStrength.innerHTML = buildMetricChart(torqueData, "Torque Index (Watts/RPM)", "#8b5cf6", "idx");
+    if(chartEconomy) chartEconomy.innerHTML = buildMetricChart(runEconData, "Economy Index (Spd/HR)", "#ec4899", "idx");
+    if(chartMechanics) chartMechanics.innerHTML = buildMetricChart(mechData, "Mechanics (Speed/Power)", "#f97316", "idx");
+
+    // 4. Update Button States
+    ['30d', '60d', '90d', '6m'].forEach(range => {
+        const btn = document.getElementById(`btn-metric-${range}`);
+        if(btn) {
+            const isActive = metricsState.timeRange === range;
+            btn.className = isActive 
+                ? "bg-slate-200 text-slate-900 font-bold border border-transparent px-3 py-1 rounded text-xs transition-all hover:opacity-90"
+                : "bg-slate-800 text-slate-400 border border-slate-600 px-3 py-1 rounded text-xs transition-all hover:opacity-90 hover:text-white";
+        }
+    });
+};
+
+// --- MAIN RENDER ---
+export function renderMetrics(allData) {
+    cachedData = allData || [];
+
+    // Helper for buttons
+    const buildToggle = (range, label) => `
+        <button id="btn-metric-${range}" onclick="window.toggleMetricsTime('${range}')" 
+            class="bg-slate-800 text-slate-400 border border-slate-600 px-3 py-1 rounded text-xs transition-all hover:opacity-90">
+            ${label}
+        </button>
+    `;
+
+    // Trigger update after DOM insertion
+    setTimeout(updateMetricsCharts, 0);
+
     return `
         <div class="max-w-7xl mx-auto space-y-8">
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-microchip text-blue-500"></i> Performance Metrics
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Analyzing physiological trends based on Garmin data.</p>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-800">
+                    ${buildToggle('30d', '30 Days')}
+                    ${buildToggle('60d', '60 Days')}
+                    ${buildToggle('90d', '90 Days')}
+                    ${buildToggle('6m', '6 Months')}
+                </div>
+            </div>
+
             <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
                 <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-tags text-blue-500"></i> Workout Categorization
@@ -253,35 +326,10 @@ export function renderMetrics(allData) {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                <div class="h-full">
-                    <div class="mb-2 flex justify-between items-end px-1">
-                        <h2 class="text-sm font-bold text-slate-300">1. Aerobic Efficiency</h2>
-                    </div>
-                    ${buildMetricChart(efData, "Efficiency Factor (Watts/BPM)", "#10b981", "EF")}
-                </div>
-
-                <div class="h-full">
-                    <div class="mb-2 flex justify-between items-end px-1">
-                        <h2 class="text-sm font-bold text-slate-300">2. Strength & Torque</h2>
-                    </div>
-                    ${buildMetricChart(torqueData, "Torque Index (Watts/RPM)", "#8b5cf6", "idx")}
-                </div>
-
-                <div class="h-full">
-                    <div class="mb-2 flex justify-between items-end px-1">
-                        <h2 class="text-sm font-bold text-slate-300">3. Running Economy</h2>
-                    </div>
-                    ${buildMetricChart(runEconData, "Economy Index (Spd/HR)", "#ec4899", "idx")}
-                </div>
-
-                <div class="h-full">
-                    <div class="mb-2 flex justify-between items-end px-1">
-                        <h2 class="text-sm font-bold text-slate-300">4. Mechanical Efficiency</h2>
-                    </div>
-                    ${buildMetricChart(mechData, "Mechanics (Speed/Power)", "#f97316", "idx")}
-                </div>
-
+                <div id="metric-chart-endurance" class="h-full"></div>
+                <div id="metric-chart-strength" class="h-full"></div>
+                <div id="metric-chart-economy" class="h-full"></div>
+                <div id="metric-chart-mechanics" class="h-full"></div>
             </div>
         </div>
         
