@@ -1,9 +1,11 @@
 // js/app.js - Auto-Busting Cache Version
 
 (async function initApp() {
-    console.log("🚀 Booting App (Always Fresh Mode)...");
+    console.log("🚀 Booting App (Unified Data Mode)...");
 
     const cacheBuster = Date.now();
+    
+    // Helper to safely import modules
     const safeImport = async (path, name) => {
         try {
             return await import(`${path}?t=${cacheBuster}`);
@@ -13,6 +15,7 @@
         }
     };
 
+    // --- 1. IMPORT MODULES ---
     const parserMod = await safeImport('./parser.js', 'Parser');
     const trendsMod = await safeImport('./views/trends.js', 'Trends');
     const gearMod = await safeImport('./views/gear.js', 'Gear');
@@ -20,7 +23,9 @@
     const roadmapMod = await safeImport('./views/roadmap.js', 'Roadmap');
     const dashMod = await safeImport('./views/dashboard.js', 'Dashboard');
     const readinessMod = await safeImport('./views/readiness.js', 'Readiness');
+    const metricsMod = await safeImport('./views/metrics.js', 'Metrics'); // <--- CRITICAL IMPORT
 
+    // --- 2. DESTRUCTURE FUNCTIONS ---
     const Parser = parserMod?.Parser || { parseTrainingLog: () => [], getSection: () => "" };
     const { renderTrends, updateDurationAnalysis } = trendsMod || { renderTrends: () => ({html: ''}) };
     const { renderGear, updateGearResult } = gearMod || { renderGear: () => ({html: ''}) };
@@ -29,13 +34,14 @@
     const { renderDashboard } = dashMod || { renderDashboard: () => '' };
     const { renderReadiness } = readinessMod || { renderReadiness: () => '' };
     const renderReadinessChart = readinessMod?.renderReadinessChart || (() => {});
+    const { renderMetrics } = metricsMod || { renderMetrics: () => '<div class="p-4 text-red-500">Metrics Module Failed to Load</div>' }; // <--- CRITICAL EXTRACT
 
     console.log(`📦 Modules loaded with ID: ${cacheBuster}`);
 
     const CONFIG = {
         PLAN_FILE: "endurance_plan.md",
         GEAR_FILE: "Gear.md",
-        HISTORY_FILE: "history_archive.md", 
+        HISTORY_FILE: "MASTER_TRAINING_DATABASE.md", 
         WEATHER_MAP: {
             0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
             45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"], 51: ["Drizzle", "🌦️"], 61: ["Rain", "🌧️"], 63: ["Rain", "🌧️"],
@@ -47,7 +53,7 @@
         planMd: "",
         gearMd: "",
         archiveMd: "", 
-        logData: [],
+        allData: [], 
         gearData: null,
         currentTemp: null,
         hourlyWeather: null,
@@ -125,17 +131,15 @@
 
         async init() {
             this.checkSecurity();
-            // --- FIX STARTS HERE ---
-            // Immediately highlight the correct tab based on the URL hash 
-            // so the user doesn't see the "Dashboard" default.
+            
             const initialHash = window.location.hash.substring(1);
-            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness'];
+            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness', 'metrics'];
             const startView = validViews.includes(initialHash) ? initialHash : 'dashboard';
     
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             const initialNavBtn = document.getElementById(`nav-${startView}`);
             if (initialNavBtn) initialNavBtn.classList.add('active');
-            // --- FIX ENDS HERE ---
+            
             try {
                 const [planRes, gearRes, archiveRes] = await Promise.all([
                     fetch(`./${CONFIG.PLAN_FILE}?t=${cacheBuster}`),
@@ -148,10 +152,32 @@
                 this.gearMd = await gearRes.text();
                 this.archiveMd = archiveRes.ok ? await archiveRes.text() : "";
 
-                const currentLog = Parser.parseTrainingLog(this.planMd);
-                const archiveLog = Parser.parseTrainingLog(this.archiveMd);
-                this.logData = [...currentLog, ...archiveLog]; 
-                
+                // --- DATA UNIFICATION STRATEGY ---
+                const masterLog = Parser.parseTrainingLog(this.archiveMd); 
+                const planLog = Parser.parseTrainingLog(this.planMd);      
+
+                const dataMap = new Map();
+                // 1. Load Master (Priority - contains Garmin Data)
+                masterLog.forEach(item => {
+                    if (item.date) {
+                        const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
+                        dataMap.set(key, item);
+                    }
+                });
+
+                // 2. Merge Plan (Only if missing from Master)
+                planLog.forEach(item => {
+                    if (item.date) {
+                        const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
+                        if (!dataMap.has(key)) {
+                            dataMap.set(key, item);
+                        }
+                    }
+                });
+
+                this.allData = Array.from(dataMap.values()).sort((a,b) => b.date - a.date);
+                this.logData = this.allData; 
+
                 this.setupEventListeners();
                 window.addEventListener('hashchange', () => this.handleHashChange());
                 this.handleHashChange(); 
@@ -165,7 +191,8 @@
         setupEventListeners() {
             const navMap = {
                 'nav-dashboard': 'dashboard', 'nav-trends': 'trends', 'nav-logbook': 'logbook',
-                'nav-roadmap': 'roadmap', 'nav-gear': 'gear', 'nav-zones': 'zones', 'nav-readiness': 'readiness'
+                'nav-roadmap': 'roadmap', 'nav-gear': 'gear', 'nav-zones': 'zones', 
+                'nav-readiness': 'readiness', 'nav-metrics': 'metrics'
             };
             Object.keys(navMap).forEach(id => {
                 const el = document.getElementById(id);
@@ -196,7 +223,6 @@
             } catch (e) { console.error("Weather unavailable", e); }
         },
 
-        // UPDATED: Added logic to hide weakest link if score is 100%
         updateStats() {
             if (!this.planMd) return;
             const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
@@ -209,7 +235,6 @@
             const weekEl = document.getElementById('stat-week');
             if (weekEl) weekEl.innerText = currentWeek;
             
-            // Event Parsing
             const lines = this.planMd.split('\n');
             let nextEvent = null;
             let inTable = false;
@@ -237,17 +262,13 @@
 
             if (nextEvent) {
                 document.getElementById('stat-event-name').innerText = nextEvent.name;
-                
-                // Set Date
                 const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
                 document.getElementById('stat-event-date').innerText = nextEvent.date.toLocaleDateString('en-US', dateOptions);
-
                 const diff = Math.ceil((nextEvent.date - today) / 86400000);
                 const timeStr = diff < 0 ? "Completed" : (diff === 0 ? "Today!" : `${Math.floor(diff/7)}w ${diff%7}d to go`);
                 document.getElementById('stat-event-countdown').innerHTML = `<i class="fa-solid fa-hourglass-half mr-1"></i> ${timeStr}`;
 
-                // --- Calculate Readiness ---
-                if (this.logData.length > 0) {
+                if (this.allData.length > 0) {
                     const parseDur = (str) => {
                         if(!str || str.includes('km') || str.includes('mi')) return 0;
                         if(!isNaN(str)) return parseInt(str);
@@ -260,7 +281,7 @@
 
                     const lookback = new Date(); lookback.setDate(lookback.getDate()-30);
                     let mS=0, mB=0, mR=0;
-                    this.logData.forEach(d => {
+                    this.allData.forEach(d => {
                         if(new Date(d.date) >= lookback) {
                             let dur = typeof d.actualDuration === 'number' ? d.actualDuration : parseDur(d.duration);
                             if(d.type==='Swim') mS=Math.max(mS,dur);
@@ -274,15 +295,12 @@
                     const tR = parseDur(nextEvent.runGoal);
                     
                     const scores = [];
-                    // Using Math.min(..., 100) ensures score never exceeds 100 in the UI
                     if(tS>0) scores.push({ type: 'Swim', val: Math.min(Math.round((mS/tS)*100),100), color: 'text-cyan-400' });
                     if(tB>0) scores.push({ type: 'Bike', val: Math.min(Math.round((mB/tB)*100),100), color: 'text-purple-400' });
                     if(tR>0) scores.push({ type: 'Run', val: Math.min(Math.round((mR/tR)*100),100), color: 'text-pink-400' });
 
                     if(scores.length > 0) {
-                        // Find minimum score
                         const minScore = scores.reduce((prev, curr) => prev.val < curr.val ? prev : curr);
-                        
                         const box = document.getElementById('stat-readiness-box');
                         const val = document.getElementById('stat-readiness-val');
                         const badge = document.getElementById('stat-readiness-badge');
@@ -291,11 +309,7 @@
                         
                         box.style.display = 'block';
                         val.innerText = `${minScore.val}%`;
-                        
-                        let color = "text-red-500"; 
-                        let bColor = "border-red-500/50";
-                        let label = "WARNING";
-                        
+                        let color = "text-red-500"; let bColor = "border-red-500/50"; let label = "WARNING";
                         if(minScore.val >= 85) { color="text-emerald-500"; bColor="border-emerald-500/50"; label="READY"; }
                         else if(minScore.val >= 60) { color="text-yellow-500"; bColor="border-yellow-500/50"; label="BUILD"; }
 
@@ -303,8 +317,6 @@
                         badge.innerText = label;
                         badge.className = `px-1.5 py-0.5 rounded bg-slate-900 border ${bColor} ${color} text-[8px] font-bold uppercase tracking-wider inline-block`;
 
-                        // UPDATED LOGIC:
-                        // Only show weakest link if the score is LESS than 100.
                         if (minScore.val < 100) {
                             weakBox.classList.remove('hidden');
                             weakName.innerText = minScore.type;
@@ -319,7 +331,7 @@
 
         handleHashChange() {
             const hash = window.location.hash.substring(1); 
-            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness'];
+            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness', 'metrics'];
             const view = validViews.includes(hash) ? hash : 'dashboard';
             this.renderView(view);
         },
@@ -327,7 +339,10 @@
         navigate(view) { window.location.hash = view; },
 
         renderView(view) {
-            const titles = { dashboard: 'Weekly Schedule', trends: 'Trends & KPIs', logbook: 'Logbook', roadmap: 'Season Roadmap', gear: 'Gear Choice', zones: 'Training Zones', readiness: 'Race Readiness' };
+            const titles = { 
+                dashboard: 'Weekly Schedule', trends: 'Trends & KPIs', logbook: 'Logbook', roadmap: 'Season Roadmap', 
+                gear: 'Gear Choice', zones: 'Training Zones', readiness: 'Race Readiness', metrics: 'Performance Metrics'
+            };
             const titleEl = document.getElementById('header-title-dynamic');
             if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
 
@@ -348,25 +363,31 @@
                     } 
                     else if (view === 'zones') content.innerHTML = renderZones(this.planMd);
                     else if (view === 'trends') {
-                        const result = renderTrends(this.logData); 
+                        const result = renderTrends(this.allData); 
                         content.innerHTML = result.html;
                         this.updateDurationAnalysis();
                     } 
                     else if (view === 'roadmap') content.innerHTML = renderRoadmap(this.planMd);
                     else if (view === 'readiness') {
-                        const html = renderReadiness(this.logData, this.planMd);
+                        const html = renderReadiness(this.allData, this.planMd); 
                         content.innerHTML = html;
-                        renderReadinessChart(this.logData);
+                        renderReadinessChart(this.allData); 
+                    }
+                    else if (view === 'metrics') {
+                        // --- THE FIX IS HERE ---
+                        // Replaced the placeholder HTML with the actual function call
+                        content.innerHTML = renderMetrics(this.allData);
                     }
                     else if (view === 'logbook') {
                         const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
                         const archive = Parser.getSection(this.archiveMd, "Training History");
-                        const mdContent = (recent || "") + "\n\n" + (archive || "");
+                        const finalArchive = archive || (this.archiveMd.includes('|') ? this.archiveMd : "");
+                        const mdContent = (recent || "") + "\n\n" + (finalArchive || "");
                         const safeMarked = window.marked ? window.marked.parse : (t) => t;
                         content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                     }
                     else {
-                        const html = this.getStatsBar() + renderDashboard(this.planMd, this.logData);
+                        const html = this.getStatsBar() + renderDashboard(this.planMd, this.allData);
                         content.innerHTML = html;
                         this.updateStats(); 
                     }
@@ -382,7 +403,7 @@
             }, 200);
         },
 
-        updateDurationAnalysis(data) { updateDurationAnalysis(data || this.logData); },
+        updateDurationAnalysis(data) { updateDurationAnalysis(data || this.allData); },
         updateGearResult() { updateGearResult(this.gearData); },
 
         toggleSidebar() {
