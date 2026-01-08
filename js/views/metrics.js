@@ -29,26 +29,25 @@ const METRIC_DEFINITIONS = {
         title: "Strength & Torque",
         icon: "fa-bicycle",
         styleClass: "icon-bike",
-        description: "<strong>The Muscle Check.</strong><br>Measures Watts per Revolution. High values mean you are pushing bigger gears (Force).",
+        description: "<strong>The Muscle Check.</strong><br>Measures Watts per Revolution (Torque). High values mean you are pushing bigger gears (Force) rather than just spinning fast.",
         improvement: "• <strong>Low Cadence Intervals:</strong> 50-60 RPM.<br>• <strong>Hill Repeats:</strong> Seated climbing."
     },
     run: {
         title: "Running Economy",
         icon: "fa-person-running",
         styleClass: "icon-run",
-        description: "<strong>The Efficiency Check.</strong><br>How fast do you run per heartbeat?",
+        description: "<strong>The Efficiency Check.</strong><br>How fast do you run per heartbeat?<br><br>📈 <strong>Trend UP:</strong> You are getting faster at the same physiological cost.",
         improvement: "• <strong>Strides:</strong> 6x20sec bursts.<br>• <strong>Hill Sprints:</strong> Short, max effort (10-15s)."
     },
     mechanical: {
         title: "Mechanical Efficiency",
         icon: "fa-person-running",
         styleClass: "icon-run",
-        description: "<strong>The Form Check.</strong><br>Speed vs. Power. Are you converting Watts into actual Speed?<br><br>📈 <strong>Trend UP:</strong> Good stiffness.",
+        description: "<strong>The Form Check.</strong><br>Speed vs. Power. Are you converting Watts into actual Speed?<br><br>📈 <strong>Trend UP:</strong> Good form (stiffness).",
         improvement: "• <strong>Cadence:</strong> Aim for 170-180 spm.<br>• <strong>Drills:</strong> A-Skips, B-Skips, High Knees."
     }
 };
 
-// --- INFO TOOLTIP (Click info icon) ---
 window.showInfoTooltip = (evt, key) => {
     evt.stopPropagation();
     let infoBox = document.getElementById('metric-info-popup');
@@ -73,7 +72,6 @@ window.showInfoTooltip = (evt, key) => {
     infoBox.classList.remove('opacity-0', 'pointer-events-none');
 };
 
-// --- DATA TOOLTIP (Click data point) ---
 window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     evt.stopPropagation();
     let tooltip = document.getElementById('metric-tooltip-popup');
@@ -93,6 +91,19 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
 };
 
+const calculateTrendline = (dataPoints) => {
+    const n = dataPoints.length;
+    if (n < 2) return null;
+    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    for (let i = 0; i < n; i++) {
+        sumX += i; sumY += dataPoints[i].val;
+        sumXY += i * dataPoints[i].val; sumXX += i * i;
+    }
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    return { startVal: intercept, endVal: intercept + slope * (n - 1) };
+};
+
 const buildMetricChart = (dataPoints, key, color, unitLabel) => {
     const def = METRIC_DEFINITIONS[key];
     if (!dataPoints || dataPoints.length < 2) {
@@ -101,11 +112,17 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
     const width = 800;
     const height = 150;
     const pad = { t: 20, b: 30, l: 40, r: 20 };
-    const getX = (d, i) => pad.l + (i / (dataPoints.length - 1)) * (width - pad.l - pad.r);
     const values = dataPoints.map(d => d.val);
     const minV = Math.min(...values) * 0.95;
     const maxV = Math.max(...values) * 1.05;
+    const getX = (d, i) => pad.l + (i / (dataPoints.length - 1)) * (width - pad.l - pad.r);
     const getY = (val) => height - pad.b - ((val - minV) / (maxV - minV)) * (height - pad.t - pad.b);
+
+    const trend = calculateTrendline(dataPoints);
+    let trendlineHtml = '';
+    if (trend) {
+        trendlineHtml = `<line x1="${getX(null, 0)}" y1="${getY(trend.startVal)}" x2="${getX(null, dataPoints.length - 1)}" y2="${getY(trend.endVal)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.4" />`;
+    }
 
     let pathD = `M ${getX(dataPoints[0], 0)} ${getY(dataPoints[0].val)}`;
     let pointsHtml = '';
@@ -123,9 +140,11 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
                     <i class="fa-solid ${def.icon} ${def.styleClass}"></i> ${def.title}
                     <i class="fa-solid fa-circle-info text-slate-500 hover:text-blue-400 cursor-pointer text-[10px]" onclick="window.showInfoTooltip(event, '${key}')"></i>
                 </h3>
+                <span class="text-[9px] text-slate-400 font-mono italic">${trend ? (trend.endVal > trend.startVal ? 'Rising ↑' : 'Falling ↓') : ''}</span>
             </div>
             <div class="flex-1 w-full h-[120px]">
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
+                    ${trendlineHtml}
                     <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.8" />
                     ${pointsHtml}
                 </svg>
@@ -134,7 +153,49 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
     `;
 };
 
-// ... (keep updateMetricsCharts as is) ...
+const updateMetricsCharts = () => {
+    if (!cachedData || cachedData.length === 0) return;
+    const cutoff = new Date();
+    if (metricsState.timeRange === '30d') cutoff.setDate(cutoff.getDate() - 30);
+    else if (metricsState.timeRange === '90d') cutoff.setDate(cutoff.getDate() - 90);
+    else if (metricsState.timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
+    
+    const filteredData = cachedData.filter(d => d.date >= cutoff);
+    const isIntensity = (item, allowedLabels) => {
+        const label = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
+        return allowedLabels.some(allowed => label === allowed.toUpperCase());
+    };
+
+    // A. ENDURANCE
+    const efData = filteredData.filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']))
+        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName || "Ride", val: d.avgPower / d.avgHR, breakdown: `Pwr: ${Math.round(d.avgPower)}W / HR: ${Math.round(d.avgHR)}` }))
+        .sort((a,b) => a.date - b.date);
+
+    // B. STRENGTH
+    const torqueData = filteredData.filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY', 'SPEED']))
+        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName || "Ride", val: d.avgPower / d.avgCadence, breakdown: `Pwr: ${Math.round(d.avgPower)}W / RPM: ${Math.round(d.avgCadence)}` }))
+        .sort((a,b) => a.date - b.date);
+
+    // C. RUN ECONOMY
+    const runEconData = filteredData.filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'SPEED']))
+        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName || "Run", val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace: ${Math.round(d.avgSpeed * 60)} m/m / HR: ${Math.round(d.avgHR)}` }))
+        .sort((a,b) => a.date - b.date);
+
+    // D. MECHANICAL
+    const mechData = filteredData.filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0)
+        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName || "Run", val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W` }))
+        .sort((a,b) => a.date - b.date);
+
+    document.getElementById('metric-chart-endurance').innerHTML = buildMetricChart(efData, 'endurance', "#10b981", "EF");
+    document.getElementById('metric-chart-strength').innerHTML = buildMetricChart(torqueData, 'strength', "#8b5cf6", "idx");
+    document.getElementById('metric-chart-economy').innerHTML = buildMetricChart(runEconData, 'run', "#ec4899", "idx");
+    document.getElementById('metric-chart-mechanics').innerHTML = buildMetricChart(mechData, 'mechanical', "#f97316", "idx");
+
+    ['30d', '90d', '6m'].forEach(range => {
+        const btn = document.getElementById(`btn-metric-${range}`);
+        if(btn) btn.className = metricsState.timeRange === range ? "bg-emerald-500 text-white font-bold px-3 py-1 rounded text-[10px] transition-all" : "bg-slate-800 text-slate-400 hover:text-white px-3 py-1 rounded text-[10px] transition-all";
+    });
+};
 
 export function renderMetrics(allData) {
     cachedData = allData || [];
