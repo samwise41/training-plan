@@ -1,7 +1,8 @@
 // js/parser.js
 
 export const Parser = {
-    // ... (Keep existing getSection, getBiometrics, _parseTime, _getType methods) ...
+    lastDebugInfo: {}, 
+
     getSection(md, title) {
         if (!md) return "";
         const lines = md.split('\n');
@@ -25,6 +26,7 @@ export const Parser = {
 
     getBiometrics(md) {
         const profileSection = this.getSection(md, "Profile") || this.getSection(md, "Biometrics");
+        
         const ftp = profileSection.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
         const weight = profileSection.match(/Weight[^0-9]*(\d{1,3})/i);
         const lthr = profileSection.match(/Lactate Threshold HR[^0-9]*(\d{2,3})/i);
@@ -44,9 +46,12 @@ export const Parser = {
         if (!str) return 0;
         const isHours = str.toLowerCase().includes('h');
         const numMatch = str.match(/([\d\.]+)/);
+        
         if (!numMatch) return 0;
+        
         const val = parseFloat(numMatch[1]);
         if (isNaN(val)) return 0;
+        
         if (isHours || (val < 10 && !str.toLowerCase().includes('m'))) {
             return Math.round(val * 60);
         } else {
@@ -64,16 +69,28 @@ export const Parser = {
         return 'Other';
     },
 
+    // Internal helper to parse a specific raw text block
     _parseTableBlock(sectionText) {
         if (!sectionText) return [];
         
         const lines = sectionText.split('\n');
         
-        // Standard Columns
-        let dateIdx = -1, statusIdx = -1, planWorkoutIdx = -1, planDurIdx = -1, actWorkoutIdx = -1, actDurIdx = -1, notesIdx = -1;
-        
-        // Extended Garmin Columns
-        let hrIdx = -1, powerIdx = -1, speedIdx = -1, cadenceIdx = -1, tssIdx = -1;
+        // Indices for Standard Log
+        let dateIdx = -1;
+        let statusIdx = -1;
+        let planWorkoutIdx = -1; 
+        let planDurIdx = -1;     
+        let actWorkoutIdx = -1;  
+        let actDurIdx = -1;
+        let notesIdx = -1;
+
+        // Indices for Extended Garmin Data
+        let hrIdx = -1;
+        let powerIdx = -1;
+        let speedIdx = -1;
+        let tssIdx = -1;
+        let activityIdIdx = -1;
+        let cadenceIdx = -1; // <--- NEW: Stores the index for Biking Cadence
 
         let data = [];
 
@@ -85,7 +102,7 @@ export const Parser = {
                     const cleanHeaders = line.split('|').map(h => h.trim().toLowerCase().replace(/\*\*/g, ''));
                     
                     cleanHeaders.forEach((h, index) => {
-                        // Standard
+                        // Standard Fields
                         if (h.includes('date')) dateIdx = index;
                         else if (h.includes('status')) statusIdx = index;
                         else if (h.includes('planned workout')) planWorkoutIdx = index;
@@ -94,16 +111,20 @@ export const Parser = {
                         else if (h.includes('actual duration')) actDurIdx = index;
                         else if (h.includes('notes') || h.includes('target')) notesIdx = index;
                         
-                        // Extended
+                        // Garmin Extended Fields
                         else if (h.includes('averagehr')) hrIdx = index;
                         else if (h.includes('avgpower')) powerIdx = index;
                         else if (h.includes('averagespeed')) speedIdx = index;
                         else if (h.includes('trainingstressscore')) tssIdx = index;
-                        // FIX: Be specific about BIKING cadence so we don't grab running cadence
-                        else if (h.includes('averagebikingcadence')) cadenceIdx = index; 
+                        else if (h.includes('activityid')) activityIdIdx = index;
+                        
+                        // FIX: Look specifically for "averageBikingCadence" to avoid grabbing Run cadence
+                        else if (h.includes('averagebikingcadence')) cadenceIdx = index;
                     });
                     
-                    if (dateIdx !== -1) break; 
+                    if (dateIdx !== -1) { 
+                        break; 
+                    }
                 }
             }
         }
@@ -121,8 +142,11 @@ export const Parser = {
             const getCol = (idx) => (idx > -1 && idx < cols.length) ? cleanText(cols[idx]) : "";
 
             const dateStr = getCol(dateIdx);
+            
+            // Skip header repeaters or empty dates
             if (!dateStr || dateStr.toLowerCase().includes('date')) continue;
 
+            // Extract Standard Data
             const planStr = getCol(planWorkoutIdx);
             const statusStr = getCol(statusIdx).toLowerCase();
             const planDurStr = getCol(planDurIdx);
@@ -130,13 +154,16 @@ export const Parser = {
             const actualWorkoutStr = getCol(actWorkoutIdx);
             const notesStr = getCol(notesIdx);
 
+            // Extract Garmin Data
             const avgHR = parseFloat(getCol(hrIdx)) || 0;
             const avgPower = parseFloat(getCol(powerIdx)) || 0;
             const avgSpeed = parseFloat(getCol(speedIdx)) || 0;
-            const avgCadence = parseFloat(getCol(cadenceIdx)) || 0;
             const tss = parseFloat(getCol(tssIdx)) || 0;
+            const avgCadence = parseFloat(getCol(cadenceIdx)) || 0; // <--- Capture the value
+            const activityId = getCol(activityIdIdx);
 
             let date = null;
+            // Force Noon to avoid UTC shift
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
             if (ymdMatch) {
                 const year = parseInt(ymdMatch[1]);
@@ -152,6 +179,15 @@ export const Parser = {
                 const type = this._getType(planStr);
                 const actualType = this._getType(actualWorkoutStr);
 
+                // Calculate Efficiency Factor (EF)
+                // Bike: Power / HR
+                // Run: Speed / HR (Note: Speed in m/s usually, simple ratio for trending)
+                let ef = 0;
+                if (avgHR > 0) {
+                    if (type === 'Bike') ef = avgPower / avgHR;
+                    else if (type === 'Run') ef = avgSpeed / avgHR;
+                }
+
                 data.push({
                     date: date,
                     dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
@@ -163,7 +199,14 @@ export const Parser = {
                     plannedDuration: this._parseTime(planDurStr),
                     actualDuration: this._parseTime(actDurStr),
                     notes: notesStr,
-                    avgHR, avgPower, avgSpeed, avgCadence, tss
+                    // Garmin Fields
+                    avgHR,
+                    avgPower,
+                    avgSpeed,
+                    tss,
+                    ef,
+                    avgCadence, // <--- Pass it to the view
+                    activityId
                 });
             }
         }
@@ -171,17 +214,22 @@ export const Parser = {
     },
 
     parseTrainingLog(md) {
+        this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, firstRowRaw: "" };
+        
         let historySection = this.getSection(md, "Appendix C: Training History Log") || this.getSection(md, "Training History");
         const scheduleSection = this.getSection(md, "Weekly Schedule");
 
         if (!historySection && md.includes('|')) {
-            historySection = md; 
+            historySection = md; // Assume entire file is a table (Master DB)
         }
 
         const historyData = this._parseTableBlock(historySection);
         const scheduleData = this._parseTableBlock(scheduleSection);
 
-        return [...historyData, ...scheduleData];
+        const merged = [...historyData, ...scheduleData];
+
+        this.lastDebugInfo.rowsParsed = merged.length;
+        return merged;
     },
 
     parseGearMatrix(md) {
