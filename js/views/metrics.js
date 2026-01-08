@@ -10,20 +10,25 @@ window.toggleMetricsTime = (range) => {
     updateMetricsCharts();
 };
 
+// Function to manually hide tooltip
+window.hideMetricTooltip = () => {
+    const tooltip = document.getElementById('metric-tooltip-popup');
+    if (tooltip) {
+        tooltip.classList.add('opacity-0', 'pointer-events-none');
+    }
+};
+
 window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     let tooltip = document.getElementById('metric-tooltip-popup');
-    if (!tooltip) {
-        tooltip = document.createElement('div');
-        tooltip.id = 'metric-tooltip-popup';
-        tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity fixed min-w-[150px] max-w-[90vw] pointer-events-none';
-        document.body.appendChild(tooltip);
-    }
+    if (!tooltip) return; // Should be created by renderMetrics
+
     tooltip.innerHTML = `
-        <div class="text-center">
+        <div class="text-center cursor-pointer">
             <div class="text-[10px] text-slate-400 font-normal mb-1 border-b border-slate-700 pb-1">${date}</div>
             <div class="text-white font-bold text-sm mb-1 text-wrap leading-tight">${name}</div>
             <div class="text-emerald-400 font-mono font-bold text-lg mb-1">${val} <span class="text-[10px] text-slate-500">${unitLabel}</span></div>
             <div class="text-[10px] text-slate-300 font-mono bg-slate-800 rounded px-2 py-1 mt-1 inline-block border border-slate-700">${breakdown}</div>
+            <div class="text-[9px] text-slate-500 mt-2 block">(Click to close)</div>
         </div>
     `;
     positionTooltip(evt, tooltip);
@@ -47,11 +52,11 @@ const positionTooltip = (evt, el) => {
     el.style.top = `${top}px`;
     el.classList.remove('opacity-0', 'pointer-events-none');
     
-    // Auto-hide after 5 seconds to prevent getting stuck
+    // Auto-hide after 8 seconds if not clicked
     if (window.metricTooltipTimer) clearTimeout(window.metricTooltipTimer);
     window.metricTooltipTimer = setTimeout(() => {
         el.classList.add('opacity-0', 'pointer-events-none');
-    }, 5000);
+    }, 8000);
 };
 
 const METRIC_DEFINITIONS = {
@@ -164,7 +169,6 @@ const updateMetricsCharts = () => {
     document.getElementById('metric-chart-economy').innerHTML = buildMetricChart(runEconData, 'run', "#ec4899", "idx");
     document.getElementById('metric-chart-mechanics').innerHTML = buildMetricChart(mechData, 'mechanical', "#f97316", "idx");
 
-    // --- RE-APPLY BUTTON STYLES ---
     ['30d', '90d', '6m'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
         if(btn) {
@@ -179,6 +183,7 @@ export function renderMetrics(allData) {
     cachedData = allData || [];
     setTimeout(updateMetricsCharts, 0);
     const buildToggle = (range, label) => `<button id="btn-metric-${range}" onclick="window.toggleMetricsTime('${range}')" class="bg-slate-800 text-slate-400 px-3 py-1 rounded text-[10px] transition-all">${label}</button>`;
+    
     return `
         <div class="max-w-7xl mx-auto space-y-6">
             <div class="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-slate-800">
@@ -194,6 +199,9 @@ export function renderMetrics(allData) {
                 <div id="metric-chart-mechanics"></div>
             </div>
         </div>
-        <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity fixed pointer-events-none"></div>
+        <div id="metric-tooltip-popup" 
+             onclick="window.hideMetricTooltip()" 
+             class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity fixed pointer-events-auto cursor-pointer">
+        </div>
     `;
 }
