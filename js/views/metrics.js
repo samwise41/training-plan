@@ -29,31 +29,6 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     positionTooltip(evt, tooltip);
 };
 
-window.showInfoTooltip = (evt, title, desc) => {
-    let tooltip = document.getElementById('metric-info-popup');
-    if (!tooltip) {
-        tooltip = document.createElement('div');
-        tooltip.id = 'metric-info-popup';
-        tooltip.className = 'z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity fixed max-w-[300px] w-[85vw] pointer-events-none text-left';
-        document.body.appendChild(tooltip);
-    }
-    tooltip.innerHTML = `
-        <h4 class="text-white font-bold mb-3 flex items-center gap-2 border-b border-slate-700 pb-2">
-            <i class="fa-solid fa-circle-info text-blue-400"></i> ${title}
-        </h4>
-        <div class="text-slate-300 leading-relaxed space-y-3">${desc}</div>
-    `;
-    positionTooltip(evt, tooltip);
-};
-
-window.hideInfoTooltip = () => {
-    const tooltip = document.getElementById('metric-info-popup');
-    if (tooltip) {
-        tooltip.classList.add('opacity-0');
-        setTimeout(() => tooltip.classList.add('pointer-events-none'), 300);
-    }
-};
-
 const positionTooltip = (evt, el) => {
     const x = evt.clientX;
     const y = evt.clientY;
@@ -67,44 +42,14 @@ const positionTooltip = (evt, el) => {
     if (top < 10) top = y + 25;
     el.style.left = `${left}px`;
     el.style.top = `${top}px`;
-    el.style.right = 'auto';
     el.classList.remove('opacity-0', 'pointer-events-none');
-    if (window.metricTooltipTimer) clearTimeout(window.metricTooltipTimer);
-    window.metricTooltipTimer = setTimeout(() => {
-        el.classList.add('opacity-0');
-        setTimeout(() => el.classList.add('pointer-events-none'), 300);
-    }, 8000);
 };
 
 const METRIC_DEFINITIONS = {
-    endurance: {
-        title: "Aerobic Efficiency",
-        icon: "fa-bicycle", 
-        styleClass: "icon-bike",
-        description: "<strong>The Engine Check.</strong><br>Watts per Heartbeat for <strong>Aerobic Base</strong> sessions.",
-        improvement: "<strong>How to Improve:</strong> Keep heart rate steady in Zone 2."
-    },
-    strength: {
-        title: "Strength & Torque",
-        icon: "fa-bicycle",
-        styleClass: "icon-bike",
-        description: "<strong>The Muscle Check.</strong><br>Watts per Revolution for <strong>High Intensity</strong> sessions.",
-        improvement: "<strong>How to Improve:</strong> Focus on low-cadence, high-force climbing."
-    },
-    run: {
-        title: "Running Economy",
-        icon: "fa-person-running",
-        styleClass: "icon-run",
-        description: "<strong>The Efficiency Check.</strong><br>Speed per heartbeat during <strong>Quality</strong> runs.",
-        improvement: "<strong>How to Improve:</strong> Focus on form stiffness and strides."
-    },
-    mechanical: {
-        title: "Mechanical Efficiency",
-        icon: "fa-person-running",
-        styleClass: "icon-run",
-        description: "<strong>The Form Check.</strong><br>Speed vs Power. Shows how well you convert energy into forward motion.",
-        improvement: "<strong>How to Improve:</strong> Increase cadence to reduce ground contact time."
-    }
+    endurance: { title: "Aerobic Efficiency", icon: "fa-bicycle", styleClass: "icon-bike" },
+    strength: { title: "Strength & Torque", icon: "fa-bicycle", styleClass: "icon-bike" },
+    run: { title: "Running Economy", icon: "fa-person-running", styleClass: "icon-run" },
+    mechanical: { title: "Mechanical Efficiency", icon: "fa-person-running", styleClass: "icon-run" }
 };
 
 const buildMetricChart = (dataPoints, key, color, unitLabel) => {
@@ -115,50 +60,39 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
                 <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
                     <i class="fa-solid ${def.icon} text-slate-500"></i> ${def.title}
                 </h3>
-                <p class="text-xs text-slate-500 italic">No data found in range.</p>
+                <p class="text-xs text-slate-500 italic">No Garmin labels matched in this range.</p>
             </div>`;
     }
     const width = 800;
-    const height = 200;
+    const height = 180;
     const pad = { t: 20, b: 30, l: 40, r: 20 };
     const values = dataPoints.map(d => d.val);
     const minVal = Math.min(...values) * 0.95;
     const maxVal = Math.max(...values) * 1.05;
     const minTime = dataPoints[0].date.getTime();
     const maxTime = dataPoints[dataPoints.length - 1].date.getTime();
+
     const getX = (d) => pad.l + ((d.date.getTime() - minTime) / (maxTime - minTime)) * (width - pad.l - pad.r);
     const getY = (val) => height - pad.b - ((val - minVal) / (maxVal - minVal)) * (height - pad.t - pad.b);
+
     let pathD = `M ${getX(dataPoints[0])} ${getY(dataPoints[0].val)}`;
     let pointsHtml = '';
     dataPoints.forEach(d => {
         const x = getX(d);
         const y = getY(d.val);
         pathD += ` L ${x} ${y}`;
-        pointsHtml += `<circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="${color}" stroke-width="2" class="hover:r-6 hover:stroke-white transition-all cursor-pointer" onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown}')"></circle>`;
+        pointsHtml += `<circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="${color}" stroke-width="2" class="cursor-pointer" onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown}')"></circle>`;
     });
-    const avg = values.reduce((a, b) => a + b, 0) / values.length;
-    const avgY = getY(avg);
+
     return `
-        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-6 h-full flex flex-col">
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 h-full flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center">
-                        <i class="fa-solid ${def.icon} ${def.styleClass} text-lg"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <h3 class="text-sm font-bold text-white">${def.title}</h3>
-                        <span class="text-[10px] text-slate-500 font-mono">${values.length} sessions</span>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] font-mono text-slate-400 block">Avg: ${avg.toFixed(2)}</span>
-                    <span class="text-xs font-bold text-white block" style="color: ${color}">Last: ${values[values.length-1].toFixed(2)}</span>
-                </div>
+                <h3 class="text-sm font-bold text-white flex items-center gap-2"><i class="fa-solid ${def.icon} ${def.styleClass}"></i> ${def.title}</h3>
+                <span class="text-[10px] text-slate-500 font-mono">${values.length} sessions</span>
             </div>
-            <div class="w-full flex-1 min-h-[150px]">
+            <div class="flex-1 w-full">
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
-                    <line x1="${pad.l}" y1="${avgY}" x2="${width-pad.r}" y2="${avgY}" stroke="#475569" stroke-width="1" stroke-dasharray="4,4" opacity="0.3" />
-                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" />
                     ${pointsHtml}
                 </svg>
             </div>
@@ -169,93 +103,59 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
 const updateMetricsCharts = () => {
     if (!cachedData || cachedData.length === 0) return;
 
-    const now = new Date();
     const cutoff = new Date();
-    if (metricsState.timeRange === '30d') cutoff.setDate(now.getDate() - 30);
-    else if (metricsState.timeRange === '60d') cutoff.setDate(now.getDate() - 60);
-    else if (metricsState.timeRange === '90d') cutoff.setDate(now.getDate() - 90);
-    else if (metricsState.timeRange === '6m') cutoff.setMonth(now.getMonth() - 6);
+    if (metricsState.timeRange === '30d') cutoff.setDate(cutoff.getDate() - 30);
+    else if (metricsState.timeRange === '90d') cutoff.setDate(cutoff.getDate() - 90);
+    else if (metricsState.timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     
     const filteredData = cachedData.filter(d => d.date >= cutoff);
 
-    // --- ENHANCED HELPER: CHECK LABEL, THEN NAME, THEN NOTES ---
-    const isIntensity = (item, intensityTypes, keywords) => {
-        const label = (item.trainingEffectLabel || "").toUpperCase();
-        const text = ((item.actualName || "") + " " + (item.notes || "")).toLowerCase();
-        
-        // 1. Check Garmin Label first
-        if (intensityTypes.some(type => label.includes(type.toUpperCase()))) return true;
-        
-        // 2. Fallback to keywords if label is missing
-        if (keywords.some(k => text.includes(k.toLowerCase()))) return true;
-        
-        return false;
+    // --- STRICT GARMIN INTENSITY HELPER ---
+    const isIntensity = (item, allowedLabels) => {
+        const label = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
+        return allowedLabels.some(allowed => label === allowed.toUpperCase());
     };
 
-    // A. ENDURANCE
+    // A. ENDURANCE: Bike + Aerobic Base/Recovery
     const efData = filteredData
-        .filter(d => {
-            const type = (d.actualType || "").toLowerCase();
-            const isBike = type.includes('bike') || type.includes('cycling');
-            return isBike && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY'], ['base', 'z2', 'easy', 'long', 'endurance']);
-        })
+        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName || "Ride", val: d.avgPower / d.avgHR, breakdown: `Pwr: ${Math.round(d.avgPower)}W / HR: ${Math.round(d.avgHR)}` }))
         .sort((a,b) => a.date - b.date);
 
-    // B. STRENGTH
+    // B. STRENGTH: Bike + Performance Intensity
     const torqueData = filteredData
-        .filter(d => {
-            const type = (d.actualType || "").toLowerCase();
-            const isBike = type.includes('bike') || type.includes('cycling');
-            return isBike && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'THRESHOLD', 'TEMPO', 'ANAEROBIC'], ['hill', 'climb', 'torque', 'interval', 'ftp', 'race']);
-        })
+        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY', 'SPEED']))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName || "Ride", val: d.avgPower / d.avgCadence, breakdown: `Pwr: ${Math.round(d.avgPower)}W / RPM: ${Math.round(d.avgCadence)}` }))
         .sort((a,b) => a.date - b.date);
 
-    // C. RUN ECONOMY
+    // C. RUN ECONOMY: Run + Quality Labels
     const runEconData = filteredData
-        .filter(d => {
-            const type = (d.actualType || "").toLowerCase();
-            return type.includes('run') && d.avgSpeed > 0 && d.avgHR > 0;
-        })
+        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'SPEED']))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName || "Run", val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace: ${Math.round(d.avgSpeed * 60)} m/m / HR: ${Math.round(d.avgHR)}` }))
         .sort((a,b) => a.date - b.date);
 
-    // D. MECHANICAL
+    // D. MECHANICAL: Run + Physics (Speed/Power)
     const mechData = filteredData
-        .filter(d => {
-            const type = (d.actualType || "").toLowerCase();
-            return type.includes('run') && d.avgSpeed > 0 && d.avgPower > 0;
-        })
+        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName || "Run", val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W` }))
         .sort((a,b) => a.date - b.date);
 
-    const chartEndurance = document.getElementById('metric-chart-endurance');
-    const chartStrength = document.getElementById('metric-chart-strength');
-    const chartEconomy = document.getElementById('metric-chart-economy');
-    const chartMechanics = document.getElementById('metric-chart-mechanics');
-
-    if(chartEndurance) chartEndurance.innerHTML = buildMetricChart(efData, 'endurance', "#10b981", "EF");
-    if(chartStrength) chartStrength.innerHTML = buildMetricChart(torqueData, 'strength', "#8b5cf6", "idx");
-    if(chartEconomy) chartEconomy.innerHTML = buildMetricChart(runEconData, 'run', "#ec4899", "idx");
-    if(chartMechanics) chartMechanics.innerHTML = buildMetricChart(mechData, 'mechanical', "#f97316", "idx");
-
-    ['30d', '60d', '90d', '6m'].forEach(range => {
-        const btn = document.getElementById(`btn-metric-${range}`);
-        if(btn) btn.className = metricsState.timeRange === range ? "bg-slate-200 text-slate-900 font-bold px-3 py-1 rounded text-xs" : "bg-slate-800 text-slate-400 px-3 py-1 rounded text-xs";
-    });
+    document.getElementById('metric-chart-endurance').innerHTML = buildMetricChart(efData, 'endurance', "#10b981", "EF");
+    document.getElementById('metric-chart-strength').innerHTML = buildMetricChart(torqueData, 'strength', "#8b5cf6", "idx");
+    document.getElementById('metric-chart-economy').innerHTML = buildMetricChart(runEconData, 'run', "#ec4899", "idx");
+    document.getElementById('metric-chart-mechanics').innerHTML = buildMetricChart(mechData, 'mechanical', "#f97316", "idx");
 };
 
 export function renderMetrics(allData) {
     cachedData = allData || [];
     setTimeout(updateMetricsCharts, 0);
-    const buildToggle = (range, label) => `<button id="btn-metric-${range}" onclick="window.toggleMetricsTime('${range}')" class="bg-slate-800 text-slate-400 px-3 py-1 rounded text-xs transition-all hover:text-white">${label}</button>`;
     return `
         <div class="max-w-7xl mx-auto space-y-8">
             <div class="flex justify-between items-center">
                 <h2 class="text-xl font-bold text-white">Performance Metrics</h2>
-                <div class="flex gap-2 bg-slate-900/50 p-1 rounded-lg">
-                    ${buildToggle('30d', '30d')}${buildToggle('60d', '60d')}${buildToggle('90d', '90d')}${buildToggle('6m', '6m')}
+                <div class="flex gap-2">
+                    <button onclick="window.toggleMetricsTime('30d')" class="bg-slate-800 text-xs px-3 py-1 rounded">30d</button>
+                    <button onclick="window.toggleMetricsTime('6m')" class="bg-slate-800 text-xs px-3 py-1 rounded">6m</button>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -265,5 +165,6 @@ export function renderMetrics(allData) {
                 <div id="metric-chart-mechanics"></div>
             </div>
         </div>
+        <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity fixed pointer-events-none"></div>
     `;
 }
