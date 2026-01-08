@@ -1,6 +1,57 @@
 // js/views/metrics.js
 
-// --- 1. CONFIGURATION & DEFINITIONS ---
+// --- GLOBAL TOOLTIP HANDLER FOR METRICS ---
+window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
+    let tooltip = document.getElementById('metric-tooltip-popup');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'metric-tooltip-popup';
+        tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[150px]';
+        document.body.appendChild(tooltip);
+    }
+
+    tooltip.innerHTML = `
+        <div class="text-center">
+            <div class="text-[10px] text-slate-400 font-normal mb-1 border-b border-slate-700 pb-1">
+                ${date}
+            </div>
+            <div class="text-white font-bold text-sm mb-1 text-wrap max-w-[200px] leading-tight">
+                ${name}
+            </div>
+            <div class="text-emerald-400 font-mono font-bold text-lg mb-1">
+                ${val} <span class="text-[10px] text-slate-500">${unitLabel}</span>
+            </div>
+            <div class="text-[10px] text-slate-300 font-mono bg-slate-800 rounded px-2 py-1 mt-1 inline-block border border-slate-700">
+                ${breakdown}
+            </div>
+        </div>
+    `;
+
+    const x = evt.clientX;
+    const y = evt.clientY;
+    const viewportWidth = window.innerWidth;
+    
+    // Position above the cursor
+    tooltip.style.top = `${y - 100}px`; 
+    
+    // Smart horizontal positioning
+    if (x > viewportWidth * 0.60) {
+        tooltip.style.right = `${viewportWidth - x + 10}px`;
+        tooltip.style.left = 'auto';
+    } else {
+        tooltip.style.left = `${x - 75}px`; 
+        tooltip.style.right = 'auto';
+    }
+    
+    tooltip.classList.remove('opacity-0');
+    
+    if (window.metricTooltipTimer) clearTimeout(window.metricTooltipTimer);
+    window.metricTooltipTimer = setTimeout(() => {
+        tooltip.classList.add('opacity-0');
+    }, 4000);
+};
+
+// --- DEFINITIONS ---
 const METRIC_DEFINITIONS = {
     endurance: {
         title: "Aerobic Efficiency",
@@ -54,16 +105,21 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
     dataPoints.forEach(d => {
         const x = getX(d);
         const y = getY(d.val);
+        const valStr = d.val.toFixed(2);
+        
+        // Pass specific breakdown data for the tooltip
+        const breakdown = d.breakdown || "";
+        
         pathD += ` L ${x} ${y}`;
         
         pointsHtml += `
-            <circle cx="${x}" cy="${y}" r="3" fill="#1e293b" stroke="${color}" stroke-width="2" class="hover:r-5 transition-all cursor-pointer">
-                <title>${d.dateStr} (${d.name}): ${d.val.toFixed(2)} ${unitLabel}</title>
+            <circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="${color}" stroke-width="2" 
+                class="hover:r-6 hover:stroke-white transition-all cursor-pointer"
+                onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${valStr}', '${unitLabel}', '${breakdown}')">
             </circle>
         `;
     });
 
-    // Simple Linear Trend Line
     const n = dataPoints.length;
     const avg = values.reduce((a, b) => a + b, 0) / n;
     const avgY = getY(avg);
@@ -79,8 +135,9 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
                     <span class="text-xs font-bold text-white block">Last: ${values[values.length-1].toFixed(2)}</span>
                 </div>
             </div>
-            <div class="w-full overflow-x-auto">
-                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto min-w-[600px] overflow-visible">
+            
+            <div class="w-full">
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto overflow-visible">
                     <line x1="${pad.l}" y1="${avgY}" x2="${width-pad.r}" y2="${avgY}" stroke="#475569" stroke-width="1" stroke-dasharray="4,4" opacity="0.3" />
                     <text x="${width-pad.r}" y="${avgY - 5}" text-anchor="end" fill="#64748b" font-size="9">AVG</text>
                     <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -93,18 +150,15 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
     `;
 };
 
-// --- 2. MAIN RENDER ---
+// --- MAIN RENDER ---
 export function renderMetrics(allData) {
     if (!allData || allData.length === 0) return '<div class="p-8 text-center text-slate-500">No data available yet. Please complete more workouts.</div>';
 
-    // Helper: Keyword Matcher
     const hasKeyword = (item, keywords) => {
         if (!item.planName && !item.actualName) return false;
         const text = ((item.planName || "") + " " + (item.actualName || "")).toLowerCase();
         return keywords.some(k => text.includes(k));
     };
-
-    // --- DATA PREP ---
 
     // 1. ENDURANCE (Aerobic Efficiency)
     const efData = allData
@@ -116,7 +170,8 @@ export function renderMetrics(allData) {
             date: d.date,
             dateStr: d.date.toISOString().split('T')[0],
             name: d.planName || d.actualName,
-            val: d.avgPower / d.avgHR
+            val: d.avgPower / d.avgHR,
+            breakdown: `Pwr: ${Math.round(d.avgPower)}W / HR: ${Math.round(d.avgHR)}`
         }))
         .sort((a,b) => a.date - b.date);
 
@@ -130,7 +185,8 @@ export function renderMetrics(allData) {
             date: d.date,
             dateStr: d.date.toISOString().split('T')[0],
             name: d.planName || d.actualName,
-            val: d.avgPower / d.avgCadence
+            val: d.avgPower / d.avgCadence,
+            breakdown: `Pwr: ${Math.round(d.avgPower)}W / RPM: ${Math.round(d.avgCadence)}`
         }))
         .sort((a,b) => a.date - b.date);
 
@@ -144,36 +200,30 @@ export function renderMetrics(allData) {
             date: d.date,
             dateStr: d.date.toISOString().split('T')[0],
             name: d.planName || d.actualName,
-            val: (d.avgSpeed * 60) / d.avgHR 
+            val: (d.avgSpeed * 60) / d.avgHR,
+            breakdown: `Pace: ${Math.round(d.avgSpeed * 60)} m/m / HR: ${Math.round(d.avgHR)}`
         }))
         .sort((a,b) => a.date - b.date);
 
-    // --- 3. BUILD HTML ---
-    
-    // Definitions Block
-    const buildDefBox = (key, color) => `
-        <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px] md:text-xs">
-            <h4 class="font-bold text-white mb-1 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span> ${METRIC_DEFINITIONS[key].title}
-            </h4>
-            <p class="text-slate-400 mb-2">${METRIC_DEFINITIONS[key].purpose}</p>
-            <div class="text-slate-500 font-mono break-words border-t border-slate-700 pt-1 mt-1">
-                Matches: "${METRIC_DEFINITIONS[key].keywords.join('", "')}"
-            </div>
-        </div>
-    `;
-
     return `
         <div class="max-w-5xl mx-auto space-y-8">
-            
             <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
                 <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-tags text-blue-500"></i> Workout Categorization Logic
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    ${buildDefBox('endurance', '#10b981')}
-                    ${buildDefBox('strength', '#8b5cf6')}
-                    ${buildDefBox('run', '#ec4899')}
+                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px] md:text-xs">
+                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> ${METRIC_DEFINITIONS.endurance.title}</h4>
+                        <p class="text-slate-400 mb-2">${METRIC_DEFINITIONS.endurance.purpose}</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px] md:text-xs">
+                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-violet-500"></span> ${METRIC_DEFINITIONS.strength.title}</h4>
+                        <p class="text-slate-400 mb-2">${METRIC_DEFINITIONS.strength.purpose}</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px] md:text-xs">
+                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-pink-500"></span> ${METRIC_DEFINITIONS.run.title}</h4>
+                        <p class="text-slate-400 mb-2">${METRIC_DEFINITIONS.run.purpose}</p>
+                    </div>
                 </div>
             </div>
 
@@ -183,7 +233,7 @@ export function renderMetrics(allData) {
                     <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl">
                         <div class="mb-4">
                             <h2 class="text-xl font-bold text-white">1. Aerobic Efficiency (EF)</h2>
-                            <p class="text-sm text-slate-400">Power output per heartbeat. Trends UP as fitness improves.</p>
+                            <p class="text-sm text-slate-400">Power output per heartbeat.</p>
                         </div>
                         ${buildMetricChart(efData, "Efficiency Factor (Watts / BPM)", "#10b981", "EF")}
                     </div>
@@ -197,9 +247,6 @@ export function renderMetrics(allData) {
                         </div>
                         <div class="flex-1">
                             ${buildMetricChart(torqueData, "Torque Index", "#8b5cf6", "idx")}
-                        </div>
-                        <div class="mt-4 pt-3 border-t border-slate-700/50 text-[10px] text-slate-500">
-                            <strong>Note:</strong> Climbs (Alpe) & Strength work will score high. Fast-spinning Tempo rides may score lower due to high cadence.
                         </div>
                     </div>
                 </div>
@@ -218,5 +265,6 @@ export function renderMetrics(allData) {
 
             </div>
         </div>
+        <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[150px]"></div>
     `;
 }
