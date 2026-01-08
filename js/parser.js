@@ -1,3 +1,5 @@
+// js/parser.js
+
 export const Parser = {
     lastDebugInfo: {}, 
 
@@ -67,20 +69,27 @@ export const Parser = {
         return 'Other';
     },
 
-    // Refactored: Internal helper to parse a specific raw text block
+    // Internal helper to parse a specific raw text block
     _parseTableBlock(sectionText) {
         if (!sectionText) return [];
         
         const lines = sectionText.split('\n');
         
-        // Indices
+        // Indices for Standard Log
         let dateIdx = -1;
         let statusIdx = -1;
         let planWorkoutIdx = -1; 
         let planDurIdx = -1;     
         let actWorkoutIdx = -1;  
         let actDurIdx = -1;
-        let notesIdx = -1; // NEW: Capture Notes
+        let notesIdx = -1;
+
+        // Indices for Extended Garmin Data
+        let hrIdx = -1;
+        let powerIdx = -1;
+        let speedIdx = -1;
+        let tssIdx = -1;
+        let activityIdIdx = -1;
 
         let data = [];
 
@@ -88,20 +97,28 @@ export const Parser = {
         for (let line of lines) {
             if (line.includes('|')) {
                 const lowLine = line.toLowerCase();
-                if (lowLine.includes('date') && lowLine.includes('planned')) {
+                if (lowLine.includes('date')) {
                     const cleanHeaders = line.split('|').map(h => h.trim().toLowerCase().replace(/\*\*/g, ''));
                     
                     cleanHeaders.forEach((h, index) => {
+                        // Standard Fields
                         if (h.includes('date')) dateIdx = index;
                         else if (h.includes('status')) statusIdx = index;
                         else if (h.includes('planned workout')) planWorkoutIdx = index;
                         else if (h.includes('planned duration')) planDurIdx = index;
                         else if (h.includes('actual workout')) actWorkoutIdx = index;
                         else if (h.includes('actual duration')) actDurIdx = index;
-                        else if (h.includes('notes') || h.includes('target')) notesIdx = index; // NEW
+                        else if (h.includes('notes') || h.includes('target')) notesIdx = index;
+                        
+                        // Garmin Extended Fields
+                        else if (h.includes('averagehr')) hrIdx = index;
+                        else if (h.includes('avgpower')) powerIdx = index;
+                        else if (h.includes('averagespeed')) speedIdx = index;
+                        else if (h.includes('trainingstressscore')) tssIdx = index;
+                        else if (h.includes('activityid')) activityIdIdx = index;
                     });
                     
-                    if (dateIdx !== -1 && planWorkoutIdx !== -1) { 
+                    if (dateIdx !== -1) { 
                         break; 
                     }
                 }
@@ -118,8 +135,6 @@ export const Parser = {
             if (cols.length < 3) continue; 
 
             const cleanText = (str) => (str || "").trim().replace(/\*\*/g, '').replace(/__/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
-            
-            // Safe column access
             const getCol = (idx) => (idx > -1 && idx < cols.length) ? cleanText(cols[idx]) : "";
 
             const dateStr = getCol(dateIdx);
@@ -127,12 +142,20 @@ export const Parser = {
             // Skip header repeaters or empty dates
             if (!dateStr || dateStr.toLowerCase().includes('date')) continue;
 
+            // Extract Standard Data
             const planStr = getCol(planWorkoutIdx);
             const statusStr = getCol(statusIdx).toLowerCase();
             const planDurStr = getCol(planDurIdx);
             const actDurStr = getCol(actDurIdx);
             const actualWorkoutStr = getCol(actWorkoutIdx);
-            const notesStr = getCol(notesIdx); // NEW
+            const notesStr = getCol(notesIdx);
+
+            // Extract Garmin Data
+            const avgHR = parseFloat(getCol(hrIdx)) || 0;
+            const avgPower = parseFloat(getCol(powerIdx)) || 0;
+            const avgSpeed = parseFloat(getCol(speedIdx)) || 0;
+            const tss = parseFloat(getCol(tssIdx)) || 0;
+            const activityId = getCol(activityIdIdx);
 
             let date = null;
             // Force Noon to avoid UTC shift
@@ -151,17 +174,33 @@ export const Parser = {
                 const type = this._getType(planStr);
                 const actualType = this._getType(actualWorkoutStr);
 
+                // Calculate Efficiency Factor (EF)
+                // Bike: Power / HR
+                // Run: Speed / HR (Note: Speed in m/s usually, simple ratio for trending)
+                let ef = 0;
+                if (avgHR > 0) {
+                    if (type === 'Bike') ef = avgPower / avgHR;
+                    else if (type === 'Run') ef = avgSpeed / avgHR;
+                }
+
                 data.push({
                     date: date,
-                    dayName: date.toLocaleDateString('en-US', { weekday: 'long' }), // Helper for UI
+                    dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
                     type: type,
                     planName: planStr,
                     actualName: actualWorkoutStr,
                     actualType: actualType,
-                    completed: statusStr.match(/completed|done|yes|x/),
+                    completed: statusStr.match(/completed|done|yes|x|exact|found/),
                     plannedDuration: this._parseTime(planDurStr),
                     actualDuration: this._parseTime(actDurStr),
-                    notes: notesStr // NEW
+                    notes: notesStr,
+                    // Garmin Fields
+                    avgHR,
+                    avgPower,
+                    avgSpeed,
+                    tss,
+                    ef,
+                    activityId
                 });
             }
         }
@@ -171,12 +210,19 @@ export const Parser = {
     parseTrainingLog(md) {
         this.lastDebugInfo = { sectionFound: false, headersFound: {}, rowsParsed: 0, firstRowRaw: "" };
         
+        // Try to find specific sections, otherwise parse the whole file (for Master DB)
         let historySection = this.getSection(md, "Appendix C: Training History Log") || this.getSection(md, "Training History");
         const scheduleSection = this.getSection(md, "Weekly Schedule");
+
+        // If no specific history section found, assume it's the Master Database file (pure table)
+        if (!historySection && md.includes('|')) {
+            historySection = md;
+        }
 
         const historyData = this._parseTableBlock(historySection);
         const scheduleData = this._parseTableBlock(scheduleSection);
 
+        // Combine if both exist (rare in new architecture, but safe)
         const merged = [...historyData, ...scheduleData];
 
         this.lastDebugInfo.rowsParsed = merged.length;
