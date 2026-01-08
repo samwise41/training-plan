@@ -142,19 +142,16 @@ export const Parser = {
             }
 
             if (date && !isNaN(date.getTime())) {
-                const planType = this._getType(planStr);
-                const actualType = this._getType(actualWorkoutStr);
                 
-                // --- CRITICAL FIX FOR TRENDS vs METRICS ---
-                // 1. For 'type' (used by Trends), prioritize Plan. 
-                //    Fallback to Actual only if Plan is missing (History).
-                let type = planType !== 'Other' ? planType : actualType;
+                // --- ORIGINAL LOGIC RESTORED ---
+                const type = this._getType(planStr);       // Trends uses Plan
+                const actualType = this._getType(actualWorkoutStr); // Metrics uses Actual
 
                 const actDurVal = this._parseTime(actDurStr);
                 const isCompleted = statusStr.match(/completed|done|yes|x|exact|found/) || (actDurVal > 0);
 
                 let ef = 0;
-                // Calculate EF based on what you ACTUALLY did
+                // Calculate EF based on ACTUAL type
                 if (avgHR > 0) {
                     if (actualType === 'Bike') ef = avgPower / avgHR;
                     else if (actualType === 'Run') ef = avgSpeed / avgHR;
@@ -163,8 +160,8 @@ export const Parser = {
                 data.push({
                     date: date,
                     dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
-                    type: type,          // For Trends (Adherence)
-                    actualType: actualType, // For Metrics (Performance)
+                    type: type,          // Used by Trends (Adherence)
+                    actualType: actualType, // Used by Metrics (Performance)
                     planName: planStr,
                     actualName: actualWorkoutStr,
                     completed: isCompleted,
@@ -188,9 +185,7 @@ export const Parser = {
         return [...historyData, ...scheduleData];
     },
     
-    // ... (Gear parsing remains same) ...
     parseGearMatrix(md) {
-        // (Keeping existing logic to save space, assuming it wasn't changed)
         const results = { bike: [], run: [] };
         const lines = md.split('\n');
         let currentType = null;
