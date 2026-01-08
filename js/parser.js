@@ -26,7 +26,6 @@ export const Parser = {
 
     getBiometrics(md) {
         const profileSection = this.getSection(md, "Profile") || this.getSection(md, "Biometrics");
-        
         const ftp = profileSection.match(/Cycling FTP[^0-9]*(\d{1,3})/i);
         const weight = profileSection.match(/Weight[^0-9]*(\d{1,3})/i);
         const lthr = profileSection.match(/Lactate Threshold HR[^0-9]*(\d{2,3})/i);
@@ -56,27 +55,26 @@ export const Parser = {
     _getType(str) {
         if (!str) return 'Other';
         const lower = str.toLowerCase();
-        if (lower.match(/bike|cycle|zwift|ride|spin|peloton|cycling/)) return 'Bike';
+        // Updated to catch your specific Garmin Sport names
+        if (lower.match(/bike|cycle|zwift|ride|spin|peloton|cycling|road biking|virtual ride/)) return 'Bike';
         if (lower.match(/run|jog|treadmill/)) return 'Run';
         if (lower.match(/swim|pool/)) return 'Swim';
         if (lower.match(/strength|lift|gym|core/)) return 'Strength';
         return 'Other';
     },
 
-_parseTableBlock(sectionText) {
+    _parseTableBlock(sectionText) {
         if (!sectionText) return [];
         const lines = sectionText.split('\n');
         
         let dateIdx = -1, statusIdx = -1, planWorkoutIdx = -1, planDurIdx = -1;
         let actWorkoutIdx = -1, actDurIdx = -1, notesIdx = -1;
-        
-        // Garmin Extended Columns
         let hrIdx = -1, powerIdx = -1, speedIdx = -1, tssIdx = -1, activityIdIdx = -1, cadenceIdx = -1; 
-        let teLabelIdx = -1; // Added for Training Effect
+        let teLabelIdx = -1; // New column for Garmin Labels
 
         let data = [];
 
-        // 1. Find Headers
+        // 1. Map column positions
         for (let line of lines) {
             if (line.includes('|')) {
                 const lowLine = line.toLowerCase();
@@ -90,14 +88,13 @@ _parseTableBlock(sectionText) {
                         else if (h.includes('actual workout')) actWorkoutIdx = index;
                         else if (h.includes('actual duration')) actDurIdx = index;
                         else if (h.includes('notes') || h.includes('target')) notesIdx = index;
-                        // Garmin
                         else if (h.includes('averagehr')) hrIdx = index;
                         else if (h.includes('avgpower')) powerIdx = index;
                         else if (h.includes('averagespeed')) speedIdx = index;
                         else if (h.includes('trainingstressscore')) tssIdx = index;
                         else if (h.includes('activityid')) activityIdIdx = index;
                         else if (h.includes('averagebikingcadence')) cadenceIdx = index;
-                        else if (h.includes('trainingeffectlabel')) teLabelIdx = index; // Match the new column
+                        else if (h.includes('trainingeffectlabel')) teLabelIdx = index; 
                     });
                     if (dateIdx !== -1) break; 
                 }
@@ -118,43 +115,59 @@ _parseTableBlock(sectionText) {
             const dateStr = getCol(dateIdx);
             if (!dateStr || dateStr.toLowerCase().includes('date')) continue;
 
-            // Garmin Data
+            const planStr = getCol(planWorkoutIdx);
+            const statusStr = getCol(statusIdx).toLowerCase();
+            const actDurStr = getCol(actDurIdx);
+            const actualWorkoutStr = getCol(actWorkoutIdx);
+            const notesStr = getCol(notesIdx);
+
+            // Extract Numbers
             const avgHR = parseFloat(getCol(hrIdx)) || 0;
             const avgPower = parseFloat(getCol(powerIdx)) || 0;
             const avgSpeed = parseFloat(getCol(speedIdx)) || 0;
             const tss = parseFloat(getCol(tssIdx)) || 0;
             const avgCadence = parseFloat(getCol(cadenceIdx)) || 0; 
             const activityId = getCol(activityIdIdx);
-            const trainingEffectLabel = getCol(teLabelIdx); // Extract the label
+            const trainingEffectLabel = getCol(teLabelIdx);
 
-            // ... (keep your existing date parsing logic here) ...
             let date = null;
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
             if (ymdMatch) {
                 date = new Date(parseInt(ymdMatch[1]), parseInt(ymdMatch[2]) - 1, parseInt(ymdMatch[3]), 12, 0, 0); 
+            } else {
+                const d = new Date(dateStr);
+                if (!isNaN(d.getTime())) { date = d; date.setHours(12, 0, 0, 0); }
             }
 
             if (date && !isNaN(date.getTime())) {
-                const planStr = getCol(planWorkoutIdx);
-                const actualWorkoutStr = getCol(actWorkoutIdx);
+                const type = this._getType(planStr);
                 const actualType = this._getType(actualWorkoutStr);
+                const actDurVal = this._parseTime(actDurStr);
+                const isCompleted = statusStr.match(/completed|done|yes|x|exact|found/) || (actDurVal > 0);
+
+                let ef = 0;
+                if (avgHR > 0) {
+                    if (actualType === 'Bike') ef = avgPower / avgHR;
+                    else if (actualType === 'Run') ef = avgSpeed / avgHR;
+                }
 
                 data.push({
                     date: date,
                     dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
-                    type: this._getType(planStr),
+                    type: type,
                     actualType: actualType,
                     planName: planStr,
                     actualName: actualWorkoutStr,
-                    completed: true, // Simplified for this context
-                    notes: getCol(notesIdx),
-                    avgHR, avgPower, avgSpeed, tss, avgCadence, activityId,
-                    trainingEffectLabel // Added to the exported object
+                    completed: isCompleted,
+                    plannedDuration: this._parseTime(getCol(planDurIdx)),
+                    actualDuration: actDurVal,
+                    notes: notesStr,
+                    avgHR, avgPower, avgSpeed, tss, ef, avgCadence, activityId, trainingEffectLabel
                 });
             }
         }
         return data;
-    }
+    },
 
     parseTrainingLog(md) {
         let historySection = this.getSection(md, "Appendix C: Training History Log") || this.getSection(md, "Training History");
