@@ -16,14 +16,15 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'metric-tooltip-popup';
-        tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[150px]';
+        // Added max-w-[90vw] to ensure it never exceeds screen width on mobile
+        tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity fixed min-w-[150px] max-w-[90vw] pointer-events-none';
         document.body.appendChild(tooltip);
     }
 
     tooltip.innerHTML = `
         <div class="text-center">
             <div class="text-[10px] text-slate-400 font-normal mb-1 border-b border-slate-700 pb-1">${date}</div>
-            <div class="text-white font-bold text-sm mb-1 text-wrap max-w-[200px] leading-tight">${name}</div>
+            <div class="text-white font-bold text-sm mb-1 text-wrap leading-tight">${name}</div>
             <div class="text-emerald-400 font-mono font-bold text-lg mb-1">${val} <span class="text-[10px] text-slate-500">${unitLabel}</span></div>
             <div class="text-[10px] text-slate-300 font-mono bg-slate-800 rounded px-2 py-1 mt-1 inline-block border border-slate-700">${breakdown}</div>
         </div>
@@ -31,13 +32,14 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     positionTooltip(evt, tooltip);
 };
 
-// 2. DESCRIPTION TOOLTIP (Expanded with Improvement Advice)
+// 2. DESCRIPTION TOOLTIP
 window.showInfoTooltip = (evt, title, desc) => {
     let tooltip = document.getElementById('metric-info-popup');
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'metric-info-popup';
-        tooltip.className = 'z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity fixed max-w-[300px] pointer-events-none text-left';
+        // Added max-w-[85vw] for mobile safety
+        tooltip.className = 'z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity fixed max-w-[300px] w-[85vw] pointer-events-none text-left';
         document.body.appendChild(tooltip);
     }
 
@@ -54,39 +56,66 @@ window.showInfoTooltip = (evt, title, desc) => {
 
 window.hideInfoTooltip = () => {
     const tooltip = document.getElementById('metric-info-popup');
-    if (tooltip) tooltip.classList.add('opacity-0');
+    if (tooltip) {
+        tooltip.classList.add('opacity-0');
+        // Delay adding pointer-events-none to allow fade out
+        setTimeout(() => tooltip.classList.add('pointer-events-none'), 300);
+    }
 };
 
-// Helper to position tooltips intelligently
+// --- SMART POSITIONING LOGIC ---
 const positionTooltip = (evt, el) => {
+    // 1. Get Dimensions
     const x = evt.clientX;
     const y = evt.clientY;
-    const viewportWidth = window.innerWidth;
+    const vW = window.innerWidth;
+    const vH = window.innerHeight;
     
-    el.style.top = `${y - 10}px`; 
+    // Make visible briefly to calculate dimensions if needed, 
+    // but usually offsetWidth works if element is in DOM.
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+
+    // 2. Horizontal Logic (Prevent Right/Left Overflow)
+    let left = x + 15; // Default: Right of cursor
     
-    if (x > viewportWidth * 0.60) {
-        el.style.right = `${viewportWidth - x + 10}px`;
-        el.style.left = 'auto';
-    } else {
-        el.style.left = `${x + 20}px`; 
-        el.style.right = 'auto';
+    // If it hits right edge, flip to left
+    if (left + w > vW - 10) {
+        left = x - w - 15;
     }
     
-    el.classList.remove('opacity-0');
+    // If flipping left hits left edge, force clamp to 10px
+    if (left < 10) left = 10;
+
+    // 3. Vertical Logic (Prevent Top/Bottom Overflow)
+    let top = y - h - 15; // Default: Above cursor
+    
+    // If it hits top edge, flip to below cursor
+    if (top < 10) {
+        top = y + 25;
+    }
+
+    // 4. Apply
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.style.right = 'auto'; // Clear defaults
+    
+    // 5. Show & Set Timer
+    el.classList.remove('opacity-0', 'pointer-events-none');
     
     if (window.metricTooltipTimer) clearTimeout(window.metricTooltipTimer);
     window.metricTooltipTimer = setTimeout(() => {
         el.classList.add('opacity-0');
-    }, 6000); // Longer timeout for reading advice
+        setTimeout(() => el.classList.add('pointer-events-none'), 300);
+    }, 8000); // 8 Seconds duration
 };
 
-// --- DEFINITIONS (With Icons, Colors, and Actionable Advice) ---
+// --- DEFINITIONS ---
 const METRIC_DEFINITIONS = {
     endurance: {
         title: "Aerobic Efficiency",
         icon: "fa-bicycle", 
-        styleClass: "icon-bike", // Matches styles.css color
+        styleClass: "icon-bike",
         keywords: ["long", "steady", "endurance", "base", "z2", "zone 2", "recovery"],
         description: "<strong>The Engine Check.</strong><br>Are you producing more Power for the same Heart Rate?<br><br>📈 <strong>Trend UP:</strong> Good. Your heart is working less to do the same work.<br>📉 <strong>Trend DOWN:</strong> Fatigue or Cardiac Drift.",
         improvement: "<strong>How to Improve:</strong><br>• <strong>Z2 Volume:</strong> Long, steady rides (2-4hrs) without coasting.<br>• <strong>Pacing:</strong> Do not surge on hills. Keep effort flat.<br>• <strong>Consistency:</strong> Stack back-to-back aerobic days."
@@ -94,7 +123,7 @@ const METRIC_DEFINITIONS = {
     strength: {
         title: "Strength & Torque",
         icon: "fa-bicycle",
-        styleClass: "icon-bike", // Matches styles.css color
+        styleClass: "icon-bike",
         keywords: ["strength", "hill", "climb", "torque", "force", "alpe", "ftp", "race", "test", "threshold", "tempo", "sweet spot", "interval"],
         description: "<strong>The Muscle Check.</strong><br>Measures Watts per Revolution. High values mean you are pushing bigger gears (Force) rather than just spinning fast (Cardio).<br><br>🎯 <strong>Goal:</strong> Steady increase during 'Hill' blocks.",
         improvement: "<strong>How to Improve:</strong><br>• <strong>Low Cadence Intervals:</strong> 3x10min @ Sweet Spot at 50-60 RPM.<br>• <strong>Hill Repeats:</strong> Seated climbing on steep gradients.<br>• <strong>Gym:</strong> Heavy squats and deadlifts."
@@ -102,7 +131,7 @@ const METRIC_DEFINITIONS = {
     run: {
         title: "Running Economy",
         icon: "fa-person-running",
-        styleClass: "icon-run", // Matches styles.css color
+        styleClass: "icon-run",
         keywords: ["tempo", "threshold", "speed", "interval", "fartlek", "long", "base", "z2"],
         description: "<strong>The Efficiency Check.</strong><br>How fast do you run per heartbeat?<br><br>📈 <strong>Trend UP:</strong> You are getting faster at the same physiological cost.",
         improvement: "<strong>How to Improve:</strong><br>• <strong>Strides:</strong> 6x20sec fast bursts after easy runs.<br>• <strong>Hill Sprints:</strong> Short, max effort sprints (10-15s) to recruit muscle.<br>• <strong>Plyometrics:</strong> Box jumps and jump rope."
@@ -110,7 +139,7 @@ const METRIC_DEFINITIONS = {
     mechanical: {
         title: "Mechanical Efficiency",
         icon: "fa-person-running",
-        styleClass: "icon-run", // Matches styles.css color
+        styleClass: "icon-run",
         keywords: ["run", "tempo", "threshold", "speed", "interval", "long", "base", "z2"],
         description: "<strong>The Form Check.</strong><br>Speed vs. Power. Are you converting raw Watts into actual Speed?<br><br>📈 <strong>Trend UP:</strong> Good form (stiffness).<br>📉 <strong>Trend DOWN:</strong> Sloppy form (bouncing up/down).",
         improvement: "<strong>How to Improve:</strong><br>• <strong>Cadence:</strong> Aim for 170-180 spm to reduce ground contact time.<br>• <strong>Drills:</strong> A-Skips, B-Skips, and High Knees.<br>• <strong>Core:</strong> Planks and stability work to stop energy leaks."
@@ -125,7 +154,7 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
         return `
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-6 flex flex-col items-center justify-center min-h-[200px] h-full">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
-                    <i class="fa-solid ${def.icon} ${def.styleClass}"></i> ${def.title}
+                    <i class="fa-solid ${def.icon} text-slate-500"></i> ${def.title}
                 </h3>
                 <p class="text-xs text-slate-500 italic">Not enough data in this range.</p>
             </div>`;
