@@ -10,17 +10,14 @@ window.toggleMetricsTime = (range) => {
     updateMetricsCharts();
 };
 
-// 1. DATA POINT TOOLTIP
 window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     let tooltip = document.getElementById('metric-tooltip-popup');
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'metric-tooltip-popup';
-        // Added max-w-[90vw] to ensure it never exceeds screen width on mobile
         tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity fixed min-w-[150px] max-w-[90vw] pointer-events-none';
         document.body.appendChild(tooltip);
     }
-
     tooltip.innerHTML = `
         <div class="text-center">
             <div class="text-[10px] text-slate-400 font-normal mb-1 border-b border-slate-700 pb-1">${date}</div>
@@ -32,24 +29,19 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     positionTooltip(evt, tooltip);
 };
 
-// 2. DESCRIPTION TOOLTIP
 window.showInfoTooltip = (evt, title, desc) => {
     let tooltip = document.getElementById('metric-info-popup');
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'metric-info-popup';
-        // Added max-w-[85vw] for mobile safety
         tooltip.className = 'z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity fixed max-w-[300px] w-[85vw] pointer-events-none text-left';
         document.body.appendChild(tooltip);
     }
-
     tooltip.innerHTML = `
         <h4 class="text-white font-bold mb-3 flex items-center gap-2 border-b border-slate-700 pb-2">
             <i class="fa-solid fa-circle-info text-blue-400"></i> ${title}
         </h4>
-        <div class="text-slate-300 leading-relaxed space-y-3">
-            ${desc}
-        </div>
+        <div class="text-slate-300 leading-relaxed space-y-3">${desc}</div>
     `;
     positionTooltip(evt, tooltip);
 };
@@ -58,59 +50,38 @@ window.hideInfoTooltip = () => {
     const tooltip = document.getElementById('metric-info-popup');
     if (tooltip) {
         tooltip.classList.add('opacity-0');
-        // Delay adding pointer-events-none to allow fade out
         setTimeout(() => tooltip.classList.add('pointer-events-none'), 300);
     }
 };
 
-// --- SMART POSITIONING LOGIC ---
 const positionTooltip = (evt, el) => {
-    // 1. Get Dimensions
     const x = evt.clientX;
     const y = evt.clientY;
     const vW = window.innerWidth;
-    const vH = window.innerHeight;
     
-    // Make visible briefly to calculate dimensions if needed, 
-    // but usually offsetWidth works if element is in DOM.
-    const w = el.offsetWidth;
-    const h = el.offsetHeight;
+    const w = el.offsetWidth || 200; 
+    const h = el.offsetHeight || 100;
 
-    // 2. Horizontal Logic (Prevent Right/Left Overflow)
-    let left = x + 15; // Default: Right of cursor
-    
-    // If it hits right edge, flip to left
-    if (left + w > vW - 10) {
-        left = x - w - 15;
-    }
-    
-    // If flipping left hits left edge, force clamp to 10px
+    let left = x + 15;
+    if (left + w > vW - 10) left = x - w - 15;
     if (left < 10) left = 10;
 
-    // 3. Vertical Logic (Prevent Top/Bottom Overflow)
-    let top = y - h - 15; // Default: Above cursor
-    
-    // If it hits top edge, flip to below cursor
-    if (top < 10) {
-        top = y + 25;
-    }
+    let top = y - h - 15;
+    if (top < 10) top = y + 25;
 
-    // 4. Apply
     el.style.left = `${left}px`;
     el.style.top = `${top}px`;
-    el.style.right = 'auto'; // Clear defaults
+    el.style.right = 'auto';
     
-    // 5. Show & Set Timer
     el.classList.remove('opacity-0', 'pointer-events-none');
     
     if (window.metricTooltipTimer) clearTimeout(window.metricTooltipTimer);
     window.metricTooltipTimer = setTimeout(() => {
         el.classList.add('opacity-0');
         setTimeout(() => el.classList.add('pointer-events-none'), 300);
-    }, 8000); // 8 Seconds duration
+    }, 8000);
 };
 
-// --- DEFINITIONS ---
 const METRIC_DEFINITIONS = {
     endurance: {
         title: "Aerobic Efficiency",
@@ -146,7 +117,6 @@ const METRIC_DEFINITIONS = {
     }
 };
 
-// --- CHARTING HELPER ---
 const buildMetricChart = (dataPoints, key, color, unitLabel) => {
     const def = METRIC_DEFINITIONS[key];
     
@@ -190,8 +160,6 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
 
     const avg = values.reduce((a, b) => a + b, 0) / values.length;
     const avgY = getY(avg);
-
-    // Prepare Tooltip Content (Description + Improvement)
     const tooltipContent = `${def.description}<div class='border-t border-slate-600 my-2'></div>${def.improvement}`.replace(/'/g, "\\'").replace(/\n/g, "");
 
     return `
@@ -234,7 +202,6 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
     `;
 };
 
-// --- DATA UPDATE & FILTERING ---
 const updateMetricsCharts = () => {
     if (!cachedData || cachedData.length === 0) return;
 
@@ -254,27 +221,29 @@ const updateMetricsCharts = () => {
         return keywords.some(k => text.includes(k));
     };
 
-    // A. ENDURANCE
+    // --- UPDATED FILTERS TO USE 'actualType' ---
+    
+    // A. ENDURANCE (Actual Bike)
     const efData = filteredData
-        .filter(d => d.type === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.endurance.keywords))
+        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.endurance.keywords))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr: ${Math.round(d.avgPower)}W / HR: ${Math.round(d.avgHR)}` }))
         .sort((a,b) => a.date - b.date);
 
-    // B. STRENGTH
+    // B. STRENGTH (Actual Bike)
     const torqueData = filteredData
-        .filter(d => d.type === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && hasKeyword(d, METRIC_DEFINITIONS.strength.keywords))
+        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && hasKeyword(d, METRIC_DEFINITIONS.strength.keywords))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr: ${Math.round(d.avgPower)}W / RPM: ${Math.round(d.avgCadence)}` }))
         .sort((a,b) => a.date - b.date);
 
-    // C. ECONOMY
+    // C. ECONOMY (Actual Run)
     const runEconData = filteredData
-        .filter(d => d.type === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.run.keywords))
+        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.run.keywords))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace: ${Math.round(d.avgSpeed * 60)} m/m / HR: ${Math.round(d.avgHR)}` }))
         .sort((a,b) => a.date - b.date);
 
-    // D. MECHANICS
+    // D. MECHANICS (Actual Run)
     const mechData = filteredData
-        .filter(d => d.type === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 && hasKeyword(d, METRIC_DEFINITIONS.mechanical.keywords))
+        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 && hasKeyword(d, METRIC_DEFINITIONS.mechanical.keywords))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W` }))
         .sort((a,b) => a.date - b.date);
 
@@ -299,36 +268,26 @@ const updateMetricsCharts = () => {
     });
 };
 
-// --- MAIN RENDER ---
 export function renderMetrics(allData) {
     cachedData = allData || [];
-
     const buildToggle = (range, label) => `
         <button id="btn-metric-${range}" onclick="window.toggleMetricsTime('${range}')" 
             class="bg-slate-800 text-slate-400 border border-slate-600 px-3 py-1 rounded text-xs transition-all hover:opacity-90">
             ${label}
         </button>
     `;
-
     setTimeout(updateMetricsCharts, 0);
-
     return `
         <div class="max-w-7xl mx-auto space-y-8">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-microchip text-blue-500"></i> Performance Metrics
-                    </h2>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-microchip text-blue-500"></i> Performance Metrics</h2>
                     <p class="text-xs text-slate-400 mt-1">Analyzing physiological trends based on Garmin data.</p>
                 </div>
                 <div class="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-800">
-                    ${buildToggle('30d', '30 Days')}
-                    ${buildToggle('60d', '60 Days')}
-                    ${buildToggle('90d', '90 Days')}
-                    ${buildToggle('6m', '6 Months')}
+                    ${buildToggle('30d', '30 Days')}${buildToggle('60d', '60 Days')}${buildToggle('90d', '90 Days')}${buildToggle('6m', '6 Months')}
                 </div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div id="metric-chart-endurance" class="h-full"></div>
                 <div id="metric-chart-strength" class="h-full"></div>
@@ -336,7 +295,6 @@ export function renderMetrics(allData) {
                 <div id="metric-chart-mechanics" class="h-full"></div>
             </div>
         </div>
-        
-        <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[150px]"></div>
+        <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity fixed min-w-[150px] max-w-[90vw] pointer-events-none"></div>
     `;
 }
