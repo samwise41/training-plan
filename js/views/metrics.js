@@ -55,21 +55,27 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
 const METRIC_DEFINITIONS = {
     endurance: {
         title: "Aerobic Efficiency",
-        purpose: "Base Building & Cardiac Drift",
+        purpose: "Cardiovascular Engine",
         keywords: ["long", "steady", "endurance", "base", "z2", "zone 2", "recovery"],
-        description: "Workouts focused on mitochondrial density. We want to see Power staying high while Heart Rate stays low."
+        description: "Power vs. Heart Rate. Are you producing more watts for the same cardiac cost?"
     },
     strength: {
         title: "Strength & Power",
-        purpose: "Force Production & Threshold",
+        purpose: "Muscular Force",
         keywords: ["strength", "hill", "climb", "torque", "force", "alpe", "ftp", "race", "test", "threshold", "tempo", "sweet spot", "interval"],
-        description: "High-load sessions. Includes Hill Climbs (Alpe du Zwift), FTP Tests, and Races. Tracks 'Torque' (Power per Revolution)."
+        description: "Power vs. Cadence. Tracks your ability to push big gears (Torque) without spiking HR."
     },
     run: {
         title: "Running Economy",
-        purpose: "Speed Efficiency",
+        purpose: "Metabolic Cost",
         keywords: ["tempo", "threshold", "speed", "interval", "fartlek", "long", "base", "z2"],
-        description: "Measures how fast you run for every heartbeat. Includes both fast Tempo runs and steady Long Runs."
+        description: "Speed vs. Heart Rate. Are you running faster at the same heart rate?"
+    },
+    mechanical: {
+        title: "Mechanical Efficiency",
+        purpose: "Form & Biomechanics",
+        keywords: ["run", "tempo", "threshold", "speed", "interval", "long", "base", "z2"],
+        description: "Speed vs. Power. How well do you convert Watts into Speed? (Higher = Less wasted energy)."
     }
 };
 
@@ -77,15 +83,16 @@ const METRIC_DEFINITIONS = {
 const buildMetricChart = (dataPoints, title, color, unitLabel) => {
     if (!dataPoints || dataPoints.length < 2) {
         return `
-            <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-6 flex flex-col items-center justify-center min-h-[200px]">
+            <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-6 flex flex-col items-center justify-center min-h-[200px] h-full">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
                     <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span> ${title}
                 </h3>
-                <p class="text-xs text-slate-500 italic">Not enough data points found.</p>
-                <p class="text-[10px] text-slate-600 mt-1">Complete at least 2 matching workouts.</p>
+                <p class="text-xs text-slate-500 italic">Not enough data.</p>
+                <p class="text-[10px] text-slate-600 mt-1">Need 2+ matching workouts.</p>
             </div>`;
     }
 
+    // Responsive Dimensions
     const width = 800;
     const height = 200;
     const pad = { t: 20, b: 30, l: 40, r: 20 };
@@ -106,8 +113,6 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
         const x = getX(d);
         const y = getY(d.val);
         const valStr = d.val.toFixed(2);
-        
-        // Pass specific breakdown data for the tooltip
         const breakdown = d.breakdown || "";
         
         pathD += ` L ${x} ${y}`;
@@ -120,12 +125,11 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
         `;
     });
 
-    const n = dataPoints.length;
-    const avg = values.reduce((a, b) => a + b, 0) / n;
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
     const avgY = getY(avg);
 
     return `
-        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-6">
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-6 h-full flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span> ${title}
@@ -136,8 +140,8 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
                 </div>
             </div>
             
-            <div class="w-full">
-                <svg viewBox="0 0 ${width} ${height}" class="w-full h-auto overflow-visible">
+            <div class="w-full flex-1 min-h-[150px]">
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
                     <line x1="${pad.l}" y1="${avgY}" x2="${width-pad.r}" y2="${avgY}" stroke="#475569" stroke-width="1" stroke-dasharray="4,4" opacity="0.3" />
                     <text x="${width-pad.r}" y="${avgY - 5}" text-anchor="end" fill="#64748b" font-size="9">AVG</text>
                     <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -160,7 +164,7 @@ export function renderMetrics(allData) {
         return keywords.some(k => text.includes(k));
     };
 
-    // 1. ENDURANCE (Aerobic Efficiency)
+    // 1. ENDURANCE (Aerobic Efficiency: Bike)
     const efData = allData
         .filter(d => 
             d.type === 'Bike' && d.avgPower > 0 && d.avgHR > 0 &&
@@ -175,7 +179,7 @@ export function renderMetrics(allData) {
         }))
         .sort((a,b) => a.date - b.date);
 
-    // 2. STRENGTH (Torque / Force)
+    // 2. STRENGTH (Torque: Bike)
     const torqueData = allData
         .filter(d => 
             d.type === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 &&
@@ -190,7 +194,7 @@ export function renderMetrics(allData) {
         }))
         .sort((a,b) => a.date - b.date);
 
-    // 3. RUN ECONOMY (Efficiency)
+    // 3. RUN ECONOMY (Physiological: Run)
     const runEconData = allData
         .filter(d => 
             d.type === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 &&
@@ -205,66 +209,82 @@ export function renderMetrics(allData) {
         }))
         .sort((a,b) => a.date - b.date);
 
+    // 4. MECHANICAL EFFICIENCY (Biomechanical: Run)
+    const mechData = allData
+        .filter(d => 
+            d.type === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 &&
+            hasKeyword(d, METRIC_DEFINITIONS.mechanical.keywords)
+        )
+        .map(d => ({
+            date: d.date,
+            dateStr: d.date.toISOString().split('T')[0],
+            name: d.planName || d.actualName,
+            // Metric: Speed / Power.  (Multiplying by 100 for readability)
+            // If you run FASTER (Speed up) for same Watts, this Score goes UP.
+            val: (d.avgSpeed * 100) / d.avgPower,
+            breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W`
+        }))
+        .sort((a,b) => a.date - b.date);
+
     return `
-        <div class="max-w-5xl mx-auto space-y-8">
+        <div class="max-w-7xl mx-auto space-y-8">
             <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
                 <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-tags text-blue-500"></i> Workout Categorization Logic
+                    <i class="fa-solid fa-tags text-blue-500"></i> Workout Categorization
                 </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px] md:text-xs">
-                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> ${METRIC_DEFINITIONS.endurance.title}</h4>
-                        <p class="text-slate-400 mb-2">${METRIC_DEFINITIONS.endurance.purpose}</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px]">
+                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Efficiency</h4>
+                        <p class="text-slate-400 leading-tight">${METRIC_DEFINITIONS.endurance.purpose}</p>
                     </div>
-                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px] md:text-xs">
-                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-violet-500"></span> ${METRIC_DEFINITIONS.strength.title}</h4>
-                        <p class="text-slate-400 mb-2">${METRIC_DEFINITIONS.strength.purpose}</p>
+                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px]">
+                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-violet-500"></span> Strength</h4>
+                        <p class="text-slate-400 leading-tight">${METRIC_DEFINITIONS.strength.purpose}</p>
                     </div>
-                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px] md:text-xs">
-                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-pink-500"></span> ${METRIC_DEFINITIONS.run.title}</h4>
-                        <p class="text-slate-400 mb-2">${METRIC_DEFINITIONS.run.purpose}</p>
+                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px]">
+                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-pink-500"></span> Economy</h4>
+                        <p class="text-slate-400 leading-tight">${METRIC_DEFINITIONS.run.purpose}</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px]">
+                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-orange-500"></span> Mechanics</h4>
+                        <p class="text-slate-400 leading-tight">${METRIC_DEFINITIONS.mechanical.purpose}</p>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                <div class="col-span-1 lg:col-span-2">
-                    <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl">
-                        <div class="mb-4">
-                            <h2 class="text-xl font-bold text-white">1. Aerobic Efficiency (EF)</h2>
-                            <p class="text-sm text-slate-400">Power output per heartbeat.</p>
-                        </div>
-                        ${buildMetricChart(efData, "Efficiency Factor (Watts / BPM)", "#10b981", "EF")}
+                <div class="h-full">
+                    <div class="mb-2 flex justify-between items-end px-1">
+                        <h2 class="text-sm font-bold text-slate-300">1. Aerobic Efficiency</h2>
                     </div>
+                    ${buildMetricChart(efData, "Efficiency Factor (Watts/BPM)", "#10b981", "EF")}
                 </div>
 
-                <div>
-                    <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl h-full flex flex-col">
-                        <div class="mb-4">
-                            <h2 class="text-lg font-bold text-white">2. Strength & Power</h2>
-                            <p class="text-xs text-slate-400">Torque Analysis (Watts per RPM).</p>
-                        </div>
-                        <div class="flex-1">
-                            ${buildMetricChart(torqueData, "Torque Index", "#8b5cf6", "idx")}
-                        </div>
+                <div class="h-full">
+                    <div class="mb-2 flex justify-between items-end px-1">
+                        <h2 class="text-sm font-bold text-slate-300">2. Strength & Torque</h2>
                     </div>
+                    ${buildMetricChart(torqueData, "Torque Index (Watts/RPM)", "#8b5cf6", "idx")}
                 </div>
 
-                <div>
-                    <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl h-full flex flex-col">
-                        <div class="mb-4">
-                            <h2 class="text-lg font-bold text-white">3. Running Economy</h2>
-                            <p class="text-xs text-slate-400">Speed per heartbeat.</p>
-                        </div>
-                        <div class="flex-1">
-                            ${buildMetricChart(runEconData, "Economy Index", "#ec4899", "idx")}
-                        </div>
+                <div class="h-full">
+                    <div class="mb-2 flex justify-between items-end px-1">
+                        <h2 class="text-sm font-bold text-slate-300">3. Running Economy</h2>
                     </div>
+                    ${buildMetricChart(runEconData, "Economy Index (Spd/HR)", "#ec4899", "idx")}
+                </div>
+
+                <div class="h-full">
+                    <div class="mb-2 flex justify-between items-end px-1">
+                        <h2 class="text-sm font-bold text-slate-300">4. Mechanical Efficiency</h2>
+                    </div>
+                    ${buildMetricChart(mechData, "Mechanics (Speed/Power)", "#f97316", "idx")}
                 </div>
 
             </div>
         </div>
+        
         <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[150px]"></div>
     `;
 }
