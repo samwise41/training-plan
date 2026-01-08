@@ -1,7 +1,7 @@
 // js/views/metrics.js
 
 // --- STATE MANAGEMENT ---
-let metricsState = { timeRange: '6m' }; // Default to 6 months
+let metricsState = { timeRange: '6m' }; 
 let cachedData = [];
 
 // --- GLOBAL HANDLERS ---
@@ -10,6 +10,7 @@ window.toggleMetricsTime = (range) => {
     updateMetricsCharts();
 };
 
+// 1. DATA POINT TOOLTIP
 window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     let tooltip = document.getElementById('metric-tooltip-popup');
     if (!tooltip) {
@@ -21,83 +22,103 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
 
     tooltip.innerHTML = `
         <div class="text-center">
-            <div class="text-[10px] text-slate-400 font-normal mb-1 border-b border-slate-700 pb-1">
-                ${date}
-            </div>
-            <div class="text-white font-bold text-sm mb-1 text-wrap max-w-[200px] leading-tight">
-                ${name}
-            </div>
-            <div class="text-emerald-400 font-mono font-bold text-lg mb-1">
-                ${val} <span class="text-[10px] text-slate-500">${unitLabel}</span>
-            </div>
-            <div class="text-[10px] text-slate-300 font-mono bg-slate-800 rounded px-2 py-1 mt-1 inline-block border border-slate-700">
-                ${breakdown}
-            </div>
+            <div class="text-[10px] text-slate-400 font-normal mb-1 border-b border-slate-700 pb-1">${date}</div>
+            <div class="text-white font-bold text-sm mb-1 text-wrap max-w-[200px] leading-tight">${name}</div>
+            <div class="text-emerald-400 font-mono font-bold text-lg mb-1">${val} <span class="text-[10px] text-slate-500">${unitLabel}</span></div>
+            <div class="text-[10px] text-slate-300 font-mono bg-slate-800 rounded px-2 py-1 mt-1 inline-block border border-slate-700">${breakdown}</div>
         </div>
     `;
+    positionTooltip(evt, tooltip);
+};
 
+// 2. DESCRIPTION TOOLTIP (NEW)
+window.showInfoTooltip = (evt, title, desc) => {
+    let tooltip = document.getElementById('metric-info-popup');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'metric-info-popup';
+        tooltip.className = 'z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity fixed max-w-[280px] pointer-events-none text-left';
+        document.body.appendChild(tooltip);
+    }
+
+    tooltip.innerHTML = `
+        <h4 class="text-white font-bold mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-blue-400"></i> ${title}
+        </h4>
+        <p class="text-slate-300 leading-relaxed">${desc}</p>
+    `;
+    positionTooltip(evt, tooltip);
+};
+
+window.hideInfoTooltip = () => {
+    const tooltip = document.getElementById('metric-info-popup');
+    if (tooltip) tooltip.classList.add('opacity-0');
+};
+
+// Helper to position tooltips intelligently
+const positionTooltip = (evt, el) => {
     const x = evt.clientX;
     const y = evt.clientY;
     const viewportWidth = window.innerWidth;
     
-    // Position above cursor
-    tooltip.style.top = `${y - 100}px`; 
+    el.style.top = `${y - 10}px`; 
     
-    // Smart horizontal positioning
     if (x > viewportWidth * 0.60) {
-        tooltip.style.right = `${viewportWidth - x + 10}px`;
-        tooltip.style.left = 'auto';
+        el.style.right = `${viewportWidth - x + 10}px`;
+        el.style.left = 'auto';
     } else {
-        tooltip.style.left = `${x - 75}px`; 
-        tooltip.style.right = 'auto';
+        el.style.left = `${x + 20}px`; 
+        el.style.right = 'auto';
     }
     
-    tooltip.classList.remove('opacity-0');
+    el.classList.remove('opacity-0');
     
+    // Auto-hide after 4 seconds
     if (window.metricTooltipTimer) clearTimeout(window.metricTooltipTimer);
     window.metricTooltipTimer = setTimeout(() => {
-        tooltip.classList.add('opacity-0');
+        el.classList.add('opacity-0');
     }, 4000);
 };
 
-// --- DEFINITIONS ---
+// --- DEFINITIONS (Added Icons) ---
 const METRIC_DEFINITIONS = {
     endurance: {
         title: "Aerobic Efficiency",
-        purpose: "Base Building & Cardiac Drift",
+        icon: "fa-bicycle", // Bike
         keywords: ["long", "steady", "endurance", "base", "z2", "zone 2", "recovery"],
-        description: "Workouts focused on mitochondrial density. We want to see Power staying high while Heart Rate stays low."
+        description: "<strong>The Engine Check.</strong><br>Are you producing more Power for the same Heart Rate?<br><br>📈 <strong>Trend UP:</strong> Good. Your heart is working less to do the same work.<br>📉 <strong>Trend DOWN:</strong> Fatigue or Cardiac Drift."
     },
     strength: {
-        title: "Strength & Power",
-        purpose: "Force Production & Threshold",
+        title: "Strength & Torque",
+        icon: "fa-bicycle", // Bike
         keywords: ["strength", "hill", "climb", "torque", "force", "alpe", "ftp", "race", "test", "threshold", "tempo", "sweet spot", "interval"],
-        description: "High-load sessions. Includes Hill Climbs (Alpe du Zwift), FTP Tests, and Races. Tracks 'Torque' (Power per Revolution)."
+        description: "<strong>The Muscle Check.</strong><br>Measures Watts per Revolution. High values mean you are pushing bigger gears (Force) rather than just spinning fast (Cardio).<br><br>🎯 <strong>Goal:</strong> steady increase during 'Hill' blocks."
     },
     run: {
         title: "Running Economy",
-        purpose: "Speed Efficiency",
+        icon: "fa-person-running", // Run
         keywords: ["tempo", "threshold", "speed", "interval", "fartlek", "long", "base", "z2"],
-        description: "Measures how fast you run for every heartbeat. Includes both fast Tempo runs and steady Long Runs."
+        description: "<strong>The Efficiency Check.</strong><br>How fast do you run per heartbeat?<br><br>📈 <strong>Trend UP:</strong> You are getting faster at the same physiological cost."
     },
     mechanical: {
         title: "Mechanical Efficiency",
-        purpose: "Form & Biomechanics",
+        icon: "fa-person-running", // Run
         keywords: ["run", "tempo", "threshold", "speed", "interval", "long", "base", "z2"],
-        description: "Speed vs. Power. How well do you convert Watts into Speed? (Higher = Less wasted energy)."
+        description: "<strong>The Form Check.</strong><br>Speed vs. Power. Are you converting raw Watts into actual Speed?<br><br>📈 <strong>Trend UP:</strong> Good form (stiffness).<br>📉 <strong>Trend DOWN:</strong> Sloppy form (bouncing up/down)."
     }
 };
 
 // --- CHARTING HELPER ---
-const buildMetricChart = (dataPoints, title, color, unitLabel) => {
+const buildMetricChart = (dataPoints, key, color, unitLabel) => {
+    const def = METRIC_DEFINITIONS[key];
+    
     if (!dataPoints || dataPoints.length < 2) {
         return `
             <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 mb-6 flex flex-col items-center justify-center min-h-[200px] h-full">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2 mb-2">
-                    <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span> ${title}
+                    <i class="fa-solid ${def.icon} text-slate-500"></i> ${def.title}
                 </h3>
                 <p class="text-xs text-slate-500 italic">Not enough data in this range.</p>
-                <p class="text-[10px] text-slate-600 mt-1">Try selecting a longer time period.</p>
             </div>`;
     }
 
@@ -120,15 +141,11 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
     dataPoints.forEach(d => {
         const x = getX(d);
         const y = getY(d.val);
-        const valStr = d.val.toFixed(2);
-        const breakdown = d.breakdown || "";
-        
         pathD += ` L ${x} ${y}`;
-        
         pointsHtml += `
             <circle cx="${x}" cy="${y}" r="4" fill="#1e293b" stroke="${color}" stroke-width="2" 
                 class="hover:r-6 hover:stroke-white transition-all cursor-pointer"
-                onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${valStr}', '${unitLabel}', '${breakdown}')">
+                onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown}')">
             </circle>
         `;
     });
@@ -139,12 +156,26 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 mb-6 h-full flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full" style="background-color: ${color}"></span> ${title}
-                </h3>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-300">
+                        <i class="fa-solid ${def.icon}"></i>
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            ${def.title}
+                            <i class="fa-solid fa-circle-info text-slate-500 hover:text-blue-400 cursor-pointer text-xs"
+                               onmouseenter="window.showInfoTooltip(event, '${def.title}', '${def.description.replace(/'/g, "\\'").replace(/\n/g, "")}')"
+                               onclick="window.showInfoTooltip(event, '${def.title}', '${def.description.replace(/'/g, "\\'").replace(/\n/g, "")}')"
+                               onmouseleave="window.hideInfoTooltip()"></i>
+                        </h3>
+                        <span class="text-[10px] text-slate-500 font-mono">${values.length} sessions</span>
+                    </div>
+                </div>
+                
                 <div class="text-right">
                     <span class="text-[10px] font-mono text-slate-400 block">Avg: ${avg.toFixed(2)}</span>
-                    <span class="text-xs font-bold text-white block">Last: ${values[values.length-1].toFixed(2)}</span>
+                    <span class="text-xs font-bold text-white block" style="color: ${color}">Last: ${values[values.length-1].toFixed(2)}</span>
                 </div>
             </div>
             
@@ -166,7 +197,6 @@ const buildMetricChart = (dataPoints, title, color, unitLabel) => {
 const updateMetricsCharts = () => {
     if (!cachedData || cachedData.length === 0) return;
 
-    // 1. Time Filter
     const now = new Date();
     const cutoff = new Date();
     
@@ -174,11 +204,9 @@ const updateMetricsCharts = () => {
     else if (metricsState.timeRange === '60d') cutoff.setDate(now.getDate() - 60);
     else if (metricsState.timeRange === '90d') cutoff.setDate(now.getDate() - 90);
     else if (metricsState.timeRange === '6m') cutoff.setMonth(now.getMonth() - 6);
-    // 'All' fallback if extended later
     
     const filteredData = cachedData.filter(d => d.date >= cutoff);
 
-    // 2. Data Preparation
     const hasKeyword = (item, keywords) => {
         if (!item.planName && !item.actualName) return false;
         const text = ((item.planName || "") + " " + (item.actualName || "")).toLowerCase();
@@ -187,76 +215,38 @@ const updateMetricsCharts = () => {
 
     // A. ENDURANCE
     const efData = filteredData
-        .filter(d => 
-            d.type === 'Bike' && d.avgPower > 0 && d.avgHR > 0 &&
-            hasKeyword(d, METRIC_DEFINITIONS.endurance.keywords)
-        )
-        .map(d => ({
-            date: d.date,
-            dateStr: d.date.toISOString().split('T')[0],
-            name: d.planName || d.actualName,
-            val: d.avgPower / d.avgHR,
-            breakdown: `Pwr: ${Math.round(d.avgPower)}W / HR: ${Math.round(d.avgHR)}`
-        }))
+        .filter(d => d.type === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.endurance.keywords))
+        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr: ${Math.round(d.avgPower)}W / HR: ${Math.round(d.avgHR)}` }))
         .sort((a,b) => a.date - b.date);
 
     // B. STRENGTH
     const torqueData = filteredData
-        .filter(d => 
-            d.type === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 &&
-            hasKeyword(d, METRIC_DEFINITIONS.strength.keywords)
-        )
-        .map(d => ({
-            date: d.date,
-            dateStr: d.date.toISOString().split('T')[0],
-            name: d.planName || d.actualName,
-            val: d.avgPower / d.avgCadence,
-            breakdown: `Pwr: ${Math.round(d.avgPower)}W / RPM: ${Math.round(d.avgCadence)}`
-        }))
+        .filter(d => d.type === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && hasKeyword(d, METRIC_DEFINITIONS.strength.keywords))
+        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr: ${Math.round(d.avgPower)}W / RPM: ${Math.round(d.avgCadence)}` }))
         .sort((a,b) => a.date - b.date);
 
     // C. ECONOMY
     const runEconData = filteredData
-        .filter(d => 
-            d.type === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 &&
-            hasKeyword(d, METRIC_DEFINITIONS.run.keywords)
-        )
-        .map(d => ({
-            date: d.date,
-            dateStr: d.date.toISOString().split('T')[0],
-            name: d.planName || d.actualName,
-            val: (d.avgSpeed * 60) / d.avgHR,
-            breakdown: `Pace: ${Math.round(d.avgSpeed * 60)} m/m / HR: ${Math.round(d.avgHR)}`
-        }))
+        .filter(d => d.type === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 && hasKeyword(d, METRIC_DEFINITIONS.run.keywords))
+        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace: ${Math.round(d.avgSpeed * 60)} m/m / HR: ${Math.round(d.avgHR)}` }))
         .sort((a,b) => a.date - b.date);
 
     // D. MECHANICS
     const mechData = filteredData
-        .filter(d => 
-            d.type === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 &&
-            hasKeyword(d, METRIC_DEFINITIONS.mechanical.keywords)
-        )
-        .map(d => ({
-            date: d.date,
-            dateStr: d.date.toISOString().split('T')[0],
-            name: d.planName || d.actualName,
-            val: (d.avgSpeed * 100) / d.avgPower,
-            breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W`
-        }))
+        .filter(d => d.type === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 && hasKeyword(d, METRIC_DEFINITIONS.mechanical.keywords))
+        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.planName || d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd: ${d.avgSpeed.toFixed(2)} m/s / Pwr: ${Math.round(d.avgPower)}W` }))
         .sort((a,b) => a.date - b.date);
 
-    // 3. Inject Charts
     const chartEndurance = document.getElementById('metric-chart-endurance');
     const chartStrength = document.getElementById('metric-chart-strength');
     const chartEconomy = document.getElementById('metric-chart-economy');
     const chartMechanics = document.getElementById('metric-chart-mechanics');
 
-    if(chartEndurance) chartEndurance.innerHTML = buildMetricChart(efData, "Efficiency Factor (Watts/BPM)", "#10b981", "EF");
-    if(chartStrength) chartStrength.innerHTML = buildMetricChart(torqueData, "Torque Index (Watts/RPM)", "#8b5cf6", "idx");
-    if(chartEconomy) chartEconomy.innerHTML = buildMetricChart(runEconData, "Economy Index (Spd/HR)", "#ec4899", "idx");
-    if(chartMechanics) chartMechanics.innerHTML = buildMetricChart(mechData, "Mechanics (Speed/Power)", "#f97316", "idx");
+    if(chartEndurance) chartEndurance.innerHTML = buildMetricChart(efData, 'endurance', "#10b981", "EF");
+    if(chartStrength) chartStrength.innerHTML = buildMetricChart(torqueData, 'strength', "#8b5cf6", "idx");
+    if(chartEconomy) chartEconomy.innerHTML = buildMetricChart(runEconData, 'run', "#ec4899", "idx");
+    if(chartMechanics) chartMechanics.innerHTML = buildMetricChart(mechData, 'mechanical', "#f97316", "idx");
 
-    // 4. Update Button States
     ['30d', '60d', '90d', '6m'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
         if(btn) {
@@ -272,7 +262,6 @@ const updateMetricsCharts = () => {
 export function renderMetrics(allData) {
     cachedData = allData || [];
 
-    // Helper for buttons
     const buildToggle = (range, label) => `
         <button id="btn-metric-${range}" onclick="window.toggleMetricsTime('${range}')" 
             class="bg-slate-800 text-slate-400 border border-slate-600 px-3 py-1 rounded text-xs transition-all hover:opacity-90">
@@ -280,12 +269,10 @@ export function renderMetrics(allData) {
         </button>
     `;
 
-    // Trigger update after DOM insertion
     setTimeout(updateMetricsCharts, 0);
 
     return `
         <div class="max-w-7xl mx-auto space-y-8">
-            
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -301,30 +288,6 @@ export function renderMetrics(allData) {
                 </div>
             </div>
 
-            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
-                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-tags text-blue-500"></i> Workout Categorization
-                </h2>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px]">
-                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Efficiency</h4>
-                        <p class="text-slate-400 leading-tight">${METRIC_DEFINITIONS.endurance.purpose}</p>
-                    </div>
-                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px]">
-                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-violet-500"></span> Strength</h4>
-                        <p class="text-slate-400 leading-tight">${METRIC_DEFINITIONS.strength.purpose}</p>
-                    </div>
-                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px]">
-                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-pink-500"></span> Economy</h4>
-                        <p class="text-slate-400 leading-tight">${METRIC_DEFINITIONS.run.purpose}</p>
-                    </div>
-                    <div class="bg-slate-900/50 p-3 rounded border border-slate-700/50 text-[10px]">
-                        <h4 class="font-bold text-white mb-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-orange-500"></span> Mechanics</h4>
-                        <p class="text-slate-400 leading-tight">${METRIC_DEFINITIONS.mechanical.purpose}</p>
-                    </div>
-                </div>
-            </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div id="metric-chart-endurance" class="h-full"></div>
                 <div id="metric-chart-strength" class="h-full"></div>
@@ -332,7 +295,6 @@ export function renderMetrics(allData) {
                 <div id="metric-chart-mechanics" class="h-full"></div>
             </div>
         </div>
-        
         <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[150px]"></div>
     `;
 }
