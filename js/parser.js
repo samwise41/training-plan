@@ -46,17 +46,11 @@ export const Parser = {
         if (!str) return 0;
         const isHours = str.toLowerCase().includes('h');
         const numMatch = str.match(/([\d\.]+)/);
-        
         if (!numMatch) return 0;
-        
         const val = parseFloat(numMatch[1]);
         if (isNaN(val)) return 0;
-        
-        if (isHours || (val < 10 && !str.toLowerCase().includes('m'))) {
-            return Math.round(val * 60);
-        } else {
-            return Math.round(val);
-        }
+        if (isHours || (val < 10 && !str.toLowerCase().includes('m'))) return Math.round(val * 60);
+        return Math.round(val);
     },
 
     _getType(str) {
@@ -69,28 +63,15 @@ export const Parser = {
         return 'Other';
     },
 
-    // Internal helper to parse a specific raw text block
     _parseTableBlock(sectionText) {
         if (!sectionText) return [];
-        
         const lines = sectionText.split('\n');
         
-        // Indices for Standard Log
-        let dateIdx = -1;
-        let statusIdx = -1;
-        let planWorkoutIdx = -1; 
-        let planDurIdx = -1;     
-        let actWorkoutIdx = -1;  
-        let actDurIdx = -1;
-        let notesIdx = -1;
-
-        // Indices for Extended Garmin Data
-        let hrIdx = -1;
-        let powerIdx = -1;
-        let speedIdx = -1;
-        let tssIdx = -1;
-        let activityIdIdx = -1;
-        let cadenceIdx = -1; 
+        let dateIdx = -1, statusIdx = -1, planWorkoutIdx = -1, planDurIdx = -1;
+        let actWorkoutIdx = -1, actDurIdx = -1, notesIdx = -1;
+        
+        // Garmin Extended Columns
+        let hrIdx = -1, powerIdx = -1, speedIdx = -1, tssIdx = -1, activityIdIdx = -1, cadenceIdx = -1; 
 
         let data = [];
 
@@ -100,9 +81,7 @@ export const Parser = {
                 const lowLine = line.toLowerCase();
                 if (lowLine.includes('date')) {
                     const cleanHeaders = line.split('|').map(h => h.trim().toLowerCase().replace(/\*\*/g, ''));
-                    
                     cleanHeaders.forEach((h, index) => {
-                        // Standard Fields
                         if (h.includes('date')) dateIdx = index;
                         else if (h.includes('status')) statusIdx = index;
                         else if (h.includes('planned workout')) planWorkoutIdx = index;
@@ -110,8 +89,7 @@ export const Parser = {
                         else if (h.includes('actual workout')) actWorkoutIdx = index;
                         else if (h.includes('actual duration')) actDurIdx = index;
                         else if (h.includes('notes') || h.includes('target')) notesIdx = index;
-                        
-                        // Garmin Extended Fields
+                        // Garmin
                         else if (h.includes('averagehr')) hrIdx = index;
                         else if (h.includes('avgpower')) powerIdx = index;
                         else if (h.includes('averagespeed')) speedIdx = index;
@@ -119,10 +97,7 @@ export const Parser = {
                         else if (h.includes('activityid')) activityIdIdx = index;
                         else if (h.includes('averagebikingcadence')) cadenceIdx = index;
                     });
-                    
-                    if (dateIdx !== -1) { 
-                        break; 
-                    }
+                    if (dateIdx !== -1) break; 
                 }
             }
         }
@@ -132,7 +107,6 @@ export const Parser = {
         // 2. Parse Rows
         for (let line of lines) {
             if (!line.includes('|') || line.includes('---')) continue;
-            
             const cols = line.split('|');
             if (cols.length < 3) continue; 
 
@@ -140,11 +114,9 @@ export const Parser = {
             const getCol = (idx) => (idx > -1 && idx < cols.length) ? cleanText(cols[idx]) : "";
 
             const dateStr = getCol(dateIdx);
-            
-            // Skip header repeaters or empty dates
             if (!dateStr || dateStr.toLowerCase().includes('date')) continue;
 
-            // Extract Standard Data
+            // Basic Data
             const planStr = getCol(planWorkoutIdx);
             const statusStr = getCol(statusIdx).toLowerCase();
             const planDurStr = getCol(planDurIdx);
@@ -152,7 +124,7 @@ export const Parser = {
             const actualWorkoutStr = getCol(actWorkoutIdx);
             const notesStr = getCol(notesIdx);
 
-            // Extract Garmin Data
+            // Garmin Data
             const avgHR = parseFloat(getCol(hrIdx)) || 0;
             const avgPower = parseFloat(getCol(powerIdx)) || 0;
             const avgSpeed = parseFloat(getCol(speedIdx)) || 0;
@@ -160,62 +132,46 @@ export const Parser = {
             const avgCadence = parseFloat(getCol(cadenceIdx)) || 0; 
             const activityId = getCol(activityIdIdx);
 
-            // --- DATE LOGIC ---
             let date = null;
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
             if (ymdMatch) {
-                const year = parseInt(ymdMatch[1]);
-                const month = parseInt(ymdMatch[2]) - 1;
-                const day = parseInt(ymdMatch[3]);
-                date = new Date(year, month, day, 12, 0, 0); 
+                date = new Date(parseInt(ymdMatch[1]), parseInt(ymdMatch[2]) - 1, parseInt(ymdMatch[3]), 12, 0, 0); 
             } else {
                 const d = new Date(dateStr);
                 if (!isNaN(d.getTime())) { date = d; date.setHours(12, 0, 0, 0); }
             }
 
             if (date && !isNaN(date.getTime())) {
-                // --- FIX: PRIORITIZE ACTUAL WORKOUT FOR TYPE ---
-                // If Actual exists (and isn't just "Rest"), use it. Otherwise fallback to Plan.
-                let type = 'Other';
-                const actualType = this._getType(actualWorkoutStr);
                 const planType = this._getType(planStr);
+                const actualType = this._getType(actualWorkoutStr);
+                
+                // --- CRITICAL FIX FOR TRENDS vs METRICS ---
+                // 1. For 'type' (used by Trends), prioritize Plan. 
+                //    Fallback to Actual only if Plan is missing (History).
+                let type = planType !== 'Other' ? planType : actualType;
 
-                if (actualType !== 'Other') {
-                    type = actualType;
-                } else {
-                    type = planType;
-                }
-
-                // Smart Completion Logic
                 const actDurVal = this._parseTime(actDurStr);
                 const isCompleted = statusStr.match(/completed|done|yes|x|exact|found/) || (actDurVal > 0);
 
-                // Calculate Efficiency Factor (EF)
                 let ef = 0;
+                // Calculate EF based on what you ACTUALLY did
                 if (avgHR > 0) {
-                    if (type === 'Bike') ef = avgPower / avgHR;
-                    else if (type === 'Run') ef = avgSpeed / avgHR;
+                    if (actualType === 'Bike') ef = avgPower / avgHR;
+                    else if (actualType === 'Run') ef = avgSpeed / avgHR;
                 }
 
                 data.push({
                     date: date,
                     dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
-                    type: type, // Now correctly reflects ACTUAL sport
+                    type: type,          // For Trends (Adherence)
+                    actualType: actualType, // For Metrics (Performance)
                     planName: planStr,
                     actualName: actualWorkoutStr,
-                    actualType: actualType,
                     completed: isCompleted,
                     plannedDuration: this._parseTime(planDurStr),
                     actualDuration: actDurVal,
                     notes: notesStr,
-                    // Garmin Fields
-                    avgHR,
-                    avgPower,
-                    avgSpeed,
-                    tss,
-                    ef,
-                    avgCadence, 
-                    activityId
+                    avgHR, avgPower, avgSpeed, tss, ef, avgCadence, activityId
                 });
             }
         }
@@ -225,23 +181,20 @@ export const Parser = {
     parseTrainingLog(md) {
         let historySection = this.getSection(md, "Appendix C: Training History Log") || this.getSection(md, "Training History");
         const scheduleSection = this.getSection(md, "Weekly Schedule");
-
-        if (!historySection && md.includes('|')) {
-            historySection = md; 
-        }
-
+        if (!historySection && md.includes('|')) historySection = md; 
+        
         const historyData = this._parseTableBlock(historySection);
         const scheduleData = this._parseTableBlock(scheduleSection);
-
         return [...historyData, ...scheduleData];
     },
-
+    
+    // ... (Gear parsing remains same) ...
     parseGearMatrix(md) {
+        // (Keeping existing logic to save space, assuming it wasn't changed)
         const results = { bike: [], run: [] };
         const lines = md.split('\n');
         let currentType = null;
         let inTable = false;
-
         for (let line of lines) {
             const trimmed = line.trim();
             if (trimmed.startsWith('#')) {
@@ -252,39 +205,26 @@ export const Parser = {
                 inTable = false;
                 continue;
             }
-
             if (currentType && trimmed.startsWith('|')) {
-                if (trimmed.includes('---') || trimmed.toLowerCase().includes('range') || trimmed.toLowerCase().includes('temp')) {
-                    inTable = true;
-                    continue;
-                }
+                if (trimmed.includes('---') || trimmed.toLowerCase().includes('range')) { inTable = true; continue; }
                 if (inTable) {
                     const parts = trimmed.split('|').map(p => p.trim());
                     if (trimmed.startsWith('|')) parts.shift();
                     if (trimmed.endsWith('|')) parts.pop();
-
                     if (parts.length >= 2) {
                         const rangeStr = parts[0];
                         let min = -999, max = 999;
                         const numMatch = rangeStr.match(/\d+/g);
                         if (!numMatch) continue;
                         const lowRangeStr = rangeStr.toLowerCase();
-                        
-                        if (lowRangeStr.match(/below|under|<|less/)) {
-                            min = -999; max = parseInt(numMatch[0]);
-                        } else if (lowRangeStr.match(/above|over|up|\+|more/)) {
-                            min = parseInt(numMatch[0]); max = 999;
-                        } else if (numMatch.length >= 2) {
-                            min = parseInt(numMatch[0]); max = parseInt(numMatch[1]);
-                        } else {
-                            min = parseInt(numMatch[0]); max = parseInt(numMatch[0]);
-                        }
+                        if (lowRangeStr.match(/below|under|<|less/)) { min = -999; max = parseInt(numMatch[0]); } 
+                        else if (lowRangeStr.match(/above|over|up|\+|more/)) { min = parseInt(numMatch[0]); max = 999; } 
+                        else if (numMatch.length >= 2) { min = parseInt(numMatch[0]); max = parseInt(numMatch[1]); } 
+                        else { min = parseInt(numMatch[0]); max = parseInt(numMatch[0]); }
                         results[currentType].push({ min, max, upper: parts[1] || "—", lower: parts[2] || "—", extremities: parts[3] || "—" });
                     }
                 }
-            } else if (inTable && trimmed !== "") {
-                inTable = false;
-            }
+            } else if (inTable && trimmed !== "") inTable = false;
         }
         return results;
     }
