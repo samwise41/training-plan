@@ -211,15 +211,18 @@ const updateMetricsCharts = () => {
     
     const filteredData = cachedData.filter(d => d.date >= cutoff);
 
-    // --- NEW HELPER: CATEGORIZE BY GARMIN TRAINING EFFECT LABEL ---
+    // --- CASE-INSENSITIVE HELPER ---
     const hasIntensity = (item, intensityTypes) => {
-        const label = (item.trainingEffectLabel || "").toUpperCase();
-        return intensityTypes.some(type => label.includes(type));
+        const rawLabel = (item.trainingEffectLabel || item.training_effect_label || "").toString().toUpperCase().trim();
+        return intensityTypes.some(type => rawLabel.includes(type.toUpperCase()));
     };
 
-    // A. ENDURANCE (Aerobic Base / Recovery)
+    // A. ENDURANCE
     const efData = filteredData
-        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && hasIntensity(d, ['AEROBIC_BASE', 'RECOVERY']))
+        .filter(d => {
+            const isBike = d.actualType === 'Bike' || d.actualType === 'Road Biking' || d.actualType === 'Virtual Ride';
+            return isBike && d.avgPower > 0 && d.avgHR > 0 && hasIntensity(d, ['AEROBIC_BASE', 'RECOVERY']);
+        })
         .map(d => ({ 
             date: d.date, 
             dateStr: d.date.toISOString().split('T')[0], 
@@ -231,7 +234,10 @@ const updateMetricsCharts = () => {
 
     // B. STRENGTH / HIGH INTENSITY
     const torqueData = filteredData
-        .filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && hasIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC', 'SPEED']))
+        .filter(d => {
+            const isBike = d.actualType === 'Bike' || d.actualType === 'Road Biking' || d.actualType === 'Virtual Ride';
+            return isBike && d.avgPower > 0 && d.avgCadence > 0 && hasIntensity(d, ['VO2MAX', 'THRESHOLD', 'TEMPO', 'ANAEROBIC', 'SPEED']);
+        })
         .map(d => ({ 
             date: d.date, 
             dateStr: d.date.toISOString().split('T')[0], 
@@ -241,9 +247,10 @@ const updateMetricsCharts = () => {
         }))
         .sort((a,b) => a.date - b.date);
 
-    // C. RUN ECONOMY (Quality Runs)
+    // C. RUN ECONOMY
     const runEconData = filteredData
-        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0 && hasIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'SPEED']))
+        .filter(d => d.actualType === 'Running' || d.actualType === 'Run')
+        .filter(d => d.avgSpeed > 0 && d.avgHR > 0 && hasIntensity(d, ['VO2MAX', 'THRESHOLD', 'TEMPO', 'SPEED', 'AEROBIC_BASE']))
         .map(d => ({ 
             date: d.date, 
             dateStr: d.date.toISOString().split('T')[0], 
@@ -253,9 +260,10 @@ const updateMetricsCharts = () => {
         }))
         .sort((a,b) => a.date - b.date);
 
-    // D. RUN MECHANICS (Form checks)
+    // D. RUN MECHANICS (Mechanical Efficiency)
     const mechData = filteredData
-        .filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0 && !hasIntensity(d, ['RECOVERY']))
+        .filter(d => d.actualType === 'Running' || d.actualType === 'Run')
+        .filter(d => d.avgSpeed > 0 && d.avgPower > 0)
         .map(d => ({ 
             date: d.date, 
             dateStr: d.date.toISOString().split('T')[0], 
