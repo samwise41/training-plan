@@ -214,6 +214,25 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 3. **Export:** Copy raw Markdown from the "Raw Source View" in this chat.
 4. **Save:** Commit and push the updated Markdown to your GitHub repository.
 
+## 9. Workout Naming Taxonomy
+
+To ensure the automated dashboard correctly tracks "Performance Signatures," all planned workouts must contain specific keywords in their title or description.
+
+### 1. Endurance (The Engine)
+* **Focus:** Aerobic Efficiency & Cardiac Drift.
+* **Keywords to use:** `Long`, `Steady`, `Endurance`, `Base`, `Zone 2`, `Z2`, `Recovery`.
+* **Example:** `[BIKE] Long Steady Distance (Zone 2)`
+
+### 2. Strength & Power (The Chassis)
+* **Focus:** Force Production, Torque, & High Intensity.
+* **Keywords to use:** `Strength`, `Hill`, `Climb`, `Torque`, `Force`, `Alpe`, `FTP`, `Race`, `Test`, `Threshold`, `Tempo`, `Sweet Spot`, `Interval`.
+* **Example:** `[BIKE] Alpe du Zwift Climb` or `[BIKE] Strength Intervals` or `[BIKE] Zwift Race`.
+
+### 3. Running Economy
+* **Focus:** Speed per Heartbeat.
+* **Keywords to use:** `Tempo`, `Threshold`, `Speed`, `Interval`, `Fartlek`, `Long`, `Base`, `Z2`.
+* **Note:** Almost all run types are tracked for economy, but ensure `Tempo` or `Speed` is used for faster sessions.
+
 ## Appendix A: Naming Conventions (For Calendar Export)
 
 **Format:** `[TYPE] - Workout Name - Distance/Time`
@@ -359,6 +378,7 @@ I have a training plan location in this github location. Can you review this fil
 4. Dates must be in `YYYY-MM-DD` format.
 5. Do not include Strength/Yoga/Stretching in this table; only Run/Bike/Swim.
 6. "Status" should be "PLANNED" for all future workouts.
+7. **Naming Convention:** Use the specific keywords defined in Section 9 (Taxonomy) when naming workouts (e.g., use "Strength Intervals" instead of just "Intervals") to ensure they are tracked by the dashboard.
 
 GitHub Training Plan File:
 https://github.com/samwise41/training-plan/blob/main/endurance_plan.md
