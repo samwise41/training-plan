@@ -4,6 +4,8 @@
     console.log("🚀 Booting App (Unified Data Mode)...");
 
     const cacheBuster = Date.now();
+    
+    // Helper to safely import modules
     const safeImport = async (path, name) => {
         try {
             return await import(`${path}?t=${cacheBuster}`);
@@ -13,6 +15,7 @@
         }
     };
 
+    // --- 1. IMPORT MODULES ---
     const parserMod = await safeImport('./parser.js', 'Parser');
     const trendsMod = await safeImport('./views/trends.js', 'Trends');
     const gearMod = await safeImport('./views/gear.js', 'Gear');
@@ -20,7 +23,9 @@
     const roadmapMod = await safeImport('./views/roadmap.js', 'Roadmap');
     const dashMod = await safeImport('./views/dashboard.js', 'Dashboard');
     const readinessMod = await safeImport('./views/readiness.js', 'Readiness');
+    const metricsMod = await safeImport('./views/metrics.js', 'Metrics'); // <--- CRITICAL IMPORT
 
+    // --- 2. DESTRUCTURE FUNCTIONS ---
     const Parser = parserMod?.Parser || { parseTrainingLog: () => [], getSection: () => "" };
     const { renderTrends, updateDurationAnalysis } = trendsMod || { renderTrends: () => ({html: ''}) };
     const { renderGear, updateGearResult } = gearMod || { renderGear: () => ({html: ''}) };
@@ -29,6 +34,7 @@
     const { renderDashboard } = dashMod || { renderDashboard: () => '' };
     const { renderReadiness } = readinessMod || { renderReadiness: () => '' };
     const renderReadinessChart = readinessMod?.renderReadinessChart || (() => {});
+    const { renderMetrics } = metricsMod || { renderMetrics: () => '<div class="p-4 text-red-500">Metrics Module Failed to Load</div>' }; // <--- CRITICAL EXTRACT
 
     console.log(`📦 Modules loaded with ID: ${cacheBuster}`);
 
@@ -47,7 +53,7 @@
         planMd: "",
         gearMd: "",
         archiveMd: "", 
-        allData: [], // Unified Dataset
+        allData: [], 
         gearData: null,
         currentTemp: null,
         hourlyWeather: null,
@@ -147,12 +153,11 @@
                 this.archiveMd = archiveRes.ok ? await archiveRes.text() : "";
 
                 // --- DATA UNIFICATION STRATEGY ---
-                const masterLog = Parser.parseTrainingLog(this.archiveMd); // High Fidelity Garmin Data
-                const planLog = Parser.parseTrainingLog(this.planMd);      // Current/Future Plan
+                const masterLog = Parser.parseTrainingLog(this.archiveMd); 
+                const planLog = Parser.parseTrainingLog(this.planMd);      
 
-                // 1. Map Master Data (Priority)
-                // Key: YYYY-MM-DD_SportType
                 const dataMap = new Map();
+                // 1. Load Master (Priority - contains Garmin Data)
                 masterLog.forEach(item => {
                     if (item.date) {
                         const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
@@ -160,10 +165,7 @@
                     }
                 });
 
-                // 2. Merge Plan Data
-                // Only add if the key DOES NOT exist in Master.
-                // This ensures we keep the rich Garmin data if a workout is completed,
-                // but still see planned workouts that haven't been logged yet.
+                // 2. Merge Plan (Only if missing from Master)
                 planLog.forEach(item => {
                     if (item.date) {
                         const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
@@ -173,9 +175,8 @@
                     }
                 });
 
-                // 3. Convert back to array & Sort
                 this.allData = Array.from(dataMap.values()).sort((a,b) => b.date - a.date);
-                this.logData = this.allData; // Alias for backward compatibility if needed
+                this.logData = this.allData; 
 
                 this.setupEventListeners();
                 window.addEventListener('hashchange', () => this.handleHashChange());
@@ -261,15 +262,12 @@
 
             if (nextEvent) {
                 document.getElementById('stat-event-name').innerText = nextEvent.name;
-                
                 const dateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
                 document.getElementById('stat-event-date').innerText = nextEvent.date.toLocaleDateString('en-US', dateOptions);
-
                 const diff = Math.ceil((nextEvent.date - today) / 86400000);
                 const timeStr = diff < 0 ? "Completed" : (diff === 0 ? "Today!" : `${Math.floor(diff/7)}w ${diff%7}d to go`);
                 document.getElementById('stat-event-countdown').innerHTML = `<i class="fa-solid fa-hourglass-half mr-1"></i> ${timeStr}`;
 
-                // --- Calculate Readiness using UNIFIED Data ---
                 if (this.allData.length > 0) {
                     const parseDur = (str) => {
                         if(!str || str.includes('km') || str.includes('mi')) return 0;
@@ -303,7 +301,6 @@
 
                     if(scores.length > 0) {
                         const minScore = scores.reduce((prev, curr) => prev.val < curr.val ? prev : curr);
-                        
                         const box = document.getElementById('stat-readiness-box');
                         const val = document.getElementById('stat-readiness-val');
                         const badge = document.getElementById('stat-readiness-badge');
@@ -312,11 +309,7 @@
                         
                         box.style.display = 'block';
                         val.innerText = `${minScore.val}%`;
-                        
-                        let color = "text-red-500"; 
-                        let bColor = "border-red-500/50";
-                        let label = "WARNING";
-                        
+                        let color = "text-red-500"; let bColor = "border-red-500/50"; let label = "WARNING";
                         if(minScore.val >= 85) { color="text-emerald-500"; bColor="border-emerald-500/50"; label="READY"; }
                         else if(minScore.val >= 60) { color="text-yellow-500"; bColor="border-yellow-500/50"; label="BUILD"; }
 
@@ -347,14 +340,8 @@
 
         renderView(view) {
             const titles = { 
-                dashboard: 'Weekly Schedule', 
-                trends: 'Trends & KPIs', 
-                logbook: 'Logbook', 
-                roadmap: 'Season Roadmap', 
-                gear: 'Gear Choice', 
-                zones: 'Training Zones', 
-                readiness: 'Race Readiness',
-                metrics: 'Metrics Explorer'
+                dashboard: 'Weekly Schedule', trends: 'Trends & KPIs', logbook: 'Logbook', roadmap: 'Season Roadmap', 
+                gear: 'Gear Choice', zones: 'Training Zones', readiness: 'Race Readiness', metrics: 'Performance Metrics'
             };
             const titleEl = document.getElementById('header-title-dynamic');
             if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
@@ -368,7 +355,6 @@
             
             setTimeout(() => {
                 try {
-                    // --- PASSING UNIFIED DATA TO ALL VIEWS ---
                     if (view === 'gear') {
                         const result = renderGear(this.gearMd, this.currentTemp, this.hourlyWeather);
                         content.innerHTML = result.html;
@@ -377,40 +363,30 @@
                     } 
                     else if (view === 'zones') content.innerHTML = renderZones(this.planMd);
                     else if (view === 'trends') {
-                        const result = renderTrends(this.allData); // Unified Data
+                        const result = renderTrends(this.allData); 
                         content.innerHTML = result.html;
                         this.updateDurationAnalysis();
                     } 
                     else if (view === 'roadmap') content.innerHTML = renderRoadmap(this.planMd);
                     else if (view === 'readiness') {
-                        const html = renderReadiness(this.allData, this.planMd); // Unified Data
+                        const html = renderReadiness(this.allData, this.planMd); 
                         content.innerHTML = html;
-                        renderReadinessChart(this.allData); // Unified Data
+                        renderReadinessChart(this.allData); 
                     }
                     else if (view === 'metrics') {
-                        content.innerHTML = `
-                            <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl">
-                                <h2 class="text-xl font-bold text-white mb-4">Maturity & Efficiency Trends</h2>
-                                <p class="text-slate-400 text-sm mb-6">Analyzing Power-to-HR (Cycling) and Speed-to-HR (Running) from Garmin Master Data.</p>
-                                <div id="metrics-view-container" class="space-y-6">
-                                    <p class="text-slate-500 italic">Historical Garmin Data Analysis Loading...</p>
-                                </div>
-                            </div>
-                        `;
+                        // --- THE FIX IS HERE ---
+                        // Replaced the placeholder HTML with the actual function call
+                        content.innerHTML = renderMetrics(this.allData);
                     }
                     else if (view === 'logbook') {
                         const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
                         const archive = Parser.getSection(this.archiveMd, "Training History");
-                        // Fallback: If archiveMd is the Master DB (pure table), use it directly
                         const finalArchive = archive || (this.archiveMd.includes('|') ? this.archiveMd : "");
-                        
                         const mdContent = (recent || "") + "\n\n" + (finalArchive || "");
                         const safeMarked = window.marked ? window.marked.parse : (t) => t;
                         content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                     }
                     else {
-                        // Dashboard View
-                        // renderDashboard(planMd, unifiedLogData)
                         const html = this.getStatsBar() + renderDashboard(this.planMd, this.allData);
                         content.innerHTML = html;
                         this.updateStats(); 
