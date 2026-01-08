@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 This document outlines the standard operating procedure for managing, migrating, and archiving endurance training data using the automated Python/Git pipeline.
-
+Files locations in C:\Users\samwi\Documents\Training Plan
 ---
 
 ## 2. System Architecture
