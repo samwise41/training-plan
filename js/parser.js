@@ -67,10 +67,14 @@ export const Parser = {
         if (!sectionText) return [];
         const lines = sectionText.split('\n');
         
+        // Header Indices
         let dateIdx = -1, statusIdx = -1, planWorkoutIdx = -1, planDurIdx = -1;
         let actWorkoutIdx = -1, actDurIdx = -1, notesIdx = -1;
         let hrIdx = -1, powerIdx = -1, speedIdx = -1, tssIdx = -1, activityIdIdx = -1, cadenceIdx = -1; 
-        let teLabelIdx = -1; // Added safety line 1
+        let teLabelIdx = -1;
+        
+        // NEW: Indices for Growth Metrics
+        let vo2Idx = -1, gctIdx = -1, vertIdx = -1, anaerobicIdx = -1;
 
         let data = [];
 
@@ -80,6 +84,7 @@ export const Parser = {
                 if (lowLine.includes('date')) {
                     const cleanHeaders = line.split('|').map(h => h.trim().toLowerCase().replace(/\*\*/g, ''));
                     cleanHeaders.forEach((h, index) => {
+                        // Standard Columns
                         if (h.includes('date')) dateIdx = index;
                         else if (h.includes('status')) statusIdx = index;
                         else if (h.includes('planned workout')) planWorkoutIdx = index;
@@ -93,7 +98,13 @@ export const Parser = {
                         else if (h.includes('trainingstressscore')) tssIdx = index;
                         else if (h.includes('activityid')) activityIdIdx = index;
                         else if (h.includes('averagebikingcadence')) cadenceIdx = index;
-                        else if (h.includes('trainingeffectlabel')) teLabelIdx = index; // Added safety line 2
+                        else if (h.includes('trainingeffectlabel')) teLabelIdx = index;
+                        
+                        // NEW: Columns for Metrics.js
+                        else if (h.includes('vo2max')) vo2Idx = index;
+                        else if (h.includes('groundcontact')) gctIdx = index;
+                        else if (h.includes('verticaloscillation')) vertIdx = index;
+                        else if (h.includes('anaerobictraining')) anaerobicIdx = index;
                     });
                     if (dateIdx !== -1) break; 
                 }
@@ -120,13 +131,20 @@ export const Parser = {
             const actualWorkoutStr = getCol(actWorkoutIdx);
             const notesStr = getCol(notesIdx);
 
+            // Parse Numerics
             const avgHR = parseFloat(getCol(hrIdx)) || 0;
             const avgPower = parseFloat(getCol(powerIdx)) || 0;
             const avgSpeed = parseFloat(getCol(speedIdx)) || 0;
             const tss = parseFloat(getCol(tssIdx)) || 0;
             const avgCadence = parseFloat(getCol(cadenceIdx)) || 0; 
             const activityId = getCol(activityIdIdx);
-            const trainingEffectLabel = getCol(teLabelIdx); // Added safety line 3
+            const trainingEffectLabel = getCol(teLabelIdx);
+
+            // NEW: Parse Advanced Metrics
+            const vO2MaxValue = parseFloat(getCol(vo2Idx)) || 0;
+            const avgGroundContactTime = parseFloat(getCol(gctIdx)) || 0;
+            const avgVerticalOscillation = parseFloat(getCol(vertIdx)) || 0;
+            const anaerobicTrainingEffect = parseFloat(getCol(anaerobicIdx)) || 0;
 
             let date = null;
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -160,8 +178,14 @@ export const Parser = {
                     plannedDuration: this._parseTime(planDurStr),
                     actualDuration: actDurVal,
                     notes: notesStr,
-                    avgHR, avgPower, avgSpeed, tss, ef, avgCadence, activityId, 
-                    trainingEffectLabel // Added safety line 4
+                    // Existing
+                    avgHR, avgPower, avgSpeed, tss, ef, avgCadence, activityId, trainingEffectLabel,
+                    // NEW: Pass these through so metrics.js can read them
+                    vO2MaxValue, 
+                    avgGroundContactTime, 
+                    avgVerticalOscillation, 
+                    anaerobicTrainingEffect,
+                    trainingStressScore: tss // Alias for compatibility with metrics.js
                 });
             }
         }
