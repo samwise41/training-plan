@@ -6,8 +6,8 @@ import traceback
 import re
 from datetime import datetime
 
-# --- CONFIGURATION (UPDATED FOR GITHUB ACTIONS) ---
-# SCRIPT_DIR = .../training-plan/python/
+# --- CONFIGURATION ---
+# SCRIPT_DIR is .../training-plan/python/
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # ROOT_DIR   = .../training-plan/ (One level up)
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
@@ -47,7 +47,6 @@ def run_garmin_fetch():
         print(f"⚠️ Warning: Fetch script not found at {GARMIN_FETCH_CMD[1]}")
         return
     try:
-        # UPDATED: Pass environment variables (secrets) to child process
         env = os.environ.copy()
         subprocess.run(GARMIN_FETCH_CMD, check=True, env=env, cwd=SCRIPT_DIR)
         print("✅ Garmin Data Synced.")
@@ -57,14 +56,13 @@ def run_garmin_fetch():
 def git_push_changes():
     print("🐙 Pushing changes to GitHub...")
     try:
-        # UPDATED: Configure Git Identity for Actions
+        # Configure Git Identity for Actions
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
         
         # Add all three files
         subprocess.run(["git", "add", MASTER_DB, PLAN_FILE, GARMIN_JSON], check=True)
         
-        # Check for changes before committing
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
         if status:
             msg = f"Auto-Sync: Master DB & Weekly Plan {datetime.now().strftime('%Y-%m-%d')}"
@@ -95,77 +93,54 @@ def load_master_db():
     return pd.DataFrame(data)
 
 def get_activity_prefix(activity):
-    """Maps Garmin activity types to dashboard tags using specific keywords."""
+    """Maps Garmin activity types to dashboard tags."""
     g_type = activity.get('activityType', {}).get('typeKey', '').lower()
-    
-    if 'running' in g_type:
-        return "[RUN]"
-    if 'road_biking' in g_type or 'virtual_ride' in g_type:
-        return "[BIKE]"
-    if 'swimming' in g_type:
-        return "[SWIM]"
+    if 'running' in g_type: return "[RUN]"
+    if 'road_biking' in g_type or 'virtual_ride' in g_type: return "[BIKE]"
+    if 'swimming' in g_type: return "[SWIM]"
     return ""
 
 def extract_weekly_table():
-    if not os.path.exists(PLAN_FILE):
-        print(f"❌ Error: Plan file not found at {PLAN_FILE}")
-        return pd.DataFrame()
-
+    if not os.path.exists(PLAN_FILE): return pd.DataFrame()
     with open(PLAN_FILE, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
-    table_lines = []
-    found_header = False
+    table_lines, found_header = [], False
     for line in lines:
         s = line.strip()
         if not found_header:
-            if s.startswith('#') and 'weekly schedule' in s.lower():
-                found_header = True
+            if s.startswith('#') and 'weekly schedule' in s.lower(): found_header = True
             continue
-        if (s.startswith('# ') or s.startswith('## ')) and len(table_lines) > 2:
-            break
-        if '|' in s:
-            if s.count('|') > 1:
-                table_lines.append(s)
+        if (s.startswith('# ') or s.startswith('## ')) and len(table_lines) > 2: break
+        if '|' in s: table_lines.append(s)
 
-    if not found_header or not table_lines:
-        return pd.DataFrame()
+    if not found_header or not table_lines: return pd.DataFrame()
 
     header = [h.strip() for h in table_lines[0].strip('|').split('|')]
     data = []
     for line in table_lines[1:]:
         if '---' in line: continue
         row_vals = [c.strip() for c in line.strip('|').split('|')]
-        if len(row_vals) < len(header): 
-            row_vals += [''] * (len(header) - len(row_vals))
+        if len(row_vals) < len(header): row_vals += [''] * (len(header) - len(row_vals))
         data.append(dict(zip(header, row_vals)))
-
     return pd.DataFrame(data)
 
 def main():
     try:
         print_header("STARTING MIGRATION & PLAN UPDATE")
-        # Removed git_pull_latest() as it's redundant in Actions
         run_garmin_fetch()
 
-        # Load raw plan lines for write-back
         if not os.path.exists(PLAN_FILE): return
         with open(PLAN_FILE, 'r', encoding='utf-8') as f:
             plan_lines = f.readlines()
 
         df_plan = extract_weekly_table()
-        if df_plan.empty:
-            print("❌ Stopping: No schedule data found.")
-            return
+        if df_plan.empty: return
 
         df_master = load_master_db()
         
-        try:
-            with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
-                json_data = json.load(f)
-        except FileNotFoundError:
-            print(f"❌ JSON not found at {GARMIN_JSON}")
-            return
+        with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
 
         garmin_by_date = {}
         for entry in json_data:
@@ -176,7 +151,7 @@ def main():
 
         print_header("PROCESSING ROWS")
         new_rows = []
-        plan_updates = {} # Map Date -> {workout, duration}
+        plan_updates = {}
 
         for idx, row in df_plan.iterrows():
             def get_col(name):
@@ -187,6 +162,7 @@ def main():
 
             date_str = get_col('Date').strip()
             plan_workout = get_col('Planned Workout')
+            plan_notes = get_col('Notes') # Capture notes from plan
             print(f"Row {idx+1}: [{date_str}] {plan_workout}")
 
             if date_str in garmin_by_date:
@@ -208,17 +184,14 @@ def main():
                     new_name = f"{prefix} {raw_name}" if prefix and prefix not in raw_name else raw_name
                     dur_min = f"{float(match.get('duration', 0)) / 60:.1f}"
 
-                    print(f"      🔗 Linked: {new_name} ({dur_min}m)")
-                    
-                    # Store update for Plan Write-back
                     plan_updates[date_str] = {"name": new_name, "dur": dur_min}
 
-                    # Prepare Master DB row
                     new_row = {c: "" for c in MASTER_COLUMNS}
                     new_row.update({
                         'Status': 'COMPLETED', 'Date': date_str, 'Day': get_col('Day'),
                         'Planned Workout': plan_workout, 'Planned Duration': get_col('Planned Duration'),
                         'Actual Workout': new_name, 'Actual Duration': dur_min,
+                        'Notes / Targets': plan_notes, # Map notes to Master column
                         'Match Status': 'Linked', 'activityId': str(match.get('activityId', ''))
                     })
                     for col in MASTER_COLUMNS:
@@ -232,40 +205,26 @@ def main():
                 in_schedule = False
                 for line in plan_lines:
                     if 'weekly schedule' in line.lower(): in_schedule = True
-                    
-                    # Identify table row
                     if in_schedule and '|' in line and '---' not in line and not line.strip().startswith('#'):
                         cols = [c.strip() for c in line.split('|')]
-                        # Find Date column (fuzzy match)
                         row_date = next((c for c in cols if re.match(r'\d{4}-\d{2}-\d{2}', c)), None)
-                        
                         if row_date in plan_updates:
                             update = plan_updates[row_date]
-                            # We reconstruct the line, preserving pipes. 
-                            # We need indices from the header line.
                             header_cols = [h.strip().lower() for h in df_plan.columns]
-                            
-                            try:
-                                # Find columns safely using 'in' check
-                                act_workout_idx = next(i for i, h in enumerate(header_cols) if 'actual workout' in h) + 1
-                                act_dur_idx = next(i for i, h in enumerate(header_cols) if 'actual duration' in h) + 1
-                                
-                                cols[act_workout_idx] = update['name']
-                                cols[act_dur_idx] = update['dur']
-                                f.write("| " + " | ".join(cols[1:-1]) + " |\n")
-                            except StopIteration:
-                                # Fallback if columns not found in header
-                                f.write(line)
-                        else:
-                            f.write(line)
+                            act_workout_idx = next(i for i, h in enumerate(header_cols) if 'actual workout' in h) + 1
+                            act_dur_idx = next(i for i, h in enumerate(header_cols) if 'actual duration' in h) + 1
+                            cols[act_workout_idx] = update['name']
+                            cols[act_dur_idx] = update['dur']
+                            f.write("| " + " | ".join(cols[1:-1]) + " |\n")
+                        else: f.write(line)
                     else:
-                        if in_schedule and line.startswith('#') and 'weekly schedule' not in line.lower(): 
-                            in_schedule = False
+                        if in_schedule and line.startswith('#') and 'weekly schedule' not in line.lower(): in_schedule = False
                         f.write(line)
 
         # --- SAVE MASTER DATABASE ---
         if new_rows:
             df_new = pd.DataFrame(new_rows)
+            # Use activityId or Date+Workout as unique key for duplicate checking
             df_combined = pd.concat([df_new, df_master])
             df_combined['temp_id'] = df_combined.apply(lambda x: x['activityId'] if x.get('activityId') else str(x['Date']) + str(x['Planned Workout']), axis=1)
             df_combined = df_combined.drop_duplicates(subset=['temp_id'], keep='first').drop(columns=['temp_id'])
@@ -281,10 +240,8 @@ def main():
 
         print("✅ Success: Plan and Master DB synced.")
         git_push_changes()
-    
     except Exception:
         traceback.print_exc()
 
 if __name__ == "__main__":
     main()
-    # Removed input() to prevent hanging in automation
