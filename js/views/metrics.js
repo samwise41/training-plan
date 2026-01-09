@@ -7,14 +7,16 @@ let cachedData = [];
 // --- TOOLTIP STATE MANAGER ---
 let activeTooltips = {
     data: null,   // Chart dots
-    static: null  // Analysis icon
+    static: null  // Info/Target icons
 };
 let tooltipTimers = {
     data: null,
     static: null
 };
 
+// Unified Closer
 const closeTooltip = (channel) => {
+    // If 'all', close both keys
     if (channel === 'all') {
         closeTooltip('data');
         closeTooltip('static');
@@ -24,34 +26,47 @@ const closeTooltip = (channel) => {
     const active = activeTooltips[channel];
     if (active) {
         const el = document.getElementById(active.id);
-        if (el) el.classList.add('opacity-0', 'pointer-events-none');
+        if (el) {
+            el.classList.add('opacity-0', 'pointer-events-none');
+            el.innerHTML = ''; // Clear content to prevent ghost sizing
+        }
         activeTooltips[channel] = null;
         if (tooltipTimers[channel]) clearTimeout(tooltipTimers[channel]);
     }
 };
 
 const manageTooltip = (evt, id, contentHTML, channel) => {
-    evt.stopPropagation(); 
+    evt.stopPropagation(); // Stop click from bubbling to window (which would close it)
     const triggerEl = evt.target;
 
+    // 1. Identify the "Other" channel
+    const otherChannel = channel === 'data' ? 'static' : 'data';
+
+    // 2. Close the OTHER channel immediately (prevent overlap)
+    closeTooltip(otherChannel);
+
+    // 3. Toggle Logic: If clicking the *same* active trigger, close it.
     if (activeTooltips[channel] && activeTooltips[channel].trigger === triggerEl) {
         closeTooltip(channel);
         return;
     }
 
+    // 4. Switch Logic: Close *current* channel's old tooltip (if any)
     closeTooltip(channel);
 
+    // 5. Open NEW Tooltip
     const tooltip = document.getElementById(id);
     if (!tooltip) return;
 
     tooltip.innerHTML = contentHTML;
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
 
+    // 6. Positioning
     const x = evt.pageX;
     const y = evt.pageY;
     const viewportWidth = window.innerWidth;
 
-    // Horizontal Position
+    // Horizontal Flip
     if (x > viewportWidth * 0.6) {
         tooltip.style.right = `${viewportWidth - x + 10}px`;
         tooltip.style.left = 'auto';
@@ -60,28 +75,35 @@ const manageTooltip = (evt, id, contentHTML, channel) => {
         tooltip.style.right = 'auto';
     }
     
-    // Vertical Position
+    // Vertical Stacking
     if (channel === 'data') {
-        tooltip.style.top = `${y - tooltip.offsetHeight - 15}px`;
+        tooltip.style.top = `${y - tooltip.offsetHeight - 15}px`; // Data above
     } else {
-        tooltip.style.top = `${y + 20}px`;
+        tooltip.style.top = `${y + 20}px`; // Info below
     }
 
+    // 7. Update State
     activeTooltips[channel] = { id, trigger: triggerEl };
 
+    // 8. Auto-Close Timer
     if (tooltipTimers[channel]) clearTimeout(tooltipTimers[channel]);
     tooltipTimers[channel] = setTimeout(() => closeTooltip(channel), 10000);
 };
 
+// Global Listener: Handles closing on background clicks
 window.addEventListener('click', (e) => {
     ['data', 'static'].forEach(channel => {
         const active = activeTooltips[channel];
         if (active) {
             const tooltipEl = document.getElementById(active.id);
+            
+            // Close if clicking INSIDE the tooltip (Explicit User Dismissal)
             if (tooltipEl && tooltipEl.contains(e.target)) {
                 closeTooltip(channel);
                 return;
             }
+
+            // Close if clicking OUTSIDE (and not on the trigger)
             if (e.target !== active.trigger) {
                 closeTooltip(channel);
             }
@@ -104,7 +126,7 @@ const METRIC_DEFINITIONS = {
     endurance: {
         title: "Aerobic Efficiency",
         sport: "Bike",
-        icon: "fa-bicycle",
+        icon: "fa-heart-pulse", // Generic Heart
         colorVar: "var(--color-bike)",
         refMin: 1.30, refMax: 1.70,
         invertRanges: false,
@@ -115,7 +137,7 @@ const METRIC_DEFINITIONS = {
     strength: {
         title: "Torque Efficiency",
         sport: "Bike",
-        icon: "fa-bicycle",
+        icon: "fa-bolt", // Generic Power
         colorVar: "var(--color-bike)",
         refMin: 2.5, refMax: 3.5,
         invertRanges: false,
@@ -127,9 +149,8 @@ const METRIC_DEFINITIONS = {
     run: {
         title: "Running Economy",
         sport: "Run",
-        icon: "fa-person-running",
+        icon: "fa-gauge-high", // Generic Speed/Gauge
         colorVar: "var(--color-run)",
-        // FIXED RANGE: Meters per Heartbeat. 1.0 (Fair) to 1.6 (Elite)
         refMin: 1.0, refMax: 1.6,
         invertRanges: false,
         rangeInfo: "1.0 – 1.6 m/beat",
@@ -139,7 +160,7 @@ const METRIC_DEFINITIONS = {
     mechanical: {
         title: "Mechanical Stiffness",
         sport: "Run",
-        icon: "fa-person-running",
+        icon: "fa-ruler-horizontal", // Generic Ratio/Measure
         colorVar: "var(--color-run)",
         refMin: 0.75, refMax: 0.95,
         invertRanges: false,
@@ -150,7 +171,7 @@ const METRIC_DEFINITIONS = {
     gct: {
         title: "Ground Contact Time",
         sport: "Run",
-        icon: "fa-person-running",
+        icon: "fa-stopwatch", // Generic Time
         colorVar: "var(--color-run)",
         refMin: 220, refMax: 260,
         invertRanges: true, // Lower is Better
@@ -161,7 +182,7 @@ const METRIC_DEFINITIONS = {
     vert: {
         title: "Vertical Oscillation",
         sport: "Run",
-        icon: "fa-person-running",
+        icon: "fa-arrows-up-down", // Generic Vert
         colorVar: "var(--color-run)",
         refMin: 6.0, refMax: 9.0,
         invertRanges: true, // Lower is Better
@@ -173,7 +194,7 @@ const METRIC_DEFINITIONS = {
     vo2max: {
         title: "VO₂ Max Trend",
         sport: "All",
-        icon: "fa-heart-pulse",
+        icon: "fa-lungs", // Generic Lungs
         colorVar: "var(--color-all)",
         refMin: 45, refMax: 60,
         invertRanges: false,
@@ -184,7 +205,7 @@ const METRIC_DEFINITIONS = {
     tss: {
         title: "Weekly TSS Load",
         sport: "All",
-        icon: "fa-layer-group",
+        icon: "fa-layer-group", // Generic Load/Stack
         colorVar: "var(--color-all)",
         refMin: 300, refMax: 600,
         invertRanges: false,
@@ -195,8 +216,8 @@ const METRIC_DEFINITIONS = {
     anaerobic: {
         title: "Anaerobic Impact",
         sport: "All",
-        icon: "fa-fire",
-        colorVar: "#ef4444", // Keep Red for Intensity
+        icon: "fa-fire", // Generic Intensity
+        colorVar: "var(--color-all)", // CHANGED TO ALL (GREEN)
         refMin: 2.0, refMax: 4.0,
         invertRanges: false,
         rangeInfo: "2.0 – 4.0 (Intervals)",
@@ -205,7 +226,7 @@ const METRIC_DEFINITIONS = {
     }
 };
 
-// --- CONSOLIDATED TOOLTIP TRIGGER ---
+// --- TOOLTIP TRIGGERS ---
 window.showAnalysisTooltip = (evt, key) => {
     const def = METRIC_DEFINITIONS[key];
     
@@ -215,7 +236,7 @@ window.showAnalysisTooltip = (evt, key) => {
         : "bg-gradient-to-r from-red-500 to-emerald-500";
 
     const html = `
-        <div class="w-[280px] space-y-3">
+        <div class="w-[280px] space-y-3 cursor-pointer">
             <div class="flex items-center gap-2 border-b border-slate-700 pb-2">
                 <i class="fa-solid ${def.icon} text-lg" style="color: ${def.colorVar}"></i>
                 <div>
@@ -247,7 +268,7 @@ window.showAnalysisTooltip = (evt, key) => {
                 </div>
             </div>
             
-            <div class="text-[9px] text-slate-600 text-center pt-1 italic">Click anywhere to close</div>
+            <div class="text-[9px] text-slate-600 text-center pt-1 italic">Click to close</div>
         </div>`;
     
     manageTooltip(evt, 'metric-info-popup', html, 'static');
@@ -255,7 +276,7 @@ window.showAnalysisTooltip = (evt, key) => {
 
 window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown, colorVar) => {
     const html = `
-        <div class="text-center min-w-[100px]">
+        <div class="text-center min-w-[100px] cursor-pointer">
             <div class="text-[10px] text-slate-400 mb-1 border-b border-slate-700 pb-1">${date}</div>
             <div class="text-white font-bold text-xs mb-1">${name}</div>
             <div class="font-mono font-bold text-xl" style="color: ${colorVar}">${val} <span class="text-[10px] text-slate-500">${unitLabel}</span></div>
@@ -280,7 +301,7 @@ const calculateTrendline = (dataPoints) => {
 
 const buildMetricChart = (dataPoints, key) => {
     const def = METRIC_DEFINITIONS[key];
-    const unitLabel = def.rangeInfo.split(' ').pop(); // Extract unit from range string
+    const unitLabel = def.rangeInfo.split(' ').pop(); 
     const color = def.colorVar;
 
     if (!dataPoints || dataPoints.length < 2) {
@@ -423,12 +444,9 @@ const updateMetricsCharts = () => {
     const torqueData = filteredData.filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr:${Math.round(d.avgPower)} / RPM:${Math.round(d.avgCadence)}` }));
 
-    // 2. RUN ECONOMY (Fixed Calculation: Meters / Beat)
+    // 2. RUN ECONOMY
     const runEconData = filteredData.filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0)
         .map(d => {
-            // avgSpeed is m/s. 
-            // m/min = speed * 60.
-            // m/beat = (m/min) / bpm
             const metersPerMin = d.avgSpeed * 60;
             const metersPerBeat = metersPerMin / d.avgHR;
             return { 
