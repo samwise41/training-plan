@@ -50,19 +50,21 @@ def run_garmin_fetch():
         print(f"⚠️ Warning: Fetch failed: {e}")
 
 def git_push_changes():
+    print("🐙 Pushing changes to GitHub...")
     try:
-        # Add the files
-        subprocess.run(["git", "add", MASTER_DB, PLAN_FILE], check=True)
+        # Include the JSON file in the push so your archive grows on GitHub
+        subprocess.run(["git", "add", MASTER_DB, PLAN_FILE, GARMIN_JSON], check=True)
         
-        # Check if there is actually anything staged to commit
-        status = subprocess.run(["git", "diff", "--cached", "--quiet"])
-        if status.returncode == 1: # 1 means there ARE changes
-            msg = f"Auto-Sync: Data {datetime.now().strftime('%Y-%m-%d')}"
+        # Check if anything is actually staged
+        diff_check = subprocess.run(["git", "diff", "--cached", "--quiet"])
+        
+        if diff_check.returncode == 1: # 1 means changes exist
+            msg = f"Auto-Sync: Training Data {datetime.now().strftime('%Y-%m-%d')}"
             subprocess.run(["git", "commit", "-m", msg], check=True)
             subprocess.run(["git", "push"], check=True)
             print("✅ Successfully pushed to GitHub!")
         else:
-            print("ℹ️ No changes to Master or Plan. Skipping push.")
+            print("ℹ️ No new data found. Skipping push.")
     except Exception as e:
         print(f"⚠️ Git Push Failed: {e}")
 
@@ -227,5 +229,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
