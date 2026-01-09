@@ -4,6 +4,43 @@
 let metricsState = { timeRange: '6m' };
 let cachedData = [];
 
+// --- GLOBAL TOGGLE HELPER ---
+if (!window.toggleSection) {
+    window.toggleSection = (id) => {
+        const content = document.getElementById(id);
+        if (!content) return;
+        const header = content.previousElementSibling;
+        const icon = header.querySelector('i.fa-caret-down');
+        const isCollapsed = content.classList.contains('max-h-0');
+
+        if (isCollapsed) {
+            content.classList.remove('max-h-0', 'opacity-0', 'py-0', 'mb-0');
+            content.classList.add('max-h-[5000px]', 'opacity-100', 'py-4', 'mb-8'); 
+            if (icon) { icon.classList.add('rotate-0'); icon.classList.remove('-rotate-90'); }
+        } else {
+            content.classList.add('max-h-0', 'opacity-0', 'py-0', 'mb-0');
+            content.classList.remove('max-h-[5000px]', 'opacity-100', 'py-4', 'mb-8');
+            if (icon) { icon.classList.remove('rotate-0'); icon.classList.add('-rotate-90'); }
+        }
+    };
+}
+
+const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
+    const contentClasses = isOpen ? "max-h-[5000px] opacity-100 py-4 mb-8" : "max-h-0 opacity-0 py-0 mb-0";
+    const iconClasses = isOpen ? "rotate-0" : "-rotate-90";
+    return `
+        <div class="w-full">
+            <div class="flex items-center gap-2 cursor-pointer py-3 border-b-2 border-slate-700 hover:border-slate-500 transition-colors group select-none" onclick="window.toggleSection('${id}')">
+                <i class="fa-solid fa-caret-down text-slate-400 text-base transition-transform duration-300 group-hover:text-white ${iconClasses}"></i>
+                <h2 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">${title}</h2>
+            </div>
+            <div id="${id}" class="collapsible-content overflow-hidden transition-all duration-500 ease-in-out ${contentClasses}">
+                ${contentHtml}
+            </div>
+        </div>
+    `;
+};
+
 // --- TOOLTIP STATE MANAGER ---
 let activeTooltips = { data: null, static: null };
 let tooltipTimers = { data: null, static: null };
@@ -46,18 +83,14 @@ const manageTooltip = (evt, id, contentHTML, channel) => {
         tooltip.style.left = `${x + 10}px`; tooltip.style.right = 'auto';
     }
     
-    // Vertical Collision Avoidance
+    let topPos = channel === 'data' ? y - tooltip.offsetHeight - 20 : y + 25;
     const otherChannel = channel === 'data' ? 'static' : 'data';
     const otherActive = activeTooltips[otherChannel];
     
-    // Default Positions
-    let topPos = channel === 'data' ? y - tooltip.offsetHeight - 20 : y + 25;
-
     if (otherActive) {
         const otherEl = document.getElementById(otherActive.id);
         if (otherEl && !otherEl.classList.contains('opacity-0')) {
             const r2 = otherEl.getBoundingClientRect();
-            // Simple logic: If we are 'static' (bottom) and 'data' (top) is open, push down
             if (channel === 'static' && (y - r2.bottom < 50)) {
                 topPos = Math.max(topPos, r2.bottom + window.scrollY + 10);
             }
@@ -269,7 +302,6 @@ const buildSummaryTable = () => {
         
         if (!fullData.length) return;
 
-        // Calculate Trends
         const getT = (days) => {
             const cutoff = new Date();
             cutoff.setDate(now.getDate() - days);
@@ -282,19 +314,14 @@ const buildSummaryTable = () => {
         const t90 = getT(90);
         const t6m = getT(180);
 
-        // Calculate Status
         const recentSubset = fullData.filter(d => d.date >= new Date(now.getTime() - 30*24*60*60*1000));
-        let avg30 = 0;
         let statusHtml = '<span class="text-slate-500">--</span>';
-        
         if (recentSubset.length > 0) {
-            avg30 = recentSubset.reduce((sum, d) => sum + d.val, 0) / recentSubset.length;
+            const avg30 = recentSubset.reduce((sum, d) => sum + d.val, 0) / recentSubset.length;
             if (def.invertRanges) {
-                // Lower is Better
                 if (avg30 <= def.refMax) statusHtml = '<span class="text-emerald-400 font-bold text-[10px] bg-emerald-900/30 px-1.5 py-0.5 rounded">✅ On Target</span>';
                 else statusHtml = '<span class="text-red-400 font-bold text-[10px] bg-red-900/30 px-1.5 py-0.5 rounded">⚠️ High</span>';
             } else {
-                // Higher is Better
                 if (avg30 >= def.refMin) statusHtml = '<span class="text-emerald-400 font-bold text-[10px] bg-emerald-900/30 px-1.5 py-0.5 rounded">✅ On Target</span>';
                 else statusHtml = '<span class="text-red-400 font-bold text-[10px] bg-red-900/30 px-1.5 py-0.5 rounded">⚠️ Low</span>';
             }
@@ -319,7 +346,7 @@ const buildSummaryTable = () => {
     });
 
     return `
-        <div class="overflow-x-auto bg-slate-800/30 border border-slate-700 rounded-xl mb-8 shadow-sm">
+        <div class="overflow-x-auto bg-slate-800/30 border border-slate-700 rounded-xl mb-4 shadow-sm">
             <table class="w-full text-left text-xs">
                 <thead class="bg-slate-900/50 text-slate-400 uppercase font-bold text-[10px] tracking-wider">
                     <tr>
@@ -343,7 +370,6 @@ const buildMetricChart = (displayData, fullData, key) => {
     const unitLabel = def.rangeInfo.split(' ').pop(); 
     const color = def.colorVar;
 
-    // Trend Indicators
     const now = new Date();
     const getSlope = (days) => {
         const cutoff = new Date();
@@ -398,7 +424,6 @@ const buildMetricChart = (displayData, fullData, key) => {
 
     const getY = (val) => height - pad.b - ((val - domainMin) / (domainMax - domainMin)) * (height - pad.t - pad.b);
 
-    // Reference Lines
     let refLinesHtml = '';
     if (def.refMin !== undefined && def.refMax !== undefined) {
         const yMin = getY(def.refMin);
@@ -459,7 +484,6 @@ const buildMetricChart = (displayData, fullData, key) => {
     `;
 };
 
-// --- MAIN RENDER ---
 const updateMetricsCharts = () => {
     if (!cachedData || cachedData.length === 0) return;
     
@@ -469,25 +493,78 @@ const updateMetricsCharts = () => {
     else if (metricsState.timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (metricsState.timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
     
-    // RENDER TABLE
-    document.getElementById('trends-table-container').innerHTML = buildSummaryTable();
-
-    // RENDER CHARTS
-    const render = (id, key) => {
-        const full = getMetricData(key).sort((a,b) => a.date - b.date);
-        const display = full.filter(d => d.date >= cutoff);
-        document.getElementById(id).innerHTML = buildMetricChart(display, full, key);
+    // FULL DATASETS (For Indicators)
+    const isIntensity = (item, labels) => {
+        const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
+        return labels.some(allowed => l === allowed.toUpperCase());
     };
 
-    render('metric-chart-endurance', 'endurance');
-    render('metric-chart-strength', 'strength');
-    render('metric-chart-economy', 'run');
-    render('metric-chart-mechanics', 'mechanical');
-    render('metric-chart-gct', 'gct');
-    render('metric-chart-vert', 'vert');
-    render('metric-chart-vo2', 'vo2max');
-    render('metric-chart-tss', 'tss');
-    render('metric-chart-anaerobic', 'anaerobic');
+    const buildSet = (filterFn, mapFn) => {
+        const full = cachedData.filter(filterFn).map(mapFn).sort((a,b) => a.date - b.date);
+        const display = full.filter(d => d.date >= cutoff);
+        return { full, display };
+    };
+
+    const ef = buildSet(
+        d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']),
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr:${Math.round(d.avgPower)} / HR:${Math.round(d.avgHR)}` })
+    );
+
+    const torque = buildSet(
+        d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']),
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr:${Math.round(d.avgPower)} / RPM:${Math.round(d.avgCadence)}` })
+    );
+
+    const runEcon = buildSet(
+        d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace:${Math.round(d.avgSpeed * 60)}m/m / HR:${Math.round(d.avgHR)}` })
+    );
+
+    const mech = buildSet(
+        d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd:${d.avgSpeed.toFixed(1)} / Pwr:${Math.round(d.avgPower)}` })
+    );
+
+    const vo2 = buildSet(
+        d => d.vO2MaxValue > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: "VO2 Estimate", val: parseFloat(d.vO2MaxValue), breakdown: `Score: ${d.vO2MaxValue}` })
+    );
+
+    const fullTss = aggregateWeeklyTSS(cachedData);
+    const displayTss = fullTss.filter(d => d.date >= cutoff);
+
+    const gct = buildSet(
+        d => d.actualType === 'Run' && d.avgGroundContactTime > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgGroundContactTime), breakdown: `${Math.round(d.avgGroundContactTime)} ms` })
+    );
+
+    const vert = buildSet(
+        d => d.actualType === 'Run' && d.avgVerticalOscillation > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgVerticalOscillation), breakdown: `${d.avgVerticalOscillation.toFixed(1)} cm` })
+    );
+
+    const ana = buildSet(
+        d => d.anaerobicTrainingEffect > 0.5,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.anaerobicTrainingEffect), breakdown: `Anaerobic: ${d.anaerobicTrainingEffect}` })
+    );
+
+    // RENDER CONTENT
+    document.getElementById('trends-table-container').innerHTML = buildSummaryTable();
+
+    const render = (id, dataObj, key) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = buildMetricChart(dataObj.display, dataObj.full, key);
+    };
+
+    render('metric-chart-endurance', ef, 'endurance');
+    render('metric-chart-strength', torque, 'strength');
+    render('metric-chart-economy', runEcon, 'run');
+    render('metric-chart-mechanics', mech, 'mechanical');
+    render('metric-chart-gct', gct, 'gct');
+    render('metric-chart-vert', vert, 'vert');
+    render('metric-chart-vo2', vo2, 'vo2max');
+    render('metric-chart-tss', { full: fullTss, display: displayTss }, 'tss');
+    render('metric-chart-anaerobic', ana, 'anaerobic');
 
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
@@ -502,41 +579,41 @@ export function renderMetrics(allData) {
     setTimeout(updateMetricsCharts, 0);
     const buildToggle = (range, label) => `<button id="btn-metric-${range}" onclick="window.toggleMetricsTime('${range}')" class="bg-slate-800 text-slate-400 px-3 py-1 rounded text-[10px] transition-all">${label}</button>`;
     
+    // Header (Sticky)
+    const headerHtml = `
+        <div class="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-0 z-10 mb-6">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-chart-area text-emerald-500"></i> Performance Lab
+            </h2>
+            <div class="flex gap-1.5">${buildToggle('30d', '30d')}${buildToggle('90d', '90d')}${buildToggle('6m', '6m')}${buildToggle('1y', '1y')}</div>
+        </div>`;
+
+    const tableSection = buildCollapsibleSection('metrics-table-section', 'Physiological Trends', '<div id="trends-table-container"></div>', true);
+
+    const chartsGrid = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div id="metric-chart-endurance"></div>
+            <div id="metric-chart-strength"></div>
+            <div id="metric-chart-economy"></div>
+            <div id="metric-chart-mechanics"></div>
+            <div id="metric-chart-gct"></div>
+            <div id="metric-chart-vert"></div>
+            <div id="metric-chart-vo2"></div>
+            <div id="metric-chart-tss"></div>
+            <div id="metric-chart-anaerobic"></div>
+            <div class="bg-slate-800/10 border border-slate-800 border-dashed rounded-xl p-6 flex items-center justify-center">
+                <p class="text-xs text-slate-600 font-mono">Future Metric Slot</p>
+            </div>
+        </div>`;
+    
+    const chartsSection = buildCollapsibleSection('metrics-charts-section', 'Detailed Charts', chartsGrid, true);
+
     return `
         <div class="max-w-7xl mx-auto space-y-6 pb-12 relative">
-            <div class="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-0 z-10">
-                <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <i class="fa-solid fa-chart-area text-emerald-500"></i> Performance Lab
-                </h2>
-                <div class="flex gap-1.5">${buildToggle('30d', '30d')}${buildToggle('90d', '90d')}${buildToggle('6m', '6m')}${buildToggle('1y', '1y')}</div>
-            </div>
-
-            <div id="trends-table-container"></div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div id="metric-chart-endurance"></div>
-                <div id="metric-chart-strength"></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div id="metric-chart-economy"></div>
-                <div id="metric-chart-mechanics"></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div id="metric-chart-gct"></div>
-                <div id="metric-chart-vert"></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div id="metric-chart-vo2"></div>
-                <div id="metric-chart-tss"></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div id="metric-chart-anaerobic"></div>
-                <div class="bg-slate-800/10 border border-slate-800 border-dashed rounded-xl p-6 flex items-center justify-center">
-                    <p class="text-xs text-slate-600 font-mono">Future Metric Slot</p>
-                </div>
-            </div>
+            ${headerHtml}
+            ${tableSection}
+            ${chartsSection}
         </div>
-
         <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity absolute pointer-events-auto cursor-pointer"></div>
         <div id="metric-info-popup" class="z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity absolute pointer-events-auto cursor-pointer max-w-[320px]"></div>
     `;
