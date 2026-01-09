@@ -5,10 +5,9 @@ let metricsState = { timeRange: '6m' };
 let cachedData = [];
 
 // --- TOOLTIP STATE MANAGER ---
-// Separate channels allow one Data tip and one Static tip to exist simultaneously
 let activeTooltips = {
     data: null,   // Chart dots
-    static: null  // Info/Target icons
+    static: null  // Analysis icon
 };
 let tooltipTimers = {
     data: null,
@@ -35,28 +34,24 @@ const manageTooltip = (evt, id, contentHTML, channel) => {
     evt.stopPropagation(); 
     const triggerEl = evt.target;
 
-    // 1. Toggle: If clicking the exact same trigger, close it.
     if (activeTooltips[channel] && activeTooltips[channel].trigger === triggerEl) {
         closeTooltip(channel);
         return;
     }
 
-    // 2. Switch: Close any existing tooltip in THIS channel (Data replaces Data)
     closeTooltip(channel);
 
-    // 3. Open New
     const tooltip = document.getElementById(id);
     if (!tooltip) return;
 
     tooltip.innerHTML = contentHTML;
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
 
-    // 4. Smart Positioning based on Channel
     const x = evt.pageX;
     const y = evt.pageY;
     const viewportWidth = window.innerWidth;
 
-    // Horizontal: Default to right of cursor, flip if too close to edge
+    // Horizontal Position
     if (x > viewportWidth * 0.6) {
         tooltip.style.right = `${viewportWidth - x + 10}px`;
         tooltip.style.left = 'auto';
@@ -65,35 +60,28 @@ const manageTooltip = (evt, id, contentHTML, channel) => {
         tooltip.style.right = 'auto';
     }
     
-    // Vertical: Data ABOVE, Static BELOW (to prevent overlap)
+    // Vertical Position
     if (channel === 'data') {
-        tooltip.style.top = `${y - tooltip.offsetHeight - 15}px`; // Above
+        tooltip.style.top = `${y - tooltip.offsetHeight - 15}px`;
     } else {
-        tooltip.style.top = `${y + 20}px`; // Below
+        tooltip.style.top = `${y + 20}px`;
     }
 
-    // 5. Update State
     activeTooltips[channel] = { id, trigger: triggerEl };
 
-    // 6. Auto-Close Timer (10 Seconds)
     if (tooltipTimers[channel]) clearTimeout(tooltipTimers[channel]);
     tooltipTimers[channel] = setTimeout(() => closeTooltip(channel), 10000);
 };
 
-// Global Listener: Handles closing on clicks
 window.addEventListener('click', (e) => {
     ['data', 'static'].forEach(channel => {
         const active = activeTooltips[channel];
         if (active) {
             const tooltipEl = document.getElementById(active.id);
-            
-            // Close if clicking INSIDE the tooltip (User wants to dismiss it)
             if (tooltipEl && tooltipEl.contains(e.target)) {
                 closeTooltip(channel);
                 return;
             }
-
-            // Close if clicking OUTSIDE the tooltip (and not on the trigger)
             if (e.target !== active.trigger) {
                 closeTooltip(channel);
             }
@@ -101,7 +89,6 @@ window.addEventListener('click', (e) => {
     });
 });
 
-// --- GLOBAL HANDLERS ---
 window.toggleMetricsTime = (range) => {
     metricsState.timeRange = range;
     updateMetricsCharts();
@@ -111,129 +98,167 @@ window.hideMetricTooltip = () => {
     closeTooltip('all');
 };
 
-// --- DEFINITIONS WITH COLORS ---
+// --- DEFINITIONS ---
 const METRIC_DEFINITIONS = {
-    // HIGH IS GOOD (Upper = Green, Lower = Red)
+    // BIKE METRICS
     endurance: {
-        title: "Aerobic Efficiency (EF)",
-        icon: "fa-heart-pulse", styleClass: "icon-bike",
+        title: "Aerobic Efficiency",
+        sport: "Bike",
+        icon: "fa-bicycle",
+        colorVar: "var(--color-bike)",
         refMin: 1.30, refMax: 1.70,
         invertRanges: false,
-        rangeInfo: "<strong>Range: 1.30 – 1.70</strong><br>Watts per Heartbeat.",
-        description: "<strong>The Engine Check.</strong><br>Are you getting fitter at base intensity?",
-        improvement: "• <strong>Z2 Volume:</strong> Long, steady rides."
+        rangeInfo: "1.30 – 1.70 EF",
+        description: "Watts produced per heartbeat. Rising values mean your engine is getting more efficient.",
+        improvement: "• Long Z2 Rides<br>• Consistent Volume"
     },
     strength: {
         title: "Torque Efficiency",
-        icon: "fa-bolt", styleClass: "icon-bike",
+        sport: "Bike",
+        icon: "fa-bicycle",
+        colorVar: "var(--color-bike)",
         refMin: 2.5, refMax: 3.5,
         invertRanges: false,
-        rangeInfo: "<strong>Range: 2.5 – 3.5</strong><br>Watts per RPM.",
-        description: "<strong>The Muscle Check.</strong><br>Measures muscular force per pedal stroke.",
-        improvement: "• <strong>Low Cadence:</strong> Intervals at 50-60 RPM."
+        rangeInfo: "2.5 – 3.5 W/RPM",
+        description: "Watts per Revolution. High values indicate strong muscular force application (pushing bigger gears).",
+        improvement: "• Low Cadence Intervals (50-60 RPM)<br>• Seated Climbing"
     },
+    // RUN METRICS
     run: {
         title: "Running Economy",
-        icon: "fa-person-running", styleClass: "icon-run",
-        refMin: 5.0, refMax: 7.0,
+        sport: "Run",
+        icon: "fa-person-running",
+        colorVar: "var(--color-run)",
+        // FIXED RANGE: Meters per Heartbeat. 1.0 (Fair) to 1.6 (Elite)
+        refMin: 1.0, refMax: 1.6,
         invertRanges: false,
-        rangeInfo: "<strong>Range: 5.0 – 7.0</strong><br>Speed (m/min) per Heartbeat.",
-        description: "<strong>The Efficiency Check.</strong><br>Speed generated per heart beat.",
-        improvement: "• <strong>Strides:</strong> Short bursts of speed."
+        rangeInfo: "1.0 – 1.6 m/beat",
+        description: "Distance traveled per heartbeat. A higher number means you run faster at a lower cardiac cost.",
+        improvement: "• Strides & Hill Sprints<br>• Plyometrics"
     },
     mechanical: {
         title: "Mechanical Stiffness",
-        icon: "fa-ruler-horizontal", styleClass: "icon-run",
+        sport: "Run",
+        icon: "fa-person-running",
+        colorVar: "var(--color-run)",
         refMin: 0.75, refMax: 0.95,
         invertRanges: false,
-        rangeInfo: "<strong>Range: 0.75 – 0.95</strong><br>Speed vs. Power ratio.",
-        description: "<strong>The Form Check.</strong><br>Are you converting Watts into Speed?",
-        improvement: "• <strong>Plyometrics:</strong> Jump rope, box jumps."
+        rangeInfo: "0.75 – 0.95 Ratio",
+        description: "Ratio of Speed vs. Power. Indicates how well you convert raw power into forward motion.",
+        improvement: "• High Cadence (170+)<br>• Form Drills (A-Skips)"
     },
-    vo2max: {
-        title: "VO₂ Max Trend",
-        icon: "fa-lungs", styleClass: "text-purple-400",
-        refMin: 45, refMax: 60,
-        invertRanges: false,
-        rangeInfo: "<strong>Target: 45 – 60+</strong><br>The aerobic ceiling.",
-        description: "<strong>The Ceiling.</strong><br>An upward trend proves your engine size is increasing.",
-        improvement: "• <strong>VO2 Intervals:</strong> 3-5 min max efforts."
-    },
-    tss: {
-        title: "Weekly TSS Load",
-        icon: "fa-layer-group", styleClass: "text-blue-400",
-        refMin: 300, refMax: 600,
-        invertRanges: false,
-        rangeInfo: "<strong>Target: 300 – 600</strong><br>Training Stress Score.",
-        description: "<strong>The Capacity Check.</strong><br>Rising TSS with stable fatigue = strength.",
-        improvement: "• <strong>Volume:</strong> Add more hours."
-    },
-    // LOW IS GOOD (Upper = Red, Lower = Green)
     gct: {
         title: "Ground Contact Time",
-        icon: "fa-shoe-prints", styleClass: "text-orange-400",
+        sport: "Run",
+        icon: "fa-person-running",
+        colorVar: "var(--color-run)",
         refMin: 220, refMax: 260,
-        invertRanges: true, // Inverted
-        rangeInfo: "<strong>Target: < 260ms</strong><br>Time spent on the ground.",
-        description: "<strong>The Elasticity Check.</strong><br>Lower time = better energy return.",
-        improvement: "• <strong>Cadence:</strong> Increase step rate."
+        invertRanges: true, // Lower is Better
+        rangeInfo: "< 260 ms",
+        description: "Time spent on the ground each step. Lower values indicate better tendon elasticity.",
+        improvement: "• Increase Cadence<br>• 'Hot Coals' Imagery"
     },
     vert: {
         title: "Vertical Oscillation",
-        icon: "fa-arrows-up-down", styleClass: "text-pink-400",
+        sport: "Run",
+        icon: "fa-person-running",
+        colorVar: "var(--color-run)",
         refMin: 6.0, refMax: 9.0,
-        invertRanges: true, // Inverted
-        rangeInfo: "<strong>Target: 6.0 – 9.0 cm</strong><br>Vertical bounce.",
-        description: "<strong>The Bounce Check.</strong><br>Energy used to go UP isn't moving you FORWARD.",
-        improvement: "• <strong>Drills:</strong> High knees, A-Skips."
+        invertRanges: true, // Lower is Better
+        rangeInfo: "6.0 – 9.0 cm",
+        description: "Vertical bounce. Too much bounce wastes energy moving UP instead of FORWARD.",
+        improvement: "• Core Stability<br>• Hill Repeats"
+    },
+    // PHYSIOLOGY (ALL)
+    vo2max: {
+        title: "VO₂ Max Trend",
+        sport: "All",
+        icon: "fa-heart-pulse",
+        colorVar: "var(--color-all)",
+        refMin: 45, refMax: 60,
+        invertRanges: false,
+        rangeInfo: "45 – 60+",
+        description: "Your aerobic ceiling. An upward trend proves your cardiovascular engine is growing.",
+        improvement: "• VO2 Max Intervals (3-5m)<br>• Years of Consistency"
+    },
+    tss: {
+        title: "Weekly TSS Load",
+        sport: "All",
+        icon: "fa-layer-group",
+        colorVar: "var(--color-all)",
+        refMin: 300, refMax: 600,
+        invertRanges: false,
+        rangeInfo: "300 – 600 TSS",
+        description: "Total physiological load. Rising TSS with stable fatigue indicates increased work capacity.",
+        improvement: "• Increase Volume<br>• Increase Intensity (IF)"
     },
     anaerobic: {
         title: "Anaerobic Impact",
-        icon: "fa-fire", styleClass: "text-red-500",
+        sport: "All",
+        icon: "fa-fire",
+        colorVar: "#ef4444", // Keep Red for Intensity
         refMin: 2.0, refMax: 4.0,
         invertRanges: false,
-        rangeInfo: "<strong>Target: 2.0 – 4.0+</strong><br>On Interval Days.",
-        description: "<strong>The Intensity Check.</strong><br>Are you hitting the high notes?",
-        improvement: "• <strong>Sprints:</strong> All-out 30s efforts."
+        rangeInfo: "2.0 – 4.0 (Intervals)",
+        description: "Training Effect on interval days. Ensures you are hitting the high-intensity stimulus needed for growth.",
+        improvement: "• All-out Sprints<br>• Full Recovery Between Sets"
     }
 };
 
-// --- TRIGGER FUNCTIONS ---
-window.showRangeTooltip = (evt, key) => {
+// --- CONSOLIDATED TOOLTIP TRIGGER ---
+window.showAnalysisTooltip = (evt, key) => {
     const def = METRIC_DEFINITIONS[key];
-    const html = `
-        <div class="space-y-3">
-            <h4 class="text-white font-bold border-b border-slate-700 pb-2 flex items-center gap-2">
-                <i class="fa-solid fa-crosshairs text-emerald-400"></i> Target Range
-            </h4>
-            <div class="text-[11px] text-slate-300 leading-relaxed">${def.rangeInfo}</div>
-            <div class="text-[9px] text-slate-500 text-center pt-1 italic">Click to close</div>
-        </div>`;
-    manageTooltip(evt, 'metric-ranges-popup', html, 'static');
-};
+    
+    // Range Bar Logic
+    const rangeColor = def.invertRanges 
+        ? "bg-gradient-to-r from-emerald-500 to-red-500" 
+        : "bg-gradient-to-r from-red-500 to-emerald-500";
 
-window.showInfoTooltip = (evt, key) => {
-    const def = METRIC_DEFINITIONS[key];
     const html = `
-        <div class="space-y-3">
-            <h4 class="text-white font-bold border-b border-slate-700 pb-2 flex items-center gap-2">
-                <i class="fa-solid fa-circle-info text-blue-400"></i> ${def.title}
-            </h4>
-            <div class="text-[11px] text-slate-300">${def.description}</div>
-            <div class="text-[11px] text-emerald-400 bg-emerald-500/10 p-2 rounded border border-emerald-500/20">
-                <strong>Improvement:</strong><br>${def.improvement}
+        <div class="w-[280px] space-y-3">
+            <div class="flex items-center gap-2 border-b border-slate-700 pb-2">
+                <i class="fa-solid ${def.icon} text-lg" style="color: ${def.colorVar}"></i>
+                <div>
+                    <h4 class="text-white font-bold text-sm leading-none">${def.title}</h4>
+                    <span class="text-[10px] text-slate-400 font-mono">${def.sport.toUpperCase()} METRIC</span>
+                </div>
             </div>
-            <div class="text-[9px] text-slate-500 text-center pt-1 italic">Click to close</div>
+
+            <div class="text-xs text-slate-300 leading-relaxed">
+                ${def.description}
+            </div>
+
+            <div class="bg-slate-800/50 rounded p-2 border border-slate-700">
+                <div class="flex justify-between items-end mb-1">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Target Range</span>
+                    <span class="text-xs font-mono font-bold text-emerald-400">${def.rangeInfo}</span>
+                </div>
+                <div class="h-1.5 w-full rounded-full ${rangeColor} opacity-80"></div>
+                <div class="flex justify-between text-[8px] text-slate-500 mt-1 font-mono">
+                    <span>${def.invertRanges ? "Lower is Better" : "Floor"}</span>
+                    <span>${def.invertRanges ? "Ceiling" : "Higher is Better"}</span>
+                </div>
+            </div>
+
+            <div>
+                <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wide">How to Improve</span>
+                <div class="text-[11px] text-slate-400 mt-1 pl-2 border-l-2 border-blue-500/30">
+                    ${def.improvement}
+                </div>
+            </div>
+            
+            <div class="text-[9px] text-slate-600 text-center pt-1 italic">Click anywhere to close</div>
         </div>`;
+    
     manageTooltip(evt, 'metric-info-popup', html, 'static');
 };
 
-window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
+window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown, colorVar) => {
     const html = `
-        <div class="text-center">
+        <div class="text-center min-w-[100px]">
             <div class="text-[10px] text-slate-400 mb-1 border-b border-slate-700 pb-1">${date}</div>
             <div class="text-white font-bold text-xs mb-1">${name}</div>
-            <div class="text-emerald-400 font-mono font-bold text-lg">${val} <span class="text-[10px] text-slate-500">${unitLabel}</span></div>
+            <div class="font-mono font-bold text-xl" style="color: ${colorVar}">${val} <span class="text-[10px] text-slate-500">${unitLabel}</span></div>
             ${breakdown ? `<div class="text-[10px] text-slate-300 font-mono bg-slate-800 rounded px-2 py-0.5 mt-1 border border-slate-700">${breakdown}</div>` : ''}
         </div>`;
     manageTooltip(evt, 'metric-tooltip-popup', html, 'data');
@@ -253,16 +278,22 @@ const calculateTrendline = (dataPoints) => {
     return { startVal: intercept, endVal: intercept + slope * (n - 1) };
 };
 
-const buildMetricChart = (dataPoints, key, color, unitLabel) => {
+const buildMetricChart = (dataPoints, key) => {
     const def = METRIC_DEFINITIONS[key];
+    const unitLabel = def.rangeInfo.split(' ').pop(); // Extract unit from range string
+    const color = def.colorVar;
+
     if (!dataPoints || dataPoints.length < 2) {
         return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 h-full flex flex-col justify-between">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <h3 class="text-xs font-bold text-white flex items-center gap-2"><i class="fa-solid ${def.icon} ${def.styleClass}"></i> ${def.title}</h3>
+                <h3 class="text-xs font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid ${def.icon}" style="color: ${color}"></i> ${def.title}
+                </h3>
             </div>
             <div class="flex-1 flex items-center justify-center"><p class="text-xs text-slate-500 italic">No data available.</p></div>
         </div>`;
     }
+
     const width = 800, height = 150;
     const pad = { t: 20, b: 30, l: 50, r: 20 };
     const getX = (d, i) => pad.l + (i / (dataPoints.length - 1)) * (width - pad.l - pad.r);
@@ -276,21 +307,18 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
     if (def.refMax !== undefined) maxV = Math.max(maxV, def.refMax);
 
     const range = maxV - minV;
-    const buf = range * 0.1 || (maxV * 0.1); 
+    const buf = range * 0.15 || (maxV * 0.1); 
     const domainMin = Math.max(0, minV - buf);
     const domainMax = maxV + buf;
 
     const getY = (val) => height - pad.b - ((val - domainMin) / (domainMax - domainMin)) * (height - pad.t - pad.b);
 
-    // Reference Lines & Colors
+    // Reference Lines (Red/Green Logic)
     let refLinesHtml = '';
     if (def.refMin !== undefined && def.refMax !== undefined) {
         const yMin = getY(def.refMin);
         const yMax = getY(def.refMax);
         
-        // Color Logic: 
-        // Invert = True (Low is Good): Max=Red, Min=Green
-        // Invert = False (High is Good): Max=Green, Min=Red
         const colorMax = def.invertRanges ? '#ef4444' : '#10b981'; // Red or Green
         const colorMin = def.invertRanges ? '#10b981' : '#ef4444'; // Green or Red
 
@@ -302,34 +330,38 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
         }
     }
 
-    // Axis & Labels
+    // Axis
     const yAxisLine = `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" stroke="#475569" stroke-width="1" />`;
     const yMid = (domainMin + domainMax) / 2;
     const axisLabelsHtml = `
-        <text x="${pad.l - 5}" y="${getY(domainMax) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMax.toFixed(1)}</text>
-        <text x="${pad.l - 5}" y="${getY(yMid) + 4}" text-anchor="end" font-size="9" fill="#64748b">${yMid.toFixed(1)}</text>
-        <text x="${pad.l - 5}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(1)}</text>
+        <text x="${pad.l - 6}" y="${getY(domainMax) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMax.toFixed(1)}</text>
+        <text x="${pad.l - 6}" y="${getY(yMid) + 4}" text-anchor="end" font-size="9" fill="#64748b">${yMid.toFixed(1)}</text>
+        <text x="${pad.l - 6}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(1)}</text>
     `;
 
-    // Data Drawing
+    // Trend & Points
     const trend = calculateTrendline(dataPoints);
-    let trendHtml = trend ? `<line x1="${getX(null, 0)}" y1="${getY(trend.startVal)}" x2="${getX(null, dataPoints.length - 1)}" y2="${getY(trend.endVal)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.4" />` : '';
+    let trendHtml = trend ? `<line x1="${getX(null, 0)}" y1="${getY(trend.startVal)}" x2="${getX(null, dataPoints.length - 1)}" y2="${getY(trend.endVal)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5" />` : '';
     
     let pathD = `M ${getX(dataPoints[0], 0)} ${getY(dataPoints[0].val)}`;
     let pointsHtml = '';
     dataPoints.forEach((d, i) => {
         const x = getX(d, i), y = getY(d.val);
         pathD += ` L ${x} ${y}`;
-        pointsHtml += `<circle cx="${x}" cy="${y}" r="3.5" fill="#0f172a" stroke="${color}" stroke-width="2" class="cursor-pointer hover:stroke-white transition-all" onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown || ""}')"></circle>`;
+        pointsHtml += `<circle cx="${x}" cy="${y}" r="3.5" fill="#0f172a" stroke="${color}" stroke-width="2" class="cursor-pointer hover:stroke-white transition-all" onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown || ""}', '${color}')"></circle>`;
     });
 
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 h-full flex flex-col hover:border-slate-600 transition-colors">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <h3 class="text-xs font-bold text-white flex items-center gap-2"><i class="fa-solid ${def.icon} ${def.styleClass}"></i> ${def.title}</h3>
                 <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-crosshairs text-slate-500 hover:text-emerald-400 cursor-pointer text-[11px]" onclick="window.showRangeTooltip(event, '${key}')"></i>
-                    <i class="fa-solid fa-circle-info text-slate-500 hover:text-blue-400 cursor-pointer text-[11px]" onclick="window.showInfoTooltip(event, '${key}')"></i>
+                    <div class="w-6 h-6 rounded flex items-center justify-center bg-slate-800 border border-slate-700">
+                        <i class="fa-solid ${def.icon} text-xs" style="color: ${color}"></i>
+                    </div>
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wide">${def.title}</h3>
+                </div>
+                <div class="cursor-pointer text-slate-500 hover:text-blue-400 transition-colors" onclick="window.showAnalysisTooltip(event, '${key}')">
+                    <i class="fa-solid fa-circle-info text-sm"></i>
                 </div>
             </div>
             <div class="flex-1 w-full h-[120px]">
@@ -338,7 +370,7 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
                     ${axisLabelsHtml}
                     ${refLinesHtml}
                     ${trendHtml}
-                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.8" />
+                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9" />
                     ${pointsHtml}
                 </svg>
             </div>
@@ -346,7 +378,7 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
     `;
 };
 
-// --- DATA AGGREGATION HELPERS ---
+// --- DATA AGGREGATION ---
 const aggregateWeeklyTSS = (data) => {
     const weeks = {};
     data.forEach(d => {
@@ -384,24 +416,41 @@ const updateMetricsCharts = () => {
         return labels.some(allowed => l === allowed.toUpperCase());
     };
 
+    // 1. EFFICIENCY (BIKE)
     const efData = filteredData.filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr:${Math.round(d.avgPower)} / HR:${Math.round(d.avgHR)}` }));
 
     const torqueData = filteredData.filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr:${Math.round(d.avgPower)} / RPM:${Math.round(d.avgCadence)}` }));
 
+    // 2. RUN ECONOMY (Fixed Calculation: Meters / Beat)
     const runEconData = filteredData.filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0)
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace:${Math.round(d.avgSpeed * 60)} m/m / HR:${Math.round(d.avgHR)}` }));
+        .map(d => {
+            // avgSpeed is m/s. 
+            // m/min = speed * 60.
+            // m/beat = (m/min) / bpm
+            const metersPerMin = d.avgSpeed * 60;
+            const metersPerBeat = metersPerMin / d.avgHR;
+            return { 
+                date: d.date, 
+                dateStr: d.date.toISOString().split('T')[0], 
+                name: d.actualName, 
+                val: metersPerBeat, 
+                breakdown: `Pace:${Math.round(metersPerMin)}m/m / HR:${Math.round(d.avgHR)}` 
+            };
+        });
 
     const mechData = filteredData.filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd:${d.avgSpeed.toFixed(1)} / Pwr:${Math.round(d.avgPower)}` }));
 
+    // 3. CAPACITY
     const vo2Data = filteredData.filter(d => d.vO2MaxValue > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: "VO2 Estimate", val: parseFloat(d.vO2MaxValue), breakdown: `Score: ${d.vO2MaxValue}` }));
 
     const fullTss = aggregateWeeklyTSS(cachedData);
     const tssData = fullTss.filter(d => d.date >= cutoff);
 
+    // 4. RUN DYNAMICS
     const gctData = filteredData.filter(d => d.actualType === 'Run' && d.avgGroundContactTime > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgGroundContactTime), breakdown: `${Math.round(d.avgGroundContactTime)} ms` }));
 
@@ -411,20 +460,20 @@ const updateMetricsCharts = () => {
     const anaData = filteredData.filter(d => d.anaerobicTrainingEffect > 0.5)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.anaerobicTrainingEffect), breakdown: `Anaerobic: ${d.anaerobicTrainingEffect}` }));
 
-    const render = (id, data, key, color, unit) => {
+    const render = (id, data, key) => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = buildMetricChart(data, key, color, unit);
+        if (el) el.innerHTML = buildMetricChart(data, key);
     };
 
-    render('metric-chart-endurance', efData, 'endurance', '#10b981', 'EF');
-    render('metric-chart-strength', torqueData, 'strength', '#8b5cf6', 'Idx');
-    render('metric-chart-economy', runEconData, 'run', '#ec4899', 'Idx');
-    render('metric-chart-mechanics', mechData, 'mechanical', '#f97316', 'Idx');
-    render('metric-chart-vo2', vo2Data, 'vo2max', '#a855f7', '');
-    render('metric-chart-tss', tssData, 'tss', '#3b82f6', 'TSS');
-    render('metric-chart-gct', gctData, 'gct', '#f59e0b', 'ms');
-    render('metric-chart-vert', vertData, 'vert', '#ec4899', 'cm');
-    render('metric-chart-anaerobic', anaData, 'anaerobic', '#ef4444', 'TE');
+    render('metric-chart-endurance', efData, 'endurance');
+    render('metric-chart-strength', torqueData, 'strength');
+    render('metric-chart-economy', runEconData, 'run');
+    render('metric-chart-mechanics', mechData, 'mechanical');
+    render('metric-chart-vo2', vo2Data, 'vo2max');
+    render('metric-chart-tss', tssData, 'tss');
+    render('metric-chart-gct', gctData, 'gct');
+    render('metric-chart-vert', vertData, 'vert');
+    render('metric-chart-anaerobic', anaData, 'anaerobic');
 
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
@@ -473,7 +522,6 @@ export function renderMetrics(allData) {
         </div>
 
         <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity absolute pointer-events-auto cursor-pointer"></div>
-        <div id="metric-info-popup" class="z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity absolute pointer-events-auto cursor-pointer max-w-[300px]"></div>
-        <div id="metric-ranges-popup" class="z-50 bg-slate-800 border border-emerald-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity absolute pointer-events-auto cursor-pointer max-w-[250px]"></div>
+        <div id="metric-info-popup" class="z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity absolute pointer-events-auto cursor-pointer max-w-[320px]"></div>
     `;
 }
