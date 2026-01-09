@@ -52,19 +52,24 @@ def run_garmin_fetch():
 def git_push_changes():
     print("🐙 Pushing changes to GitHub...")
     try:
-        # Include the JSON file in the push so your archive grows on GitHub
+        # 1. Set the identity so GitHub knows who is committing
+        subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
+        subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
+        
+        # 2. Add all modified files (Database, Plan, and Garmin JSON)
         subprocess.run(["git", "add", MASTER_DB, PLAN_FILE, GARMIN_JSON], check=True)
         
-        # Check if anything is actually staged
-        diff_check = subprocess.run(["git", "diff", "--cached", "--quiet"])
+        # 3. Check if there are actually changes to avoid 'empty commit' errors
+        status = subprocess.run(["git", "diff", "--cached", "--quiet"])
         
-        if diff_check.returncode == 1: # 1 means changes exist
+        if status.returncode == 1: # 1 means there ARE changes to commit
             msg = f"Auto-Sync: Training Data {datetime.now().strftime('%Y-%m-%d')}"
             subprocess.run(["git", "commit", "-m", msg], check=True)
             subprocess.run(["git", "push"], check=True)
             print("✅ Successfully pushed to GitHub!")
         else:
-            print("ℹ️ No new data found. Skipping push.")
+            print("ℹ️ No changes detected in Master DB or Plan. Skipping push.")
+            
     except Exception as e:
         print(f"⚠️ Git Push Failed: {e}")
 
@@ -229,6 +234,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
