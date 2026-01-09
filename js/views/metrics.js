@@ -5,29 +5,15 @@ let metricsState = { timeRange: '6m' };
 let cachedData = [];
 
 // --- TOOLTIP STATE MANAGER ---
-let activeTooltips = {
-    data: null,   // Chart dots
-    static: null  // Analysis icon
-};
-let tooltipTimers = {
-    data: null,
-    static: null
-};
+let activeTooltips = { data: null, static: null };
+let tooltipTimers = { data: null, static: null };
 
 const closeTooltip = (channel) => {
-    if (channel === 'all') {
-        closeTooltip('data');
-        closeTooltip('static');
-        return;
-    }
-
+    if (channel === 'all') { closeTooltip('data'); closeTooltip('static'); return; }
     const active = activeTooltips[channel];
     if (active) {
         const el = document.getElementById(active.id);
-        if (el) {
-            el.classList.add('opacity-0', 'pointer-events-none');
-            el.innerHTML = ''; 
-        }
+        if (el) { el.classList.add('opacity-0', 'pointer-events-none'); el.innerHTML = ''; }
         activeTooltips[channel] = null;
         if (tooltipTimers[channel]) clearTimeout(tooltipTimers[channel]);
     }
@@ -37,71 +23,49 @@ const manageTooltip = (evt, id, contentHTML, channel) => {
     evt.stopPropagation(); 
     const triggerEl = evt.target;
 
-    // Toggle: If clicking the exact same trigger, close it.
     if (activeTooltips[channel] && activeTooltips[channel].trigger === triggerEl) {
         closeTooltip(channel);
         return;
     }
-
-    // Switch: Close *current* channel's old tooltip
-    closeTooltip(channel);
     
+    closeTooltip(channel);
+
     const tooltip = document.getElementById(id);
     if (!tooltip) return;
 
     tooltip.innerHTML = contentHTML;
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
 
-    // --- INITIAL POSITIONING ---
     const x = evt.pageX;
     const y = evt.pageY;
     const viewportWidth = window.innerWidth;
 
-    // Horizontal Flip
     if (x > viewportWidth * 0.6) {
-        tooltip.style.right = `${viewportWidth - x + 10}px`;
-        tooltip.style.left = 'auto';
+        tooltip.style.right = `${viewportWidth - x + 10}px`; tooltip.style.left = 'auto';
     } else {
-        tooltip.style.left = `${x + 10}px`;
-        tooltip.style.right = 'auto';
+        tooltip.style.left = `${x + 10}px`; tooltip.style.right = 'auto';
     }
     
-    // Vertical Stacking (Initial Guess)
-    if (channel === 'data') {
-        tooltip.style.top = `${y - tooltip.offsetHeight - 20}px`; // Above
-    } else {
-        tooltip.style.top = `${y + 25}px`; // Below
-    }
-
-    // --- COLLISION AVOIDANCE ---
+    // Vertical Collision Avoidance
     const otherChannel = channel === 'data' ? 'static' : 'data';
     const otherActive = activeTooltips[otherChannel];
     
+    // Default Positions
+    let topPos = channel === 'data' ? y - tooltip.offsetHeight - 20 : y + 25;
+
     if (otherActive) {
         const otherEl = document.getElementById(otherActive.id);
         if (otherEl && !otherEl.classList.contains('opacity-0')) {
-            const r1 = tooltip.getBoundingClientRect();
             const r2 = otherEl.getBoundingClientRect();
-
-            // Check overlap
-            const overlap = !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
-
-            if (overlap) {
-                // Shift the CURRENT tooltip away from the existing one
-                let currentTop = parseFloat(tooltip.style.top);
-                if (channel === 'data') {
-                    // Move Data higher
-                    tooltip.style.top = `${currentTop - r2.height - 10}px`;
-                } else {
-                    // Move Static lower
-                    tooltip.style.top = `${currentTop + r2.height + 10}px`;
-                }
+            // Simple logic: If we are 'static' (bottom) and 'data' (top) is open, push down
+            if (channel === 'static' && (y - r2.bottom < 50)) {
+                topPos = Math.max(topPos, r2.bottom + window.scrollY + 10);
             }
         }
     }
+    tooltip.style.top = `${topPos}px`;
 
     activeTooltips[channel] = { id, trigger: triggerEl };
-
     if (tooltipTimers[channel]) clearTimeout(tooltipTimers[channel]);
     tooltipTimers[channel] = setTimeout(() => closeTooltip(channel), 15000);
 };
@@ -111,13 +75,8 @@ window.addEventListener('click', (e) => {
         const active = activeTooltips[channel];
         if (active) {
             const tooltipEl = document.getElementById(active.id);
-            if (tooltipEl && tooltipEl.contains(e.target)) {
-                closeTooltip(channel);
-                return;
-            }
-            if (e.target !== active.trigger) {
-                closeTooltip(channel);
-            }
+            if (tooltipEl && tooltipEl.contains(e.target)) { closeTooltip(channel); return; }
+            if (e.target !== active.trigger) closeTooltip(channel);
         }
     });
 });
@@ -127,119 +86,69 @@ window.toggleMetricsTime = (range) => {
     updateMetricsCharts();
 };
 
-window.hideMetricTooltip = () => {
-    closeTooltip('all');
-};
+window.hideMetricTooltip = () => { closeTooltip('all'); };
 
 // --- DEFINITIONS ---
 const METRIC_DEFINITIONS = {
     endurance: {
-        title: "Aerobic Efficiency",
-        sport: "Bike",
-        icon: "fa-heart-pulse",
-        colorVar: "var(--color-bike)",
-        refMin: 1.30, refMax: 1.70,
-        invertRanges: false,
-        rangeInfo: "1.30 – 1.70 EF",
+        title: "Aerobic Efficiency", sport: "Bike", icon: "fa-heart-pulse", colorVar: "var(--color-bike)",
+        refMin: 1.30, refMax: 1.70, invertRanges: false, rangeInfo: "1.30 – 1.70 EF",
         description: "Watts produced per heartbeat. Rising values mean your engine is getting more efficient.",
         improvement: "• Long Z2 Rides<br>• Consistent Volume"
     },
     strength: {
-        title: "Torque Efficiency",
-        sport: "Bike",
-        icon: "fa-bolt",
-        colorVar: "var(--color-bike)",
-        refMin: 2.5, refMax: 3.5,
-        invertRanges: false,
-        rangeInfo: "2.5 – 3.5 W/RPM",
+        title: "Torque Efficiency", sport: "Bike", icon: "fa-bolt", colorVar: "var(--color-bike)",
+        refMin: 2.5, refMax: 3.5, invertRanges: false, rangeInfo: "2.5 – 3.5 W/RPM",
         description: "Watts per Revolution. High values indicate strong muscular force application.",
         improvement: "• Low Cadence Intervals (50-60 RPM)<br>• Seated Climbing"
     },
     run: {
-        title: "Running Economy",
-        sport: "Run",
-        icon: "fa-gauge-high",
-        colorVar: "var(--color-run)",
-        refMin: 1.0, refMax: 1.6,
-        invertRanges: false,
-        rangeInfo: "1.0 – 1.6 m/beat",
-        description: "Distance traveled per heartbeat. A higher number means you run faster at a lower cardiac cost.",
+        title: "Running Economy", sport: "Run", icon: "fa-gauge-high", colorVar: "var(--color-run)",
+        refMin: 1.0, refMax: 1.6, invertRanges: false, rangeInfo: "1.0 – 1.6 m/beat",
+        description: "Distance traveled per heartbeat. Higher is better.",
         improvement: "• Strides & Hill Sprints<br>• Plyometrics"
     },
     mechanical: {
-        title: "Mechanical Stiffness",
-        sport: "Run",
-        icon: "fa-ruler-horizontal",
-        colorVar: "var(--color-run)",
-        refMin: 0.75, refMax: 0.95,
-        invertRanges: false,
-        rangeInfo: "0.75 – 0.95 Ratio",
-        description: "Ratio of Speed vs. Power. Indicates how well you convert raw power into forward motion.",
+        title: "Mechanical Stiffness", sport: "Run", icon: "fa-ruler-horizontal", colorVar: "var(--color-run)",
+        refMin: 0.75, refMax: 0.95, invertRanges: false, rangeInfo: "0.75 – 0.95 Ratio",
+        description: "Ratio of Speed vs. Power. Indicates conversion of power to forward motion.",
         improvement: "• High Cadence (170+)<br>• Form Drills (A-Skips)"
     },
     gct: {
-        title: "Ground Contact Time",
-        sport: "Run",
-        icon: "fa-stopwatch",
-        colorVar: "var(--color-run)",
-        refMin: 220, refMax: 260,
-        invertRanges: true, // Lower is Better
-        rangeInfo: "< 260 ms",
-        description: "Time spent on the ground each step. Lower values indicate better tendon elasticity.",
+        title: "Ground Contact Time", sport: "Run", icon: "fa-stopwatch", colorVar: "var(--color-run)",
+        refMin: 220, refMax: 260, invertRanges: true, rangeInfo: "< 260 ms",
+        description: "Time spent on the ground. Lower is better (more elastic).",
         improvement: "• Increase Cadence<br>• 'Hot Coals' Imagery"
     },
     vert: {
-        title: "Vertical Oscillation",
-        sport: "Run",
-        icon: "fa-arrows-up-down",
-        colorVar: "var(--color-run)",
-        refMin: 6.0, refMax: 9.0,
-        invertRanges: true, // Lower is Better
-        rangeInfo: "6.0 – 9.0 cm",
-        description: "Vertical bounce. Too much bounce wastes energy moving UP instead of FORWARD.",
+        title: "Vertical Oscillation", sport: "Run", icon: "fa-arrows-up-down", colorVar: "var(--color-run)",
+        refMin: 6.0, refMax: 9.0, invertRanges: true, rangeInfo: "6.0 – 9.0 cm",
+        description: "Vertical bounce. Lower is usually more efficient.",
         improvement: "• Core Stability<br>• Hill Repeats"
     },
     vo2max: {
-        title: "VO₂ Max Trend",
-        sport: "All",
-        icon: "fa-lungs",
-        colorVar: "var(--color-all)",
-        refMin: 45, refMax: 60,
-        invertRanges: false,
-        rangeInfo: "45 – 60+",
-        description: "Your aerobic ceiling. An upward trend proves your cardiovascular engine is growing.",
-        improvement: "• VO2 Max Intervals (3-5m)<br>• Years of Consistency"
+        title: "VO₂ Max Trend", sport: "All", icon: "fa-lungs", colorVar: "var(--color-all)",
+        refMin: 45, refMax: 60, invertRanges: false, rangeInfo: "45 – 60+",
+        description: "Aerobic ceiling. Upward trend = engine growth.",
+        improvement: "• VO2 Max Intervals<br>• Consistency"
     },
     tss: {
-        title: "Weekly TSS Load",
-        sport: "All",
-        icon: "fa-layer-group",
-        colorVar: "var(--color-all)",
-        refMin: 300, refMax: 600,
-        invertRanges: false,
-        rangeInfo: "300 – 600 TSS",
-        description: "Total physiological load. Rising TSS with stable fatigue indicates increased work capacity.",
-        improvement: "• Increase Volume<br>• Increase Intensity (IF)"
+        title: "Weekly TSS Load", sport: "All", icon: "fa-layer-group", colorVar: "var(--color-all)",
+        refMin: 300, refMax: 600, invertRanges: false, rangeInfo: "300 – 600 TSS",
+        description: "Total physiological load.",
+        improvement: "• Increase Volume<br>• Increase Intensity"
     },
     anaerobic: {
-        title: "Anaerobic Impact",
-        sport: "All",
-        icon: "fa-fire",
-        colorVar: "var(--color-all)",
-        refMin: 2.0, refMax: 4.0,
-        invertRanges: false,
-        rangeInfo: "2.0 – 4.0 (Intervals)",
-        description: "Training Effect on interval days. Ensures you are hitting the high-intensity stimulus needed for growth.",
-        improvement: "• All-out Sprints<br>• Full Recovery Between Sets"
+        title: "Anaerobic Impact", sport: "All", icon: "fa-fire", colorVar: "var(--color-all)",
+        refMin: 2.0, refMax: 4.0, invertRanges: false, rangeInfo: "2.0 – 4.0",
+        description: "Intensity stimulus on hard days.",
+        improvement: "• All-out Sprints<br>• Full Recovery"
     }
 };
 
 window.showAnalysisTooltip = (evt, key) => {
     const def = METRIC_DEFINITIONS[key];
-    const rangeColor = def.invertRanges 
-        ? "bg-gradient-to-r from-emerald-500 to-red-500" 
-        : "bg-gradient-to-r from-red-500 to-emerald-500";
-
+    const rangeColor = def.invertRanges ? "bg-gradient-to-r from-emerald-500 to-red-500" : "bg-gradient-to-r from-red-500 to-emerald-500";
     const html = `
         <div class="w-[280px] space-y-3 cursor-pointer">
             <div class="flex items-center gap-2 border-b border-slate-700 pb-2">
@@ -257,8 +166,8 @@ window.showAnalysisTooltip = (evt, key) => {
                 </div>
                 <div class="h-1.5 w-full rounded-full ${rangeColor} opacity-80"></div>
                 <div class="flex justify-between text-[8px] text-slate-500 mt-1 font-mono">
-                    <span>${def.invertRanges ? "Lower is Better" : "Floor"}</span>
-                    <span>${def.invertRanges ? "Ceiling" : "Higher is Better"}</span>
+                    <span>${def.invertRanges ? "Low (Good)" : "Floor"}</span>
+                    <span>${def.invertRanges ? "High (Bad)" : "Ceiling"}</span>
                 </div>
             </div>
             <div>
@@ -281,9 +190,54 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown, colorVar
     manageTooltip(evt, 'metric-tooltip-popup', html, 'data');
 };
 
+// --- DATA HELPERS ---
+const aggregateWeeklyTSS = (data) => {
+    const weeks = {};
+    data.forEach(d => {
+        if (!d.trainingStressScore || d.trainingStressScore === 0) return;
+        const date = new Date(d.date);
+        const day = date.getDay(); 
+        const diff = date.getDate() - day + (day === 0 ? 0 : 7); 
+        const weekEnd = new Date(date.setDate(diff));
+        weekEnd.setHours(0,0,0,0);
+        const key = weekEnd.toISOString().split('T')[0];
+        if (!weeks[key]) weeks[key] = 0;
+        weeks[key] += parseFloat(d.trainingStressScore);
+    });
+    return Object.keys(weeks).sort().map(k => ({
+        date: new Date(k),
+        dateStr: `Week Ending ${k}`,
+        name: "Weekly Load",
+        val: weeks[k],
+        breakdown: `Total TSS: ${Math.round(weeks[k])}`
+    }));
+};
+
+const getMetricData = (key) => {
+    const d = cachedData;
+    const isInt = (item, labels) => {
+        const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
+        return labels.some(allowed => l === allowed.toUpperCase());
+    };
+
+    switch(key) {
+        case 'endurance': return d.filter(x => x.actualType === 'Bike' && x.avgPower > 0 && x.avgHR > 0 && isInt(x, ['AEROBIC_BASE', 'RECOVERY'])).map(x => ({ val: x.avgPower / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / HR:${Math.round(x.avgHR)}` }));
+        case 'strength': return d.filter(x => x.actualType === 'Bike' && x.avgPower > 0 && x.avgCadence > 0 && isInt(x, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY'])).map(x => ({ val: x.avgPower / x.avgCadence, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / RPM:${Math.round(x.avgCadence)}` }));
+        case 'run': return d.filter(x => x.actualType === 'Run' && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pace:${Math.round(x.avgSpeed*60)}m/m / HR:${Math.round(x.avgHR)}` }));
+        case 'mechanical': return d.filter(x => x.actualType === 'Run' && x.avgSpeed > 0 && x.avgPower > 0).map(x => ({ val: (x.avgSpeed * 100) / x.avgPower, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${x.avgSpeed.toFixed(1)} / Pwr:${Math.round(x.avgPower)}` }));
+        case 'gct': return d.filter(x => x.actualType === 'Run' && x.avgGroundContactTime > 0).map(x => ({ val: x.avgGroundContactTime, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${Math.round(x.avgGroundContactTime)} ms` }));
+        case 'vert': return d.filter(x => x.actualType === 'Run' && x.avgVerticalOscillation > 0).map(x => ({ val: x.avgVerticalOscillation, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${x.avgVerticalOscillation.toFixed(1)} cm` }));
+        case 'vo2max': return d.filter(x => x.vO2MaxValue > 0).map(x => ({ val: x.vO2MaxValue, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: "VO2 Est", breakdown: `Score: ${x.vO2MaxValue}` }));
+        case 'anaerobic': return d.filter(x => x.anaerobicTrainingEffect > 0.5).map(x => ({ val: x.anaerobicTrainingEffect, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Anaerobic: ${x.anaerobicTrainingEffect}` }));
+        case 'tss': return aggregateWeeklyTSS(d);
+        default: return [];
+    }
+};
+
+// --- TREND LOGIC ---
 const calculateTrend = (dataPoints) => {
     const n = dataPoints.length;
-    if (n < 2) return null;
+    if (n < 3) return null;
     let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
     for (let i = 0; i < n; i++) {
         sumX += i; sumY += dataPoints[i].val;
@@ -291,61 +245,129 @@ const calculateTrend = (dataPoints) => {
     }
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
-    const startVal = intercept;
-    const endVal = intercept + slope * (n - 1);
-    return { slope, startVal, endVal };
+    return { slope, startVal: intercept, endVal: intercept + slope * (n - 1) };
 };
 
-const buildTrendIndicators = (fullData, def) => {
+const getTrendIcon = (slope, invert) => {
+    if (Math.abs(slope) < 0.001) return { icon: 'fa-arrow-right', color: 'text-slate-500' };
+    const isUp = slope > 0;
+    const isGood = invert ? !isUp : isUp;
+    return {
+        icon: isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down',
+        color: isGood ? 'text-emerald-400' : 'text-red-400'
+    };
+};
+
+// --- TABLE BUILDER ---
+const buildSummaryTable = () => {
+    let rows = '';
     const now = new Date();
-    
-    const getSlope = (days) => {
-        const cutoff = new Date();
-        cutoff.setDate(now.getDate() - days);
-        const subset = fullData.filter(d => d.date >= cutoff);
-        if (subset.length < 3) return { dir: 'flat', val: 0 }; 
-        const trend = calculateTrend(subset);
-        if (!trend) return { dir: 'flat', val: 0 };
-        const slope = trend.slope;
-        if (Math.abs(slope) < 0.001) return { dir: 'flat', val: slope };
-        return { dir: slope > 0 ? 'up' : 'down', val: slope };
-    };
 
-    const t30 = getSlope(30);
-    const t90 = getSlope(90);
-    const t6m = getSlope(180);
+    Object.keys(METRIC_DEFINITIONS).forEach(key => {
+        const def = METRIC_DEFINITIONS[key];
+        const fullData = getMetricData(key).sort((a,b) => a.date - b.date);
+        
+        if (!fullData.length) return;
 
-    const renderArrow = (trendObj, label) => {
-        let icon = 'fa-minus';
-        let color = 'text-slate-500';
-        if (trendObj.dir !== 'flat') {
-            const isUp = trendObj.dir === 'up';
-            icon = isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
-            const isGood = def.invertRanges ? !isUp : isUp;
-            color = isGood ? 'text-emerald-400' : 'text-red-400';
+        // Calculate Trends
+        const getT = (days) => {
+            const cutoff = new Date();
+            cutoff.setDate(now.getDate() - days);
+            const subset = fullData.filter(d => d.date >= cutoff);
+            const trend = calculateTrend(subset);
+            return trend ? getTrendIcon(trend.slope, def.invertRanges) : { icon: 'fa-minus', color: 'text-slate-600' };
+        };
+
+        const t30 = getT(30);
+        const t90 = getT(90);
+        const t6m = getT(180);
+
+        // Calculate Status
+        const recentSubset = fullData.filter(d => d.date >= new Date(now.getTime() - 30*24*60*60*1000));
+        let avg30 = 0;
+        let statusHtml = '<span class="text-slate-500">--</span>';
+        
+        if (recentSubset.length > 0) {
+            avg30 = recentSubset.reduce((sum, d) => sum + d.val, 0) / recentSubset.length;
+            if (def.invertRanges) {
+                // Lower is Better
+                if (avg30 <= def.refMax) statusHtml = '<span class="text-emerald-400 font-bold text-[10px] bg-emerald-900/30 px-1.5 py-0.5 rounded">✅ On Target</span>';
+                else statusHtml = '<span class="text-red-400 font-bold text-[10px] bg-red-900/30 px-1.5 py-0.5 rounded">⚠️ High</span>';
+            } else {
+                // Higher is Better
+                if (avg30 >= def.refMin) statusHtml = '<span class="text-emerald-400 font-bold text-[10px] bg-emerald-900/30 px-1.5 py-0.5 rounded">✅ On Target</span>';
+                else statusHtml = '<span class="text-red-400 font-bold text-[10px] bg-red-900/30 px-1.5 py-0.5 rounded">⚠️ Low</span>';
+            }
         }
-        return `
-            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="${label} Trend">
-                <span class="text-[8px] font-bold text-slate-400">${label}</span>
-                <i class="fa-solid ${icon} ${color} text-[8px]"></i>
-            </div>
-        `;
-    };
+
+        const iconCell = `<div class="w-6 h-6 rounded flex items-center justify-center bg-slate-800 border border-slate-700"><i class="fa-solid ${def.icon} text-xs" style="color: ${def.colorVar}"></i></div>`;
+
+        rows += `
+            <tr class="border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors">
+                <td class="px-4 py-3 flex items-center gap-3">
+                    ${iconCell}
+                    <div>
+                        <div class="font-bold text-slate-200">${def.title}</div>
+                        <div class="text-[9px] text-slate-500 font-mono">${def.rangeInfo}</div>
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-center"><i class="fa-solid ${t30.icon} ${t30.color}"></i></td>
+                <td class="px-4 py-3 text-center"><i class="fa-solid ${t90.icon} ${t90.color}"></i></td>
+                <td class="px-4 py-3 text-center"><i class="fa-solid ${t6m.icon} ${t6m.color}"></i></td>
+                <td class="px-4 py-3 text-right">${statusHtml}</td>
+            </tr>`;
+    });
 
     return `
-        <div class="flex gap-1 ml-auto">
-            ${renderArrow(t30, '30d')}
-            ${renderArrow(t90, '90d')}
-            ${renderArrow(t6m, '6m')}
-        </div>
-    `;
+        <div class="overflow-x-auto bg-slate-800/30 border border-slate-700 rounded-xl mb-8 shadow-sm">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-900/50 text-slate-400 uppercase font-bold text-[10px] tracking-wider">
+                    <tr>
+                        <th class="px-4 py-3">Metric & Target</th>
+                        <th class="px-4 py-3 text-center">30d</th>
+                        <th class="px-4 py-3 text-center">90d</th>
+                        <th class="px-4 py-3 text-center">6m</th>
+                        <th class="px-4 py-3 text-right">Current Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/50 text-slate-300">
+                    ${rows}
+                </tbody>
+            </table>
+        </div>`;
 };
 
+// --- GRAPH BUILDER ---
 const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
     const unitLabel = def.rangeInfo.split(' ').pop(); 
     const color = def.colorVar;
-    const indicatorsHtml = buildTrendIndicators(fullData, def);
+
+    // Trend Indicators
+    const now = new Date();
+    const getSlope = (days) => {
+        const cutoff = new Date();
+        cutoff.setDate(now.getDate() - days);
+        const subset = fullData.filter(d => d.date >= cutoff);
+        const trend = calculateTrend(subset);
+        return trend ? getTrendIcon(trend.slope, def.invertRanges) : { icon: 'fa-minus', color: 'text-slate-600' };
+    };
+    const t30 = getSlope(30);
+    const t90 = getSlope(90);
+    const t6m = getSlope(180);
+
+    const indicatorsHtml = `
+        <div class="flex gap-1 ml-auto">
+            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="30d Trend">
+                <span class="text-[8px] font-bold text-slate-400">30d</span><i class="fa-solid ${t30.icon} ${t30.color} text-[8px]"></i>
+            </div>
+            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="90d Trend">
+                <span class="text-[8px] font-bold text-slate-400">90d</span><i class="fa-solid ${t90.icon} ${t90.color} text-[8px]"></i>
+            </div>
+            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="6m Trend">
+                <span class="text-[8px] font-bold text-slate-400">6m</span><i class="fa-solid ${t6m.icon} ${t6m.color} text-[8px]"></i>
+            </div>
+        </div>`;
 
     if (!displayData || displayData.length < 2) {
         return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 h-full flex flex-col justify-between">
@@ -376,6 +398,7 @@ const buildMetricChart = (displayData, fullData, key) => {
 
     const getY = (val) => height - pad.b - ((val - domainMin) / (domainMax - domainMin)) * (height - pad.t - pad.b);
 
+    // Reference Lines
     let refLinesHtml = '';
     if (def.refMin !== undefined && def.refMax !== undefined) {
         const yMin = getY(def.refMin);
@@ -436,28 +459,7 @@ const buildMetricChart = (displayData, fullData, key) => {
     `;
 };
 
-const aggregateWeeklyTSS = (data) => {
-    const weeks = {};
-    data.forEach(d => {
-        if (!d.trainingStressScore || d.trainingStressScore === 0) return;
-        const date = new Date(d.date);
-        const day = date.getDay(); 
-        const diff = date.getDate() - day + (day === 0 ? 0 : 7); 
-        const weekEnd = new Date(date.setDate(diff));
-        weekEnd.setHours(0,0,0,0);
-        const key = weekEnd.toISOString().split('T')[0];
-        if (!weeks[key]) weeks[key] = 0;
-        weeks[key] += parseFloat(d.trainingStressScore);
-    });
-    return Object.keys(weeks).sort().map(k => ({
-        date: new Date(k),
-        dateStr: `Week Ending ${k}`,
-        name: "Weekly Load",
-        val: weeks[k],
-        breakdown: `Total TSS: ${Math.round(weeks[k])}`
-    }));
-};
-
+// --- MAIN RENDER ---
 const updateMetricsCharts = () => {
     if (!cachedData || cachedData.length === 0) return;
     
@@ -467,87 +469,25 @@ const updateMetricsCharts = () => {
     else if (metricsState.timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (metricsState.timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
     
-    // Full data for trends, filtered data for charts
-    const filteredData = cachedData.filter(d => d.date >= cutoff).sort((a,b) => a.date - b.date);
-    const isIntensity = (item, labels) => {
-        const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
-        return labels.some(allowed => l === allowed.toUpperCase());
-    };
+    // RENDER TABLE
+    document.getElementById('trends-table-container').innerHTML = buildSummaryTable();
 
-    // --- DATASETS (Full & Display) ---
-    const buildSet = (filterFn, mapFn) => {
-        const full = cachedData.filter(filterFn).map(mapFn).sort((a,b) => a.date - b.date);
+    // RENDER CHARTS
+    const render = (id, key) => {
+        const full = getMetricData(key).sort((a,b) => a.date - b.date);
         const display = full.filter(d => d.date >= cutoff);
-        return { full, display };
+        document.getElementById(id).innerHTML = buildMetricChart(display, full, key);
     };
 
-    const ef = buildSet(
-        d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']),
-        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr:${Math.round(d.avgPower)} / HR:${Math.round(d.avgHR)}` })
-    );
-
-    const torque = buildSet(
-        d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']),
-        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr:${Math.round(d.avgPower)} / RPM:${Math.round(d.avgCadence)}` })
-    );
-
-    const runEcon = buildSet(
-        d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0,
-        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace:${Math.round(d.avgSpeed * 60)}m/m / HR:${Math.round(d.avgHR)}` })
-    );
-
-    const mech = buildSet(
-        d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0,
-        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd:${d.avgSpeed.toFixed(1)} / Pwr:${Math.round(d.avgPower)}` })
-    );
-
-    const vo2 = buildSet(
-        d => d.vO2MaxValue > 0,
-        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: "VO2 Estimate", val: parseFloat(d.vO2MaxValue), breakdown: `Score: ${d.vO2MaxValue}` })
-    );
-
-    const fullTss = aggregateWeeklyTSS(cachedData);
-    const displayTss = fullTss.filter(d => d.date >= cutoff);
-
-    const gct = buildSet(
-        d => d.actualType === 'Run' && d.avgGroundContactTime > 0,
-        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgGroundContactTime), breakdown: `${Math.round(d.avgGroundContactTime)} ms` })
-    );
-
-    const vert = buildSet(
-        d => d.actualType === 'Run' && d.avgVerticalOscillation > 0,
-        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgVerticalOscillation), breakdown: `${d.avgVerticalOscillation.toFixed(1)} cm` })
-    );
-
-    const ana = buildSet(
-        d => d.anaerobicTrainingEffect > 0.5,
-        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.anaerobicTrainingEffect), breakdown: `Anaerobic: ${d.anaerobicTrainingEffect}` })
-    );
-
-    // --- RENDER ---
-    const render = (id, dataObj, key) => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = buildMetricChart(dataObj.display, dataObj.full, key);
-    };
-
-    // Row 1: Bike
-    render('metric-chart-endurance', ef, 'endurance');
-    render('metric-chart-strength', torque, 'strength');
-    
-    // Row 2: Run Efficiency
-    render('metric-chart-economy', runEcon, 'run');
-    render('metric-chart-mechanics', mech, 'mechanical');
-
-    // Row 3: Run Dynamics (Moved Up)
-    render('metric-chart-gct', gct, 'gct');
-    render('metric-chart-vert', vert, 'vert');
-
-    // Row 4: Physiology
-    render('metric-chart-vo2', vo2, 'vo2max');
-    render('metric-chart-tss', { full: fullTss, display: displayTss }, 'tss');
-
-    // Row 5: Intensity
-    render('metric-chart-anaerobic', ana, 'anaerobic');
+    render('metric-chart-endurance', 'endurance');
+    render('metric-chart-strength', 'strength');
+    render('metric-chart-economy', 'run');
+    render('metric-chart-mechanics', 'mechanical');
+    render('metric-chart-gct', 'gct');
+    render('metric-chart-vert', 'vert');
+    render('metric-chart-vo2', 'vo2max');
+    render('metric-chart-tss', 'tss');
+    render('metric-chart-anaerobic', 'anaerobic');
 
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
@@ -570,6 +510,8 @@ export function renderMetrics(allData) {
                 </h2>
                 <div class="flex gap-1.5">${buildToggle('30d', '30d')}${buildToggle('90d', '90d')}${buildToggle('6m', '6m')}${buildToggle('1y', '1y')}</div>
             </div>
+
+            <div id="trends-table-container"></div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div id="metric-chart-endurance"></div>
