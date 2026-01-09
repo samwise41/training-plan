@@ -1,0 +1,30 @@
+name: Sync Training Data
+on:
+  schedule:
+    - cron: '0 13,14,15 * * *' # Runs daily at 6,7 and 8:00 AM MST
+  workflow_dispatch:      # Allows you to run it manually from the "Actions" tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write     # Required to push changes back to your repo
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install pandas garminconnect PyGithub
+
+      - name: Run Migration Script
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: python python/fetch_garmin.py
