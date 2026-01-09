@@ -23,7 +23,7 @@
     const roadmapMod = await safeImport('./views/roadmap.js', 'Roadmap');
     const dashMod = await safeImport('./views/dashboard.js', 'Dashboard');
     const readinessMod = await safeImport('./views/readiness.js', 'Readiness');
-    const metricsMod = await safeImport('./views/metrics.js', 'Metrics'); // <--- CRITICAL IMPORT
+    const metricsMod = await safeImport('./views/metrics.js', 'Metrics'); 
 
     // --- 2. DESTRUCTURE FUNCTIONS ---
     const Parser = parserMod?.Parser || { parseTrainingLog: () => [], getSection: () => "" };
@@ -34,20 +34,29 @@
     const { renderDashboard } = dashMod || { renderDashboard: () => '' };
     const { renderReadiness } = readinessMod || { renderReadiness: () => '' };
     const renderReadinessChart = readinessMod?.renderReadinessChart || (() => {});
-    const { renderMetrics } = metricsMod || { renderMetrics: () => '<div class="p-4 text-red-500">Metrics Module Failed to Load</div>' }; // <--- CRITICAL EXTRACT
+    const { renderMetrics } = metricsMod || { renderMetrics: () => '<div class="p-4 text-red-500">Metrics Module Failed to Load</div>' };
 
     console.log(`📦 Modules loaded with ID: ${cacheBuster}`);
 
     const CONFIG = {
         PLAN_FILE: "endurance_plan.md",
         GEAR_FILE: "Gear.md",
-        HISTORY_FILE: "MASTER_TRAINING_DATABASE.md", 
+        HISTORY_FILE: "MASTER_TRAINING_DATABASE.md",
+        AUTH_FILE: "auth_config.json", // New config file
         WEATHER_MAP: {
             0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
             45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"], 51: ["Drizzle", "🌦️"], 61: ["Rain", "🌧️"], 63: ["Rain", "🌧️"],
             71: ["Snow", "❄️"], 95: ["Storm", "⛈️"]
         }
     };
+
+    // --- SECURITY HELPER: HASHING ---
+    async function hashString(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     const App = {
         planMd: "",
@@ -58,35 +67,66 @@
         currentTemp: null,
         hourlyWeather: null,
 
-        checkSecurity() {
+        // --- UPDATED SECURITY CHECK ---
+        async checkSecurity() {
             const curtain = document.getElementById('security-curtain');
             const input = document.getElementById('access-code');
             const btn = document.getElementById('btn-unlock');
             const errorMsg = document.getElementById('access-error');
 
+            // 1. Check Cookie First (Fast Path)
             if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
                 if (curtain) curtain.classList.add('hidden');
                 return;
             }
 
+            // 2. Show Curtain if no cookie
             if (curtain) curtain.classList.remove('hidden');
 
             if (btn && input) {
-                const unlock = () => {
-                    if (input.value.trim() === 'training2026') { 
-                        document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
-                        curtain.style.opacity = '0';
-                        setTimeout(() => curtain.classList.add('hidden'), 500);
-                    } else {
+                const unlock = async () => {
+                    const enteredPass = input.value.trim();
+                    if (!enteredPass) return;
+
+                    try {
+                        // Fetch the allowed hashes (with cache busting)
+                        const response = await fetch(`./${CONFIG.AUTH_FILE}?t=${new Date().getTime()}`);
+                        
+                        if (!response.ok) {
+                            throw new Error("Auth config missing");
+                        }
+
+                        const allowedHashes = await response.json();
+                        const userHash = await hashString(enteredPass);
+
+                        if (allowedHashes.includes(userHash)) {
+                            // Success
+                            document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
+                            curtain.style.opacity = '0';
+                            setTimeout(() => curtain.classList.add('hidden'), 500);
+                        } else {
+                            // Fail
+                            throw new Error("Invalid Password");
+                        }
+                    } catch (e) {
+                        console.error("Auth Failed:", e);
                         input.value = '';
-                        if (errorMsg) errorMsg.classList.remove('hidden');
+                        if (errorMsg) {
+                            errorMsg.classList.remove('hidden');
+                            errorMsg.innerText = "Access Denied"; 
+                        }
                         input.classList.add('border-red-500');
                         input.classList.remove('border-slate-700');
                     }
                 };
+
                 btn.onclick = unlock; 
                 input.onkeypress = (e) => { if (e.key === 'Enter') unlock(); };
-                input.oninput = () => { if (errorMsg) errorMsg.classList.add('hidden'); input.classList.remove('border-red-500'); input.classList.add('border-slate-700'); }
+                input.oninput = () => { 
+                    if (errorMsg) errorMsg.classList.add('hidden'); 
+                    input.classList.remove('border-red-500'); 
+                    input.classList.add('border-slate-700'); 
+                }
             }
         },
 
@@ -130,7 +170,8 @@
         },
 
         async init() {
-            this.checkSecurity();
+            // Await security check because fetching auth file is async
+            await this.checkSecurity();
             
             const initialHash = window.location.hash.substring(1);
             const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness', 'metrics'];
@@ -157,7 +198,6 @@
                 const planLog = Parser.parseTrainingLog(this.planMd);      
 
                 const dataMap = new Map();
-                // 1. Load Master (Priority - contains Garmin Data)
                 masterLog.forEach(item => {
                     if (item.date) {
                         const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
@@ -165,7 +205,6 @@
                     }
                 });
 
-                // 2. Merge Plan (Only if missing from Master)
                 planLog.forEach(item => {
                     if (item.date) {
                         const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
@@ -374,8 +413,6 @@
                         renderReadinessChart(this.allData); 
                     }
                     else if (view === 'metrics') {
-                        // --- THE FIX IS HERE ---
-                        // Replaced the placeholder HTML with the actual function call
                         content.innerHTML = renderMetrics(this.allData);
                     }
                     else if (view === 'logbook') {
