@@ -4,7 +4,7 @@
 let metricsState = { timeRange: '6m' };
 let cachedData = [];
 
-// --- GLOBAL TOGGLE HELPER ---
+// --- GLOBAL TOGGLE & SCROLL HELPERS ---
 if (!window.toggleSection) {
     window.toggleSection = (id) => {
         const content = document.getElementById(id);
@@ -24,6 +24,41 @@ if (!window.toggleSection) {
         }
     };
 }
+
+// NEW: Scroll to specific chart from table
+window.scrollToMetric = (key) => {
+    const sectionId = 'metrics-charts-section';
+    const chartId = `metric-chart-${key}`;
+    const section = document.getElementById(sectionId);
+    
+    // 1. Expand Section if Closed
+    if (section && section.classList.contains('max-h-0')) {
+        window.toggleSection(sectionId);
+        // Wait for transition to start/finish slightly
+        setTimeout(() => performScroll(chartId), 300);
+    } else {
+        performScroll(chartId);
+    }
+};
+
+const performScroll = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    // 2. Scroll
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // 3. Highlight Effect (Blue Glow)
+    const container = el.closest('.bg-slate-800\\/30'); // Find the card container
+    if (container) {
+        container.classList.add('ring-2', 'ring-blue-500', 'bg-slate-800');
+        container.classList.remove('bg-slate-800/30');
+        setTimeout(() => {
+            container.classList.remove('ring-2', 'ring-blue-500', 'bg-slate-800');
+            container.classList.add('bg-slate-800/30');
+        }, 1500);
+    }
+};
 
 const buildCollapsibleSection = (id, title, contentHtml, isOpen = true) => {
     const contentClasses = isOpen ? "max-h-[5000px] opacity-100 py-4 mb-8" : "max-h-0 opacity-0 py-0 mb-0";
@@ -327,7 +362,11 @@ const buildSummaryTable = () => {
             }
         }
 
-        const iconCell = `<div class="w-6 h-6 rounded flex items-center justify-center bg-slate-800 border border-slate-700"><i class="fa-solid ${def.icon} text-xs" style="color: ${def.colorVar}"></i></div>`;
+        // MAKE ICON CLICKABLE
+        const iconCell = `
+            <div onclick="window.scrollToMetric('${key}')" class="w-6 h-6 rounded flex items-center justify-center bg-slate-800 border border-slate-700 cursor-pointer hover:bg-slate-700 hover:border-slate-500 hover:scale-110 transition-all duration-200 group shadow-sm" title="Jump to Chart">
+                <i class="fa-solid ${def.icon} text-xs group-hover:text-white transition-colors" style="color: ${def.colorVar}"></i>
+            </div>`;
 
         rows += `
             <tr class="border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors">
@@ -493,7 +532,7 @@ const updateMetricsCharts = () => {
     else if (metricsState.timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (metricsState.timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
     
-    // FULL DATASETS (For Indicators)
+    const filteredData = cachedData.filter(d => d.date >= cutoff).sort((a,b) => a.date - b.date);
     const isIntensity = (item, labels) => {
         const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
         return labels.some(allowed => l === allowed.toUpperCase());
@@ -548,7 +587,6 @@ const updateMetricsCharts = () => {
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.anaerobicTrainingEffect), breakdown: `Anaerobic: ${d.anaerobicTrainingEffect}` })
     );
 
-    // RENDER CONTENT
     document.getElementById('trends-table-container').innerHTML = buildSummaryTable();
 
     const render = (id, dataObj, key) => {
