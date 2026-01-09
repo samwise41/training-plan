@@ -200,12 +200,19 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 
 | Date | FTP (Watts) | Growth |
 | :--- | :--- | :--- |
+| Dec 23, 2025 | 241 W | +1 W |
 | Sep 06, 2025 | 240 W | +5 W |
 | Jun 25, 2025 | 235 W | +15 W |
 | Jun 07, 2025 | 220 W | +5 W |
 | May 03, 2025 | 215 W | +5 W |
 | Apr 19, 2025 | 210 W | +7 W |
 | Apr 05, 2025 | 203 W | Baseline |
+
+### Historical LTHR Log
+
+| Date | LTHR (bpm) | Growth (bpm) | FTP | Growth (Pace) |
+| :--- | :--- | :--- | :--- | :--- |
+| Dec 26, 2025 | 171 bpm | Baseline | 7:45 min/mile | Baseline |
 
 ## 8. Documentation Workflow
 
@@ -237,23 +244,6 @@ To ensure the automated dashboard correctly tracks "Performance Signatures," all
 * **Focus:** Speed per Heartbeat.
 * **Keywords to use:** `Tempo`, `Threshold`, `Speed`, `Interval`, `Fartlek`, `Long`, `Base`, `Z2`.
 * **Note:** Almost all run types are tracked for economy, but ensure `Tempo` or `Speed` is used for faster sessions.
-
-## Appendix A: Naming Conventions (For Calendar Export)
-
-**Format:** `[TYPE] - Workout Name - Distance/Time`
-**Example:** `[RUN] - Endurance Run - 6 miles`
-
-## Appendix B: Fitness Test Reports
-
-### 1. 30-Min Run Field Test Analysis (Dec 26, 2025)
-
-* **LTHR:** 171 bpm
-* **Adjusted FTP:** ~7:40 – 7:45 min/mile
-
-### 2. Alpe du Zwift FTP Test Analysis (Dec 23, 2025)
-
-* **Result:** 241 Watts
-* **Finishing Kick:** >328 Watts (Final 5 mins)
 
 # Appendix E: AI Prompt
 
