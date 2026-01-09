@@ -7,11 +7,16 @@ import re
 from datetime import datetime
 
 # --- CONFIGURATION ---
-# SCRIPT_DIR is .../python/
+# SCRIPT_DIR is the 'python/' folder where this script lives
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(SCRIPT_DIR) # Go up one level to the repo root
+# ROOT_DIR is the repository root (one level up from 'python/')
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+
+# Files in the ROOT directory
 PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
+
+# Files in the PYTHON directory
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 GARMIN_FETCH_CMD = ["python", os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
 
@@ -222,4 +227,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
