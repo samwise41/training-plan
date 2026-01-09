@@ -9,9 +9,7 @@ from datetime import datetime
 # --- CONFIGURATION ---
 # SCRIPT_DIR is .../python/
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# ROOT_DIR is the parent folder where endurance_plan.md and MASTER_TRAINING_DATABASE.md live
-ROOT_DIR = os.path.dirname(SCRIPT_DIR)
-
+ROOT_DIR = os.path.dirname(SCRIPT_DIR) # Go up one level to the repo root
 PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
@@ -47,21 +45,19 @@ def run_garmin_fetch():
         print(f"⚠️ Warning: Fetch failed: {e}")
 
 def git_push_changes():
-    """GitHub Actions handles auth via the checkout action, so we just commit and push."""
-    print("🐙 Pushing changes to GitHub...")
     try:
-        subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
-        subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
+        # Add the files
         subprocess.run(["git", "add", MASTER_DB, PLAN_FILE], check=True)
-        msg = f"Auto-Sync: Master DB & Weekly Plan {datetime.now().strftime('%Y-%m-%d')}"
-        # Only commit if there are changes to avoid error
-        status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
-        if status:
+        
+        # Check if there is actually anything staged to commit
+        status = subprocess.run(["git", "diff", "--cached", "--quiet"])
+        if status.returncode == 1: # 1 means there ARE changes
+            msg = f"Auto-Sync: Data {datetime.now().strftime('%Y-%m-%d')}"
             subprocess.run(["git", "commit", "-m", msg], check=True)
             subprocess.run(["git", "push"], check=True)
             print("✅ Successfully pushed to GitHub!")
         else:
-            print("ℹ️ No changes detected, skipping push.")
+            print("ℹ️ No changes to Master or Plan. Skipping push.")
     except Exception as e:
         print(f"⚠️ Git Push Failed: {e}")
 
@@ -226,3 +222,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
