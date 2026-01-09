@@ -18,7 +18,9 @@ METRICS = {
     'swim_efficiency':    {'unit': 'm/beat', 'good': 'up', 'range': (0.3, 0.6)},
     'ground_contact':     {'unit': 'ms', 'good': 'down', 'range': (220, 260)},
     'vertical_osc':       {'unit': 'cm', 'good': 'down', 'range': (6.0, 9.0)},
-    'vo2_max':            {'unit': 'ml/kg', 'good': 'up', 'range': (45, 60)}
+    'vo2_max':            {'unit': 'ml/kg', 'good': 'up', 'range': (45, 60)},
+    'anaerobic_impact':   {'unit': 'TE', 'good': 'up', 'range': (2.0, 4.0)},
+    'weekly_tss':         {'unit': 'TSS', 'good': 'up', 'range': (300, 600)}
 }
 
 def load_data():
@@ -48,6 +50,34 @@ def analyze_metric(df, col_name, config):
     now = datetime.now()
     results = {}
     
+    # Special Handling for Weekly TSS (Needs aggregation first)
+    if col_name == 'weekly_tss':
+        # Resample daily TSS to Weekly Sum
+        if 'trainingStressScore' not in df.columns: return {'30d': 'No Data'}
+        
+        df_tss = df.dropna(subset=['trainingStressScore']).set_index('startTime_dt')
+        # Resample to Weekly ('W-MON') and sum
+        weekly_series = df_tss['trainingStressScore'].resample('W-MON').sum()
+        
+        # Analyze the weekly series
+        for days in [30, 90, 180]:
+            # Convert days to weeks for the cutoff
+            cutoff = now - timedelta(days=days)
+            subset = weekly_series[weekly_series.index >= cutoff]
+            
+            if len(subset) < 2: # Need at least 2 weeks for a trend
+                results[f'{days}d'] = "Not enough data"
+                continue
+
+            slope = calculate_slope(subset)
+            trend_desc = determine_trend(slope, config['good'])
+            avg_val = subset.mean()
+            results[f'{days}d'] = f"{trend_desc} (Avg: {avg_val:.0f})"
+            if days == 30: results['current'] = avg_val
+            
+        return results
+
+    # Standard Metrics (Activity Averages)
     if col_name not in df.columns:
         return {'30d': 'No Data', '90d': 'No Data', '6m': 'No Data'}
 
@@ -81,39 +111,51 @@ def main():
 
     df['startTime_dt'] = pd.to_datetime(df['startTimeLocal'])
     
-    # CALCULATIONS
+    # --- 1. CALCULATE DERIVED METRICS ---
+    
+    # Aerobic Efficiency (Bike)
     df['aerobic_efficiency'] = np.where(
         (df['activityType'].apply(lambda x: x.get('typeKey') in ['virtual_ride', 'road_biking'])) & (df['averageHR'] > 0),
         df['avgPower'] / df['averageHR'], np.nan
     )
     
+    # Torque Efficiency Proxy (Watts/RPM)
     df['torque_efficiency'] = np.where(
         (df['activityType'].apply(lambda x: x.get('typeKey') == 'virtual_ride')) & (df['averageBikingCadenceInRevPerMinute'] > 0),
         df['avgPower'] / df['averageBikingCadenceInRevPerMinute'], np.nan
     )
 
+    # Run Economy (m/beat)
     df['run_speed_m_min'] = df['averageSpeed'] * 60
     df['run_economy'] = np.where(
-        (df['activityType'].apply(lambda x: x.get('typeKey') == 'running')) & (df['averageHR'] > 0),
+        (df['activityType'].apply(lambda x: 'running' in x.get('typeKey'))) & (df['averageHR'] > 0),
         df['run_speed_m_min'] / df['averageHR'], np.nan
     )
 
+    # Run Stiffness
     df['run_stiffness'] = np.where(
-        (df['activityType'].apply(lambda x: x.get('typeKey') == 'running')) & (df['avgPower'] > 0),
+        (df['activityType'].apply(lambda x: 'running' in x.get('typeKey'))) & (df['avgPower'] > 0),
         (df['averageSpeed'] * 100) / df['avgPower'], np.nan
     )
 
-    # SWIM CALCULATION
+    # Swim Efficiency (Broader Filter: looks for 'swimming' anywhere in typeKey)
     df['swim_speed_m_min'] = df['averageSpeed'] * 60
     df['swim_efficiency'] = np.where(
-        (df['activityType'].apply(lambda x: x.get('typeKey') == 'swimming')) & (df['averageHR'] > 0),
+        (df['activityType'].apply(lambda x: 'swimming' in x.get('typeKey'))) & (df['averageHR'] > 0),
         df['swim_speed_m_min'] / df['averageHR'], np.nan
     )
 
+    # Map raw columns
     df['ground_contact'] = df.get('avgGroundContactTime', np.nan)
     df['vertical_osc'] = df.get('avgVerticalOscillation', np.nan)
     df['vo2_max'] = df.get('vO2MaxValue', np.nan)
+    df['anaerobic_impact'] = df.get('anaerobicTrainingEffect', np.nan)
+    
+    # Ensure TSS exists
+    if 'trainingStressScore' not in df.columns:
+        df['trainingStressScore'] = np.nan
 
+    # --- 2. GENERATE REPORT ---
     print(f"Writing briefing to: {OUTPUT_FILE}")
     with open(OUTPUT_FILE, 'w') as f:
         f.write("# 🤖 AI Coach Context Briefing\n")
@@ -130,14 +172,17 @@ def main():
             r_min, r_max = conf['range']
             
             status_icon = "✅"
-            if current < r_min: 
+            if current == 0:
+                status_icon = "⚪ No Recent Data"
+            elif current < r_min: 
                 status_icon = "⚠️ Low"
                 if conf['good'] == 'up': alerts.append(f"**{key}** is {current:.2f} (Target: >{r_min}).")
             elif current > r_max: 
                 status_icon = "⚠️ High"
                 if conf['good'] == 'down': alerts.append(f"**{key}** is {current:.2f} (Target: <{r_max}).")
             
-            f.write(f"| **{key.replace('_', ' ').title()}** | {r_min}-{r_max} {conf['unit']} | {stats.get('30d', '--')} | {stats.get('90d', '--')} | {stats.get('6m', '--')} | {status_icon} |\n")
+            unit = conf['unit']
+            f.write(f"| **{key.replace('_', ' ').title()}** | {r_min}-{r_max} {unit} | {stats.get('30d', '--')} | {stats.get('90d', '--')} | {stats.get('6m', '--')} | {status_icon} |\n")
 
         f.write("\n## 2. Actionable Alerts\n")
         if alerts:
