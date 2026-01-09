@@ -5,33 +5,45 @@ let metricsState = { timeRange: '6m' };
 let cachedData = [];
 
 // --- TOOLTIP STATE MANAGER ---
-let activeTooltip = null;
-let tooltipTimer = null;
-
-const closeTooltip = () => {
-    if (!activeTooltip) return;
-    const el = document.getElementById(activeTooltip.id);
-    if (el) {
-        el.classList.add('opacity-0', 'pointer-events-none');
-    }
-    activeTooltip = null;
-    clearTimeout(tooltipTimer);
+// We separate state into two "channels" so they don't conflict
+let activeTooltips = {
+    data: null,   // For Chart Dots
+    static: null  // For Info (i) and Ranges (Target)
+};
+let tooltipTimers = {
+    data: null,
+    static: null
 };
 
-const manageTooltip = (evt, id, contentHTML) => {
-    evt.stopPropagation(); // Stop propagation so document click doesn't kill it immediately
-    const triggerEl = evt.target;
-
-    // 1. Toggle: If clicking the same trigger, close it.
-    if (activeTooltip && activeTooltip.trigger === triggerEl) {
-        closeTooltip();
+// Close a specific channel or both
+const closeTooltip = (channel) => {
+    if (channel === 'all') {
+        closeTooltip('data');
+        closeTooltip('static');
         return;
     }
 
-    // 2. Switch: If clicking a different trigger, close old first.
-    if (activeTooltip) {
-        closeTooltip();
+    const active = activeTooltips[channel];
+    if (active) {
+        const el = document.getElementById(active.id);
+        if (el) el.classList.add('opacity-0', 'pointer-events-none');
+        activeTooltips[channel] = null;
+        if (tooltipTimers[channel]) clearTimeout(tooltipTimers[channel]);
     }
+};
+
+const manageTooltip = (evt, id, contentHTML, channel) => {
+    evt.stopPropagation(); 
+    const triggerEl = evt.target;
+
+    // 1. Toggle: If clicking the same trigger, close it.
+    if (activeTooltips[channel] && activeTooltips[channel].trigger === triggerEl) {
+        closeTooltip(channel);
+        return;
+    }
+
+    // 2. Switch: Close any existing tooltip in this channel
+    closeTooltip(channel);
 
     // 3. Open New
     const tooltip = document.getElementById(id);
@@ -41,17 +53,15 @@ const manageTooltip = (evt, id, contentHTML) => {
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
 
     // 4. Positioning (Absolute to Document)
-    // Use pageX/pageY so it sticks to the document position, not the screen
     const x = evt.pageX;
     const y = evt.pageY;
     const viewportWidth = window.innerWidth;
 
-    let top = y - 10; // Slight offset
+    let top = y - 10;
     let left = x + 15; 
 
-    // Edge Detection: Flip to left if too close to right edge
+    // Edge Detection
     if (x > viewportWidth * 0.6) {
-        left = 'auto'; // Reset left
         tooltip.style.right = `${viewportWidth - x + 15}px`;
         tooltip.style.left = 'auto';
     } else {
@@ -59,35 +69,31 @@ const manageTooltip = (evt, id, contentHTML) => {
         tooltip.style.right = 'auto';
     }
     
-    // Position above the cursor by default
+    // Vertical positioning
     tooltip.style.top = `${top - tooltip.offsetHeight - 10}px`;
-    // If that pushes it off top of page, flip to below
-    if (y < 200) {
-        tooltip.style.top = `${y + 20}px`;
-    }
+    if (y < 200) tooltip.style.top = `${y + 20}px`;
 
-    activeTooltip = { id, trigger: triggerEl };
+    // 5. Update State
+    activeTooltips[channel] = { id, trigger: triggerEl };
 
-    // 5. Timer (10 Seconds)
-    clearTimeout(tooltipTimer);
-    tooltipTimer = setTimeout(closeTooltip, 10000);
+    // 6. Timer (10 Seconds)
+    if (tooltipTimers[channel]) clearTimeout(tooltipTimers[channel]);
+    tooltipTimers[channel] = setTimeout(() => closeTooltip(channel), 10000);
 };
 
-// Global Listener to handle "Clicking off" or "Clicking Window"
+// Global Listener: Clicking blank space closes ALL tooltips
+// Clicking a tooltip itself keeps it open
 window.addEventListener('click', (e) => {
-    if (!activeTooltip) return;
-    
-    // If clicking the tooltip itself -> Close
-    const tooltipEl = document.getElementById(activeTooltip.id);
-    if (tooltipEl && tooltipEl.contains(e.target)) {
-        closeTooltip();
-        return;
-    }
-
-    // If clicking anywhere else (that isn't the trigger) -> Close
-    if (e.target !== activeTooltip.trigger) {
-        closeTooltip();
-    }
+    ['data', 'static'].forEach(channel => {
+        const active = activeTooltips[channel];
+        if (active) {
+            const tooltipEl = document.getElementById(active.id);
+            // If click is NOT inside the tooltip AND NOT the trigger -> Close
+            if (tooltipEl && !tooltipEl.contains(e.target) && e.target !== active.trigger) {
+                closeTooltip(channel);
+            }
+        }
+    });
 });
 
 // --- GLOBAL HANDLERS ---
@@ -97,86 +103,95 @@ window.toggleMetricsTime = (range) => {
 };
 
 window.hideMetricTooltip = () => {
-    closeTooltip(); // Use shared closer
+    closeTooltip('all');
 };
 
-// --- DEFINITIONS ---
+// --- DEFINITIONS WITH RANGES ---
 const METRIC_DEFINITIONS = {
     endurance: {
         title: "Aerobic Efficiency (EF)",
         icon: "fa-heart-pulse", 
         styleClass: "icon-bike",
-        rangeInfo: "<strong>Healthy Range: 1.30 – 1.70</strong><br>Watts per Heartbeat. Rising values mean you produce more power for the same cardiac cost.",
+        refMin: 1.30, refMax: 1.70, // Horizontal Line Targets
+        rangeInfo: "<strong>Healthy Range: 1.30 – 1.70</strong><br>Watts per Heartbeat.",
         description: "<strong>The Engine Check.</strong><br>Are you getting fitter at base intensity?",
-        improvement: "• <strong>Z2 Volume:</strong> Long, steady rides.<br>• <strong>Consistency:</strong> Stack aerobic days."
+        improvement: "• <strong>Z2 Volume:</strong> Long, steady rides."
     },
     strength: {
         title: "Torque Efficiency",
         icon: "fa-bolt",
         styleClass: "icon-bike",
-        rangeInfo: "<strong>Healthy Range: 2.5 – 3.5</strong><br>Watts per RPM. Measures muscular force application per pedal stroke.",
-        description: "<strong>The Muscle Check.</strong><br>High values indicate you are pushing bigger gears (Force) rather than just spinning fast.",
-        improvement: "• <strong>Low Cadence:</strong> Intervals at 50-60 RPM.<br>• <strong>Hill Repeats:</strong> Seated climbing."
+        refMin: 2.5, refMax: 3.5,
+        rangeInfo: "<strong>Healthy Range: 2.5 – 3.5</strong><br>Watts per RPM.",
+        description: "<strong>The Muscle Check.</strong><br>Measures muscular force per pedal stroke.",
+        improvement: "• <strong>Low Cadence:</strong> Intervals at 50-60 RPM."
     },
     run: {
         title: "Running Economy",
         icon: "fa-person-running",
         styleClass: "icon-run",
-        rangeInfo: "<strong>Healthy Range: 5.0 – 7.0</strong><br>Speed (m/min) per Heartbeat. Higher is better.",
-        description: "<strong>The Efficiency Check.</strong><br>How much speed do you generate for every heart beat?",
-        improvement: "• <strong>Strides:</strong> Short bursts of speed.<br>• <strong>Hill Sprints:</strong> Max effort (10-15s)."
+        refMin: 5.0, refMax: 7.0,
+        rangeInfo: "<strong>Healthy Range: 5.0 – 7.0</strong><br>Speed (m/min) per Heartbeat.",
+        description: "<strong>The Efficiency Check.</strong><br>Speed generated per heart beat.",
+        improvement: "• <strong>Strides:</strong> Short bursts of speed."
     },
     mechanical: {
         title: "Mechanical Stiffness",
         icon: "fa-ruler-horizontal",
         styleClass: "icon-run",
-        rangeInfo: "<strong>Healthy Range: 0.75 – 0.95</strong><br>Speed vs. Power ratio. Higher means better form conversion.",
-        description: "<strong>The Form Check.</strong><br>Are you converting Watts into actual forward Speed?",
-        improvement: "• <strong>Cadence:</strong> Aim for 170-180 spm.<br>• <strong>Plyometrics:</strong> Jump rope, box jumps."
+        refMin: 0.75, refMax: 0.95,
+        rangeInfo: "<strong>Healthy Range: 0.75 – 0.95</strong><br>Speed vs. Power ratio.",
+        description: "<strong>The Form Check.</strong><br>Are you converting Watts into Speed?",
+        improvement: "• <strong>Plyometrics:</strong> Jump rope, box jumps."
     },
     vo2max: {
         title: "VO₂ Max Trend",
         icon: "fa-lungs",
         styleClass: "text-purple-400",
-        rangeInfo: "<strong>Range: 40 – 60+</strong><br>The absolute ceiling of your aerobic engine.",
-        description: "<strong>The Ceiling.</strong><br>An upward trend here proves your engine size is increasing, regardless of daily fatigue.",
-        improvement: "• <strong>VO2 Intervals:</strong> 3-5 min max efforts.<br>• <strong>Consistency:</strong> Years of aerobic base."
+        refMin: 45, refMax: 55, // Estimated Range
+        rangeInfo: "<strong>Target: 45 – 55+</strong><br>The aerobic ceiling.",
+        description: "<strong>The Ceiling.</strong><br>An upward trend proves your engine size is increasing.",
+        improvement: "• <strong>VO2 Intervals:</strong> 3-5 min max efforts."
     },
     tss: {
         title: "Weekly TSS Load",
         icon: "fa-layer-group",
         styleClass: "text-blue-400",
-        rangeInfo: "<strong>Range: 300 – 700+</strong><br>Training Stress Score. Measures total weekly physiological load.",
-        description: "<strong>The Capacity Check.</strong><br>Are you handling more work? Rising TSS with stable fatigue means you are getting stronger.",
-        improvement: "• <strong>Volume:</strong> Add more hours.<br>• <strong>Intensity:</strong> Increase IF of existing sessions."
+        refMin: 300, refMax: 600,
+        rangeInfo: "<strong>Target: 300 – 600</strong><br>Training Stress Score.",
+        description: "<strong>The Capacity Check.</strong><br>Rising TSS with stable fatigue = strength.",
+        improvement: "• <strong>Volume:</strong> Add more hours."
     },
     gct: {
         title: "Ground Contact Time",
         icon: "fa-shoe-prints",
         styleClass: "text-orange-400",
-        rangeInfo: "<strong>Target: < 260ms</strong><br>Time spent on the ground. Lower is better (more elastic).",
-        description: "<strong>The Elasticity Check.</strong><br>Less time on the ground means better tendon energy return and less braking force.",
-        improvement: "• <strong>Cadence:</strong> Increase step rate.<br>• <strong>Form:</strong> Land under hips, not in front."
+        refMin: 220, refMax: 260, // Lower is better, but this is the "Good" band
+        rangeInfo: "<strong>Target: < 260ms</strong><br>Time spent on the ground.",
+        description: "<strong>The Elasticity Check.</strong><br>Lower time = better energy return.",
+        improvement: "• <strong>Cadence:</strong> Increase step rate."
     },
     vert: {
         title: "Vertical Oscillation",
         icon: "fa-arrows-up-down",
         styleClass: "text-pink-400",
-        rangeInfo: "<strong>Target: 6.0 – 9.0 cm</strong><br>How much you bounce. Lower is usually more efficient.",
-        description: "<strong>The Bounce Check.</strong><br>Energy used to go UP is energy not used to go FORWARD.",
-        improvement: "• <strong>Drills:</strong> High knees, A-Skips.<br>• <strong>Core:</strong> Improve stability."
+        refMin: 6.0, refMax: 9.0,
+        rangeInfo: "<strong>Target: 6.0 – 9.0 cm</strong><br>Vertical bounce.",
+        description: "<strong>The Bounce Check.</strong><br>Energy used to go UP isn't moving you FORWARD.",
+        improvement: "• <strong>Drills:</strong> High knees, A-Skips."
     },
     anaerobic: {
         title: "Anaerobic Impact",
         icon: "fa-fire",
         styleClass: "text-red-500",
-        rangeInfo: "<strong>Score: 0.0 – 5.0</strong><br>Garmin Anaerobic Training Effect.",
-        description: "<strong>The Intensity Check.</strong><br>Are you hitting the high notes? Ensures you aren't just doing 'grey zone' training.",
-        improvement: "• <strong>Sprints:</strong> All-out 30s efforts.<br>• <strong>Recover:</strong> Rest fully between sets."
+        refMin: 2.0, refMax: 4.0,
+        rangeInfo: "<strong>Target: 2.0 – 4.0+</strong><br>On Interval Days.",
+        description: "<strong>The Intensity Check.</strong><br>Are you hitting the high notes?",
+        improvement: "• <strong>Sprints:</strong> All-out 30s efforts."
     }
 };
 
-// --- TOOLTIP TRIGGERS ---
+// --- TRIGGER FUNCTIONS (Routed to Channels) ---
 window.showRangeTooltip = (evt, key) => {
     const def = METRIC_DEFINITIONS[key];
     const html = `
@@ -187,7 +202,7 @@ window.showRangeTooltip = (evt, key) => {
             <div class="text-[11px] text-slate-300 leading-relaxed">${def.rangeInfo}</div>
             <div class="text-[9px] text-slate-500 text-center pt-1 italic">Click to close</div>
         </div>`;
-    manageTooltip(evt, 'metric-ranges-popup', html);
+    manageTooltip(evt, 'metric-ranges-popup', html, 'static'); // Channel: Static
 };
 
 window.showInfoTooltip = (evt, key) => {
@@ -203,7 +218,7 @@ window.showInfoTooltip = (evt, key) => {
             </div>
             <div class="text-[9px] text-slate-500 text-center pt-1 italic">Click to close</div>
         </div>`;
-    manageTooltip(evt, 'metric-info-popup', html);
+    manageTooltip(evt, 'metric-info-popup', html, 'static'); // Channel: Static
 };
 
 window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
@@ -214,7 +229,7 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
             <div class="text-emerald-400 font-mono font-bold text-lg">${val} <span class="text-[10px] text-slate-500">${unitLabel}</span></div>
             ${breakdown ? `<div class="text-[10px] text-slate-300 font-mono bg-slate-800 rounded px-2 py-0.5 mt-1 border border-slate-700">${breakdown}</div>` : ''}
         </div>`;
-    manageTooltip(evt, 'metric-tooltip-popup', html);
+    manageTooltip(evt, 'metric-tooltip-popup', html, 'data'); // Channel: Data
 };
 
 // --- CHART BUILDERS ---
@@ -242,12 +257,51 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
         </div>`;
     }
     const width = 800, height = 150;
-    const pad = { t: 20, b: 30, l: 40, r: 20 };
+    const pad = { t: 20, b: 30, l: 50, r: 20 }; // Increased Left Padding for Axis
     const getX = (d, i) => pad.l + (i / (dataPoints.length - 1)) * (width - pad.l - pad.r);
-    const values = dataPoints.map(d => d.val);
-    const minV = Math.min(...values) * 0.95, maxV = Math.max(...values) * 1.05;
-    const getY = (val) => height - pad.b - ((val - minV) / (maxV - minV)) * (height - pad.t - pad.b);
+    
+    // --- Y-AXIS SCALING ---
+    const dataValues = dataPoints.map(d => d.val);
+    let minV = Math.min(...dataValues);
+    let maxV = Math.max(...dataValues);
 
+    // Expand Domain to include Ideal Range Lines (if they exist)
+    if (def.refMin !== undefined) minV = Math.min(minV, def.refMin);
+    if (def.refMax !== undefined) maxV = Math.max(maxV, def.refMax);
+
+    // Add 10% buffer
+    const range = maxV - minV;
+    const buf = range * 0.1 || (maxV * 0.1); 
+    const domainMin = Math.max(0, minV - buf);
+    const domainMax = maxV + buf;
+
+    const getY = (val) => height - pad.b - ((val - domainMin) / (domainMax - domainMin)) * (height - pad.t - pad.b);
+
+    // --- REFERENCE LINES (Ideal Ranges) ---
+    let refLinesHtml = '';
+    if (def.refMin !== undefined && def.refMax !== undefined) {
+        const yMin = getY(def.refMin);
+        const yMax = getY(def.refMax);
+        // Ensure lines stay within drawing area
+        if (yMin >= pad.t && yMin <= height - pad.b) {
+            refLinesHtml += `<line x1="${pad.l}" y1="${yMin}" x2="${width - pad.r}" y2="${yMin}" stroke="#10b981" stroke-width="1" stroke-dasharray="4,4" opacity="0.5" />`;
+        }
+        if (yMax >= pad.t && yMax <= height - pad.b) {
+            refLinesHtml += `<line x1="${pad.l}" y1="${yMax}" x2="${width - pad.r}" y2="${yMax}" stroke="#10b981" stroke-width="1" stroke-dasharray="4,4" opacity="0.5" />`;
+        }
+    }
+
+    // --- VERTICAL AXIS & LABELS ---
+    const yAxisLine = `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" stroke="#475569" stroke-width="1" />`;
+    const yMid = (domainMin + domainMax) / 2;
+    
+    const axisLabelsHtml = `
+        <text x="${pad.l - 5}" y="${getY(domainMax) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMax.toFixed(1)}</text>
+        <text x="${pad.l - 5}" y="${getY(yMid) + 4}" text-anchor="end" font-size="9" fill="#64748b">${yMid.toFixed(1)}</text>
+        <text x="${pad.l - 5}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(1)}</text>
+    `;
+
+    // --- TRENDLINE & DATA ---
     const trend = calculateTrendline(dataPoints);
     let trendHtml = trend ? `<line x1="${getX(null, 0)}" y1="${getY(trend.startVal)}" x2="${getX(null, dataPoints.length - 1)}" y2="${getY(trend.endVal)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.4" />` : '';
     
@@ -270,6 +324,9 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
             </div>
             <div class="flex-1 w-full h-[120px]">
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
+                    ${yAxisLine}
+                    ${axisLabelsHtml}
+                    ${refLinesHtml}
                     ${trendHtml}
                     <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.8" />
                     ${pointsHtml}
@@ -317,7 +374,7 @@ const updateMetricsCharts = () => {
         return labels.some(allowed => l === allowed.toUpperCase());
     };
 
-    // EXISTING METRICS
+    // 1. EFFICIENCY
     const efData = filteredData.filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr:${Math.round(d.avgPower)} / HR:${Math.round(d.avgHR)}` }));
 
@@ -330,7 +387,7 @@ const updateMetricsCharts = () => {
     const mechData = filteredData.filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd:${d.avgSpeed.toFixed(1)} / Pwr:${Math.round(d.avgPower)}` }));
 
-    // NEW GROWTH METRICS
+    // 2. CAPACITY & GROWTH
     const vo2Data = filteredData.filter(d => d.vO2MaxValue > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: "VO2 Estimate", val: parseFloat(d.vO2MaxValue), breakdown: `Score: ${d.vO2MaxValue}` }));
 
@@ -374,7 +431,6 @@ export function renderMetrics(allData) {
     setTimeout(updateMetricsCharts, 0);
     const buildToggle = (range, label) => `<button id="btn-metric-${range}" onclick="window.toggleMetricsTime('${range}')" class="bg-slate-800 text-slate-400 px-3 py-1 rounded text-[10px] transition-all">${label}</button>`;
     
-    // Note: Tooltip classes changed from 'fixed' to 'absolute' to allow scrolling
     return `
         <div class="max-w-7xl mx-auto space-y-6 pb-12 relative">
             <div class="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-0 z-10">
@@ -388,22 +444,18 @@ export function renderMetrics(allData) {
                 <div id="metric-chart-endurance"></div>
                 <div id="metric-chart-strength"></div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div id="metric-chart-economy"></div>
                 <div id="metric-chart-mechanics"></div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div id="metric-chart-vo2"></div>
                 <div id="metric-chart-tss"></div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div id="metric-chart-gct"></div>
                 <div id="metric-chart-vert"></div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div id="metric-chart-anaerobic"></div>
                 <div class="bg-slate-800/10 border border-slate-800 border-dashed rounded-xl p-6 flex items-center justify-center">
