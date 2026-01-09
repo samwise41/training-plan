@@ -3,7 +3,92 @@
 // --- STATE MANAGEMENT ---
 let metricsState = { timeRange: '6m' };
 let cachedData = [];
-let lastClickedElement = null;
+
+// --- TOOLTIP STATE MANAGER ---
+let activeTooltip = null;
+let tooltipTimer = null;
+
+const closeTooltip = () => {
+    if (!activeTooltip) return;
+    const el = document.getElementById(activeTooltip.id);
+    if (el) {
+        el.classList.add('opacity-0', 'pointer-events-none');
+    }
+    activeTooltip = null;
+    clearTimeout(tooltipTimer);
+};
+
+const manageTooltip = (evt, id, contentHTML) => {
+    evt.stopPropagation(); // Stop propagation so document click doesn't kill it immediately
+    const triggerEl = evt.target;
+
+    // 1. Toggle: If clicking the same trigger, close it.
+    if (activeTooltip && activeTooltip.trigger === triggerEl) {
+        closeTooltip();
+        return;
+    }
+
+    // 2. Switch: If clicking a different trigger, close old first.
+    if (activeTooltip) {
+        closeTooltip();
+    }
+
+    // 3. Open New
+    const tooltip = document.getElementById(id);
+    if (!tooltip) return;
+
+    tooltip.innerHTML = contentHTML;
+    tooltip.classList.remove('opacity-0', 'pointer-events-none');
+
+    // 4. Positioning (Absolute to Document)
+    // Use pageX/pageY so it sticks to the document position, not the screen
+    const x = evt.pageX;
+    const y = evt.pageY;
+    const viewportWidth = window.innerWidth;
+
+    let top = y - 10; // Slight offset
+    let left = x + 15; 
+
+    // Edge Detection: Flip to left if too close to right edge
+    if (x > viewportWidth * 0.6) {
+        left = 'auto'; // Reset left
+        tooltip.style.right = `${viewportWidth - x + 15}px`;
+        tooltip.style.left = 'auto';
+    } else {
+        tooltip.style.left = `${left}px`;
+        tooltip.style.right = 'auto';
+    }
+    
+    // Position above the cursor by default
+    tooltip.style.top = `${top - tooltip.offsetHeight - 10}px`;
+    // If that pushes it off top of page, flip to below
+    if (y < 200) {
+        tooltip.style.top = `${y + 20}px`;
+    }
+
+    activeTooltip = { id, trigger: triggerEl };
+
+    // 5. Timer (10 Seconds)
+    clearTimeout(tooltipTimer);
+    tooltipTimer = setTimeout(closeTooltip, 10000);
+};
+
+// Global Listener to handle "Clicking off" or "Clicking Window"
+window.addEventListener('click', (e) => {
+    if (!activeTooltip) return;
+    
+    // If clicking the tooltip itself -> Close
+    const tooltipEl = document.getElementById(activeTooltip.id);
+    if (tooltipEl && tooltipEl.contains(e.target)) {
+        closeTooltip();
+        return;
+    }
+
+    // If clicking anywhere else (that isn't the trigger) -> Close
+    if (e.target !== activeTooltip.trigger) {
+        closeTooltip();
+    }
+});
 
 // --- GLOBAL HANDLERS ---
 window.toggleMetricsTime = (range) => {
@@ -12,18 +97,11 @@ window.toggleMetricsTime = (range) => {
 };
 
 window.hideMetricTooltip = () => {
-    const tooltip = document.getElementById('metric-tooltip-popup');
-    const info = document.getElementById('metric-info-popup');
-    const ranges = document.getElementById('metric-ranges-popup');
-    if (tooltip) tooltip.classList.add('opacity-0', 'pointer-events-none');
-    if (info) info.classList.add('opacity-0', 'pointer-events-none');
-    if (ranges) ranges.classList.add('opacity-0', 'pointer-events-none');
-    lastClickedElement = null;
+    closeTooltip(); // Use shared closer
 };
 
 // --- DEFINITIONS ---
 const METRIC_DEFINITIONS = {
-    // EXISTING
     endurance: {
         title: "Aerobic Efficiency (EF)",
         icon: "fa-heart-pulse", 
@@ -56,7 +134,6 @@ const METRIC_DEFINITIONS = {
         description: "<strong>The Form Check.</strong><br>Are you converting Watts into actual forward Speed?",
         improvement: "• <strong>Cadence:</strong> Aim for 170-180 spm.<br>• <strong>Plyometrics:</strong> Jump rope, box jumps."
     },
-    // NEW METRICS
     vo2max: {
         title: "VO₂ Max Trend",
         icon: "fa-lungs",
@@ -99,31 +176,23 @@ const METRIC_DEFINITIONS = {
     }
 };
 
-// --- TOOLTIPS (Ranges, Info, Data) ---
+// --- TOOLTIP TRIGGERS ---
 window.showRangeTooltip = (evt, key) => {
-    evt.stopPropagation();
-    let rangeBox = document.getElementById('metric-ranges-popup');
-    if (!rangeBox) return;
     const def = METRIC_DEFINITIONS[key];
-    rangeBox.innerHTML = `
+    const html = `
         <div class="space-y-3">
             <h4 class="text-white font-bold border-b border-slate-700 pb-2 flex items-center gap-2">
                 <i class="fa-solid fa-crosshairs text-emerald-400"></i> Target Range
             </h4>
             <div class="text-[11px] text-slate-300 leading-relaxed">${def.rangeInfo}</div>
             <div class="text-[9px] text-slate-500 text-center pt-1 italic">Click to close</div>
-        </div>
-    `;
-    rangeBox.style.left = `${evt.clientX - 150}px`; rangeBox.style.top = `${evt.clientY + 15}px`;
-    rangeBox.classList.remove('opacity-0', 'pointer-events-none');
+        </div>`;
+    manageTooltip(evt, 'metric-ranges-popup', html);
 };
 
 window.showInfoTooltip = (evt, key) => {
-    evt.stopPropagation();
-    let infoBox = document.getElementById('metric-info-popup');
-    if (!infoBox) return;
     const def = METRIC_DEFINITIONS[key];
-    infoBox.innerHTML = `
+    const html = `
         <div class="space-y-3">
             <h4 class="text-white font-bold border-b border-slate-700 pb-2 flex items-center gap-2">
                 <i class="fa-solid fa-circle-info text-blue-400"></i> ${def.title}
@@ -133,34 +202,19 @@ window.showInfoTooltip = (evt, key) => {
                 <strong>Improvement:</strong><br>${def.improvement}
             </div>
             <div class="text-[9px] text-slate-500 text-center pt-1 italic">Click to close</div>
-        </div>
-    `;
-    infoBox.style.left = `${evt.clientX + 10}px`; infoBox.style.top = `${evt.clientY + 10}px`;
-    infoBox.classList.remove('opacity-0', 'pointer-events-none');
+        </div>`;
+    manageTooltip(evt, 'metric-info-popup', html);
 };
 
 window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
-    evt.stopPropagation();
-    let tooltip = document.getElementById('metric-tooltip-popup');
-    if (!tooltip) return;
-    if (lastClickedElement === evt.target && !tooltip.classList.contains('opacity-0')) {
-        window.hideMetricTooltip(); lastClickedElement = null; return;
-    }
-    lastClickedElement = evt.target;
-    tooltip.innerHTML = `
+    const html = `
         <div class="text-center">
             <div class="text-[10px] text-slate-400 mb-1 border-b border-slate-700 pb-1">${date}</div>
             <div class="text-white font-bold text-xs mb-1">${name}</div>
             <div class="text-emerald-400 font-mono font-bold text-lg">${val} <span class="text-[10px] text-slate-500">${unitLabel}</span></div>
             ${breakdown ? `<div class="text-[10px] text-slate-300 font-mono bg-slate-800 rounded px-2 py-0.5 mt-1 border border-slate-700">${breakdown}</div>` : ''}
-        </div>
-    `;
-    tooltip.style.left = `${evt.clientX + 15}px`; tooltip.style.top = `${evt.clientY - 50}px`;
-    tooltip.classList.remove('opacity-0', 'pointer-events-none');
-    setTimeout(() => {
-        const r = tooltip.getBoundingClientRect();
-        if (r.right > window.innerWidth) tooltip.style.left = `${evt.clientX - 15 - r.width}px`;
-    }, 0);
+        </div>`;
+    manageTooltip(evt, 'metric-tooltip-popup', html);
 };
 
 // --- CHART BUILDERS ---
@@ -227,22 +281,18 @@ const buildMetricChart = (dataPoints, key, color, unitLabel) => {
 
 // --- DATA AGGREGATION HELPERS ---
 const aggregateWeeklyTSS = (data) => {
-    // 1. Group by Week Ending (Sunday)
     const weeks = {};
     data.forEach(d => {
         if (!d.trainingStressScore || d.trainingStressScore === 0) return;
         const date = new Date(d.date);
         const day = date.getDay(); 
-        const diff = date.getDate() - day + (day === 0 ? 0 : 7); // Adjust to next Sunday
+        const diff = date.getDate() - day + (day === 0 ? 0 : 7); 
         const weekEnd = new Date(date.setDate(diff));
         weekEnd.setHours(0,0,0,0);
         const key = weekEnd.toISOString().split('T')[0];
-        
         if (!weeks[key]) weeks[key] = 0;
         weeks[key] += parseFloat(d.trainingStressScore);
     });
-
-    // 2. Convert to Array and Sort
     return Object.keys(weeks).sort().map(k => ({
         date: new Date(k),
         dateStr: `Week Ending ${k}`,
@@ -255,7 +305,6 @@ const aggregateWeeklyTSS = (data) => {
 const updateMetricsCharts = () => {
     if (!cachedData || cachedData.length === 0) return;
     
-    // Time Filtering
     const cutoff = new Date();
     if (metricsState.timeRange === '30d') cutoff.setDate(cutoff.getDate() - 30);
     else if (metricsState.timeRange === '90d') cutoff.setDate(cutoff.getDate() - 90);
@@ -268,7 +317,7 @@ const updateMetricsCharts = () => {
         return labels.some(allowed => l === allowed.toUpperCase());
     };
 
-    // --- 1. EXISTING METRICS ---
+    // EXISTING METRICS
     const efData = filteredData.filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']))
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr:${Math.round(d.avgPower)} / HR:${Math.round(d.avgHR)}` }));
 
@@ -281,30 +330,22 @@ const updateMetricsCharts = () => {
     const mechData = filteredData.filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd:${d.avgSpeed.toFixed(1)} / Pwr:${Math.round(d.avgPower)}` }));
 
-    // --- 2. NEW GROWTH METRICS ---
-    
-    // A. VO2 Max (Filter out 0s)
+    // NEW GROWTH METRICS
     const vo2Data = filteredData.filter(d => d.vO2MaxValue > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: "VO2 Estimate", val: parseFloat(d.vO2MaxValue), breakdown: `Score: ${d.vO2MaxValue}` }));
 
-    // B. Weekly TSS (Aggregated)
-    // Note: We use cachedData (full history) for aggregation to ensure partial weeks at cutoff start are handled correctly, then filter by date.
     const fullTss = aggregateWeeklyTSS(cachedData);
     const tssData = fullTss.filter(d => d.date >= cutoff);
 
-    // C. Ground Contact Time (Run Only)
     const gctData = filteredData.filter(d => d.actualType === 'Run' && d.avgGroundContactTime > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgGroundContactTime), breakdown: `${Math.round(d.avgGroundContactTime)} ms` }));
 
-    // D. Vertical Oscillation (Run Only)
     const vertData = filteredData.filter(d => d.actualType === 'Run' && d.avgVerticalOscillation > 0)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgVerticalOscillation), breakdown: `${d.avgVerticalOscillation.toFixed(1)} cm` }));
 
-    // E. Anaerobic Impact (Intensity Days Only)
     const anaData = filteredData.filter(d => d.anaerobicTrainingEffect > 0.5)
         .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.anaerobicTrainingEffect), breakdown: `Anaerobic: ${d.anaerobicTrainingEffect}` }));
 
-    // --- RENDER ---
     const render = (id, data, key, color, unit) => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = buildMetricChart(data, key, color, unit);
@@ -314,15 +355,12 @@ const updateMetricsCharts = () => {
     render('metric-chart-strength', torqueData, 'strength', '#8b5cf6', 'Idx');
     render('metric-chart-economy', runEconData, 'run', '#ec4899', 'Idx');
     render('metric-chart-mechanics', mechData, 'mechanical', '#f97316', 'Idx');
-    
-    // New Renders
     render('metric-chart-vo2', vo2Data, 'vo2max', '#a855f7', '');
     render('metric-chart-tss', tssData, 'tss', '#3b82f6', 'TSS');
     render('metric-chart-gct', gctData, 'gct', '#f59e0b', 'ms');
     render('metric-chart-vert', vertData, 'vert', '#ec4899', 'cm');
     render('metric-chart-anaerobic', anaData, 'anaerobic', '#ef4444', 'TE');
 
-    // Update Buttons
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
         if(btn) btn.className = metricsState.timeRange === range ? 
@@ -336,8 +374,9 @@ export function renderMetrics(allData) {
     setTimeout(updateMetricsCharts, 0);
     const buildToggle = (range, label) => `<button id="btn-metric-${range}" onclick="window.toggleMetricsTime('${range}')" class="bg-slate-800 text-slate-400 px-3 py-1 rounded text-[10px] transition-all">${label}</button>`;
     
+    // Note: Tooltip classes changed from 'fixed' to 'absolute' to allow scrolling
     return `
-        <div class="max-w-7xl mx-auto space-y-6 pb-12">
+        <div class="max-w-7xl mx-auto space-y-6 pb-12 relative">
             <div class="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-0 z-10">
                 <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                     <i class="fa-solid fa-chart-area text-emerald-500"></i> Performance Lab
@@ -373,8 +412,8 @@ export function renderMetrics(allData) {
             </div>
         </div>
 
-        <div id="metric-tooltip-popup" onclick="window.hideMetricTooltip()" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity fixed pointer-events-auto cursor-pointer"></div>
-        <div id="metric-info-popup" onclick="window.hideMetricTooltip()" class="z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity fixed pointer-events-auto cursor-pointer max-w-[300px]"></div>
-        <div id="metric-ranges-popup" onclick="window.hideMetricTooltip()" class="z-50 bg-slate-800 border border-emerald-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity fixed pointer-events-auto cursor-pointer max-w-[250px]"></div>
+        <div id="metric-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs opacity-0 transition-opacity absolute pointer-events-auto cursor-pointer"></div>
+        <div id="metric-info-popup" class="z-50 bg-slate-800 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity absolute pointer-events-auto cursor-pointer max-w-[300px]"></div>
+        <div id="metric-ranges-popup" class="z-50 bg-slate-800 border border-emerald-500/50 p-4 rounded-xl shadow-2xl text-xs opacity-0 transition-opacity absolute pointer-events-auto cursor-pointer max-w-[250px]"></div>
     `;
 }
