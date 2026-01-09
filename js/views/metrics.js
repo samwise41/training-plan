@@ -4,6 +4,32 @@
 let metricsState = { timeRange: '6m' };
 let cachedData = [];
 
+// --- SPORT ID CONSTANTS (Matches Python Script) ---
+const SPORT_IDS = {
+    RUN: [1],      // Running, Trail, Treadmill
+    BIKE: [2],     // Cycling, Indoor, Gravel, MTB
+    SWIM: [5, 26, 18] // Lap Swim (5), Open Water (26), Multisport Swim (18)
+};
+
+// --- HELPER: ROBUST SPORT CHECK ---
+const checkSport = (activity, sportKey) => {
+    // 1. Try ID Match (Most Robust)
+    const typeId = activity.activityType ? activity.activityType.typeId : null;
+    const parentId = activity.activityType ? activity.activityType.parentTypeId : null;
+    
+    if (SPORT_IDS[sportKey].includes(typeId) || SPORT_IDS[sportKey].includes(parentId)) {
+        return true;
+    }
+
+    // 2. Fallback: String Match (Safety Net)
+    // Sometimes cachedData has a simplified 'actualType' field from preprocessing
+    if (activity.actualType && activity.actualType.toUpperCase() === sportKey) {
+        return true;
+    }
+    
+    return false;
+};
+
 // --- GLOBAL TOGGLE & SCROLL HELPERS ---
 if (!window.toggleSection) {
     window.toggleSection = (id) => {
@@ -46,7 +72,6 @@ const performScroll = (id) => {
     
     const card = wrapper.firstElementChild;
     if (card) {
-        // Updated Highlight: Uses ring-inset to keep border inside
         card.classList.remove('bg-slate-800/30'); 
         card.classList.add('bg-slate-800', 'ring-2', 'ring-inset', 'ring-blue-500', 'shadow-lg', 'shadow-blue-900/50', 'transition-all', 'duration-500');
         
@@ -179,6 +204,12 @@ const METRIC_DEFINITIONS = {
         description: "Ratio of Speed vs. Power. Indicates conversion of power to forward motion.",
         improvement: "• High Cadence (170+)<br>• Form Drills (A-Skips)"
     },
+    swim: {
+        title: "Swim Efficiency", sport: "Swim", icon: "fa-person-swimming", colorVar: "var(--color-swim)",
+        refMin: 0.3, refMax: 0.6, invertRanges: false, rangeInfo: "0.3 – 0.6 m/beat",
+        description: "Distance traveled per heartbeat in water. Measures stroke efficiency relative to cardiac cost.",
+        improvement: "• Drills (Catch/Pull)<br>• Long Steady Swims"
+    },
     gct: {
         title: "Ground Contact Time", sport: "Run", icon: "fa-stopwatch", colorVar: "var(--color-run)",
         refMin: 220, refMax: 260, invertRanges: true, rangeInfo: "< 260 ms",
@@ -190,12 +221,6 @@ const METRIC_DEFINITIONS = {
         refMin: 6.0, refMax: 9.0, invertRanges: true, rangeInfo: "6.0 – 9.0 cm",
         description: "Vertical bounce. Lower is usually more efficient.",
         improvement: "• Core Stability<br>• Hill Repeats"
-    },
-    swim: {
-        title: "Swim Efficiency", sport: "Swim", icon: "fa-person-swimming", colorVar: "var(--color-swim)",
-        refMin: 0.3, refMax: 0.6, invertRanges: false, rangeInfo: "0.3 – 0.6 m/beat",
-        description: "Distance traveled per heartbeat in water. Measures stroke efficiency relative to cardiac cost.",
-        improvement: "• Drills (Catch/Pull)<br>• Long Steady Swims"
     },
     vo2max: {
         title: "VO₂ Max Trend", sport: "All", icon: "fa-lungs", colorVar: "var(--color-all)",
@@ -292,13 +317,20 @@ const getMetricData = (key) => {
     };
 
     switch(key) {
-        case 'endurance': return d.filter(x => x.actualType === 'Bike' && x.avgPower > 0 && x.avgHR > 0 && isInt(x, ['AEROBIC_BASE', 'RECOVERY'])).map(x => ({ val: x.avgPower / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / HR:${Math.round(x.avgHR)}` }));
-        case 'strength': return d.filter(x => x.actualType === 'Bike' && x.avgPower > 0 && x.avgCadence > 0 && isInt(x, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY'])).map(x => ({ val: x.avgPower / x.avgCadence, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / RPM:${Math.round(x.avgCadence)}` }));
-        case 'run': return d.filter(x => x.actualType === 'Run' && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pace:${Math.round(x.avgSpeed*60)}m/m / HR:${Math.round(x.avgHR)}` }));
-        case 'mechanical': return d.filter(x => x.actualType === 'Run' && x.avgSpeed > 0 && x.avgPower > 0).map(x => ({ val: (x.avgSpeed * 100) / x.avgPower, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${x.avgSpeed.toFixed(1)} / Pwr:${Math.round(x.avgPower)}` }));
-        case 'swim': return d.filter(x => x.actualType === 'Swim' && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${(x.avgSpeed*60).toFixed(1)}m/m / HR:${Math.round(x.avgHR)}` }));
-        case 'gct': return d.filter(x => x.actualType === 'Run' && x.avgGroundContactTime > 0).map(x => ({ val: x.avgGroundContactTime, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${Math.round(x.avgGroundContactTime)} ms` }));
-        case 'vert': return d.filter(x => x.actualType === 'Run' && x.avgVerticalOscillation > 0).map(x => ({ val: x.avgVerticalOscillation, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${x.avgVerticalOscillation.toFixed(1)} cm` }));
+        // BIKE: Uses ID 2
+        case 'endurance': return d.filter(x => checkSport(x, 'BIKE') && x.avgPower > 0 && x.avgHR > 0 && isInt(x, ['AEROBIC_BASE', 'RECOVERY'])).map(x => ({ val: x.avgPower / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / HR:${Math.round(x.avgHR)}` }));
+        case 'strength': return d.filter(x => checkSport(x, 'BIKE') && x.avgPower > 0 && x.avgCadence > 0 && isInt(x, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY'])).map(x => ({ val: x.avgPower / x.avgCadence, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / RPM:${Math.round(x.avgCadence)}` }));
+        
+        // RUN: Uses ID 1
+        case 'run': return d.filter(x => checkSport(x, 'RUN') && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pace:${Math.round(x.avgSpeed*60)}m/m / HR:${Math.round(x.avgHR)}` }));
+        case 'mechanical': return d.filter(x => checkSport(x, 'RUN') && x.avgSpeed > 0 && x.avgPower > 0).map(x => ({ val: (x.avgSpeed * 100) / x.avgPower, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${x.avgSpeed.toFixed(1)} / Pwr:${Math.round(x.avgPower)}` }));
+        case 'gct': return d.filter(x => checkSport(x, 'RUN') && x.avgGroundContactTime > 0).map(x => ({ val: x.avgGroundContactTime, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${Math.round(x.avgGroundContactTime)} ms` }));
+        case 'vert': return d.filter(x => checkSport(x, 'RUN') && x.avgVerticalOscillation > 0).map(x => ({ val: x.avgVerticalOscillation, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${x.avgVerticalOscillation.toFixed(1)} cm` }));
+        
+        // SWIM: Uses ID 5, 26, 18
+        case 'swim': return d.filter(x => checkSport(x, 'SWIM') && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${(x.avgSpeed*60).toFixed(1)}m/m / HR:${Math.round(x.avgHR)}` }));
+        
+        // ALL
         case 'vo2max': return d.filter(x => x.vO2MaxValue > 0).map(x => ({ val: x.vO2MaxValue, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: "VO2 Est", breakdown: `Score: ${x.vO2MaxValue}` }));
         case 'anaerobic': return d.filter(x => x.anaerobicTrainingEffect > 0.5).map(x => ({ val: x.anaerobicTrainingEffect, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Anaerobic: ${x.anaerobicTrainingEffect}` }));
         case 'tss': return aggregateWeeklyTSS(d);
@@ -535,7 +567,7 @@ const updateMetricsCharts = () => {
     else if (metricsState.timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (metricsState.timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
     
-    const filteredData = cachedData.filter(d => d.date >= cutoff).sort((a,b) => a.date - b.date);
+    // FULL DATASETS
     const isIntensity = (item, labels) => {
         const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
         return labels.some(allowed => l === allowed.toUpperCase());
@@ -547,28 +579,29 @@ const updateMetricsCharts = () => {
         return { full, display };
     };
 
+    // Use robust checkSport helper
     const ef = buildSet(
-        d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']),
+        d => checkSport(d, 'BIKE') && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']),
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr:${Math.round(d.avgPower)} / HR:${Math.round(d.avgHR)}` })
     );
 
     const torque = buildSet(
-        d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']),
+        d => checkSport(d, 'BIKE') && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']),
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr:${Math.round(d.avgPower)} / RPM:${Math.round(d.avgCadence)}` })
     );
 
     const runEcon = buildSet(
-        d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0,
+        d => checkSport(d, 'RUN') && d.avgSpeed > 0 && d.avgHR > 0,
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace:${Math.round(d.avgSpeed * 60)}m/m / HR:${Math.round(d.avgHR)}` })
     );
 
     const mech = buildSet(
-        d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0,
+        d => checkSport(d, 'RUN') && d.avgSpeed > 0 && d.avgPower > 0,
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd:${d.avgSpeed.toFixed(1)} / Pwr:${Math.round(d.avgPower)}` })
     );
 
     const swim = buildSet(
-        d => d.actualType === 'Swim' && d.avgSpeed > 0 && d.avgHR > 0,
+        d => checkSport(d, 'SWIM') && d.avgSpeed > 0 && d.avgHR > 0,
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Spd:${(d.avgSpeed*60).toFixed(1)}m/m / HR:${Math.round(d.avgHR)}` })
     );
 
@@ -581,12 +614,12 @@ const updateMetricsCharts = () => {
     const displayTss = fullTss.filter(d => d.date >= cutoff);
 
     const gct = buildSet(
-        d => d.actualType === 'Run' && d.avgGroundContactTime > 0,
+        d => checkSport(d, 'RUN') && d.avgGroundContactTime > 0,
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgGroundContactTime), breakdown: `${Math.round(d.avgGroundContactTime)} ms` })
     );
 
     const vert = buildSet(
-        d => d.actualType === 'Run' && d.avgVerticalOscillation > 0,
+        d => checkSport(d, 'RUN') && d.avgVerticalOscillation > 0,
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgVerticalOscillation), breakdown: `${d.avgVerticalOscillation.toFixed(1)} cm` })
     );
 
@@ -609,7 +642,7 @@ const updateMetricsCharts = () => {
     render('metric-chart-mechanical', mech, 'mechanical');
     render('metric-chart-gct', gct, 'gct');
     render('metric-chart-vert', vert, 'vert');
-    render('metric-chart-swim', swim, 'swim'); // RENDER SWIM
+    render('metric-chart-swim', swim, 'swim');
     render('metric-chart-vo2max', vo2, 'vo2max');
     render('metric-chart-tss', { full: fullTss, display: displayTss }, 'tss');
     render('metric-chart-anaerobic', ana, 'anaerobic');
@@ -643,10 +676,9 @@ export function renderMetrics(allData) {
             <div id="metric-chart-endurance"></div>
             <div id="metric-chart-strength"></div>
             <div id="metric-chart-run"></div>
-            <div id="metric-chart-mechanical"></div>
+            <div id="metric-chart-swim"></div> <div id="metric-chart-mechanical"></div>
             <div id="metric-chart-gct"></div>
             <div id="metric-chart-vert"></div>
-            <div id="metric-chart-swim"></div>
             <div id="metric-chart-vo2max"></div>
             <div id="metric-chart-tss"></div>
             <div id="metric-chart-anaerobic"></div>
