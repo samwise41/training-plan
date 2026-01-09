@@ -32,13 +32,13 @@ def save_data(data):
 
 def main():
     # 1. Handle Login
-    email = EMAIL
-    password = PASSWORD
+    email = GARMIN_EMAIL
+    password = GARMIN_PASSWORD
     
     # If not hardcoded, prompt user
-    if "YOUR_GARMIN" in email:
-        email = input("Enter Garmin Email: ")
-        password = getpass.getpass("Enter Garmin Password: ")
+    #if "YOUR_GARMIN" in email:
+    #    email = input("Enter Garmin Email: ")
+    #    password = getpass.getpass("Enter Garmin Password: ")
 
     try:
         print("🔐 Authenticating with Garmin Connect...")
@@ -89,3 +89,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
