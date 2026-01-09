@@ -5,15 +5,29 @@ let metricsState = { timeRange: '6m' };
 let cachedData = [];
 
 // --- TOOLTIP STATE MANAGER ---
-let activeTooltips = { data: null, static: null };
-let tooltipTimers = { data: null, static: null };
+let activeTooltips = {
+    data: null,   // Chart dots
+    static: null  // Analysis icon
+};
+let tooltipTimers = {
+    data: null,
+    static: null
+};
 
 const closeTooltip = (channel) => {
-    if (channel === 'all') { closeTooltip('data'); closeTooltip('static'); return; }
+    if (channel === 'all') {
+        closeTooltip('data');
+        closeTooltip('static');
+        return;
+    }
+
     const active = activeTooltips[channel];
     if (active) {
         const el = document.getElementById(active.id);
-        if (el) { el.classList.add('opacity-0', 'pointer-events-none'); el.innerHTML = ''; }
+        if (el) {
+            el.classList.add('opacity-0', 'pointer-events-none');
+            el.innerHTML = ''; 
+        }
         activeTooltips[channel] = null;
         if (tooltipTimers[channel]) clearTimeout(tooltipTimers[channel]);
     }
@@ -23,35 +37,71 @@ const manageTooltip = (evt, id, contentHTML, channel) => {
     evt.stopPropagation(); 
     const triggerEl = evt.target;
 
-    // Toggle logic
+    // Toggle: If clicking the exact same trigger, close it.
     if (activeTooltips[channel] && activeTooltips[channel].trigger === triggerEl) {
         closeTooltip(channel);
         return;
     }
-    
-    // Switch logic (same channel)
-    closeTooltip(channel);
 
+    // Switch: Close *current* channel's old tooltip
+    closeTooltip(channel);
+    
     const tooltip = document.getElementById(id);
     if (!tooltip) return;
 
     tooltip.innerHTML = contentHTML;
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
 
+    // --- INITIAL POSITIONING ---
     const x = evt.pageX;
     const y = evt.pageY;
     const viewportWidth = window.innerWidth;
 
+    // Horizontal Flip
     if (x > viewportWidth * 0.6) {
-        tooltip.style.right = `${viewportWidth - x + 10}px`; tooltip.style.left = 'auto';
+        tooltip.style.right = `${viewportWidth - x + 10}px`;
+        tooltip.style.left = 'auto';
     } else {
-        tooltip.style.left = `${x + 10}px`; tooltip.style.right = 'auto';
+        tooltip.style.left = `${x + 10}px`;
+        tooltip.style.right = 'auto';
     }
     
-    if (channel === 'data') tooltip.style.top = `${y - tooltip.offsetHeight - 15}px`;
-    else tooltip.style.top = `${y + 20}px`;
+    // Vertical Stacking (Initial Guess)
+    if (channel === 'data') {
+        tooltip.style.top = `${y - tooltip.offsetHeight - 20}px`; // Above
+    } else {
+        tooltip.style.top = `${y + 25}px`; // Below
+    }
+
+    // --- COLLISION AVOIDANCE ---
+    const otherChannel = channel === 'data' ? 'static' : 'data';
+    const otherActive = activeTooltips[otherChannel];
+    
+    if (otherActive) {
+        const otherEl = document.getElementById(otherActive.id);
+        if (otherEl && !otherEl.classList.contains('opacity-0')) {
+            const r1 = tooltip.getBoundingClientRect();
+            const r2 = otherEl.getBoundingClientRect();
+
+            // Check overlap
+            const overlap = !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+
+            if (overlap) {
+                // Shift the CURRENT tooltip away from the existing one
+                let currentTop = parseFloat(tooltip.style.top);
+                if (channel === 'data') {
+                    // Move Data higher
+                    tooltip.style.top = `${currentTop - r2.height - 10}px`;
+                } else {
+                    // Move Static lower
+                    tooltip.style.top = `${currentTop + r2.height + 10}px`;
+                }
+            }
+        }
+    }
 
     activeTooltips[channel] = { id, trigger: triggerEl };
+
     if (tooltipTimers[channel]) clearTimeout(tooltipTimers[channel]);
     tooltipTimers[channel] = setTimeout(() => closeTooltip(channel), 15000);
 };
@@ -61,8 +111,13 @@ window.addEventListener('click', (e) => {
         const active = activeTooltips[channel];
         if (active) {
             const tooltipEl = document.getElementById(active.id);
-            if (tooltipEl && tooltipEl.contains(e.target)) { closeTooltip(channel); return; }
-            if (e.target !== active.trigger) closeTooltip(channel);
+            if (tooltipEl && tooltipEl.contains(e.target)) {
+                closeTooltip(channel);
+                return;
+            }
+            if (e.target !== active.trigger) {
+                closeTooltip(channel);
+            }
         }
     });
 });
@@ -72,7 +127,9 @@ window.toggleMetricsTime = (range) => {
     updateMetricsCharts();
 };
 
-window.hideMetricTooltip = () => { closeTooltip('all'); };
+window.hideMetricTooltip = () => {
+    closeTooltip('all');
+};
 
 // --- DEFINITIONS ---
 const METRIC_DEFINITIONS = {
@@ -224,7 +281,6 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown, colorVar
     manageTooltip(evt, 'metric-tooltip-popup', html, 'data');
 };
 
-// --- TREND CALCULATION ENGINE ---
 const calculateTrend = (dataPoints) => {
     const n = dataPoints.length;
     if (n < 2) return null;
@@ -235,15 +291,11 @@ const calculateTrend = (dataPoints) => {
     }
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
-    
-    // Trendline Coordinates
     const startVal = intercept;
     const endVal = intercept + slope * (n - 1);
-    
     return { slope, startVal, endVal };
 };
 
-// --- BUILD 3-WAY INDICATOR ---
 const buildTrendIndicators = (fullData, def) => {
     const now = new Date();
     
@@ -251,13 +303,10 @@ const buildTrendIndicators = (fullData, def) => {
         const cutoff = new Date();
         cutoff.setDate(now.getDate() - days);
         const subset = fullData.filter(d => d.date >= cutoff);
-        if (subset.length < 3) return { dir: 'flat', val: 0 }; // Need data points
-        
+        if (subset.length < 3) return { dir: 'flat', val: 0 }; 
         const trend = calculateTrend(subset);
         if (!trend) return { dir: 'flat', val: 0 };
-
         const slope = trend.slope;
-        // Threshold for "Flat"
         if (Math.abs(slope) < 0.001) return { dir: 'flat', val: slope };
         return { dir: slope > 0 ? 'up' : 'down', val: slope };
     };
@@ -268,19 +317,13 @@ const buildTrendIndicators = (fullData, def) => {
 
     const renderArrow = (trendObj, label) => {
         let icon = 'fa-minus';
-        let color = 'text-slate-500'; // Default Flat
-        
+        let color = 'text-slate-500';
         if (trendObj.dir !== 'flat') {
             const isUp = trendObj.dir === 'up';
             icon = isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
-            
-            // Color Logic
-            // If Invert=False (High is Good): Up=Green, Down=Red
-            // If Invert=True (Low is Good): Up=Red, Down=Green
             const isGood = def.invertRanges ? !isUp : isUp;
             color = isGood ? 'text-emerald-400' : 'text-red-400';
         }
-
         return `
             <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="${label} Trend">
                 <span class="text-[8px] font-bold text-slate-400">${label}</span>
@@ -302,8 +345,6 @@ const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
     const unitLabel = def.rangeInfo.split(' ').pop(); 
     const color = def.colorVar;
-
-    // Build the 3-Way Indicators using the FULL dataset (not just the zoomed one)
     const indicatorsHtml = buildTrendIndicators(fullData, def);
 
     if (!displayData || displayData.length < 2) {
@@ -321,7 +362,6 @@ const buildMetricChart = (displayData, fullData, key) => {
     const pad = { t: 20, b: 30, l: 50, r: 20 };
     const getX = (d, i) => pad.l + (i / (displayData.length - 1)) * (width - pad.l - pad.r);
     
-    // Scale Logic
     const dataValues = displayData.map(d => d.val);
     let minV = Math.min(...dataValues);
     let maxV = Math.max(...dataValues);
@@ -336,7 +376,6 @@ const buildMetricChart = (displayData, fullData, key) => {
 
     const getY = (val) => height - pad.b - ((val - domainMin) / (domainMax - domainMin)) * (height - pad.t - pad.b);
 
-    // Reference Lines
     let refLinesHtml = '';
     if (def.refMin !== undefined && def.refMax !== undefined) {
         const yMin = getY(def.refMin);
@@ -356,7 +395,6 @@ const buildMetricChart = (displayData, fullData, key) => {
         <text x="${pad.l - 6}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(1)}</text>
     `;
 
-    // Chart Trendline (Visual Only)
     const chartTrend = calculateTrend(displayData);
     let trendHtml = chartTrend ? `<line x1="${getX(null, 0)}" y1="${getY(chartTrend.startVal)}" x2="${getX(null, displayData.length - 1)}" y2="${getY(chartTrend.endVal)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5" />` : '';
     
@@ -375,12 +413,14 @@ const buildMetricChart = (displayData, fullData, key) => {
                     <div class="w-7 h-7 rounded flex items-center justify-center bg-slate-800 border border-slate-700">
                         <i class="fa-solid ${def.icon} text-sm" style="color: ${color}"></i>
                     </div>
-                    <div>
-                        <h3 class="text-xs font-bold text-white uppercase tracking-wide leading-none">${def.title}</h3>
-                        <div class="cursor-pointer text-[10px] text-blue-400 hover:text-white mt-0.5" onclick="window.showAnalysisTooltip(event, '${key}')">Analysis <i class="fa-solid fa-circle-info text-[9px]"></i></div>
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wide leading-none">${def.title}</h3>
+                </div>
+                <div class="flex items-center gap-3">
+                    ${indicatorsHtml}
+                    <div class="cursor-pointer text-slate-500 hover:text-white transition-colors p-1" onclick="window.showAnalysisTooltip(event, '${key}')">
+                        <i class="fa-solid fa-circle-info text-sm"></i>
                     </div>
                 </div>
-                ${indicatorsHtml}
             </div>
             <div class="flex-1 w-full h-[120px]">
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
@@ -427,55 +467,87 @@ const updateMetricsCharts = () => {
     else if (metricsState.timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (metricsState.timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
     
-    // FULL DATASETS (For Indicators)
+    // Full data for trends, filtered data for charts
+    const filteredData = cachedData.filter(d => d.date >= cutoff).sort((a,b) => a.date - b.date);
     const isIntensity = (item, labels) => {
         const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
         return labels.some(allowed => l === allowed.toUpperCase());
     };
 
-    const efFull = cachedData.filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']))
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr:${Math.round(d.avgPower)} / HR:${Math.round(d.avgHR)}` })).sort((a,b) => a.date - b.date);
-
-    const torqueFull = cachedData.filter(d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']))
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr:${Math.round(d.avgPower)} / RPM:${Math.round(d.avgCadence)}` })).sort((a,b) => a.date - b.date);
-
-    const runEconFull = cachedData.filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0)
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace:${Math.round(d.avgSpeed * 60)}m/m / HR:${Math.round(d.avgHR)}` })).sort((a,b) => a.date - b.date);
-
-    const mechFull = cachedData.filter(d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0)
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd:${d.avgSpeed.toFixed(1)} / Pwr:${Math.round(d.avgPower)}` })).sort((a,b) => a.date - b.date);
-
-    const vo2Full = cachedData.filter(d => d.vO2MaxValue > 0)
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: "VO2 Estimate", val: parseFloat(d.vO2MaxValue), breakdown: `Score: ${d.vO2MaxValue}` })).sort((a,b) => a.date - b.date);
-
-    const tssFull = aggregateWeeklyTSS(cachedData); // Already Sorted
-
-    const gctFull = cachedData.filter(d => d.actualType === 'Run' && d.avgGroundContactTime > 0)
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgGroundContactTime), breakdown: `${Math.round(d.avgGroundContactTime)} ms` })).sort((a,b) => a.date - b.date);
-
-    const vertFull = cachedData.filter(d => d.actualType === 'Run' && d.avgVerticalOscillation > 0)
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgVerticalOscillation), breakdown: `${d.avgVerticalOscillation.toFixed(1)} cm` })).sort((a,b) => a.date - b.date);
-
-    const anaFull = cachedData.filter(d => d.anaerobicTrainingEffect > 0.5)
-        .map(d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.anaerobicTrainingEffect), breakdown: `Anaerobic: ${d.anaerobicTrainingEffect}` })).sort((a,b) => a.date - b.date);
-
-    // DISPLAY DATASETS (Filtered by Time)
-    const filter = (arr) => arr.filter(d => d.date >= cutoff);
-
-    const render = (id, full, key) => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = buildMetricChart(filter(full), full, key);
+    // --- DATASETS (Full & Display) ---
+    const buildSet = (filterFn, mapFn) => {
+        const full = cachedData.filter(filterFn).map(mapFn).sort((a,b) => a.date - b.date);
+        const display = full.filter(d => d.date >= cutoff);
+        return { full, display };
     };
 
-    render('metric-chart-endurance', efFull, 'endurance');
-    render('metric-chart-strength', torqueFull, 'strength');
-    render('metric-chart-economy', runEconFull, 'run');
-    render('metric-chart-mechanics', mechFull, 'mechanical');
-    render('metric-chart-vo2', vo2Full, 'vo2max');
-    render('metric-chart-tss', tssFull, 'tss');
-    render('metric-chart-gct', gctFull, 'gct');
-    render('metric-chart-vert', vertFull, 'vert');
-    render('metric-chart-anaerobic', anaFull, 'anaerobic');
+    const ef = buildSet(
+        d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgHR > 0 && isIntensity(d, ['AEROBIC_BASE', 'RECOVERY']),
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgHR, breakdown: `Pwr:${Math.round(d.avgPower)} / HR:${Math.round(d.avgHR)}` })
+    );
+
+    const torque = buildSet(
+        d => d.actualType === 'Bike' && d.avgPower > 0 && d.avgCadence > 0 && isIntensity(d, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']),
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: d.avgPower / d.avgCadence, breakdown: `Pwr:${Math.round(d.avgPower)} / RPM:${Math.round(d.avgCadence)}` })
+    );
+
+    const runEcon = buildSet(
+        d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgHR > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Pace:${Math.round(d.avgSpeed * 60)}m/m / HR:${Math.round(d.avgHR)}` })
+    );
+
+    const mech = buildSet(
+        d => d.actualType === 'Run' && d.avgSpeed > 0 && d.avgPower > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd:${d.avgSpeed.toFixed(1)} / Pwr:${Math.round(d.avgPower)}` })
+    );
+
+    const vo2 = buildSet(
+        d => d.vO2MaxValue > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: "VO2 Estimate", val: parseFloat(d.vO2MaxValue), breakdown: `Score: ${d.vO2MaxValue}` })
+    );
+
+    const fullTss = aggregateWeeklyTSS(cachedData);
+    const displayTss = fullTss.filter(d => d.date >= cutoff);
+
+    const gct = buildSet(
+        d => d.actualType === 'Run' && d.avgGroundContactTime > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgGroundContactTime), breakdown: `${Math.round(d.avgGroundContactTime)} ms` })
+    );
+
+    const vert = buildSet(
+        d => d.actualType === 'Run' && d.avgVerticalOscillation > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.avgVerticalOscillation), breakdown: `${d.avgVerticalOscillation.toFixed(1)} cm` })
+    );
+
+    const ana = buildSet(
+        d => d.anaerobicTrainingEffect > 0.5,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.anaerobicTrainingEffect), breakdown: `Anaerobic: ${d.anaerobicTrainingEffect}` })
+    );
+
+    // --- RENDER ---
+    const render = (id, dataObj, key) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = buildMetricChart(dataObj.display, dataObj.full, key);
+    };
+
+    // Row 1: Bike
+    render('metric-chart-endurance', ef, 'endurance');
+    render('metric-chart-strength', torque, 'strength');
+    
+    // Row 2: Run Efficiency
+    render('metric-chart-economy', runEcon, 'run');
+    render('metric-chart-mechanics', mech, 'mechanical');
+
+    // Row 3: Run Dynamics (Moved Up)
+    render('metric-chart-gct', gct, 'gct');
+    render('metric-chart-vert', vert, 'vert');
+
+    // Row 4: Physiology
+    render('metric-chart-vo2', vo2, 'vo2max');
+    render('metric-chart-tss', { full: fullTss, display: displayTss }, 'tss');
+
+    // Row 5: Intensity
+    render('metric-chart-anaerobic', ana, 'anaerobic');
 
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
@@ -508,12 +580,12 @@ export function renderMetrics(allData) {
                 <div id="metric-chart-mechanics"></div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div id="metric-chart-vo2"></div>
-                <div id="metric-chart-tss"></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div id="metric-chart-gct"></div>
                 <div id="metric-chart-vert"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div id="metric-chart-vo2"></div>
+                <div id="metric-chart-tss"></div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div id="metric-chart-anaerobic"></div>
