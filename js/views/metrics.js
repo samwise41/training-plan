@@ -25,7 +25,6 @@ if (!window.toggleSection) {
     };
 }
 
-// NEW: Scroll to specific chart from table
 window.scrollToMetric = (key) => {
     const sectionId = 'metrics-charts-section';
     const chartId = `metric-chart-${key}`;
@@ -34,7 +33,6 @@ window.scrollToMetric = (key) => {
     // 1. Expand Section if Closed
     if (section && section.classList.contains('max-h-0')) {
         window.toggleSection(sectionId);
-        // Wait for transition to start/finish slightly
         setTimeout(() => performScroll(chartId), 300);
     } else {
         performScroll(chartId);
@@ -42,20 +40,22 @@ window.scrollToMetric = (key) => {
 };
 
 const performScroll = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
+    const wrapper = document.getElementById(id);
+    if (!wrapper) return;
     
-    // 2. Scroll
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Scroll to the wrapper
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
-    // 3. Highlight Effect (Blue Glow)
-    const container = el.closest('.bg-slate-800\\/30'); // Find the card container
-    if (container) {
-        container.classList.add('ring-2', 'ring-blue-500', 'bg-slate-800');
-        container.classList.remove('bg-slate-800/30');
+    // Highlight the CARD (which is the first child of the wrapper)
+    const card = wrapper.firstElementChild;
+    if (card) {
+        // Remove the default background opacity for a stronger "Active" look
+        card.classList.remove('bg-slate-800/30'); 
+        card.classList.add('bg-slate-800', 'ring-2', 'ring-blue-500', 'shadow-blue-500/50', 'scale-[1.02]', 'transition-all', 'duration-500');
+        
         setTimeout(() => {
-            container.classList.remove('ring-2', 'ring-blue-500', 'bg-slate-800');
-            container.classList.add('bg-slate-800/30');
+            card.classList.remove('bg-slate-800', 'ring-2', 'ring-blue-500', 'shadow-blue-500/50', 'scale-[1.02]');
+            card.classList.add('bg-slate-800/30'); 
         }, 1500);
     }
 };
@@ -182,6 +182,13 @@ const METRIC_DEFINITIONS = {
         description: "Ratio of Speed vs. Power. Indicates conversion of power to forward motion.",
         improvement: "• High Cadence (170+)<br>• Form Drills (A-Skips)"
     },
+    // NEW SWIM METRIC
+    swim: {
+        title: "Swim Efficiency", sport: "Swim", icon: "fa-person-swimming", colorVar: "var(--color-swim)",
+        refMin: 0.3, refMax: 0.6, invertRanges: false, rangeInfo: "0.3 – 0.6 m/beat",
+        description: "Distance traveled per heartbeat in water. Measures stroke efficiency relative to cardiac cost.",
+        improvement: "• Drills (Catch/Pull)<br>• Long Steady Swims"
+    },
     gct: {
         title: "Ground Contact Time", sport: "Run", icon: "fa-stopwatch", colorVar: "var(--color-run)",
         refMin: 220, refMax: 260, invertRanges: true, rangeInfo: "< 260 ms",
@@ -293,6 +300,8 @@ const getMetricData = (key) => {
         case 'strength': return d.filter(x => x.actualType === 'Bike' && x.avgPower > 0 && x.avgCadence > 0 && isInt(x, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY'])).map(x => ({ val: x.avgPower / x.avgCadence, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / RPM:${Math.round(x.avgCadence)}` }));
         case 'run': return d.filter(x => x.actualType === 'Run' && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pace:${Math.round(x.avgSpeed*60)}m/m / HR:${Math.round(x.avgHR)}` }));
         case 'mechanical': return d.filter(x => x.actualType === 'Run' && x.avgSpeed > 0 && x.avgPower > 0).map(x => ({ val: (x.avgSpeed * 100) / x.avgPower, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${x.avgSpeed.toFixed(1)} / Pwr:${Math.round(x.avgPower)}` }));
+        // SWIM CALC: Speed (m/s) * 60 / HR
+        case 'swim': return d.filter(x => x.actualType === 'Swim' && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${(x.avgSpeed*60).toFixed(1)}m/m / HR:${Math.round(x.avgHR)}` }));
         case 'gct': return d.filter(x => x.actualType === 'Run' && x.avgGroundContactTime > 0).map(x => ({ val: x.avgGroundContactTime, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${Math.round(x.avgGroundContactTime)} ms` }));
         case 'vert': return d.filter(x => x.actualType === 'Run' && x.avgVerticalOscillation > 0).map(x => ({ val: x.avgVerticalOscillation, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${x.avgVerticalOscillation.toFixed(1)} cm` }));
         case 'vo2max': return d.filter(x => x.vO2MaxValue > 0).map(x => ({ val: x.vO2MaxValue, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: "VO2 Est", breakdown: `Score: ${x.vO2MaxValue}` }));
@@ -362,7 +371,6 @@ const buildSummaryTable = () => {
             }
         }
 
-        // MAKE ICON CLICKABLE
         const iconCell = `
             <div onclick="window.scrollToMetric('${key}')" class="w-6 h-6 rounded flex items-center justify-center bg-slate-800 border border-slate-700 cursor-pointer hover:bg-slate-700 hover:border-slate-500 hover:scale-110 transition-all duration-200 group shadow-sm" title="Jump to Chart">
                 <i class="fa-solid ${def.icon} text-xs group-hover:text-white transition-colors" style="color: ${def.colorVar}"></i>
@@ -532,7 +540,7 @@ const updateMetricsCharts = () => {
     else if (metricsState.timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (metricsState.timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
     
-    const filteredData = cachedData.filter(d => d.date >= cutoff).sort((a,b) => a.date - b.date);
+    // FULL DATASETS
     const isIntensity = (item, labels) => {
         const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
         return labels.some(allowed => l === allowed.toUpperCase());
@@ -564,6 +572,11 @@ const updateMetricsCharts = () => {
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 100) / d.avgPower, breakdown: `Spd:${d.avgSpeed.toFixed(1)} / Pwr:${Math.round(d.avgPower)}` })
     );
 
+    const swim = buildSet(
+        d => d.actualType === 'Swim' && d.avgSpeed > 0 && d.avgHR > 0,
+        d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: (d.avgSpeed * 60) / d.avgHR, breakdown: `Spd:${(d.avgSpeed*60).toFixed(1)}m/m / HR:${Math.round(d.avgHR)}` })
+    );
+
     const vo2 = buildSet(
         d => d.vO2MaxValue > 0,
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: "VO2 Estimate", val: parseFloat(d.vO2MaxValue), breakdown: `Score: ${d.vO2MaxValue}` })
@@ -587,6 +600,7 @@ const updateMetricsCharts = () => {
         d => ({ date: d.date, dateStr: d.date.toISOString().split('T')[0], name: d.actualName, val: parseFloat(d.anaerobicTrainingEffect), breakdown: `Anaerobic: ${d.anaerobicTrainingEffect}` })
     );
 
+    // RENDER CONTENT
     document.getElementById('trends-table-container').innerHTML = buildSummaryTable();
 
     const render = (id, dataObj, key) => {
@@ -598,6 +612,7 @@ const updateMetricsCharts = () => {
     render('metric-chart-strength', torque, 'strength');
     render('metric-chart-economy', runEcon, 'run');
     render('metric-chart-mechanics', mech, 'mechanical');
+    render('metric-chart-swim', swim, 'swim');
     render('metric-chart-gct', gct, 'gct');
     render('metric-chart-vert', vert, 'vert');
     render('metric-chart-vo2', vo2, 'vo2max');
@@ -621,7 +636,7 @@ export function renderMetrics(allData) {
     const headerHtml = `
         <div class="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-0 z-10 mb-6">
             <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <i class="fa-solid fa-chart-area text-emerald-500"></i> Performance Lab
+                <i class="fa-solid fa-bullseye text-emerald-500"></i> Performance Lab
             </h2>
             <div class="flex gap-1.5">${buildToggle('30d', '30d')}${buildToggle('90d', '90d')}${buildToggle('6m', '6m')}${buildToggle('1y', '1y')}</div>
         </div>`;
@@ -634,14 +649,12 @@ export function renderMetrics(allData) {
             <div id="metric-chart-strength"></div>
             <div id="metric-chart-economy"></div>
             <div id="metric-chart-mechanics"></div>
+            <div id="metric-chart-swim"></div>
             <div id="metric-chart-gct"></div>
             <div id="metric-chart-vert"></div>
             <div id="metric-chart-vo2"></div>
             <div id="metric-chart-tss"></div>
             <div id="metric-chart-anaerobic"></div>
-            <div class="bg-slate-800/10 border border-slate-800 border-dashed rounded-xl p-6 flex items-center justify-center">
-                <p class="text-xs text-slate-600 font-mono">Future Metric Slot</p>
-            </div>
         </div>`;
     
     const chartsSection = buildCollapsibleSection('metrics-charts-section', 'Detailed Charts', chartsGrid, true);
