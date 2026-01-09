@@ -1,8 +1,9 @@
 // js/views/metrics.js
 
 // --- STATE MANAGEMENT ---
-let metricsState = { timeRange: '6m' }; 
+let metricsState = { timeRange: '6m' };
 let cachedData = [];
+let lastClickedElement = null;
 
 // --- GLOBAL HANDLERS ---
 window.toggleMetricsTime = (range) => {
@@ -17,6 +18,7 @@ window.hideMetricTooltip = () => {
     if (tooltip) tooltip.classList.add('opacity-0', 'pointer-events-none');
     if (info) info.classList.add('opacity-0', 'pointer-events-none');
     if (ranges) ranges.classList.add('opacity-0', 'pointer-events-none');
+    lastClickedElement = null;
 };
 
 const METRIC_DEFINITIONS = {
@@ -107,6 +109,15 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
     let tooltip = document.getElementById('metric-tooltip-popup');
     if (!tooltip) return;
 
+    // If clicking the same element and tooltip is visible, hide it
+    if (lastClickedElement === evt.target && !tooltip.classList.contains('opacity-0')) {
+        window.hideMetricTooltip();
+        lastClickedElement = null;
+        return;
+    }
+
+    lastClickedElement = evt.target;
+
     tooltip.innerHTML = `
         <div class="text-center">
             <div class="text-[10px] text-slate-400 mb-1 border-b border-slate-700 pb-1">${date}</div>
@@ -115,10 +126,37 @@ window.showMetricTooltip = (evt, date, name, val, unitLabel, breakdown) => {
             <div class="text-[10px] text-slate-300 font-mono bg-slate-800 rounded px-2 py-0.5 mt-1 border border-slate-700">${breakdown}</div>
         </div>
     `;
-    
+
+    // Initial positioning
     tooltip.style.left = `${evt.clientX + 15}px`;
     tooltip.style.top = `${evt.clientY - 50}px`;
     tooltip.classList.remove('opacity-0', 'pointer-events-none');
+
+    // Adjust if off-screen
+    setTimeout(() => {
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        let newLeft = parseFloat(tooltip.style.left);
+        let newTop = parseFloat(tooltip.style.top);
+
+        if (tooltipRect.right > viewportWidth) {
+            newLeft = evt.clientX - 15 - tooltipRect.width;
+        }
+        if (tooltipRect.left < 0) {
+            newLeft = 10;
+        }
+        if (tooltipRect.bottom > viewportHeight) {
+            newTop = evt.clientY - 10 - tooltipRect.height;
+        }
+        if (tooltipRect.top < 0) {
+            newTop = 10;
+        }
+
+        tooltip.style.left = `${newLeft}px`;
+        tooltip.style.top = `${newTop}px`;
+    }, 0);
 };
 
 const calculateTrendline = (dataPoints) => {
