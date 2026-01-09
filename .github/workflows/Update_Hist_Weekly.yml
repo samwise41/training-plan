@@ -39,11 +39,18 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Force add the file to ensure git tracks it
           git add COACH_BRIEFING.md
-          # Only proceed if there are changes
-          if ! git diff --quiet && ! git diff --staged --quiet; then
+          
+          # Check if there are ANY changes (staged or unstaged) to commit
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Changes detected. Committing..."
             git commit -m "Auto-Update: AI Coach Briefing"
-            # PULL LATEST CHANGES BEFORE PUSHING
+            
+            # Rebase ensures we don't conflict with the previous step's push
             git pull --rebase origin main
             git push
+          else
+            echo "No changes to commit."
           fi
