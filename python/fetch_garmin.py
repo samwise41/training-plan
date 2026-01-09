@@ -8,13 +8,10 @@ JSON_FILE = 'my_garmin_data_ALL.json'
 FETCH_LIMIT = 50  # Number of recent activities to fetch
 
 # --- CREDENTIALS ---
-# Option A: Hardcode them (Not recommended if sharing code)
-EMAIL = "YOUR_GARMIN_EMAIL@example.com"
-PASSWORD = "YOUR_GARMIN_PASSWORD"
-
-# Option B: Use Environment Variables (Safer)
-# EMAIL = os.getenv("GARMIN_EMAIL")
-# PASSWORD = os.getenv("GARMIN_PASSWORD")
+# Get secrets from GitHub Environment
+GARMIN_EMAIL = os.environ.get('GARMIN_EMAIL')
+GARMIN_PASSWORD = os.environ.get('GARMIN_PASSWORD')
+GITHUB_TOKEN = os.environ.get('GH_PAT')
 
 def load_existing_data():
     if os.path.exists(JSON_FILE):
