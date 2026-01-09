@@ -1,4 +1,4 @@
-name: Sync Training Data
+name: Fetch Garmin Data Only
 on:
   schedule:
     - cron: '0 13,14,15 * * *' # Runs daily at 6,7 and 8:00 AM MST
