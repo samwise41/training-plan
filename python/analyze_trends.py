@@ -9,7 +9,17 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_FILE = os.path.join(REPO_ROOT, 'python', 'my_garmin_data_ALL.json')
 OUTPUT_FILE = os.path.join(REPO_ROOT, 'COACH_BRIEFING.md')
 
-# --- DEFINITIONS ---
+# --- SPORT ID CONSTANTS (The "Source of Truth") ---
+# 1 = Running (Road, Trail, Treadmill, etc.)
+# 2 = Cycling (Road, Indoor, MTB, Gravel, etc.)
+# 5 = Swimming (Lap, Open Water) -- Note: Garmin sometimes uses different IDs for Open Water (e.g. 26).
+# We will use a robust check that falls back to string if ID fails.
+SPORT_IDS = {
+    'RUN': [1],
+    'BIKE': [2],
+    'SWIM': [5, 26, 18] # 5=Lap, 26=Open Water, 18=Some Multisport Swim legs
+}
+
 METRICS = {
     'aerobic_efficiency': {'unit': 'EF', 'good': 'up', 'range': (1.3, 1.7)},
     'torque_efficiency':  {'unit': 'W/RPM', 'good': 'up', 'range': (2.5, 3.5)},
@@ -50,34 +60,24 @@ def analyze_metric(df, col_name, config):
     now = datetime.now()
     results = {}
     
-    # Special Handling for Weekly TSS (Needs aggregation first)
     if col_name == 'weekly_tss':
-        # Resample daily TSS to Weekly Sum
         if 'trainingStressScore' not in df.columns: return {'30d': 'No Data'}
-        
         df_tss = df.dropna(subset=['trainingStressScore']).set_index('startTime_dt')
-        # Resample to Weekly ('W-MON') and sum
         weekly_series = df_tss['trainingStressScore'].resample('W-MON').sum()
         
-        # Analyze the weekly series
         for days in [30, 90, 180]:
-            # Convert days to weeks for the cutoff
             cutoff = now - timedelta(days=days)
             subset = weekly_series[weekly_series.index >= cutoff]
-            
-            if len(subset) < 2: # Need at least 2 weeks for a trend
+            if len(subset) < 2:
                 results[f'{days}d'] = "Not enough data"
                 continue
-
             slope = calculate_slope(subset)
             trend_desc = determine_trend(slope, config['good'])
             avg_val = subset.mean()
             results[f'{days}d'] = f"{trend_desc} (Avg: {avg_val:.0f})"
             if days == 30: results['current'] = avg_val
-            
         return results
 
-    # Standard Metrics (Activity Averages)
     if col_name not in df.columns:
         return {'30d': 'No Data', '90d': 'No Data', '6m': 'No Data'}
 
@@ -86,19 +86,41 @@ def analyze_metric(df, col_name, config):
     for days in [30, 90, 180]:
         cutoff = now - timedelta(days=days)
         subset = df_clean[df_clean['startTime_dt'] >= cutoff]
-        
         if len(subset) < 3:
             results[f'{days}d'] = "Not enough data"
             continue
-
         slope = calculate_slope(subset[col_name])
         trend_desc = determine_trend(slope, config['good'])
         avg_val = subset[col_name].mean()
-        
         results[f'{days}d'] = f"{trend_desc} (Avg: {avg_val:.2f})"
         if days == 30: results['current'] = avg_val
 
     return results
+
+def get_sport_filter(row, sport_type):
+    """
+    Robust check for sport type using ID first, then key fallback.
+    Garmin JSON usually puts ID in activityType['typeId'] or activityType['parentTypeId'].
+    """
+    act_type = row.get('activityType', {})
+    
+    # Check 1: Direct ID Match (Most Robust)
+    type_id = act_type.get('typeId')
+    parent_id = act_type.get('parentTypeId')
+    
+    target_ids = SPORT_IDS.get(sport_type, [])
+    if type_id in target_ids or parent_id in target_ids:
+        return True
+        
+    # Check 2: String Fallback (Safety Net)
+    key = act_type.get('typeKey', '').lower()
+    parent_key = act_type.get('parentTypeKey', '').lower()
+    
+    if sport_type == 'RUN' and ('running' in key or 'running' in parent_key): return True
+    if sport_type == 'BIKE' and ('cycling' in key or 'cycling' in parent_key): return True
+    if sport_type == 'SWIM' and ('swimming' in key or 'swimming' in parent_key): return True
+    
+    return False
 
 def main():
     print("Starting Trend Analysis...")
@@ -111,51 +133,58 @@ def main():
 
     df['startTime_dt'] = pd.to_datetime(df['startTimeLocal'])
     
-    # --- 1. CALCULATE DERIVED METRICS ---
+    # --- APPLY FILTERS ---
+    # We pre-calculate boolean masks for speed
+    is_run = df.apply(lambda x: get_sport_filter(x, 'RUN'), axis=1)
+    is_bike = df.apply(lambda x: get_sport_filter(x, 'BIKE'), axis=1)
+    is_swim = df.apply(lambda x: get_sport_filter(x, 'SWIM'), axis=1)
+
+    # --- CALCULATE METRICS ---
     
-    # Aerobic Efficiency (Bike)
+    # Bike: EF (Power/HR)
+    # Logic: Must be a Bike ride AND have Power AND have HR
     df['aerobic_efficiency'] = np.where(
-        (df['activityType'].apply(lambda x: x.get('typeKey') in ['virtual_ride', 'road_biking'])) & (df['averageHR'] > 0),
+        is_bike & (df['avgPower'] > 0) & (df['averageHR'] > 0),
         df['avgPower'] / df['averageHR'], np.nan
     )
     
-    # Torque Efficiency Proxy (Watts/RPM)
+    # Bike: Torque (Power/Cadence)
     df['torque_efficiency'] = np.where(
-        (df['activityType'].apply(lambda x: x.get('typeKey') == 'virtual_ride')) & (df['averageBikingCadenceInRevPerMinute'] > 0),
+        is_bike & (df['avgPower'] > 0) & (df['averageBikingCadenceInRevPerMinute'] > 0),
         df['avgPower'] / df['averageBikingCadenceInRevPerMinute'], np.nan
     )
 
-    # Run Economy (m/beat)
+    # Run: Economy (Speed/HR)
+    # Speed is usually m/s. Convert to m/min for readable "Economy" metric
     df['run_speed_m_min'] = df['averageSpeed'] * 60
     df['run_economy'] = np.where(
-        (df['activityType'].apply(lambda x: 'running' in x.get('typeKey'))) & (df['averageHR'] > 0),
+        is_run & (df['averageHR'] > 0),
         df['run_speed_m_min'] / df['averageHR'], np.nan
     )
 
-    # Run Stiffness
+    # Run: Stiffness (Speed/Power)
     df['run_stiffness'] = np.where(
-        (df['activityType'].apply(lambda x: 'running' in x.get('typeKey'))) & (df['avgPower'] > 0),
+        is_run & (df['avgPower'] > 0),
         (df['averageSpeed'] * 100) / df['avgPower'], np.nan
     )
 
-    # Swim Efficiency (Broader Filter: looks for 'swimming' anywhere in typeKey)
+    # Swim: Efficiency (Speed/HR)
     df['swim_speed_m_min'] = df['averageSpeed'] * 60
     df['swim_efficiency'] = np.where(
-        (df['activityType'].apply(lambda x: 'swimming' in x.get('typeKey'))) & (df['averageHR'] > 0),
+        is_swim & (df['averageHR'] > 0),
         df['swim_speed_m_min'] / df['averageHR'], np.nan
     )
 
-    # Map raw columns
+    # Direct Mappings
     df['ground_contact'] = df.get('avgGroundContactTime', np.nan)
     df['vertical_osc'] = df.get('avgVerticalOscillation', np.nan)
     df['vo2_max'] = df.get('vO2MaxValue', np.nan)
     df['anaerobic_impact'] = df.get('anaerobicTrainingEffect', np.nan)
     
-    # Ensure TSS exists
     if 'trainingStressScore' not in df.columns:
         df['trainingStressScore'] = np.nan
 
-    # --- 2. GENERATE REPORT ---
+    # --- WRITE REPORT ---
     print(f"Writing briefing to: {OUTPUT_FILE}")
     with open(OUTPUT_FILE, 'w') as f:
         f.write("# 🤖 AI Coach Context Briefing\n")
@@ -173,7 +202,7 @@ def main():
             
             status_icon = "✅"
             if current == 0:
-                status_icon = "⚪ No Recent Data"
+                status_icon = "⚪ No Data"
             elif current < r_min: 
                 status_icon = "⚠️ Low"
                 if conf['good'] == 'up': alerts.append(f"**{key}** is {current:.2f} (Target: >{r_min}).")
