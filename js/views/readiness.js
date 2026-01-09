@@ -36,7 +36,7 @@ export function renderReadiness(mergedLogData, planMd) {
                     priority: cols[3] || 'C',
                     // Strictly access the correct index. 
                     swimGoal: cols[7] || '',
-                    bikeGoal: cols[9] || '',
+                    Goal: cols[9] || '',
                     runGoal: cols[11] || ''
                 });
             }
@@ -96,7 +96,7 @@ export function renderReadiness(mergedLogData, planMd) {
     const lookbackDate = new Date();
     lookbackDate.setDate(lookbackDate.getDate() - 30);
     
-    let maxSwim = 0, maxBike = 0, maxRun = 0;
+    let maxSwim = 0, max = 0, maxRun = 0;
     const safeLog = Array.isArray(mergedLogData) ? mergedLogData : [];
 
     if (safeLog.length > 0) {
@@ -119,9 +119,9 @@ export function renderReadiness(mergedLogData, planMd) {
 
     // 3. Configuration using Semantic Classes (Brand Colors)
     const sportConfig = {
-        swim: { color: 'text-swim', icon: 'fa-person-swimming', label: 'Swim' },
-        bike: { color: 'text-bike', icon: 'fa-person-biking', label: 'Bike' },
-        run:  { color: 'text-run',  icon: 'fa-person-running',  label: 'Run' }
+        swim: { color: 'icon-swim', icon: 'fa-person-swimming', label: 'Swim' },
+        bike: { color: 'icon-bike', icon: 'fa-person-biking', label: 'Bike' },
+        run:  { color: 'icon-run',  icon: 'fa-person-running',  label: 'Run' }
     };
 
     // 4. Build HTML
