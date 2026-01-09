@@ -6,37 +6,6 @@ export function renderReadiness(mergedLogData, planMd) {
     const safePlan = typeof planMd === 'string' ? planMd : '';
     if (!safePlan) return '<div class="p-8 text-slate-500 italic">Invalid plan format.</div>';
 
-    // --- NEW: READINESS GUIDE CHART ---
-    let guideHtml = `
-    <div class="max-w-5xl mx-auto mb-8 bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
-        <div class="bg-slate-900/80 p-3 border-b border-slate-700 flex items-center gap-2">
-            <i class="fa-solid fa-circle-info text-blue-400"></i>
-            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Readiness Guide</span>
-        </div>
-        <div class="grid grid-cols-3 text-center py-4 px-2 gap-4">
-            <div class="flex flex-col items-center">
-                <div class="w-3 h-3 rounded-full bg-emerald-500 mb-2 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                <span class="text-[10px] font-black text-emerald-500 uppercase">Race Ready</span>
-                <span class="text-[10px] text-slate-400">85% - 100%</span>
-            </div>
-            <div class="flex flex-col items-center border-x border-slate-700">
-                <div class="w-3 h-3 rounded-full bg-yellow-500 mb-2 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div>
-                <span class="text-[10px] font-black text-yellow-500 uppercase">Developing</span>
-                <span class="text-[10px] text-slate-400">60% - 84%</span>
-            </div>
-            <div class="flex flex-col items-center">
-                <div class="w-3 h-3 rounded-full bg-red-500 mb-2 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
-                <span class="text-[10px] font-black text-red-500 uppercase">Warning</span>
-                <span class="text-[10px] text-slate-400">&lt; 60%</span>
-            </div>
-        </div>
-        <div class="bg-slate-900/30 p-2 text-center border-t border-slate-700/50">
-            <p class="text-[9px] text-slate-500 italic">Score = (Longest Session in 30 Days / Goal) for your <strong>weakest</strong> discipline.</p>
-        </div>
-    </div>
-    `;
-
-    // --- EXISTING PARSING LOGIC ---
     const lines = safePlan.split('\n');
     let inTable = false;
     let events = [];
@@ -65,11 +34,7 @@ export function renderReadiness(mergedLogData, planMd) {
         return !isNaN(d.getTime()) && d >= today;
     });
 
-    if (upcomingEvents.length === 0) {
-        return guideHtml + '<div class="p-8 text-center text-slate-500 text-lg">No upcoming events found.</div>';
-    }
-
-    // --- REUSE YOUR EXISTING HELPER FUNCTIONS (parseDur, formatTime, max calcs) ---
+    // Helper Functions
     const parseDur = (str) => {
         if (!str || str === '-' || str.toLowerCase() === 'n/a') return 0;
         if (str.includes('km') || str.includes('mi')) return 0;
@@ -106,13 +71,42 @@ export function renderReadiness(mergedLogData, planMd) {
         }
     });
 
+    // START HTML BUILDING
+    let html = `
+    <div class="max-w-5xl mx-auto mb-8 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg">
+        <div class="bg-slate-900/80 p-3 border-b border-slate-700 flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-blue-400"></i>
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Readiness Guide</span>
+        </div>
+        <div class="grid grid-cols-3 text-center py-4 px-2 gap-4">
+            <div class="flex flex-col items-center">
+                <div class="w-3 h-3 rounded-full bg-emerald-500 mb-2"></div>
+                <span class="text-[10px] font-black text-emerald-500 uppercase">Race Ready</span>
+                <span class="text-[10px] text-slate-400">85% - 100%</span>
+            </div>
+            <div class="flex flex-col items-center border-x border-slate-700">
+                <div class="w-3 h-3 rounded-full bg-yellow-500 mb-2"></div>
+                <span class="text-[10px] font-black text-yellow-500 uppercase">Developing</span>
+                <span class="text-[10px] text-slate-400">60% - 84%</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <div class="w-3 h-3 rounded-full bg-red-500 mb-2"></div>
+                <span class="text-[10px] font-black text-red-500 uppercase">Warning</span>
+                <span class="text-[10px] text-slate-400">&lt; 60%</span>
+            </div>
+        </div>
+    </div>`;
+
+    if (upcomingEvents.length === 0) {
+        return html + '<div class="p-8 text-center text-slate-500 text-lg">No upcoming events found.</div>';
+    }
+
     const sportConfig = {
         swim: { color: 'text-swim', icon: 'fa-person-swimming', label: 'Swim' },
         bike: { color: 'text-bike', icon: 'fa-person-biking', label: 'Bike' },
         run:  { color: 'text-run',  icon: 'fa-person-running',  label: 'Run' }
     };
 
-    let eventsHtml = '';
     upcomingEvents.forEach(e => {
         const raceDate = new Date(e.dateStr);
         const tgtSwim = parseDur(e.swimGoal);
@@ -157,7 +151,7 @@ export function renderReadiness(mergedLogData, planMd) {
                 </div>`;
         };
 
-        eventsHtml += `
+        html += `
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-0 mb-8 overflow-hidden shadow-lg relative max-w-5xl mx-auto">
             <div class="bg-slate-900/50 border-b border-slate-700 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="flex items-center gap-3">
@@ -184,8 +178,7 @@ export function renderReadiness(mergedLogData, planMd) {
         </div>`;
     });
 
-    // Return the Guide followed by the Events
-    return guideHtml + eventsHtml;
+    return html;
 }
 
 export function renderReadinessChart(logData) {}
