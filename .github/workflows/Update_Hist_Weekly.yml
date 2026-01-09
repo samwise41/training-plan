@@ -2,7 +2,7 @@ name: Update History Master and Weekly Schedule
 on:
   schedule:
     - cron: '0 13,14,15 * * *' # Runs daily at 6,7 and 8:00 AM MST
-    - cron: '15 17 * * *'      # New: 10:15 AM MST (17:15 UTC)
+    - cron: '15 17 * * *'      # New: 10:15 AM MST
   workflow_dispatch:      # Allows you to run it manually from the "Actions" tab
 
 jobs:
