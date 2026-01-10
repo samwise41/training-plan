@@ -14,6 +14,7 @@ PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 
+# Helper Scripts
 GARMIN_FETCH_CMD = ["python", os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
 HYDRATE_CMD = ["python", os.path.join(SCRIPT_DIR, "hydrate_master_db.py")]
 
@@ -69,11 +70,14 @@ def load_master_db():
     if not os.path.exists(MASTER_DB): return pd.DataFrame(columns=MASTER_COLUMNS)
     with open(MASTER_DB, 'r', encoding='utf-8') as f: lines = f.readlines()
     if len(lines) < 3: return pd.DataFrame(columns=MASTER_COLUMNS)
+    
+    # Robust header parsing
     header = [h.strip() for h in lines[0].strip('|').split('|')]
     data = []
     for line in lines[2:]:
         if '|' not in line: continue
         row = [c.strip() for c in line.strip('|').split('|')]
+        # Fix column mismatch
         if len(row) < len(header): row += [''] * (len(header) - len(row))
         data.append(dict(zip(header, row)))
     return pd.DataFrame(data)
@@ -88,6 +92,7 @@ def get_activity_prefix(activity):
 def extract_weekly_table():
     if not os.path.exists(PLAN_FILE): return pd.DataFrame()
     with open(PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
+    
     table_lines, found_header = [], False
     for line in lines:
         s = line.strip()
@@ -96,7 +101,9 @@ def extract_weekly_table():
             continue
         if (s.startswith('# ') or s.startswith('## ')) and len(table_lines) > 2: break
         if '|' in s: table_lines.append(s)
+        
     if not found_header or not table_lines: return pd.DataFrame()
+    
     header = [h.strip() for h in table_lines[0].strip('|').split('|')]
     data = []
     for line in table_lines[1:]:
@@ -128,7 +135,7 @@ def main():
 
         new_rows = []
         plan_updates = {}
-        matched_activity_ids = set() # Track what we've used
+        matched_activity_ids = set() 
 
         print_header("1. MATCHING PLANNED WORKOUTS")
         for idx, row in df_plan.iterrows():
@@ -140,9 +147,10 @@ def main():
                 match = None
                 p_type = plan_workout.lower()
                 
-                # STRICT MATCHING ONLY
+                # --- STRICT MATCHING LOGIC ---
                 for act in candidates:
                     g_type = act.get('activityType', {}).get('typeKey', '').lower()
+                    
                     is_run = 'run' in p_type and 'running' in g_type
                     is_bike = 'bike' in p_type and ('biking' in g_type or 'virtual' in g_type)
                     is_swim = 'swim' in p_type and 'swimming' in g_type
@@ -151,11 +159,9 @@ def main():
                         match = act
                         break
                 
-                # Removed the "loose match" fallback logic here
-
                 if match:
                     act_id = match.get('activityId')
-                    matched_activity_ids.add(act_id) # Mark as consumed
+                    matched_activity_ids.add(act_id)
                     
                     prefix = get_activity_prefix(match)
                     raw_name = match.get('activityName', 'Manual Activity')
@@ -176,10 +182,11 @@ def main():
                         if col in match: new_row[col] = str(match[col])
                     new_rows.append(new_row)
                     print(f"   ✅ Linked: [{date_str}] {plan_workout} -> {new_name}")
+                else:
+                    print(f"   ⚠️ No Sport Match for: [{date_str}] {plan_workout}")
 
         print_header("2. FINDING UNPLANNED ACTIVITIES")
-        # Look for any activity in Garmin that wasn't matched to a plan
-        # We only check dates that exist in the plan to avoid importing years of history
+        # Check all activities in the relevant date range
         plan_dates = set(df_plan['Date'].unique())
         
         for date_str, activities in garmin_by_date.items():
@@ -196,10 +203,11 @@ def main():
                         
                         new_row = {c: "" for c in MASTER_COLUMNS}
                         new_row.update({
-                            'Status': 'EXTRA', 'Date': date_str, 'Day': datetime.strptime(date_str, '%Y-%m-%d').strftime('%A'),
+                            'Status': 'EXTRA', 'Date': date_str, 
+                            'Day': datetime.strptime(date_str, '%Y-%m-%d').strftime('%A'),
                             'Planned Workout': '', 'Planned Duration': '',
                             'Actual Workout': name, 'Actual Duration': dur,
-                            'Notes / Targets': '',
+                            'Notes / Targets': 'Unplanned Session',
                             'Match Status': 'Unplanned', 'activityId': str(act.get('activityId'))
                         })
                         for col in MASTER_COLUMNS:
@@ -218,12 +226,9 @@ def main():
                         row_date = next((c for c in cols if re.match(r'\d{4}-\d{2}-\d{2}', c)), None)
                         if row_date in plan_updates:
                             update = plan_updates[row_date]
-                            # Simple index guess based on standard layout
-                            # | Status | Day | Planned | Dur | Actual | Act Dur | ...
-                            # 0        1     2         3     4        5
                             if len(cols) > 5:
-                                cols[5] = update['name'] # Actual Workout
-                                cols[6] = update['dur']  # Actual Duration
+                                cols[5] = update['name'] 
+                                cols[6] = update['dur']  
                                 f.write("| " + " | ".join(cols[1:-1]) + " |\n")
                             else: f.write(line)
                         else: f.write(line)
@@ -235,8 +240,11 @@ def main():
         if new_rows:
             df_new = pd.DataFrame(new_rows)
             df_combined = pd.concat([df_new, df_master])
-            # Dedup based on ID
+            
+            # Dedup based on activityId
+            # We filter out rows that have an ID but might be duplicates
             df_combined = df_combined.drop_duplicates(subset=['activityId'], keep='first')
+            
             # Sort
             df_combined['Date_Obj'] = pd.to_datetime(df_combined['Date'], errors='coerce')
             df_combined = df_combined.sort_values(by='Date_Obj', ascending=False).drop(columns=['Date_Obj'])
@@ -248,7 +256,7 @@ def main():
                     vals = [str(row.get(c, "")).replace('\n', ' ').replace('|', '/') for c in MASTER_COLUMNS]
                     f.write("| " + " | ".join(vals) + " |\n")
 
-        # --- EXECUTE HYDRATION BEFORE PUSH ---
+        # --- FINAL STEP: HYDRATE & PUSH ---
         run_hydration()
         git_push_changes()
         
