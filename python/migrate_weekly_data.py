@@ -19,6 +19,7 @@ MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
 # Python/JSON files are in the 'python/' folder
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 GARMIN_FETCH_CMD = ["python", os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
+HYDRATE_DB_CMD = ["python", os.path.join(SCRIPT_DIR, "hydrate_master_db.py")]
 
 # Get secrets from GitHub Environment
 GARMIN_EMAIL = os.environ.get('GARMIN_EMAIL')
@@ -53,6 +54,19 @@ def run_garmin_fetch():
     except Exception as e:
         print(f"⚠️ Warning: Fetch failed: {e}")
 
+def run_hydration():
+    print(f"💧 Triggering Hydration & TSS Calc...")
+    if not os.path.exists(HYDRATE_DB_CMD[1]):
+        print(f"⚠️ Warning: Hydrate script not found at {HYDRATE_DB_CMD[1]}")
+        return
+    try:
+        # This will run the hydrate script we updated previously.
+        # It will read the Master DB we just saved, fix the TSS, and save it again.
+        subprocess.run(HYDRATE_DB_CMD, check=True, cwd=SCRIPT_DIR)
+        print("✅ Hydration Complete.")
+    except Exception as e:
+        print(f"⚠️ Warning: Hydration failed: {e}")
+
 def git_push_changes():
     print("🐙 Pushing changes to GitHub...")
     try:
@@ -60,7 +74,7 @@ def git_push_changes():
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
         
-        # Add all three files
+        # Add all files (MASTER_DB might have been updated by hydrate script too)
         subprocess.run(["git", "add", MASTER_DB, PLAN_FILE, GARMIN_JSON], check=True)
         
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
@@ -128,6 +142,8 @@ def extract_weekly_table():
 def main():
     try:
         print_header("STARTING MIGRATION & PLAN UPDATE")
+        
+        # 1. Fetch Latest Data
         run_garmin_fetch()
 
         if not os.path.exists(PLAN_FILE): return
@@ -162,7 +178,7 @@ def main():
 
             date_str = get_col('Date').strip()
             plan_workout = get_col('Planned Workout')
-            plan_notes = get_col('Notes') # Capture notes from plan
+            plan_notes = get_col('Notes')
             print(f"Row {idx+1}: [{date_str}] {plan_workout}")
 
             if date_str in garmin_by_date:
@@ -191,7 +207,7 @@ def main():
                         'Status': 'COMPLETED', 'Date': date_str, 'Day': get_col('Day'),
                         'Planned Workout': plan_workout, 'Planned Duration': get_col('Planned Duration'),
                         'Actual Workout': new_name, 'Actual Duration': dur_min,
-                        'Notes / Targets': plan_notes, # Map notes to Master column
+                        'Notes / Targets': plan_notes,
                         'Match Status': 'Linked', 'activityId': str(match.get('activityId', ''))
                     })
                     for col in MASTER_COLUMNS:
@@ -211,11 +227,14 @@ def main():
                         if row_date in plan_updates:
                             update = plan_updates[row_date]
                             header_cols = [h.strip().lower() for h in df_plan.columns]
-                            act_workout_idx = next(i for i, h in enumerate(header_cols) if 'actual workout' in h) + 1
-                            act_dur_idx = next(i for i, h in enumerate(header_cols) if 'actual duration' in h) + 1
-                            cols[act_workout_idx] = update['name']
-                            cols[act_dur_idx] = update['dur']
-                            f.write("| " + " | ".join(cols[1:-1]) + " |\n")
+                            try:
+                                act_workout_idx = next(i for i, h in enumerate(header_cols) if 'actual workout' in h) + 1
+                                act_dur_idx = next(i for i, h in enumerate(header_cols) if 'actual duration' in h) + 1
+                                cols[act_workout_idx] = update['name']
+                                cols[act_dur_idx] = update['dur']
+                                f.write("| " + " | ".join(cols[1:-1]) + " |\n")
+                            except StopIteration:
+                                f.write(line)
                         else: f.write(line)
                     else:
                         if in_schedule and line.startswith('#') and 'weekly schedule' not in line.lower(): in_schedule = False
@@ -224,7 +243,6 @@ def main():
         # --- SAVE MASTER DATABASE ---
         if new_rows:
             df_new = pd.DataFrame(new_rows)
-            # Use activityId or Date+Workout as unique key for duplicate checking
             df_combined = pd.concat([df_new, df_master])
             df_combined['temp_id'] = df_combined.apply(lambda x: x['activityId'] if x.get('activityId') else str(x['Date']) + str(x['Planned Workout']), axis=1)
             df_combined = df_combined.drop_duplicates(subset=['temp_id'], keep='first').drop(columns=['temp_id'])
@@ -238,8 +256,14 @@ def main():
                     vals = [str(row.get(c, "")).replace('\n', ' ').replace('|', '/') for c in MASTER_COLUMNS]
                     f.write("| " + " | ".join(vals) + " |\n")
 
-        print("✅ Success: Plan and Master DB synced.")
+            print("✅ Success: Plan and Master DB synced (Initial).")
+            
+            # --- TRIGGER HYDRATION / TSS CALC ---
+            run_hydration()
+        
+        # --- FINAL PUSH ---
         git_push_changes()
+        
     except Exception:
         traceback.print_exc()
 
