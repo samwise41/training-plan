@@ -14,7 +14,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 | June 20, 2026 | Jordanelle Olympic Triathlon | Finish ~ 2:30:00 | **A-Race** |  Hilly Bike / Flat Run | Needs low-cadence/high-torque bike intervals (Strength Endurance). | 1.5 k | 00:30:00 | 25 Miles | 1:14:00  | 10 k |  00:50:33 |
 | Aug 15, 2026 | CF Ride for Life Century Ride | Finish ~ 5:30:00 | **A-Race** |  4000+ ft of climb over two mountains  | Needs sustained Z2 endurance (4-5h saddle time). | | | 100 Miles | 5:30:00 | | |
 | Sept 11, 2026 | Brineman 70.3 Triathlon | sub 6:00:00 | **B-Race** |  1000 ft of climb total with no single climb over 200 ft.  | Need to pace effort. | 1.2 Miles | 01:00:00 | 52 Miles | 02:45:00 | 13.1 Miles | 02:15:00 | 
-| May 5, 2026 | East Canyon and Back | Finish ~ 2:30:00 | **C-Race** |  5000+ ft oc climb | Needs low-cadence/high-torque bike intervals (Strength Endurance). |  |  | 41 Miles | 2:30:00  |  |  |
+| May 5, 2026 | East Canyon and Back | Finish ~ 2:30:00 | **C-Race** |  5000+ ft of climb | Needs low-cadence/high-torque bike intervals (Strength Endurance). |  |  | 41 Miles | 2:30:00  |  |  |
 
 ## 2. User Profile & Health
 
@@ -251,7 +251,7 @@ To ensure the automated dashboard correctly tracks "Performance Signatures," all
 
 I have a training plan location in this github location. Can you review this file thoroughly, **specifically cross-referencing `COACH_BRIEFING.md` and `MASTER_TRAINING_DATABASE.md`,** and help me generate my training for the next week? 
 
-Please generate a raw markdown text of next week's schedule. If I forget to attach the GitHub repo, please remind me before spinning your wheels. 
+Please generate a raw markdown text of next week's schedule. Please provide evidence that you followed the Weekly Generator Checklist SOP. If I forget to attach the GitHub repo, please remind me before spinning your wheels. 
 
 **ADAPTIVE LOGIC INSTRUCTIONS:**
 1. **Analyze (Trends):** Read `COACH_BRIEFING.md` first. Identify any metrics flagged with "⚠️ Low" or "⚠️ High", or those showing "Improving" or "Declining" trends that may require attention.
