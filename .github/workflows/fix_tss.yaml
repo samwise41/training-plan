@@ -1,4 +1,4 @@
-name: Update History Master and Weekly Schedule
+name: tss
 
 on:
   schedule:
