@@ -14,7 +14,6 @@ PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 
-# Helper Scripts
 GARMIN_FETCH_CMD = ["python", os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
 HYDRATE_CMD = ["python", os.path.join(SCRIPT_DIR, "hydrate_master_db.py")]
 
@@ -50,16 +49,19 @@ def run_hydration():
         print("✅ Hydration Complete.")
     except Exception as e: print(f"⚠️ Warning: Hydration failed: {e}")
 
-def git_push_changes():
-    print("🐙 Pushing changes to GitHub...")
+def git_commit_and_push():
+    print("🐙 Pushing ALL changes to GitHub...")
     try:
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
-        subprocess.run(["git", "add", MASTER_DB, PLAN_FILE, GARMIN_JSON], check=True)
+        
+        # KEY CHANGE: Add EVERYTHING (.), not just specific files.
+        # This catches garmind_data/ changes, logs, etc.
+        subprocess.run(["git", "add", "."], check=True)
         
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
         if status:
-            msg = f"Auto-Sync: Master DB & Weekly Plan {datetime.now().strftime('%Y-%m-%d')}"
+            msg = f"Auto-Sync: Data Pipeline Update {datetime.now().strftime('%Y-%m-%d')}"
             subprocess.run(["git", "commit", "-m", msg], check=True)
             subprocess.run(["git", "push"], check=True)
             print("✅ Successfully pushed to GitHub!")
@@ -70,14 +72,11 @@ def load_master_db():
     if not os.path.exists(MASTER_DB): return pd.DataFrame(columns=MASTER_COLUMNS)
     with open(MASTER_DB, 'r', encoding='utf-8') as f: lines = f.readlines()
     if len(lines) < 3: return pd.DataFrame(columns=MASTER_COLUMNS)
-    
-    # Robust header parsing
     header = [h.strip() for h in lines[0].strip('|').split('|')]
     data = []
     for line in lines[2:]:
         if '|' not in line: continue
         row = [c.strip() for c in line.strip('|').split('|')]
-        # Fix column mismatch
         if len(row) < len(header): row += [''] * (len(header) - len(row))
         data.append(dict(zip(header, row)))
     return pd.DataFrame(data)
@@ -92,7 +91,6 @@ def get_activity_prefix(activity):
 def extract_weekly_table():
     if not os.path.exists(PLAN_FILE): return pd.DataFrame()
     with open(PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
-    
     table_lines, found_header = [], False
     for line in lines:
         s = line.strip()
@@ -101,9 +99,7 @@ def extract_weekly_table():
             continue
         if (s.startswith('# ') or s.startswith('## ')) and len(table_lines) > 2: break
         if '|' in s: table_lines.append(s)
-        
     if not found_header or not table_lines: return pd.DataFrame()
-    
     header = [h.strip() for h in table_lines[0].strip('|').split('|')]
     data = []
     for line in table_lines[1:]:
@@ -125,7 +121,6 @@ def main():
         with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
 
-        # Map Date -> List of Activities
         garmin_by_date = {}
         for entry in json_data:
             d = entry.get('startTimeLocal', '')[:10]
@@ -135,7 +130,7 @@ def main():
 
         new_rows = []
         plan_updates = {}
-        matched_activity_ids = set() 
+        matched_activity_ids = set()
 
         print_header("1. MATCHING PLANNED WORKOUTS")
         for idx, row in df_plan.iterrows():
@@ -147,10 +142,8 @@ def main():
                 match = None
                 p_type = plan_workout.lower()
                 
-                # --- STRICT MATCHING LOGIC ---
                 for act in candidates:
                     g_type = act.get('activityType', {}).get('typeKey', '').lower()
-                    
                     is_run = 'run' in p_type and 'running' in g_type
                     is_bike = 'bike' in p_type and ('biking' in g_type or 'virtual' in g_type)
                     is_swim = 'swim' in p_type and 'swimming' in g_type
@@ -162,7 +155,6 @@ def main():
                 if match:
                     act_id = match.get('activityId')
                     matched_activity_ids.add(act_id)
-                    
                     prefix = get_activity_prefix(match)
                     raw_name = match.get('activityName', 'Manual Activity')
                     new_name = f"{prefix} {raw_name}" if prefix and prefix not in raw_name else raw_name
@@ -182,25 +174,18 @@ def main():
                         if col in match: new_row[col] = str(match[col])
                     new_rows.append(new_row)
                     print(f"   ✅ Linked: [{date_str}] {plan_workout} -> {new_name}")
-                else:
-                    print(f"   ⚠️ No Sport Match for: [{date_str}] {plan_workout}")
 
         print_header("2. FINDING UNPLANNED ACTIVITIES")
-        # Check all activities in the relevant date range
         plan_dates = set(df_plan['Date'].unique())
-        
         for date_str, activities in garmin_by_date.items():
             if date_str in plan_dates:
                 for act in activities:
                     if act.get('activityId') not in matched_activity_ids:
-                        # Found an orphan!
                         prefix = get_activity_prefix(act)
                         raw_name = act.get('activityName', 'Unplanned Activity')
                         name = f"{prefix} {raw_name}"
                         dur = f"{float(act.get('duration', 0)) / 60:.1f}"
-                        
                         print(f"   🆕 Found Unplanned: [{date_str}] {name}")
-                        
                         new_row = {c: "" for c in MASTER_COLUMNS}
                         new_row.update({
                             'Status': 'EXTRA', 'Date': date_str, 
@@ -214,7 +199,6 @@ def main():
                             if col in act: new_row[col] = str(act[col])
                         new_rows.append(new_row)
 
-        # --- UPDATE ENDURANCE_PLAN.MD ---
         if plan_updates:
             with open(PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
             with open(PLAN_FILE, 'w', encoding='utf-8') as f:
@@ -236,16 +220,10 @@ def main():
                         if in_schedule and line.startswith('#') and 'weekly schedule' not in line.lower(): in_schedule = False
                         f.write(line)
 
-        # --- SAVE MASTER DATABASE ---
         if new_rows:
             df_new = pd.DataFrame(new_rows)
             df_combined = pd.concat([df_new, df_master])
-            
-            # Dedup based on activityId
-            # We filter out rows that have an ID but might be duplicates
             df_combined = df_combined.drop_duplicates(subset=['activityId'], keep='first')
-            
-            # Sort
             df_combined['Date_Obj'] = pd.to_datetime(df_combined['Date'], errors='coerce')
             df_combined = df_combined.sort_values(by='Date_Obj', ascending=False).drop(columns=['Date_Obj'])
 
@@ -256,9 +234,9 @@ def main():
                     vals = [str(row.get(c, "")).replace('\n', ' ').replace('|', '/') for c in MASTER_COLUMNS]
                     f.write("| " + " | ".join(vals) + " |\n")
 
-        # --- FINAL STEP: HYDRATE & PUSH ---
+        # --- EXECUTE HYDRATION & COMMIT EVERYTHING ---
         run_hydration()
-        git_push_changes()
+        git_commit_and_push()
         
     except Exception:
         traceback.print_exc()
