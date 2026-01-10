@@ -7,23 +7,16 @@ import re
 from datetime import datetime
 
 # --- CONFIGURATION ---
-# SCRIPT_DIR is .../training-plan/python/
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# ROOT_DIR   = .../training-plan/ (One level up)
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 
-# Markdown files are in the Repo Root
 PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
-
-# Python/JSON files are in the 'python/' folder
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
-GARMIN_FETCH_CMD = ["python", os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
 
-# Get secrets from GitHub Environment
-GARMIN_EMAIL = os.environ.get('GARMIN_EMAIL')
-GARMIN_PASSWORD = os.environ.get('GARMIN_PASSWORD')
-GITHUB_TOKEN = os.environ.get('GH_PAT')
+# Commands
+GARMIN_FETCH_CMD = ["python", os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
+HYDRATE_CMD = ["python", os.path.join(SCRIPT_DIR, "hydrate_master_db.py")]  # <--- NEW COMMAND
 
 MASTER_COLUMNS = [
     'Status', 'Day', 'Planned Workout', 'Planned Duration', 
@@ -53,14 +46,26 @@ def run_garmin_fetch():
     except Exception as e:
         print(f"⚠️ Warning: Fetch failed: {e}")
 
+def run_hydration():
+    """Runs the hydration script to backfill TSS and other calculated metrics."""
+    print(f"💧 Triggering Database Hydration & TSS Calc...")
+    if not os.path.exists(HYDRATE_CMD[1]):
+        print(f"⚠️ Warning: Hydrate script not found at {HYDRATE_CMD[1]}")
+        return
+    try:
+        # We run this BEFORE git push so calculated fields are included in the commit
+        subprocess.run(HYDRATE_CMD, check=True, cwd=SCRIPT_DIR)
+        print("✅ Hydration Complete.")
+    except Exception as e:
+        print(f"⚠️ Warning: Hydration failed: {e}")
+
 def git_push_changes():
     print("🐙 Pushing changes to GitHub...")
     try:
-        # Configure Git Identity for Actions
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
         
-        # Add all three files
+        # Add all files (Plan, Master DB, JSON)
         subprocess.run(["git", "add", MASTER_DB, PLAN_FILE, GARMIN_JSON], check=True)
         
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
@@ -76,7 +81,6 @@ def git_push_changes():
 
 def load_master_db():
     if not os.path.exists(MASTER_DB):
-        print(f"ℹ️ Creating new Master DB at {MASTER_DB}")
         return pd.DataFrame(columns=MASTER_COLUMNS)
     
     with open(MASTER_DB, 'r', encoding='utf-8') as f:
@@ -93,7 +97,6 @@ def load_master_db():
     return pd.DataFrame(data)
 
 def get_activity_prefix(activity):
-    """Maps Garmin activity types to dashboard tags."""
     g_type = activity.get('activityType', {}).get('typeKey', '').lower()
     if 'running' in g_type: return "[RUN]"
     if 'road_biking' in g_type or 'virtual_ride' in g_type: return "[BIKE]"
@@ -162,7 +165,7 @@ def main():
 
             date_str = get_col('Date').strip()
             plan_workout = get_col('Planned Workout')
-            plan_notes = get_col('Notes') # Capture notes from plan
+            plan_notes = get_col('Notes')
             print(f"Row {idx+1}: [{date_str}] {plan_workout}")
 
             if date_str in garmin_by_date:
@@ -191,14 +194,13 @@ def main():
                         'Status': 'COMPLETED', 'Date': date_str, 'Day': get_col('Day'),
                         'Planned Workout': plan_workout, 'Planned Duration': get_col('Planned Duration'),
                         'Actual Workout': new_name, 'Actual Duration': dur_min,
-                        'Notes / Targets': plan_notes, # Map notes to Master column
+                        'Notes / Targets': plan_notes,
                         'Match Status': 'Linked', 'activityId': str(match.get('activityId', ''))
                     })
                     for col in MASTER_COLUMNS:
                         if col in match: new_row[col] = str(match[col])
                     new_rows.append(new_row)
 
-        # --- UPDATE ENDURANCE_PLAN.MD ---
         if plan_updates:
             print_header("UPDATING WEEKLY PLAN")
             with open(PLAN_FILE, 'w', encoding='utf-8') as f:
@@ -221,10 +223,8 @@ def main():
                         if in_schedule and line.startswith('#') and 'weekly schedule' not in line.lower(): in_schedule = False
                         f.write(line)
 
-        # --- SAVE MASTER DATABASE ---
         if new_rows:
             df_new = pd.DataFrame(new_rows)
-            # Use activityId or Date+Workout as unique key for duplicate checking
             df_combined = pd.concat([df_new, df_master])
             df_combined['temp_id'] = df_combined.apply(lambda x: x['activityId'] if x.get('activityId') else str(x['Date']) + str(x['Planned Workout']), axis=1)
             df_combined = df_combined.drop_duplicates(subset=['temp_id'], keep='first').drop(columns=['temp_id'])
@@ -239,7 +239,13 @@ def main():
                     f.write("| " + " | ".join(vals) + " |\n")
 
         print("✅ Success: Plan and Master DB synced.")
+        
+        # --- EXECUTE HYDRATION BEFORE PUSH ---
+        run_hydration()
+        
+        # --- PUSH ALL CHANGES ---
         git_push_changes()
+        
     except Exception:
         traceback.print_exc()
 
