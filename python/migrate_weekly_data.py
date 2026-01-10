@@ -47,11 +47,8 @@ def run_garmin_fetch():
 def git_push_changes():
     print("🐙 Pushing changes to GitHub...")
     try:
-        # Configure Git Identity for Actions
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
-        
-        # Add all three files
         subprocess.run(["git", "add", MASTER_DB, PLAN_FILE, GARMIN_JSON], check=True)
         
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
@@ -67,7 +64,6 @@ def git_push_changes():
 
 def load_master_db():
     if not os.path.exists(MASTER_DB):
-        print(f"ℹ️ Creating new Master DB at {MASTER_DB}")
         return pd.DataFrame(columns=MASTER_COLUMNS)
     
     with open(MASTER_DB, 'r', encoding='utf-8') as f:
@@ -81,10 +77,10 @@ def load_master_db():
         row = [c.strip() for c in line.strip('|').split('|')]
         if len(row) < len(header): row += [''] * (len(header) - len(row))
         data.append(dict(zip(header, row)))
+    
     return pd.DataFrame(data)
 
 def extract_weekly_table():
-    """Extracts the planned workouts from endurance_plan.md"""
     if not os.path.exists(PLAN_FILE): return pd.DataFrame()
     with open(PLAN_FILE, 'r', encoding='utf-8') as f:
         lines = f.readlines()
@@ -111,249 +107,209 @@ def extract_weekly_table():
 
 def calculate_tss(row):
     """
-    Hydration: Calculate TSS if missing. 
-    Formula: (sec * NP * IF) / (FTP * 3600) * 100
-    Assuming a standard FTP if not present (e.g., 250) or skipping.
+    Calculates TSS only if:
+    1. It is missing (empty or 0)
+    2. Activity Type is Run or Bike
     """
-    # If TSS exists and is not zero/empty, keep it
-    try:
-        current_tss = float(row.get('trainingStressScore', 0))
-        if current_tss > 0: return current_tss
-    except: pass
+    # 1. Check if TSS already exists
+    existing = str(row.get('trainingStressScore', '')).strip()
+    if existing and existing != 'nan':
+        try:
+            if float(existing) > 0: return existing
+        except: pass
 
+    # 2. Check Activity Type (Only calc for Run/Bike)
+    # We check both 'Planned Workout' and 'activityType' (from Garmin) to be safe
+    act_type = str(row.get('activityType', '')).lower()
+    plan_type = str(row.get('Planned Workout', '')).lower()
+    
+    is_run_bike = ('run' in act_type or 'run' in plan_type or 
+                   'cycl' in act_type or 'bik' in act_type or 'virtual_ride' in act_type)
+    
+    if not is_run_bike:
+        return ""
+
+    # 3. Calculate
     try:
-        # Get duration in seconds
         duration = float(row.get('duration', 0))
-        # Get Normalized Power (Garmin often labels this 'normPower' or similar)
         np_val = float(row.get('normPower', 0))
-        
-        # We need FTP. Hardcoded fallback or column lookup.
-        ftp = 265.0 # Update this or pull from a settings file/column if available
+        ftp = 265.0 # Default FTP
         
         if duration > 0 and np_val > 0:
             intensity = np_val / ftp
             tss = (duration * np_val * intensity) / (ftp * 3600) * 100
-            return round(tss, 1)
-    except Exception:
+            return f"{tss:.1f}"
+    except:
         return ""
-    
     return ""
 
 def main():
     try:
-        print_header("STARTING MIGRATION & PLAN UPDATE")
+        print_header("STARTING MIGRATION")
         run_garmin_fetch()
 
-        # 1. Load Data Sources
+        # 1. Load Data
         df_master = load_master_db()
         df_plan = extract_weekly_table()
         
         with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
             garmin_data = json.load(f)
-        df_garmin = pd.DataFrame(garmin_data)
-
-        # 2. Pre-process Dates for Matching
-        df_master['Date_Dt'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.normalize()
         
-        # Process Garmin Dates & Columns
-        if not df_garmin.empty:
-            # Handle start time
-            df_garmin['Date_Dt'] = pd.to_datetime(df_garmin['startTimeLocal']).dt.normalize()
-            df_garmin['activityId'] = df_garmin['activityId'].astype(str)
-            
-            # Ensure columns map to Master Schema
-            # Map standard Garmin JSON keys to our columns if names differ
-            # (The JSON keys seem to match MASTER_COLUMNS mostly based on previous script)
-            pass
+        garmin_by_date = {}
+        for g in garmin_data:
+            d = g.get('startTimeLocal', '')[:10]
+            if d not in garmin_by_date: garmin_by_date[d] = []
+            garmin_by_date[d].append(g)
 
-        # 3. Sync Plan to Master (Ensure Master has all planned rows)
-        # We append planned rows that aren't in Master yet
+        # 2. Sync Plan -> Master (Append missing planned rows)
         if not df_plan.empty:
-            print("Syncing Weekly Plan to Master DB...")
-            df_plan['Date_Dt'] = pd.to_datetime(df_plan['Date'], errors='coerce').dt.normalize()
-            
-            # Simple check: Date + Planned Workout match
-            # Create a signature key for checking existence
-            df_master['unique_key'] = df_master['Date_Dt'].astype(str) + "_" + df_master['Planned Workout'].astype(str)
-            df_plan['unique_key'] = df_plan['Date_Dt'].astype(str) + "_" + df_plan['Planned Workout'].astype(str)
-            
-            existing_keys = set(df_master['unique_key'].tolist())
-            
-            new_plan_rows = []
-            for _, row in df_plan.iterrows():
-                if row['unique_key'] not in existing_keys:
-                    # Create new blank master row from plan
-                    new_row = {col: "" for col in MASTER_COLUMNS}
+            print("Syncing Plan Rows...")
+            for _, p_row in df_plan.iterrows():
+                p_date = p_row.get('Date', '').strip()
+                p_workout = p_row.get('Planned Workout', '').strip()
+                
+                # Check for duplicate
+                match = df_master[(df_master['Date'] == p_date) & 
+                                  (df_master['Planned Workout'] == p_workout)]
+                
+                if match.empty:
+                    new_row = {c: "" for c in MASTER_COLUMNS}
                     new_row.update({
-                        'Date': row['Date'],
-                        'Day': row['Day'],
-                        'Planned Workout': row['Planned Workout'],
-                        'Planned Duration': row['Planned Duration'],
-                        'Notes / Targets': row.get('Notes', ''),
+                        'Date': p_date,
+                        'Day': p_row.get('Day', ''),
+                        'Planned Workout': p_workout,
+                        'Planned Duration': p_row.get('Planned Duration', ''),
+                        'Notes / Targets': p_row.get('Notes', ''),
                         'Status': 'Pending'
                     })
-                    new_plan_rows.append(new_row)
+                    df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
+
+        # 3. LINKING (Iterative)
+        claimed_ids = set() 
+        print("Linking Garmin Data...")
+        
+        for idx, row in df_master.iterrows():
+            date = str(row.get('Date', '')).strip()
+            if len(date) < 10: continue
+
+            current_id = str(row.get('activityId', '')).strip()
+            if current_id and current_id != 'nan':
+                claimed_ids.add(current_id)
+                continue
+
+            candidates = garmin_by_date.get(date, [])
+            if not candidates: continue
+
+            planned_type = str(row.get('Planned Workout', '')).lower()
+            best_match = None
             
-            if new_plan_rows:
-                print(f"Adding {len(new_plan_rows)} new planned workouts to Master.")
-                df_master = pd.concat([df_master, pd.DataFrame(new_plan_rows)], ignore_index=True)
-                # Re-calc dates
-                df_master['Date_Dt'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.normalize()
+            # Type Match
+            for cand in candidates:
+                cand_id = str(cand.get('activityId'))
+                if cand_id in claimed_ids: continue
 
-        # 4. THE MERGE (Master First)
-        # We merge Garmin data into Master. 
-        # Left Join = Keep all Master rows.
-        print_header("MERGING GARMIN DATA (MASTER PRESERVED)")
-        
-        # Prepare Garmin for Merge (Rename cols to avoid collision or map directly)
-        # We'll suffix Garmin columns with '_new' to control the overwrite
-        df_garmin_merge = df_garmin.add_suffix('_new')
-        
-        # Merge on Date (and potentially Activity Type if we wanted to get fancy, but Date is standard)
-        # Note: If there are multiple activities per day, this simple merge might duplicate rows.
-        # To be safe, we merge on Date.
-        merged_df = pd.merge(
-            df_master, 
-            df_garmin_merge, 
-            left_on='Date_Dt', 
-            right_on='Date_Dt_new', 
-            how='left'
-        )
-
-        # 5. Hydrate & Update Columns
-        # For every row, if we found a match (activityId_new exists), we update the data.
-        
-        telemetry_cols = [
-            'activityId', 'activityName', 'activityType', 'duration', 'distance', 
-            'averageHR', 'maxHR', 'aerobicTrainingEffect', 'anaerobicTrainingEffect', 
-            'avgPower', 'normPower', 'trainingStressScore', 'calories', 'elevationGain'
-        ]
-
-        for index, row in merged_df.iterrows():
-            if pd.notna(row.get('activityId_new')):
-                # We have a match!
-                merged_df.at[index, 'Match Status'] = 'Linked'
-                merged_df.at[index, 'Status'] = 'COMPLETED'
+                g_type = cand.get('activityType', {}).get('typeKey', '').lower()
+                is_run = 'run' in planned_type and 'running' in g_type
+                is_bike = 'bike' in planned_type and ('cycling' in g_type or 'biking' in g_type)
+                is_swim = 'swim' in planned_type and 'swimming' in g_type
                 
-                # Update telemetry
-                for col in telemetry_cols:
-                    new_val = row.get(f"{col}_new")
-                    # Update if new_val is valid
-                    if pd.notna(new_val) and str(new_val) != "":
-                        merged_df.at[index, col] = new_val
+                if is_run or is_bike or is_swim:
+                    best_match = cand
+                    break
+            
+            # Fallback (Single activity matches anything)
+            if not best_match and len(candidates) == 1:
+                cand = candidates[0]
+                if str(cand.get('activityId')) not in claimed_ids:
+                    best_match = cand
+
+            if best_match:
+                m_id = str(best_match.get('activityId'))
+                claimed_ids.add(m_id)
                 
-                # Update Actual Workout Name/Duration for the plan
-                merged_df.at[index, 'Actual Workout'] = row.get('activityName_new', 'Activity')
-                # Convert duration (sec) to minutes for readability in "Actual Duration"
+                df_master.at[idx, 'Status'] = 'COMPLETED'
+                df_master.at[idx, 'Match Status'] = 'Linked'
+                df_master.at[idx, 'activityId'] = m_id
+                df_master.at[idx, 'Actual Workout'] = best_match.get('activityName', '')
+                df_master.at[idx, 'activityType'] = best_match.get('activityType', {}).get('typeKey', '')
+                
                 try:
-                    dur_sec = float(row.get('duration_new', 0))
-                    merged_df.at[index, 'Actual Duration'] = f"{dur_sec/60:.1f}"
+                    dur_sec = float(best_match.get('duration', 0))
+                    df_master.at[idx, 'Actual Duration'] = f"{dur_sec/60:.1f}"
                 except: pass
 
-        # 6. Identify & Append Unplanned Workouts
-        # Find Garmin IDs that were NOT used in the merge
-        matched_ids = merged_df['activityId_new'].dropna().unique()
-        unplanned_mask = ~df_garmin['activityId'].isin(matched_ids)
-        df_unplanned = df_garmin[unplanned_mask].copy()
+                # Map Telemetry
+                # We map specifically to ensure we populate columns for TSS calc
+                df_master.at[idx, 'duration'] = best_match.get('duration', '')
+                df_master.at[idx, 'normPower'] = best_match.get('normPower', '')
+                df_master.at[idx, 'trainingStressScore'] = best_match.get('trainingStressScore', '') # Try Garmin TSS first
+                
+                # Other fields
+                df_master.at[idx, 'distance'] = best_match.get('distance', '')
+                df_master.at[idx, 'averageHR'] = best_match.get('averageHeartRate', '')
+                df_master.at[idx, 'maxHR'] = best_match.get('maxHeartRate', '')
+                df_master.at[idx, 'calories'] = best_match.get('calories', '')
+                df_master.at[idx, 'elevationGain'] = best_match.get('totalAscent', '')
+                df_master.at[idx, 'avgPower'] = best_match.get('avgPower', '')
+
+        # 4. UNPLANNED APPEND
+        print("Handling Unplanned Workouts...")
+        unplanned_rows = []
+        all_garmin = [item for sublist in garmin_by_date.values() for item in sublist]
         
-        if not df_unplanned.empty:
-            print(f"Found {len(df_unplanned)} unplanned activities. Appending...")
-            
-            # Map Unplanned rows to Master Schema
-            unplanned_rows = []
-            for _, u_row in df_unplanned.iterrows():
-                new_row = {col: "" for col in MASTER_COLUMNS}
-                # Fill what we know
+        for g in all_garmin:
+            g_id = str(g.get('activityId'))
+            if g_id not in claimed_ids:
+                new_row = {c: "" for c in MASTER_COLUMNS}
                 new_row['Planned Workout'] = 'Unplanned'
                 new_row['Status'] = 'COMPLETED'
                 new_row['Match Status'] = 'Unplanned'
-                new_row['Date'] = str(u_row['startTimeLocal'])[:10] # YYYY-MM-DD
-                new_row['Actual Workout'] = u_row.get('activityName', 'Unplanned Activity')
+                new_row['Date'] = g.get('startTimeLocal', '')[:10]
+                new_row['activityId'] = g_id
+                new_row['Actual Workout'] = g.get('activityName', 'Unplanned')
+                new_row['activityType'] = g.get('activityType', {}).get('typeKey', '')
+                
+                # Telemetry
+                new_row['duration'] = g.get('duration', '')
+                new_row['normPower'] = g.get('normPower', '')
+                new_row['trainingStressScore'] = g.get('trainingStressScore', '')
+                
+                new_row['distance'] = g.get('distance', '')
+                new_row['averageHR'] = g.get('averageHeartRate', '')
+                new_row['maxHR'] = g.get('maxHeartRate', '')
+                new_row['calories'] = g.get('calories', '')
+                new_row['elevationGain'] = g.get('totalAscent', '')
+                new_row['avgPower'] = g.get('avgPower', '')
                 
                 try:
-                    new_row['Actual Duration'] = f"{float(u_row.get('duration', 0))/60:.1f}"
+                    new_row['Actual Duration'] = f"{float(g.get('duration', 0))/60:.1f}"
                 except: pass
-                
-                # Fill telemetry
-                for col in telemetry_cols:
-                    if col in u_row:
-                        new_row[col] = u_row[col]
-                
+
                 unplanned_rows.append(new_row)
-            
-            merged_df = pd.concat([merged_df, pd.DataFrame(unplanned_rows)], ignore_index=True)
 
-        # 7. Final Hydration (TSS Calc)
-        print("Hydrating TSS and calculated fields...")
-        merged_df['trainingStressScore'] = merged_df.apply(calculate_tss, axis=1)
+        if unplanned_rows:
+            print(f"Adding {len(unplanned_rows)} unplanned rows.")
+            df_master = pd.concat([df_master, pd.DataFrame(unplanned_rows)], ignore_index=True)
 
-        # 8. Clean up & Save Master
-        # Remove temporary merge columns
-        final_cols = [c for c in merged_df.columns if c in MASTER_COLUMNS]
-        df_final = merged_df[final_cols]
+        # 5. HYDRATE (Selective TSS)
+        print("Hydrating calculated fields (Run/Bike Only)...")
+        df_master['trainingStressScore'] = df_master.apply(calculate_tss, axis=1)
+
+        # 6. SAVE (Sorted Newest to Oldest)
+        # Create temp sort column
+        df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
+        # Sort DESCENDING (Newest first)
+        df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
         
-        # Sort by Date (Descending)
-        df_final['Date_Sort'] = pd.to_datetime(df_final['Date'], errors='coerce')
-        df_final = df_final.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
-
-        # Write to Markdown
-        print(f"Saving {len(df_final)} rows to Master DB...")
+        print("Saving Master DB...")
         with open(MASTER_DB, 'w', encoding='utf-8') as f:
             f.write("| " + " | ".join(MASTER_COLUMNS) + " |\n")
             f.write("| " + " | ".join(['---'] * len(MASTER_COLUMNS)) + " |\n")
-            for _, row in df_final.iterrows():
-                # Clean values for Markdown table
+            for _, row in df_master.iterrows():
                 vals = [str(row.get(c, "")).replace('\n', ' ').replace('|', '/') for c in MASTER_COLUMNS]
                 f.write("| " + " | ".join(vals) + " |\n")
 
-        # 9. Update the Weekly Plan (Visuals only)
-        # We read the master rows we just updated to sync back to the Plan MD
-        # (This keeps the "Actual" columns in your weekly schedule updated)
-        if not df_plan.empty:
-            print_header("UPDATING WEEKLY PLAN VISUALS")
-            # Create a lookup map from the updated master
-            # Key: Date -> {Actual Name, Actual Duration}
-            updates_map = {}
-            for _, row in df_final.iterrows():
-                d = str(row['Date'])
-                if row['Actual Workout'] and row['Actual Workout'] != 'nan':
-                    updates_map[d] = {
-                        'name': row['Actual Workout'],
-                        'dur': row['Actual Duration']
-                    }
-
-            # Rewriting the plan file line by line
-            with open(PLAN_FILE, 'r', encoding='utf-8') as f:
-                plan_lines = f.readlines()
-            
-            with open(PLAN_FILE, 'w', encoding='utf-8') as f:
-                in_schedule = False
-                for line in plan_lines:
-                    if 'weekly schedule' in line.lower(): in_schedule = True
-                    
-                    if in_schedule and '|' in line and '---' not in line and not line.strip().startswith('#'):
-                        cols = [c.strip() for c in line.split('|')]
-                        # Find date in this row
-                        row_date = next((c for c in cols if re.match(r'\d{4}-\d{2}-\d{2}', c)), None)
-                        
-                        if row_date and row_date in updates_map:
-                            upd = updates_map[row_date]
-                            # Assuming fixed column positions based on header, or simple search
-                            # We'll use index logic roughly based on standard plan format
-                            # Date | Day | Planned Workout | Dur | Actual Workout | Actual Dur | Notes
-                            # 1    | 2   | 3               | 4   | 5              | 6          | 7
-                            if len(cols) > 6:
-                                cols[5] = upd['name'] # Actual Workout
-                                cols[6] = upd['dur']  # Actual Duration
-                            f.write("| " + " | ".join(cols[1:-1]) + " |\n")
-                        else:
-                            f.write(line)
-                    else:
-                        if in_schedule and line.startswith('#') and 'weekly schedule' not in line.lower(): 
-                            in_schedule = False
-                        f.write(line)
-
-        print("✅ Success: Master DB and Weekly Plan updated.")
+        print("✅ Success: Migration Complete.")
         git_push_changes()
 
     except Exception:
