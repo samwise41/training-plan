@@ -39,7 +39,8 @@ def run_garmin_fetch():
         env = os.environ.copy()
         subprocess.run(GARMIN_FETCH_CMD, check=True, env=env, cwd=SCRIPT_DIR)
         print("✅ Garmin Data Synced.")
-    except Exception as e: print(f"⚠️ Warning: Fetch failed: {e}")
+    except Exception as e: 
+        print(f"⚠️ Warning: Fetch failed: {e}")
 
 def run_hydration():
     print(f"💧 Triggering Database Hydration & TSS Calc...")
@@ -54,9 +55,6 @@ def git_commit_and_push():
     try:
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
-        
-        # KEY CHANGE: Add EVERYTHING (.), not just specific files.
-        # This catches garmind_data/ changes, logs, etc.
         subprocess.run(["git", "add", "."], check=True)
         
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
@@ -72,6 +70,7 @@ def load_master_db():
     if not os.path.exists(MASTER_DB): return pd.DataFrame(columns=MASTER_COLUMNS)
     with open(MASTER_DB, 'r', encoding='utf-8') as f: lines = f.readlines()
     if len(lines) < 3: return pd.DataFrame(columns=MASTER_COLUMNS)
+    
     header = [h.strip() for h in lines[0].strip('|').split('|')]
     data = []
     for line in lines[2:]:
@@ -89,25 +88,63 @@ def get_activity_prefix(activity):
     return ""
 
 def extract_weekly_table():
-    if not os.path.exists(PLAN_FILE): return pd.DataFrame()
+    if not os.path.exists(PLAN_FILE): 
+        print(f"❌ Plan file not found: {PLAN_FILE}")
+        return pd.DataFrame()
+        
     with open(PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
+    
     table_lines, found_header = [], False
     for line in lines:
         s = line.strip()
         if not found_header:
-            if s.startswith('#') and 'weekly schedule' in s.lower(): found_header = True
+            if s.startswith('#') and 'weekly schedule' in s.lower(): 
+                found_header = True
             continue
         if (s.startswith('# ') or s.startswith('## ')) and len(table_lines) > 2: break
         if '|' in s: table_lines.append(s)
-    if not found_header or not table_lines: return pd.DataFrame()
-    header = [h.strip() for h in table_lines[0].strip('|').split('|')]
+        
+    if not found_header:
+        print("❌ Error: Could not find '## Weekly Schedule' section in plan.")
+        return pd.DataFrame()
+        
+    if len(table_lines) < 2:
+        print("❌ Error: Weekly Schedule table appears empty or malformed.")
+        return pd.DataFrame()
+    
+    # --- ROBUST HEADER PARSING ---
+    # Strip whitespace, splitting by pipe
+    header_raw = [h.strip() for h in table_lines[0].strip().strip('|').split('|')]
+    
+    # Check for empty headers (often caused by trailing pipes)
+    headers = [h for h in header_raw if h]
+    
+    print(f"🔎 Found Headers: {headers}")
+    
+    if 'Date' not in headers:
+        print(f"❌ CRITICAL ERROR: 'Date' column not found in headers.")
+        print(f"   Expected format: | Status | Day | ... | Date |")
+        return pd.DataFrame()
+
     data = []
     for line in table_lines[1:]:
         if '---' in line: continue
-        row_vals = [c.strip() for c in line.strip('|').split('|')]
-        if len(row_vals) < len(header): row_vals += [''] * (len(header) - len(row_vals))
-        data.append(dict(zip(header, row_vals)))
-    return pd.DataFrame(data)
+        row_vals = [c.strip() for c in line.strip().strip('|').split('|')]
+        
+        # Align Row with Header
+        if len(row_vals) == len(headers):
+            data.append(dict(zip(headers, row_vals)))
+        elif len(row_vals) > len(headers):
+             # Truncate extra cols
+             data.append(dict(zip(headers, row_vals[:len(headers)])))
+        else:
+             # Pad missing cols
+             row_vals += [''] * (len(headers) - len(row_vals))
+             data.append(dict(zip(headers, row_vals)))
+        
+    df = pd.DataFrame(data)
+    print(f"✅ Extracted {len(df)} rows from Weekly Schedule.")
+    return df
 
 def main():
     try:
@@ -115,22 +152,33 @@ def main():
         run_garmin_fetch()
 
         if not os.path.exists(PLAN_FILE): return
+        
+        # 1. EXTRACT PLAN
         df_plan = extract_weekly_table()
+        if df_plan.empty:
+            print("⚠️ Skipping migration: No valid schedule data found.")
+            return
+
         df_master = load_master_db()
         
-        with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
-            json_data = json.load(f)
-
+        # 2. LOAD GARMIN DATA
         garmin_by_date = {}
-        for entry in json_data:
-            d = entry.get('startTimeLocal', '')[:10]
-            if d:
-                if d not in garmin_by_date: garmin_by_date[d] = []
-                garmin_by_date[d].append(entry)
+        try:
+            with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
+                json_data = json.load(f)
+            
+            for entry in json_data:
+                d = entry.get('startTimeLocal', '')[:10]
+                if d:
+                    if d not in garmin_by_date: garmin_by_date[d] = []
+                    garmin_by_date[d].append(entry)
+        except Exception as e:
+            print(f"⚠️ Could not load Garmin JSON: {e}")
+            return
 
         new_rows = []
         plan_updates = {}
-        matched_activity_ids = set()
+        matched_activity_ids = set() 
 
         print_header("1. MATCHING PLANNED WORKOUTS")
         for idx, row in df_plan.iterrows():
@@ -142,6 +190,7 @@ def main():
                 match = None
                 p_type = plan_workout.lower()
                 
+                # STRICT MATCHING LOGIC
                 for act in candidates:
                     g_type = act.get('activityType', {}).get('typeKey', '').lower()
                     is_run = 'run' in p_type and 'running' in g_type
@@ -155,6 +204,7 @@ def main():
                 if match:
                     act_id = match.get('activityId')
                     matched_activity_ids.add(act_id)
+                    
                     prefix = get_activity_prefix(match)
                     raw_name = match.get('activityName', 'Manual Activity')
                     new_name = f"{prefix} {raw_name}" if prefix and prefix not in raw_name else raw_name
@@ -199,6 +249,7 @@ def main():
                             if col in act: new_row[col] = str(act[col])
                         new_rows.append(new_row)
 
+        # --- UPDATE ENDURANCE_PLAN.MD ---
         if plan_updates:
             with open(PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
             with open(PLAN_FILE, 'w', encoding='utf-8') as f:
@@ -220,6 +271,7 @@ def main():
                         if in_schedule and line.startswith('#') and 'weekly schedule' not in line.lower(): in_schedule = False
                         f.write(line)
 
+        # --- SAVE MASTER DATABASE ---
         if new_rows:
             df_new = pd.DataFrame(new_rows)
             df_combined = pd.concat([df_new, df_master])
