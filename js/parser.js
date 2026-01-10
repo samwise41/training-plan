@@ -73,8 +73,8 @@ export const Parser = {
         let hrIdx = -1, powerIdx = -1, speedIdx = -1, tssIdx = -1, activityIdIdx = -1, cadenceIdx = -1; 
         let teLabelIdx = -1;
         
-        // NEW: Indices for Growth Metrics
-        let vo2Idx = -1, gctIdx = -1, vertIdx = -1, anaerobicIdx = -1;
+        // NEW: Indices for Growth Metrics & Normalized Power
+        let vo2Idx = -1, gctIdx = -1, vertIdx = -1, anaerobicIdx = -1, normPowerIdx = -1;
 
         let data = [];
 
@@ -105,6 +105,7 @@ export const Parser = {
                         else if (h.includes('groundcontact')) gctIdx = index;
                         else if (h.includes('verticaloscillation')) vertIdx = index;
                         else if (h.includes('anaerobictraining')) anaerobicIdx = index;
+                        else if (h.includes('normpower')) normPowerIdx = index; // <--- The Missing Link
                     });
                     if (dateIdx !== -1) break; 
                 }
@@ -145,6 +146,7 @@ export const Parser = {
             const avgGroundContactTime = parseFloat(getCol(gctIdx)) || 0;
             const avgVerticalOscillation = parseFloat(getCol(vertIdx)) || 0;
             const anaerobicTrainingEffect = parseFloat(getCol(anaerobicIdx)) || 0;
+            const normPower = parseFloat(getCol(normPowerIdx)) || 0; // <--- Capture Value
 
             let date = null;
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -185,6 +187,7 @@ export const Parser = {
                     avgGroundContactTime, 
                     avgVerticalOscillation, 
                     anaerobicTrainingEffect,
+                    normPower, // <--- Add to Object
                     trainingStressScore: tss // Alias for compatibility with metrics.js
                 });
             }
