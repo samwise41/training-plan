@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import re
 from datetime import datetime
 
 # --- CONFIGURATION ---
@@ -9,16 +10,27 @@ MASTER_DB = os.path.join(SCRIPT_DIR, '..', 'MASTER_TRAINING_DATABASE.md')
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 PLAN_FILE = os.path.join(SCRIPT_DIR, '..', 'endurance_plan.md')
 
-def get_ftp_history():
-    """Parses FTP history from plan."""
+def get_config_from_plan():
+    """Parses FTP history and LTHR from plan."""
     default_ftp = 241
+    lthr = 171 # Default fallback
+    
     if not os.path.exists(PLAN_FILE):
-        return [(datetime.now(), default_ftp)]
+        return [(datetime.now(), default_ftp)], lthr
 
     ftp_log = []
     with open(PLAN_FILE, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+        content = f.read()
+        lines = content.split('\n')
     
+    # 1. Parse LTHR
+    # Look for: "**Lactate Threshold HR (LTHR):** 171 bpm"
+    lthr_match = re.search(r'Lactate Threshold HR.*?(\d{3})', content)
+    if lthr_match:
+        try: lthr = int(lthr_match.group(1))
+        except: pass
+
+    # 2. Parse FTP History
     in_table = False
     for line in lines:
         if "### Historical FTP Log" in line: in_table = True; continue
@@ -32,7 +44,8 @@ def get_ftp_history():
             except: continue
         elif in_table and line.strip() == "": in_table = False
     
-    return sorted(ftp_log, key=lambda x: x[0], reverse=True) or [(datetime.now(), default_ftp)]
+    sorted_ftp = sorted(ftp_log, key=lambda x: x[0], reverse=True) or [(datetime.now(), default_ftp)]
+    return sorted_ftp, lthr
 
 def get_ftp(date_str, history):
     try:
@@ -42,31 +55,41 @@ def get_ftp(date_str, history):
         return history[-1][1]
     except: return 241
 
-def calculate_tss(duration_sec, np, ftp):
+def calculate_power_tss(duration_sec, np, ftp):
+    """Cycling TSS based on Normalized Power."""
     try:
-        s = float(duration_sec)
-        n = float(np)
-        f = float(ftp)
+        s, n, f = float(duration_sec), float(np), float(ftp)
         if f == 0 or s == 0 or n == 0: return ""
-        intensity_factor = n / f
-        tss = (s * n * intensity_factor) / (f * 3600) * 100
+        intensity = n / f
+        tss = (s * n * intensity) / (f * 3600) * 100
+        return f"{tss:.1f}"
+    except: return ""
+
+def calculate_hr_tss(duration_sec, avg_hr, lthr):
+    """Running TSS based on Heart Rate (hrTSS)."""
+    try:
+        s, hr, lt = float(duration_sec), float(avg_hr), float(lthr)
+        if lt == 0 or s == 0 or hr == 0: return ""
+        # Formula: (Duration/3600) * (IF^2) * 100
+        # IF (Intensity Factor) = AvgHR / LTHR
+        intensity = hr / lt
+        tss = (s / 3600) * (intensity * intensity) * 100
         return f"{tss:.1f}"
     except: return ""
 
 def main():
     print(f"--- 💧 HYDRATION & TSS REPAIR STARTED ---")
-    
     if not os.path.exists(MASTER_DB): return
 
-    ftp_hist = get_ftp_history()
+    ftp_hist, current_lthr = get_config_from_plan()
+    print(f"   ⚙️ Config Loaded: LTHR={current_lthr} bpm | Latest FTP={ftp_hist[0][1]}W")
+
     try:
-        with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
-            garmin_data = json.load(f)
+        with open(GARMIN_JSON, 'r', encoding='utf-8') as f: garmin_data = json.load(f)
         garmin_lookup = {str(act['activityId']): act for act in garmin_data}
     except: garmin_lookup = {}
 
-    with open(MASTER_DB, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+    with open(MASTER_DB, 'r', encoding='utf-8') as f: lines = f.readlines()
     if len(lines) < 3: return
 
     header_line = lines[0].strip().strip('|')
@@ -82,7 +105,6 @@ def main():
         idx_dur = headers.index('duration') 
         idx_act_dur = headers.index('Actual Duration')
         idx_act_name = headers.index('Actual Workout')
-        # Check Sport Type to avoid Running TSS errors
         idx_sport = headers.index('sportTypeId') 
     except: return
 
@@ -96,6 +118,7 @@ def main():
         
         act_id = cols[idx_id]
         date_val = cols[idx_date]
+        sport_type = cols[idx_sport]
         
         # A. HYDRATE
         if act_id and act_id in garmin_lookup:
@@ -110,18 +133,11 @@ def main():
                     except: pass
                 updates += 1
 
-        # B. CALCULATE TSS (BIKE ONLY)
+        # B. CALCULATE TSS (Run & Bike)
         tss_val = cols[idx_tss]
-        np_val = cols[idx_np]
-        sport_type = cols[idx_sport]
-        
-        # Only calculate if Sport Type is 2 (Cycling) or 5 (Virtual Ride sometimes)
-        # Assuming 1 is Run, 2 is Bike based on your data
-        is_bike = sport_type in ['2', '2.0', '5', '5.0'] 
-        
         is_bad_tss = (tss_val in ['', 'nan', 'NaN', '0', '0.0', 'None'])
         
-        if is_bike and is_bad_tss and np_val and np_val not in ['nan', '']:
+        if is_bad_tss:
             sec = 0
             if cols[idx_dur] and cols[idx_dur] != 'nan':
                 try: sec = float(cols[idx_dur])
@@ -131,27 +147,34 @@ def main():
                 except: pass
             
             if sec > 0:
-                ftp = get_ftp(date_val, ftp_hist)
-                new_tss = calculate_tss(sec, np_val, ftp)
+                new_tss = ""
+                # BIKE (Type 2 or 5) -> Power TSS
+                if sport_type in ['2', '2.0', '5', '5.0'] and cols[idx_np]:
+                    ftp = get_ftp(date_val, ftp_hist)
+                    new_tss = calculate_power_tss(sec, cols[idx_np], ftp)
+                    if new_tss:
+                        print(f"   🚴 Bike TSS Fix: {date_val} = {new_tss}")
+
+                # RUN (Type 1) -> Heart Rate TSS
+                elif sport_type in ['1', '1.0'] and cols[idx_hr]:
+                    # Only if HR is valid (e.g. > 100)
+                    try: 
+                        if float(cols[idx_hr]) > 100:
+                            new_tss = calculate_hr_tss(sec, cols[idx_hr], current_lthr)
+                            if new_tss:
+                                print(f"   🏃 Run TSS Fix: {date_val} = {new_tss}")
+                    except: pass
+
                 if new_tss and new_tss != "0.0":
                     cols[idx_tss] = new_tss
-                    print(f"   🧮 Calculated Bike TSS: {date_val} = {new_tss}")
                     updates += 1
 
         updated_lines.append("| " + " | ".join(cols) + " |\n")
 
     if updates > 0:
-        print(f"\n💾 Saving {updates} updates...")
+        print(f"\n💾 Saving {updates} updates locally (Committing in parent script)...")
         with open(MASTER_DB, 'w', encoding='utf-8') as f:
             f.writelines(updated_lines)
-        
-        try:
-            print("🐙 Pushing to GitHub...")
-            subprocess.run(["git", "add", MASTER_DB], check=True, shell=True, cwd=SCRIPT_DIR)
-            subprocess.run(["git", "commit", "-m", "Auto: Hydrated DB & Calculated Bike TSS"], check=True, shell=True, cwd=SCRIPT_DIR)
-            subprocess.run(["git", "push"], check=True, shell=True, cwd=SCRIPT_DIR)
-            print("✅ Success!")
-        except Exception as e: print(f"⚠️ Push failed: {e}")
     else:
         print("✨ Database up to date.")
 
