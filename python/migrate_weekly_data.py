@@ -81,7 +81,10 @@ def load_master_db():
     return pd.DataFrame(data)
 
 def extract_weekly_table():
-    if not os.path.exists(PLAN_FILE): return pd.DataFrame()
+    if not os.path.exists(PLAN_FILE): 
+        print("⚠️ Plan file not found.")
+        return pd.DataFrame()
+        
     with open(PLAN_FILE, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
@@ -94,7 +97,9 @@ def extract_weekly_table():
         if (s.startswith('# ') or s.startswith('## ')) and len(table_lines) > 2: break
         if '|' in s: table_lines.append(s)
 
-    if not found_header or not table_lines: return pd.DataFrame()
+    if not found_header or not table_lines: 
+        print("⚠️ No 'Weekly Schedule' table found in Plan.")
+        return pd.DataFrame()
 
     header = [h.strip() for h in table_lines[0].strip('|').split('|')]
     data = []
@@ -103,49 +108,42 @@ def extract_weekly_table():
         row_vals = [c.strip() for c in line.strip('|').split('|')]
         if len(row_vals) < len(header): row_vals += [''] * (len(header) - len(row_vals))
         data.append(dict(zip(header, row_vals)))
-    return pd.DataFrame(data)
+    
+    df = pd.DataFrame(data)
+    print(f"✅ Extracted {len(df)} rows from Weekly Plan.")
+    return df
 
 def calculate_tss(row):
-    """
-    Calculates TSS only if:
-    1. It is missing (empty or 0)
-    2. Activity Type is Run or Bike
-    """
-    # 1. Check if TSS already exists
+    """Calculates TSS only if missing and activity is Run/Bike"""
     existing = str(row.get('trainingStressScore', '')).strip()
     if existing and existing != 'nan':
         try:
             if float(existing) > 0: return existing
         except: pass
 
-    # 2. Check Activity Type (Only calc for Run/Bike)
-    # We check both 'Planned Workout' and 'activityType' (from Garmin) to be safe
     act_type = str(row.get('activityType', '')).lower()
     plan_type = str(row.get('Planned Workout', '')).lower()
     
     is_run_bike = ('run' in act_type or 'run' in plan_type or 
                    'cycl' in act_type or 'bik' in act_type or 'virtual_ride' in act_type)
     
-    if not is_run_bike:
-        return ""
+    if not is_run_bike: return ""
 
-    # 3. Calculate
     try:
         duration = float(row.get('duration', 0))
         np_val = float(row.get('normPower', 0))
-        ftp = 265.0 # Default FTP
+        ftp = 265.0 
         
         if duration > 0 and np_val > 0:
             intensity = np_val / ftp
             tss = (duration * np_val * intensity) / (ftp * 3600) * 100
             return f"{tss:.1f}"
-    except:
-        return ""
+    except: return ""
     return ""
 
 def main():
     try:
-        print_header("STARTING MIGRATION")
+        print_header("STARTING MIGRATION (SYNC & MATCH)")
         run_garmin_fetch()
 
         # 1. Load Data
@@ -161,36 +159,57 @@ def main():
             if d not in garmin_by_date: garmin_by_date[d] = []
             garmin_by_date[d].append(g)
 
-        # 2. Sync Plan -> Master (Append missing planned rows)
+        # 2. SYNC PLAN -> MASTER (CRITICAL STEP)
         if not df_plan.empty:
-            print("Syncing Plan Rows...")
+            print_header("SYNCING WEEKLY PLAN TO MASTER")
+            count_added = 0
+            
+            # Normalize dates for robust comparison
+            df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
+            df_plan['Date_Norm'] = pd.to_datetime(df_plan['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
+
+            # Create composite keys for existing rows
+            existing_keys = set(zip(df_master['Date_Norm'], df_master['Planned Workout'].str.strip()))
+
             for _, p_row in df_plan.iterrows():
-                p_date = p_row.get('Date', '').strip()
-                p_workout = p_row.get('Planned Workout', '').strip()
+                p_date_norm = p_row['Date_Norm']
+                p_workout = str(p_row.get('Planned Workout', '')).strip()
                 
-                # Check for duplicate
-                match = df_master[(df_master['Date'] == p_date) & 
-                                  (df_master['Planned Workout'] == p_workout)]
-                
-                if match.empty:
+                if pd.isna(p_date_norm): continue # Skip invalid dates
+
+                # Check if this Date+Workout exists in Master
+                if (p_date_norm, p_workout) not in existing_keys:
+                    # ADD IT!
+                    print(f"[NEW PLAN ROW] Adding: {p_date_norm} - {p_workout}")
                     new_row = {c: "" for c in MASTER_COLUMNS}
                     new_row.update({
-                        'Date': p_date,
+                        'Date': p_date_norm,
                         'Day': p_row.get('Day', ''),
                         'Planned Workout': p_workout,
                         'Planned Duration': p_row.get('Planned Duration', ''),
                         'Notes / Targets': p_row.get('Notes', ''),
-                        'Status': 'Pending'
+                        'Status': 'Pending' # Default to Pending
                     })
                     df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
+                    # Update local key set to prevent duplicates within this loop
+                    existing_keys.add((p_date_norm, p_workout))
+                    count_added += 1
+            
+            print(f"✅ Sync Complete. Added {count_added} new planned workouts.")
+            # Drop temp column
+            df_master.drop(columns=['Date_Norm'], inplace=True)
+        else:
+            print("⚠️ No plan rows found to sync.")
 
         # 3. LINKING (Iterative)
         claimed_ids = set() 
-        print("Linking Garmin Data...")
+        print_header("LINKING GARMIN DATA")
         
         for idx, row in df_master.iterrows():
             date = str(row.get('Date', '')).strip()
-            if len(date) < 10: continue
+            # Try to fix date format if weird
+            try: date = pd.to_datetime(date).strftime('%Y-%m-%d')
+            except: pass
 
             current_id = str(row.get('activityId', '')).strip()
             if current_id and current_id != 'nan':
@@ -217,7 +236,7 @@ def main():
                     best_match = cand
                     break
             
-            # Fallback (Single activity matches anything)
+            # Fallback (Single activity)
             if not best_match and len(candidates) == 1:
                 cand = candidates[0]
                 if str(cand.get('activityId')) not in claimed_ids:
@@ -239,12 +258,9 @@ def main():
                 except: pass
 
                 # Map Telemetry
-                # We map specifically to ensure we populate columns for TSS calc
                 df_master.at[idx, 'duration'] = best_match.get('duration', '')
                 df_master.at[idx, 'normPower'] = best_match.get('normPower', '')
-                df_master.at[idx, 'trainingStressScore'] = best_match.get('trainingStressScore', '') # Try Garmin TSS first
-                
-                # Other fields
+                df_master.at[idx, 'trainingStressScore'] = best_match.get('trainingStressScore', '')
                 df_master.at[idx, 'distance'] = best_match.get('distance', '')
                 df_master.at[idx, 'averageHR'] = best_match.get('averageHeartRate', '')
                 df_master.at[idx, 'maxHR'] = best_match.get('maxHeartRate', '')
@@ -273,7 +289,6 @@ def main():
                 new_row['duration'] = g.get('duration', '')
                 new_row['normPower'] = g.get('normPower', '')
                 new_row['trainingStressScore'] = g.get('trainingStressScore', '')
-                
                 new_row['distance'] = g.get('distance', '')
                 new_row['averageHR'] = g.get('averageHeartRate', '')
                 new_row['maxHR'] = g.get('maxHeartRate', '')
@@ -296,12 +311,10 @@ def main():
         df_master['trainingStressScore'] = df_master.apply(calculate_tss, axis=1)
 
         # 6. SAVE (Sorted Newest to Oldest)
-        # Create temp sort column
         df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
-        # Sort DESCENDING (Newest first)
         df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
         
-        print("Saving Master DB...")
+        print(f"Saving {len(df_master)} rows to Master DB...")
         with open(MASTER_DB, 'w', encoding='utf-8') as f:
             f.write("| " + " | ".join(MASTER_COLUMNS) + " |\n")
             f.write("| " + " | ".join(['---'] * len(MASTER_COLUMNS)) + " |\n")
