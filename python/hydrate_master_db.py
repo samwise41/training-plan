@@ -4,7 +4,6 @@ import subprocess
 from datetime import datetime
 
 # --- CONFIGURATION ---
-# Paths are relative to where the script runs
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MASTER_DB = os.path.join(SCRIPT_DIR, '..', 'MASTER_TRAINING_DATABASE.md')
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
@@ -44,26 +43,21 @@ def get_ftp(date_str, history):
     except: return 241
 
 def calculate_tss(duration_sec, np, ftp):
-    """TSS = (sec x NP x IF) / (FTP x 3600) x 100"""
     try:
         s = float(duration_sec)
         n = float(np)
         f = float(ftp)
         if f == 0 or s == 0 or n == 0: return ""
-        
         intensity_factor = n / f
         tss = (s * n * intensity_factor) / (f * 3600) * 100
         return f"{tss:.1f}"
-    except:
-        return ""
+    except: return ""
 
 def main():
     print(f"--- 💧 HYDRATION & TSS REPAIR STARTED ---")
     
-    if not os.path.exists(MASTER_DB):
-        print("❌ Master DB not found!"); return
+    if not os.path.exists(MASTER_DB): return
 
-    # 1. Load Resources
     ftp_hist = get_ftp_history()
     try:
         with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
@@ -71,83 +65,63 @@ def main():
         garmin_lookup = {str(act['activityId']): act for act in garmin_data}
     except: garmin_lookup = {}
 
-    # 2. Read File Lines
     with open(MASTER_DB, 'r', encoding='utf-8') as f:
         lines = f.readlines()
-
     if len(lines) < 3: return
 
-    # 3. Parse Header
     header_line = lines[0].strip().strip('|')
     headers = [h.strip() for h in header_line.split('|')]
     
-    # Map Indices
     try:
-        # Core
         idx_id = headers.index('activityId')
         idx_date = headers.index('Date')
         idx_match = headers.index('Match Status')
-        
-        # Metrics
         idx_tss = headers.index('trainingStressScore')
         idx_np = headers.index('normPower')
         idx_hr = headers.index('averageHR')
-        
-        # Duration (Raw Seconds vs Display Minutes)
         idx_dur = headers.index('duration') 
         idx_act_dur = headers.index('Actual Duration')
         idx_act_name = headers.index('Actual Workout')
-        
-    except ValueError as e:
-        print(f"❌ Missing critical column: {e}"); return
+        # Check Sport Type to avoid Running TSS errors
+        idx_sport = headers.index('sportTypeId') 
+    except: return
 
-    updated_lines = lines[:2] # Preserve header & separator
+    updated_lines = lines[:2]
     updates = 0
 
-    # 4. Process Rows
     for line in lines[2:]:
-        if '|' not in line: 
-            updated_lines.append(line); continue
-
+        if '|' not in line: updated_lines.append(line); continue
         cols = [c.strip() for c in line.strip().strip('|').split('|')]
-        
-        # Pad Columns
         if len(cols) < len(headers): cols += [''] * (len(headers) - len(cols))
         
-        # Vars
         act_id = cols[idx_id]
         date_val = cols[idx_date]
         
-        # --- A. HYDRATE FROM GARMIN (The Linker) ---
+        # A. HYDRATE
         if act_id and act_id in garmin_lookup:
             match = garmin_lookup[act_id]
-            is_manual = (cols[idx_match] == 'Manual')
-            missing_data = (not cols[idx_hr] or not cols[idx_np])
-            
-            if is_manual or missing_data:
+            if cols[idx_match] == 'Manual' or not cols[idx_hr] or not cols[idx_np]:
                 cols[idx_match] = 'Linked'
                 cols[idx_act_name] = match.get('activityName', cols[idx_act_name])
-                
-                # Fill all matching columns
                 for i, h in enumerate(headers):
-                    if h in match and not cols[i]:
-                        cols[i] = str(match[h])
-                
-                # Handle Duration Display (Sec -> Min)
+                    if h in match and not cols[i]: cols[i] = str(match[h])
                 if 'duration' in match and not cols[idx_act_dur]:
                     try: cols[idx_act_dur] = f"{float(match['duration']) / 60:.1f}"
                     except: pass
-                
                 updates += 1
 
-        # --- B. CALCULATE TSS (The Fix) ---
+        # B. CALCULATE TSS (BIKE ONLY)
         tss_val = cols[idx_tss]
         np_val = cols[idx_np]
+        sport_type = cols[idx_sport]
+        
+        # Only calculate if Sport Type is 2 (Cycling) or 5 (Virtual Ride sometimes)
+        # Assuming 1 is Run, 2 is Bike based on your data
+        is_bike = sport_type in ['2', '2.0', '5', '5.0'] 
         
         is_bad_tss = (tss_val in ['', 'nan', 'NaN', '0', '0.0', 'None'])
         
-        if is_bad_tss and np_val and np_val not in ['nan', '']:
-            # Get Duration in Seconds
+        if is_bike and is_bad_tss and np_val and np_val not in ['nan', '']:
             sec = 0
             if cols[idx_dur] and cols[idx_dur] != 'nan':
                 try: sec = float(cols[idx_dur])
@@ -161,13 +135,11 @@ def main():
                 new_tss = calculate_tss(sec, np_val, ftp)
                 if new_tss and new_tss != "0.0":
                     cols[idx_tss] = new_tss
-                    print(f"   🧮 Calculated TSS: {date_val} = {new_tss}")
+                    print(f"   🧮 Calculated Bike TSS: {date_val} = {new_tss}")
                     updates += 1
 
-        # Rebuild Line
         updated_lines.append("| " + " | ".join(cols) + " |\n")
 
-    # 5. Save & Push
     if updates > 0:
         print(f"\n💾 Saving {updates} updates...")
         with open(MASTER_DB, 'w', encoding='utf-8') as f:
@@ -176,13 +148,12 @@ def main():
         try:
             print("🐙 Pushing to GitHub...")
             subprocess.run(["git", "add", MASTER_DB], check=True, shell=True, cwd=SCRIPT_DIR)
-            subprocess.run(["git", "commit", "-m", "Auto: Hydrated DB & Calculated TSS"], check=True, shell=True, cwd=SCRIPT_DIR)
+            subprocess.run(["git", "commit", "-m", "Auto: Hydrated DB & Calculated Bike TSS"], check=True, shell=True, cwd=SCRIPT_DIR)
             subprocess.run(["git", "push"], check=True, shell=True, cwd=SCRIPT_DIR)
-            print("✅ Success! Changes are live.")
-        except Exception as e:
-            print(f"⚠️ Saved locally, but Push failed: {e}")
+            print("✅ Success!")
+        except Exception as e: print(f"⚠️ Push failed: {e}")
     else:
-        print("✨ Database is already up to date.")
+        print("✨ Database up to date.")
 
 if __name__ == "__main__":
     main()
