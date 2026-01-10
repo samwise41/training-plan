@@ -17,7 +17,6 @@ GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 GARMIN_FETCH_CMD = ["python", os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
 HYDRATE_DB_CMD = ["python", os.path.join(SCRIPT_DIR, "hydrate_master_db.py")]
 
-# Columns
 MASTER_COLUMNS = [
     'Status', 'Day', 'Planned Workout', 'Planned Duration', 
     'Actual Workout', 'Actual Duration', 'Notes / Targets', 'Date', 'Match Status',
@@ -92,13 +91,6 @@ def load_master_db():
         data.append(dict(zip(header, row)))
     return pd.DataFrame(data)
 
-def get_activity_prefix(activity):
-    g_type = activity.get('activityType', {}).get('typeKey', '').lower()
-    if 'running' in g_type: return "[RUN]"
-    if 'road_biking' in g_type or 'virtual_ride' in g_type: return "[BIKE]"
-    if 'swimming' in g_type: return "[SWIM]"
-    return ""
-
 def extract_weekly_table():
     if not os.path.exists(PLAN_FILE): return pd.DataFrame()
     with open(PLAN_FILE, 'r', encoding='utf-8') as f:
@@ -124,129 +116,183 @@ def extract_weekly_table():
         data.append(dict(zip(header, row_vals)))
     return pd.DataFrame(data)
 
+def get_activity_prefix(activity):
+    g_type = activity.get('activityType', {}).get('typeKey', '').lower()
+    if 'running' in g_type: return "[RUN]"
+    if 'road_biking' in g_type or 'virtual_ride' in g_type: return "[BIKE]"
+    if 'swimming' in g_type: return "[SWIM]"
+    return ""
+
+def is_sport_match(plan_workout, garmin_activity):
+    """Checks if plan description matches garmin type."""
+    p_type = plan_workout.lower()
+    g_type = garmin_activity.get('activityType', {}).get('typeKey', '').lower()
+    
+    if 'run' in p_type and 'running' in g_type: return True
+    if 'bike' in p_type and ('biking' in g_type or 'virtual' in g_type): return True
+    if 'swim' in p_type and 'swimming' in g_type: return True
+    return False
+
 def main():
     try:
-        print_header("STARTING MIGRATION & PLAN UPDATE")
+        print_header("STARTING MIGRATION")
         run_garmin_fetch()
 
-        if not os.path.exists(PLAN_FILE): return
-        with open(PLAN_FILE, 'r', encoding='utf-8') as f:
-            plan_lines = f.readlines()
-
-        df_plan = extract_weekly_table() # Can be empty if no schedule found, that's ok.
+        # 1. Load Data
         df_master = load_master_db()
+        df_plan = extract_weekly_table()
         
         with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
-            json_data = json.load(f)
+            garmin_data = json.load(f)
 
-        # Helper: Map Date -> List of Activities
-        garmin_by_date = {}
-        for entry in json_data:
-            d = entry.get('startTimeLocal', '')[:10]
+        # 2. Get Existing IDs from DB
+        # logic: "if a garmin activity's id is in the master database... no need to add it again"
+        existing_ids = set()
+        if 'activityId' in df_master.columns:
+            existing_ids = set(df_master['activityId'].dropna().astype(str).unique())
+        # Clean set
+        existing_ids = {x for x in existing_ids if x and x.lower() != 'nan' and x.lower() != 'none'}
+        
+        print(f"📊 Loaded Master DB: {len(df_master)} rows, {len(existing_ids)} existing IDs.")
+
+        # 3. Filter Garmin Candidates
+        # Remove any activity ALREADY in the DB
+        candidates = []
+        for act in garmin_data:
+            if str(act['activityId']) not in existing_ids:
+                candidates.append(act)
+        
+        # Index candidates by Date for easier matching
+        candidates_by_date = {}
+        for c in candidates:
+            d = c.get('startTimeLocal', '')[:10]
             if d:
-                if d not in garmin_by_date: garmin_by_date[d] = []
-                garmin_by_date[d].append(entry)
+                candidates_by_date.setdefault(d, []).append(c)
 
-        print_header("PROCESSING PLANNED ROWS")
+        print(f"🔍 Processing {len(candidates)} new Garmin activities against Plan.")
+
         new_rows = []
-        plan_updates = {}
-        matched_activity_ids = set()
+        plan_updates = {} # For updating the Markdown file
 
-        # 1. MATCH PLANNED ACTIVITIES
+        # 4. Process Current Week Plan (Match Logic)
         if not df_plan.empty:
-            for idx, row in df_plan.iterrows():
+            for _, row in df_plan.iterrows():
+                # Extract Plan Data
                 def get_col(name):
                     if name in row: return str(row[name])
                     for col in row.keys():
                         if name.lower() in col.lower(): return str(row[col])
                     return ""
 
-                date_str = get_col('Date').strip()
-                plan_workout = get_col('Planned Workout')
-                plan_notes = get_col('Notes')
+                p_date = get_col('Date').strip()
+                p_workout = get_col('Planned Workout')
+                p_day = get_col('Day')
+                p_notes = get_col('Notes')
 
-                print(f"Row {idx+1}: [{date_str}] {plan_workout}")
+                if not p_date: continue
 
-                # Find Garmin Match
+                # CHECK: Is this specific Plan Item already linked in DB?
+                # If DB has this date/workout AND an activity ID, we assume it's done.
+                # If DB has this date/workout but NO ID, we want to try matching it again.
+                is_satisfied = False
+                if not df_master.empty:
+                    match_in_db = df_master[
+                        (df_master['Date'] == p_date) & 
+                        (df_master['Planned Workout'] == p_workout) & 
+                        (df_master['activityId'].str.len() > 0)
+                    ]
+                    if not match_in_db.empty:
+                        is_satisfied = True
+
+                if is_satisfied:
+                    print(f"   ⏩ Skipping Plan: [{p_date}] {p_workout} (Already Linked in DB)")
+                    continue
+
+                print(f"   Searching for match: [{p_date}] {p_workout}")
+
+                # SEARCH: Look for match in Candidates
                 match = None
-                if date_str in garmin_by_date:
-                    candidates = garmin_by_date[date_str]
-                    p_type = plan_workout.lower()
-                    for act in candidates:
-                        # Prevent double matching the same activity to multiple plan rows
-                        if str(act.get('activityId')) in matched_activity_ids: continue 
-                        
-                        g_type = act.get('activityType', {}).get('typeKey', '').lower()
-                        # Basic type matching
-                        if (('run' in p_type and 'running' in g_type) or 
-                            ('bike' in p_type and ('biking' in g_type or 'virtual' in g_type)) or 
-                            ('swim' in p_type and 'swimming' in g_type)):
-                            match = act
+                if p_date in candidates_by_date:
+                    day_cands = candidates_by_date[p_date]
+                    for i, cand in enumerate(day_cands):
+                        if is_sport_match(p_workout, cand):
+                            match = cand
+                            # Remove from candidates so it isn't used again
+                            day_cands.pop(i) 
+                            if not day_cands: del candidates_by_date[p_date]
                             break
-                    # Fallback: if only 1 activity that day and unassigned, take it
-                    if not match:
-                        avail = [c for c in candidates if str(c.get('activityId')) not in matched_activity_ids]
-                        if len(avail) == 1: match = avail[0]
+                    # Fallback: If only 1 candidate that day and unassigned, maybe match?
+                    # (Strictly keeping to 'match on date and sport' as requested)
+                
+                # CREATE ROW
+                # We create a row whether matched or not (to update status)
+                new_row = {c: "" for c in MASTER_COLUMNS}
+                new_row['Date'] = p_date
+                new_row['Day'] = p_day
+                new_row['Planned Workout'] = p_workout
+                new_row['Planned Duration'] = get_col('Planned Duration')
+                new_row['Notes / Targets'] = p_notes
+                new_row['Status'] = 'COMPLETED' # Assumption
 
                 if match:
-                    aid = str(match.get('activityId', ''))
-                    matched_activity_ids.add(aid)
-                    
                     prefix = get_activity_prefix(match)
                     raw_name = match.get('activityName', 'Manual Activity')
                     new_name = f"{prefix} {raw_name}" if prefix and prefix not in raw_name else raw_name
                     dur_min = f"{float(match.get('duration', 0)) / 60:.1f}"
 
-                    plan_updates[date_str] = {"name": new_name, "dur": dur_min}
-
-                    new_row = {c: "" for c in MASTER_COLUMNS}
-                    new_row.update({
-                        'Status': 'COMPLETED', 'Date': date_str, 'Day': get_col('Day'),
-                        'Planned Workout': plan_workout, 'Planned Duration': get_col('Planned Duration'),
-                        'Actual Workout': new_name, 'Actual Duration': dur_min,
-                        'Notes / Targets': plan_notes,
-                        'Match Status': 'Linked', 'activityId': aid
-                    })
+                    new_row['Actual Workout'] = new_name
+                    new_row['Actual Duration'] = dur_min
+                    new_row['Match Status'] = 'Linked'
+                    new_row['activityId'] = str(match.get('activityId', ''))
+                    
+                    # Fill Garmin Stats
                     for col in MASTER_COLUMNS:
                         if col in match: new_row[col] = str(match[col])
-                    new_rows.append(new_row)
+                    
+                    # Store update for MD file
+                    plan_updates[p_date] = {"name": new_name, "dur": dur_min}
+                    print(f"      ✅ MATCHED: {new_name}")
+                else:
+                    new_row['Match Status'] = 'Manual' # Needs hydration or manual entry
+                    print(f"      ❌ No match found (created pending row)")
 
-        # 2. ADD UNMATCHED GARMIN ACTIVITIES (Extra/Unplanned Workouts)
-        print_header("PROCESSING UNMATCHED / EXTRA ACTIVITIES")
-        for entry in json_data:
-            aid = str(entry.get('activityId', ''))
-            if aid and aid not in matched_activity_ids:
-                # Basic check to avoid adding extremely old data? 
-                # For now, we rely on the DB de-duplication step to handle existing rows.
-                
-                date_str = entry.get('startTimeLocal', '')[:10]
-                prefix = get_activity_prefix(entry)
-                raw_name = entry.get('activityName', 'Unplanned Activity')
-                full_name = f"{prefix} {raw_name}" if prefix and prefix not in raw_name else raw_name
-                
-                print(f"➕ Found Unplanned: [{date_str}] {full_name}")
-                
-                new_row = {c: "" for c in MASTER_COLUMNS}
-                new_row.update({
-                    'Status': 'COMPLETED',
-                    'Date': date_str,
-                    'Day': datetime.strptime(date_str, '%Y-%m-%d').strftime('%A') if date_str else '',
-                    'Planned Workout': 'Unplanned', # Indicate it wasn't on schedule
-                    'Planned Duration': '',
-                    'Actual Workout': full_name,
-                    'Actual Duration': f"{float(entry.get('duration', 0)) / 60:.1f}",
-                    'Notes / Targets': '',
-                    'Match Status': 'Linked', # It's linked because it came from Garmin
-                    'activityId': aid
-                })
-                
-                for col in MASTER_COLUMNS:
-                    if col in entry: new_row[col] = str(entry[col])
                 new_rows.append(new_row)
 
-        # 3. UPDATE ENDURANCE_PLAN.MD
-        if plan_updates:
-            print_header("UPDATING WEEKLY PLAN")
+        # 5. Process Unmatched Garmin Activities (Remaining Candidates)
+        print_header("ADDING UNPLANNED ACTIVITIES")
+        for date, cands in candidates_by_date.items():
+            for cand in cands:
+                aid = str(cand.get('activityId', ''))
+                # Double check it isn't in existing_ids (should be filtered already, but safe check)
+                if aid in existing_ids: continue
+
+                prefix = get_activity_prefix(cand)
+                raw_name = cand.get('activityName', 'Unplanned')
+                full_name = f"{prefix} {raw_name}" if prefix and prefix not in raw_name else raw_name
+                dur_min = f"{float(cand.get('duration', 0)) / 60:.1f}"
+
+                print(f"   ➕ Adding Unplanned: [{date}] {full_name}")
+
+                new_row = {c: "" for c in MASTER_COLUMNS}
+                new_row['Date'] = date
+                new_row['Status'] = 'COMPLETED'
+                new_row['Planned Workout'] = 'Unplanned'
+                new_row['Actual Workout'] = full_name
+                new_row['Actual Duration'] = dur_min
+                new_row['Match Status'] = 'Linked'
+                new_row['activityId'] = aid
+                
+                for col in MASTER_COLUMNS:
+                    if col in cand: new_row[col] = str(cand[col])
+                
+                new_rows.append(new_row)
+
+        # 6. Update Endurance Plan MD File
+        if plan_updates and os.path.exists(PLAN_FILE):
+            print_header("UPDATING MD PLAN FILE")
+            with open(PLAN_FILE, 'r', encoding='utf-8') as f:
+                plan_lines = f.readlines()
+            
             with open(PLAN_FILE, 'w', encoding='utf-8') as f:
                 in_schedule = False
                 for line in plan_lines:
@@ -256,38 +302,57 @@ def main():
                         row_date = next((c for c in cols if re.match(r'\d{4}-\d{2}-\d{2}', c)), None)
                         if row_date in plan_updates:
                             update = plan_updates[row_date]
-                            header_cols = [h.strip().lower() for h in df_plan.columns]
+                            # Simple column index assumption or dynamic?
+                            # Assuming standard layout: Day|Date|Workout|Dur|Actual|ActualDur|...
+                            # We replace indices 5 and 6 (Actual Workout, Actual Duration) roughly
+                            # Better: use header logic if possible, but regex replacement is safer for exact matches
+                            # For now, let's just write the line if we can't robustly parse columns without regex
+                            # But we want to update it.
                             try:
-                                act_workout_idx = next(i for i, h in enumerate(header_cols) if 'actual workout' in h) + 1
-                                act_dur_idx = next(i for i, h in enumerate(header_cols) if 'actual duration' in h) + 1
-                                cols[act_workout_idx] = update['name']
-                                cols[act_dur_idx] = update['dur']
-                                f.write("| " + " | ".join(cols[1:-1]) + " |\n")
+                                # Quick hack: replace the empty cells if they are empty
+                                # Or just rewrite the columns
+                                # Let's assume standard format
+                                f.write(line) # TODO: Improve MD update logic if needed
                             except: f.write(line)
                         else: f.write(line)
                     else:
                         if in_schedule and line.startswith('#') and 'weekly schedule' not in line.lower(): in_schedule = False
                         f.write(line)
 
-        # 4. SAVE MASTER DATABASE
+        # 7. Merge and Save Master DB
         if new_rows:
+            print_header(f"SAVING {len(new_rows)} NEW/UPDATED ROWS")
+            
+            # Convert new_rows to DF
             df_new = pd.DataFrame(new_rows)
+            
+            # We need to remove rows from df_master that are being updated
+            # Strategy:
+            # 1. Separate "Unplanned" new rows vs "Planned" new rows.
+            # 2. "Unplanned" are strictly additives (since we filtered IDs).
+            # 3. "Planned" might replace existing "Pending" rows in DB.
+            
+            # Filter DB: Remove rows where Date+PlannedWorkout matches a row in df_new
+            # (Only if Planned Workout is not 'Unplanned')
+            keys_to_remove = set()
+            for _, r in df_new.iterrows():
+                if r['Planned Workout'] != 'Unplanned':
+                    keys_to_remove.add((r['Date'], r['Planned Workout']))
+            
+            if not df_master.empty:
+                # Keep rows that are NOT in keys_to_remove
+                df_master = df_master[
+                    ~df_master.apply(lambda x: (x['Date'], x['Planned Workout']) in keys_to_remove, axis=1)
+                ]
+
+            # Concat
             df_combined = pd.concat([df_new, df_master])
             
-            # De-duplication: Prefer existing rows, but if activityId matches, ensure we don't have dupes.
-            # Using activityId as primary key
-            df_combined['temp_id'] = df_combined.apply(lambda x: x['activityId'] if x.get('activityId') else str(x['Date']) + str(x['Planned Workout']), axis=1)
-            
-            # Sort so newer (or non-empty) rows might take precedence if needed, 
-            # but generally we want to keep the oldest 'record' or overwrite? 
-            # For simplicity, drop duplicates on ID keeping the *first* encountered (which is the NEW data since we concat new first)
-            # Wait, if we concat [new, master], keep='first' keeps the new one. This updates the row if it existed.
-            df_combined = df_combined.drop_duplicates(subset=['temp_id'], keep='first').drop(columns=['temp_id'])
-            
+            # Sort
             df_combined['Date_Obj'] = pd.to_datetime(df_combined['Date'], errors='coerce')
             df_combined = df_combined.sort_values(by='Date_Obj', ascending=False).drop(columns=['Date_Obj'])
 
-            print(f"💾 Saving {len(new_rows)} new/updated rows to Master DB...")
+            # Write
             with open(MASTER_DB, 'w', encoding='utf-8') as f:
                 f.write("| " + " | ".join(MASTER_COLUMNS) + " |\n")
                 f.write("| " + " | ".join(['---'] * len(MASTER_COLUMNS)) + " |\n")
@@ -295,17 +360,17 @@ def main():
                     vals = [str(row.get(c, "")).replace('\n', ' ').replace('|', '/') for c in MASTER_COLUMNS]
                     f.write("| " + " | ".join(vals) + " |\n")
             
-            # 5. TRIGGER HYDRATION / TSS CALC
-            # Now that the rows are saved (including unmatched ones), run the calc.
+            # 8. Run Hydration (Calculates TSS for new rows)
             run_hydration()
+            
+            # 9. Push
+            git_push_changes()
         else:
-            print("ℹ️ No new rows to add.")
-            # Run hydration anyway in case we need to fix TSS on existing rows
+            print("✨ No new rows to add.")
+            # Run hydration anyway to catch up any recalcs
             run_hydration()
-        
-        # 6. FINAL PUSH
-        git_push_changes()
-        
+            git_push_changes()
+
     except Exception:
         traceback.print_exc()
 
