@@ -30,7 +30,8 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pandas requests
+        # FIX: Added 'garminconnect' to the list
+        pip install pandas requests garminconnect
 
     - name: Run Data Migration & Sync
       env:
@@ -38,5 +39,4 @@ jobs:
         GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
         GH_PAT: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # This script now handles Fetching, Migrating, Hydrating, AND Committing
         python python/migrate_weekly_data.py
