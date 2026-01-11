@@ -157,13 +157,13 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 
 | **Status** | **Day** | **Planned Workout** | **Planned Duration** | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** |
 |:---|:---|:---|:---|:---|:---|:---|:---|
-| COMPLETED | Monday | [BIKE] Strength / Hill Focus | 60 mins | [BIKE] Zwift - Sweet Spot - 2 x 15 on Richmond Rollercoaster in Richmond | 60.3 | Zone 3 / Sweet Spot (181-226W). Focus on low cadence (60-70 rpm) to build force. | 2026-01-05 |
-| COMPLETED | Tuesday | [SWIM] Technique Focus | 30 mins | [SWIM] Pool Swim | 37.9 | Zone 1 (RPE 3-4). Drills: Catch & Pull. Focus on smooth rotation. | 2026-01-06 |
-| COMPLETED | Wednesday | [RUN] Tempo / Threshold | 45 mins | [RUN] Roy - Zone 3 - Tempo - 45 minutes | 46.6 | Zone 3 (153-161 bpm) to low Zone 4. Build durability at speed. | 2026-01-07 |
-| COMPLETED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | [BIKE] Harrogate Virtual Cycling | 85.7 | **Winter Strategy Applied.** Full volume restored. Zone 2 (134-180W). | 2026-01-08 |
-| COMPLETED | Friday | [RUN] Aerobic Maintenance | 45 mins | [RUN] Roy - Zone 2 - 45 Minutes | 51.8 | Zone 2 (140-152 bpm). Easy aerobic miles. | 2026-01-09 |
-| COMPLETED | Saturday | [BIKE] Long Steady Distance | 2.0 Hours | [BIKE] Richmond Virtual Cycling | 120.6 | Zone 2 (134-180W). **Winter Cap Applied.** Practice fueling every 45m. | 2026-01-10 |
-| PLANNED | Sunday | Rest | - | | | Total Recovery. No active training. | 2026-01-11 |
+| PLANNED | Monday | [BIKE] Strength / Hill Focus | 40 mins | | | **Deload.** Focus: Low Cadence (60-65 rpm) intervals to fix low Torque Efficiency (1.90). | 2026-01-12 |
+| PLANNED | Tuesday | [SWIM] Technique Focus | 30 mins | | | **Deload.** Use a Pull Buoy if ankle kicking is painful. Focus: Smooth rotation. | 2026-01-13 |
+| PLANNED | Wednesday | [BIKE] Zwift Race | 45 mins | | | **Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus. | 2026-01-14 |
+| PLANNED | Thursday | [BIKE] Zone 2 Endurance | 45 mins | | | **Deload.** Easy spin. Zone 2 (134-180W). Keep it smooth. | 2026-01-15 |
+| PLANNED | Friday | [RUN] Easy / Base | 25 mins | | | **Ankle Test.** Flat surface only. Focus: High Cadence (175+ spm) to fix Ground Contact Time. | 2026-01-16 |
+| PLANNED | Saturday | [BIKE] Long Steady Distance | 75 mins | | | **Deload.** Reduced volume. Zone 2 Focus. Monitor Aerobic Efficiency. | 2026-01-17 |
+| PLANNED | Sunday | Rest | - | | | Total Recovery. Ice ankle if needed. | 2026-01-18 |
 
 
 
