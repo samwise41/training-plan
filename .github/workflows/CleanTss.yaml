@@ -1,4 +1,4 @@
-name: Weekly Training Data Sync
+name: Upodate Master Database
 
 on:
   schedule:
