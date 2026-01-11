@@ -149,12 +149,10 @@ def extract_weekly_table():
     df = pd.DataFrame(data)
     print(f"✅ Extracted {len(df)} rows from Weekly Plan.")
     
-    # Validate Date Column Exists
     if 'Date' not in df.columns:
         print("❌ CRITICAL ERROR: Could not find 'Date' column in Markdown table.")
-        # Debug print
         print(f"Headers found: {raw_header}")
-        return pd.DataFrame() # Return empty to fail gracefully in main
+        return pd.DataFrame() 
 
     return df
 
@@ -196,6 +194,10 @@ def main():
                 p_workout = str(p_row.get('Planned Workout', '')).strip()
                 
                 if pd.isna(p_date_norm): continue 
+                
+                # --- FILTER: Skip Rest Days ---
+                if 'rest day' in p_workout.lower():
+                    continue
 
                 if (p_date_norm, p_workout) not in existing_keys:
                     print(f"[NEW PLAN ROW] Adding: {p_date_norm} - {p_workout}")
