@@ -30,13 +30,26 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # FIX: Added 'garminconnect' to the list
-        pip install pandas requests garminconnect
+        pip install pandas garminconnect tabulate
 
-    - name: Run Data Migration & Sync
+    - name: Run Training Plan Updater
       env:
         GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
         GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-        GH_PAT: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        python python/migrate_weekly_data.py
+        # This points to the NEW script
+        python python/update_training_plan.py
+
+    - name: Commit and Push Changes
+      run: |
+        git config --global user.name "GitHub Action"
+        git config --global user.email "action@github.com"
+        
+        # Stage the specific files we expect to change
+        git add MASTER_TRAINING_DATABASE.md python/my_garmin_data_ALL.json
+        
+        # Commit if there are changes
+        git commit -m "Auto-update: Synced Garmin & Training Plan" || echo "No changes to commit"
+        
+        # Push
+        git push
