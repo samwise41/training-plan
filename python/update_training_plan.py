@@ -286,22 +286,6 @@ def load_master_db():
     
     return pd.DataFrame(data)
 
-def extract_ftp(text):
-    """
-    Extracts the FTP value from a string like "* **Cycling FTP:** 241 Watts"
-    """
-    if not text:
-        return None
-    
-    # This pattern looks for "Cycling FTP:", ignores any non-digit characters 
-    # immediately following it (like ** or spaces), and captures the first number found.
-    match = re.search(r"Cycling FTP:.*?(\d+)", text, re.IGNORECASE)
-    
-    if match:
-        return int(match.group(1))
-    
-    return None
-
 def clean_corrupt_data(df):
     if 'activityType' in df.columns:
         def fix_type(val):
@@ -647,7 +631,6 @@ def main():
 
         # 5. HYDRATE
         print("Hydrating calculated fields...")
-        current_ftp = extract_ftp() # Get dynamic FTP
         
         for idx, row in df_master.iterrows():
             act_type = str(row.get('activityType', '')).lower()
@@ -660,7 +643,7 @@ def main():
             try:
                 duration = float(row.get('duration', 0))
                 np_val = float(row.get('normPower', 0))
-                ftp = current_ftp # Use dynamic FTP
+                ftp = 241.0 
             except: continue 
 
             if duration > 0 and np_val > 0:
