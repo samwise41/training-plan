@@ -286,27 +286,21 @@ def load_master_db():
     
     return pd.DataFrame(data)
 
-def extract_ftp():
-    """Extracts FTP from endurance_plan.md matching 'Cycling FTP: 241'."""
-    default_ftp = 265.0
-    if not os.path.exists(PLAN_FILE):
-        return default_ftp
-        
-    try:
-        with open(PLAN_FILE, 'r', encoding='utf-8') as f:
-            content = f.read()
-            
-        # Updated Regex to match "Cycling FTP: [number]"
-        match = re.search(r'Cycling FTP:\s*(\d+)', content, re.IGNORECASE)
-        if match:
-            ftp_val = float(match.group(1))
-            print(f"⚡ Found FTP in Plan: {ftp_val}")
-            return ftp_val
-    except Exception as e:
-        print(f"⚠️ Error reading FTP: {e}")
-        
-    print(f"⚠️ FTP not found in plan. Using default: {default_ftp}")
-    return default_ftp
+def extract_ftp(text):
+    """
+    Extracts the FTP value from a string like "* **Cycling FTP:** 241 Watts"
+    """
+    if not text:
+        return None
+    
+    # This pattern looks for "Cycling FTP:", ignores any non-digit characters 
+    # immediately following it (like ** or spaces), and captures the first number found.
+    match = re.search(r"Cycling FTP:.*?(\d+)", text, re.IGNORECASE)
+    
+    if match:
+        return int(match.group(1))
+    
+    return None
 
 def clean_corrupt_data(df):
     if 'activityType' in df.columns:
