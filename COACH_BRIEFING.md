@@ -1,5 +1,5 @@
 # 🤖 AI Coach Context Briefing
-**Last Updated:** 2026-01-11 15:37
+**Last Updated:** 2026-01-11 17:30
 
 ## 1. Physiological Trends
 | Metric | Target | 30d Trend | 90d Trend | 6m Trend | Status |
@@ -12,7 +12,7 @@
 | **Ground Contact** | 220-260 ms | ↘️ Improving (Avg: 277.92) | ↗️ Worsening (Avg: 275.66) | -- | ⚠️ High |
 | **Vertical Osc** | 6.0-9.0 cm | ↗️ Worsening (Avg: 9.36) | ↘️ Improving (Avg: 9.43) | -- | ⚠️ High |
 | **Vo2 Max** | 45-60 ml/kg | ↗️ Improving (Avg: 51.88) | ↗️ Improving (Avg: 50.91) | -- | ✅ |
-| **Anaerobic Impact** | 2.0-4.0 TE | ↘️ Declining (Avg: 0.44) | ↘️ Declining (Avg: 0.73) | -- | ⚠️ Low |
+| **Anaerobic Impact** | 2.0-4.0 TE | ↘️ Declining (Avg: 0.44) | ↘️ Declining (Avg: 0.72) | -- | ⚠️ Low |
 | **Weekly Tss** | 300-600 TSS | ➡️ Stable (Avg: 54) | ↘️ Declining (Avg: 49) | -- | ⚠️ Low |
 
 ## 2. Actionable Alerts
