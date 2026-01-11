@@ -30,13 +30,25 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # FIX: Added 'garminconnect' to the list
-        pip install pandas requests garminconnect
+        # Added 'tabulate' which is required for the new script
+        pip install pandas garminconnect tabulate requests
 
     - name: Run Data Migration & Sync
       env:
         GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
         GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        # The new script does not need GH_PAT, but keeping it doesn't hurt
         GH_PAT: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        python python/migrate_weekly_data.py
+        # CHANGED: Pointing to the new, clean script
+        python python/update_training_plan.py
+        
+    - name: Commit and Push Changes
+      # This step ensures the updated .md and .json files are saved back to the repo
+      run: |
+        git config --global user.name "GitHub Action"
+        git config --global user.email "action@github.com"
+        git add MASTER_TRAINING_DATABASE.md python/my_garmin_data_ALL.json
+        # Only commit if there are changes to avoid empty commit errors
+        git commit -m "Auto-update Training Log & Garmin Data" || echo "No changes to commit"
+        git push
