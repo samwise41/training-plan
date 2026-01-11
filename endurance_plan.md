@@ -162,7 +162,7 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 | COMPLETED | Wednesday | [RUN] Tempo / Threshold | 45 mins | [RUN] Roy - Zone 3 - Tempo - 45 minutes | 46.6 | Zone 3 (153-161 bpm) to low Zone 4. Build durability at speed. | 2026-01-07 |
 | COMPLETED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | [BIKE] Harrogate Virtual Cycling | 85.7 | **Winter Strategy Applied.** Full volume restored. Zone 2 (134-180W). | 2026-01-08 |
 | COMPLETED | Friday | [RUN] Aerobic Maintenance | 45 mins | [RUN] Roy - Zone 2 - 45 Minutes | 51.8 | Zone 2 (140-152 bpm). Easy aerobic miles. | 2026-01-09 |
-| PLANNED | Saturday | [BIKE] Long Steady Distance | 2.0 Hours |  | | Zone 2 (134-180W). **Winter Cap Applied.** Practice fueling every 45m. | 2026-01-10 |
+| COMPLETED | Saturday | [BIKE] Long Steady Distance | 2.0 Hours | [BIKE] Richmond Virtual Cycling | 120.6 | Zone 2 (134-180W). **Winter Cap Applied.** Practice fueling every 45m. | 2026-01-10 |
 | PLANNED | Sunday | Rest | - | | | Total Recovery. No active training. | 2026-01-11 |
 
 
