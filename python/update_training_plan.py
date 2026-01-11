@@ -156,6 +156,102 @@ def extract_weekly_table():
 
     return df
 
+def update_weekly_plan(df_master):
+    """Updates 'Actual Workout' and 'Actual Duration' in the weekly plan file."""
+    if not os.path.exists(PLAN_FILE): return
+
+    print_header("UPDATING WEEKLY PLAN VISUALS")
+
+    # 1. Create Lookup from Master DB
+    # Key: (Date, Planned Workout) -> Value: (Actual Workout, Actual Duration)
+    lookup = {}
+    
+    df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
+    
+    for _, row in df_master.iterrows():
+        d = row.get('Date_Norm')
+        p_work = str(row.get('Planned Workout', '')).strip()
+        a_work = str(row.get('Actual Workout', '')).strip()
+        a_dur = str(row.get('Actual Duration', '')).strip()
+        
+        # Only store if we have actual data
+        if d and p_work and (a_work or a_dur):
+            # Clean up 'nan' strings for display
+            if a_work.lower() == 'nan': a_work = ""
+            if a_dur.lower() == 'nan': a_dur = ""
+            
+            lookup[(d, p_work)] = (a_work, a_dur)
+
+    # 2. Read and Modify the Plan File
+    with open(PLAN_FILE, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    
+    new_lines = []
+    table_started = False
+    header_indices = {}
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Detect Table Start
+        if not table_started:
+            if stripped.startswith('|') and 'date' in stripped.lower():
+                table_started = True
+                # Parse Header Indices
+                headers = [h.strip().lower() for h in stripped.strip('|').split('|')]
+                for i, h in enumerate(headers):
+                    if 'date' in h: header_indices['date'] = i
+                    elif 'planned workout' in h: header_indices['planned_workout'] = i
+                    elif 'actual workout' in h: header_indices['actual_workout'] = i
+                    elif 'actual duration' in h: header_indices['actual_duration'] = i
+            new_lines.append(line)
+            continue
+        
+        # Process Table Rows
+        if table_started and stripped.startswith('|') and '---' not in stripped:
+            cols = [c.strip() for c in stripped.strip('|').split('|')]
+            
+            # Check if we can identify this row
+            try:
+                # Extract Date and Planned Workout from this row
+                row_date_raw = cols[header_indices['date']]
+                row_plan_raw = cols[header_indices['planned_workout']]
+                
+                # Normalize Date
+                row_date = pd.to_datetime(row_date_raw, errors='coerce').strftime('%Y-%m-%d')
+                
+                # Check Lookup
+                key = (row_date, row_plan_raw)
+                
+                if key in lookup:
+                    actual_work, actual_dur = lookup[key]
+                    
+                    # Update Columns
+                    if 'actual_workout' in header_indices:
+                        cols[header_indices['actual_workout']] = actual_work
+                    if 'actual_duration' in header_indices:
+                        cols[header_indices['actual_duration']] = actual_dur
+                    
+                    # Reconstruct Line
+                    # Use " | " separator and ensure ends have pipes
+                    new_line = "| " + " | ".join(cols) + " |\n"
+                    new_lines.append(new_line)
+                else:
+                    new_lines.append(line)
+            except:
+                # If parsing fails (e.g. alignment issue), keep original line
+                new_lines.append(line)
+        else:
+            # End of table or other content
+            new_lines.append(line)
+
+    # 3. Write Back
+    with open(PLAN_FILE, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)
+    
+    print("✅ Weekly plan updated with actuals.")
+
+
 def main():
     try:
         print_header("STARTING MIGRATION (SYNC & FIX)")
@@ -381,8 +477,6 @@ def main():
         df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
         df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
         
-        # NOTE: Removed automatic NaN cleanup as requested.
-        
         print(f"Saving {len(df_master)} rows to Master DB...")
         with open(MASTER_DB, 'w', encoding='utf-8') as f:
             f.write("| " + " | ".join(MASTER_COLUMNS) + " |\n")
@@ -394,6 +488,9 @@ def main():
                     val = val.replace('\n', ' ').replace('\r', '').replace('|', '/')
                     vals.append(val)
                 f.write("| " + " | ".join(vals) + " |\n")
+
+        # 7. UPDATE WEEKLY PLAN (New Step)
+        update_weekly_plan(df_master)
 
         print("✅ Success: Migration Complete.")
         git_push_changes()
