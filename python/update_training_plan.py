@@ -287,8 +287,8 @@ def load_master_db():
     return pd.DataFrame(data)
 
 def extract_ftp():
-    """Extracts FTP from endurance_plan.md. Defaults to 265 if not found."""
-    default_ftp = 100.0
+    """Extracts FTP from endurance_plan.md matching 'Cycling FTP: 241'."""
+    default_ftp = 265.0
     if not os.path.exists(PLAN_FILE):
         return default_ftp
         
@@ -296,8 +296,8 @@ def extract_ftp():
         with open(PLAN_FILE, 'r', encoding='utf-8') as f:
             content = f.read()
             
-        # Regex to find "Current FTP: 265" or "FTP: 265" case insensitive
-        match = re.search(r'(?:Current )?FTP:\s*(\d+)', content, re.IGNORECASE)
+        # Updated Regex to match "Cycling FTP: [number]"
+        match = re.search(r'Cycling FTP:\s*(\d+)', content, re.IGNORECASE)
         if match:
             ftp_val = float(match.group(1))
             print(f"⚡ Found FTP in Plan: {ftp_val}")
