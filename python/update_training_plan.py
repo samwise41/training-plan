@@ -14,8 +14,10 @@ ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 
 PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
+BRIEF_FILE = os.path.join(ROOT_DIR, 'coaching_brief.md') # <--- Added for Git Push
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 GARMIN_FETCH_CMD = ["python", os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
+TRENDS_SCRIPT = os.path.join(SCRIPT_DIR, "analyze_trends.py") # <--- Trend Analysis Script
 
 MASTER_COLUMNS = [
     'Status', 'Day', 'Planned Workout', 'Planned Duration', 
@@ -45,16 +47,35 @@ def run_garmin_fetch():
     except Exception as e:
         print(f"⚠️ Warning: Fetch failed: {e}")
 
+def run_trend_analysis():
+    """Executes the external trend analysis script."""
+    print(f"📈 Running Trend Analysis...")
+    if not os.path.exists(TRENDS_SCRIPT):
+        print(f"⚠️ Warning: Trend script not found at {TRENDS_SCRIPT}")
+        return
+    try:
+        # Run the script and wait for it to finish
+        subprocess.run(["python", TRENDS_SCRIPT], check=True, cwd=SCRIPT_DIR)
+        print("✅ Coaching Brief Updated.")
+    except Exception as e:
+        print(f"⚠️ Warning: Analysis failed: {e}")
+
 def git_push_changes():
     print("🐙 Pushing changes to GitHub...")
     try:
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
-        subprocess.run(["git", "add", MASTER_DB, PLAN_FILE, GARMIN_JSON], check=True)
+        
+        # ADDED BRIEF_FILE to the commit list
+        files_to_add = [MASTER_DB, PLAN_FILE, GARMIN_JSON]
+        if os.path.exists(BRIEF_FILE):
+            files_to_add.append(BRIEF_FILE)
+            
+        subprocess.run(["git", "add"] + files_to_add, check=True)
         
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
         if status:
-            msg = f"Auto-Sync: Master DB & Weekly Plan {datetime.now().strftime('%Y-%m-%d')}"
+            msg = f"Auto-Sync: Master DB, Plan & Brief {datetime.now().strftime('%Y-%m-%d')}"
             subprocess.run(["git", "commit", "-m", msg], check=True)
             subprocess.run(["git", "push"], check=True)
             print("✅ Successfully pushed to GitHub!")
@@ -202,7 +223,6 @@ def update_weekly_plan(df_master):
         
         # Detect Table Start & Parse Headers
         if not table_started:
-            # Check for header row (must contain Date and Day)
             if stripped.startswith('|') and 'date' in stripped.lower() and 'day' in stripped.lower():
                 table_started = True
                 headers = [h.strip().lower() for h in stripped.strip('|').split('|')]
@@ -507,6 +527,9 @@ def main():
 
         # 7. UPDATE WEEKLY PLAN
         update_weekly_plan(df_master)
+
+        # 8. ANALYZE TRENDS
+        run_trend_analysis()
 
         print("✅ Success: Migration Complete.")
         git_push_changes()
