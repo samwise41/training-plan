@@ -11,7 +11,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_FILE = os.path.join(REPO_ROOT, 'python', 'my_garmin_data_ALL.json')
 
 # *** FIX: Changed from COACH_BRIEFING.md to coaching_brief.md to match main script ***
-OUTPUT_FILE = os.path.join(REPO_ROOT, 'coaching_brief.md')
+OUTPUT_FILE = os.path.join(REPO_ROOT, 'COACH_BRIEFING.md')
 
 # --- SPORT ID CONSTANTS ---
 SPORT_IDS = {
