@@ -6,6 +6,7 @@ import subprocess
 import traceback
 import re
 import ast
+import sys # <--- Added to ensure correct Python interpreter usage
 from datetime import datetime
 
 # --- CONFIGURATION ---
@@ -14,10 +15,10 @@ ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 
 PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
-BRIEF_FILE = os.path.join(ROOT_DIR, 'coaching_brief.md') # <--- Added for Git Push
+BRIEF_FILE = os.path.join(ROOT_DIR, 'coaching_brief.md') 
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
-GARMIN_FETCH_CMD = ["python", os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
-TRENDS_SCRIPT = os.path.join(SCRIPT_DIR, "analyze_trends.py") # <--- Trend Analysis Script
+GARMIN_FETCH_CMD = [sys.executable, os.path.join(SCRIPT_DIR, "fetch_garmin.py")] # Use sys.executable
+TRENDS_SCRIPT = os.path.join(SCRIPT_DIR, "analyze_trends.py") 
 
 MASTER_COLUMNS = [
     'Status', 'Day', 'Planned Workout', 'Planned Duration', 
@@ -37,28 +38,53 @@ def print_header(msg):
 
 def run_garmin_fetch():
     print(f"📡 Triggering Garmin Fetch...")
-    if not os.path.exists(GARMIN_FETCH_CMD[1]):
-        print(f"⚠️ Warning: Fetch script not found at {GARMIN_FETCH_CMD[1]}")
+    # Fix: Use the full path from the command list we built
+    fetch_script_path = GARMIN_FETCH_CMD[1]
+    if not os.path.exists(fetch_script_path):
+        print(f"⚠️ Warning: Fetch script not found at {fetch_script_path}")
         return
     try:
         env = os.environ.copy()
+        # Use sys.executable to ensure we use the same python environment
         subprocess.run(GARMIN_FETCH_CMD, check=True, env=env, cwd=SCRIPT_DIR)
         print("✅ Garmin Data Synced.")
     except Exception as e:
         print(f"⚠️ Warning: Fetch failed: {e}")
 
 def run_trend_analysis():
-    """Executes the external trend analysis script."""
-    print(f"📈 Running Trend Analysis...")
+    """Executes the external trend analysis script and PRINTS output for debugging."""
+    print_header("RUNNING TREND ANALYSIS")
+    
     if not os.path.exists(TRENDS_SCRIPT):
         print(f"⚠️ Warning: Trend script not found at {TRENDS_SCRIPT}")
         return
+
     try:
-        # Run the script and wait for it to finish
-        subprocess.run(["python", TRENDS_SCRIPT], check=True, cwd=SCRIPT_DIR)
-        print("✅ Coaching Brief Updated.")
+        print(f"   Executing: {TRENDS_SCRIPT}")
+        # Capture output so we can see if it crashes
+        result = subprocess.run(
+            [sys.executable, TRENDS_SCRIPT], 
+            cwd=SCRIPT_DIR, 
+            capture_output=True, 
+            text=True
+        )
+        
+        # Print the output from the sub-script
+        if result.stdout:
+            print("   --- Script Output ---")
+            print(result.stdout)
+        
+        if result.stderr:
+            print("   --- Script Errors ---")
+            print(result.stderr)
+
+        if result.returncode == 0:
+            print("✅ Coaching Brief Update Script Finished Successfully.")
+        else:
+            print("❌ Coaching Brief Update Failed (Non-zero exit code).")
+
     except Exception as e:
-        print(f"⚠️ Warning: Analysis failed: {e}")
+        print(f"⚠️ Warning: Execution failed: {e}")
 
 def git_push_changes():
     print("🐙 Pushing changes to GitHub...")
@@ -66,15 +92,17 @@ def git_push_changes():
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
         
-        # ADDED BRIEF_FILE to the commit list
+        # Explicitly add all files including the brief
         files_to_add = [MASTER_DB, PLAN_FILE, GARMIN_JSON]
         if os.path.exists(BRIEF_FILE):
             files_to_add.append(BRIEF_FILE)
             
+        print(f"   Adding files: {files_to_add}")
         subprocess.run(["git", "add"] + files_to_add, check=True)
         
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
         if status:
+            print("   Changes detected. Committing...")
             msg = f"Auto-Sync: Master DB, Plan & Brief {datetime.now().strftime('%Y-%m-%d')}"
             subprocess.run(["git", "commit", "-m", msg], check=True)
             subprocess.run(["git", "push"], check=True)
@@ -143,7 +171,6 @@ def extract_weekly_table():
     # Parse Header aggressively
     raw_header = [h.strip() for h in table_lines[0].strip('|').split('|')]
     
-    # Map fuzzy names to standard internal names
     col_map = {}
     for i, h in enumerate(raw_header):
         clean_h = h.lower().replace(' ', '')
@@ -158,7 +185,6 @@ def extract_weekly_table():
         if '---' in line: continue
         row_vals = [c.strip() for c in line.strip('|').split('|')]
         
-        # Build Dict based on index
         row_dict = {}
         for col_name, idx in col_map.items():
             if idx < len(row_vals):
@@ -261,7 +287,6 @@ def update_weekly_plan(df_master):
                     if key in lookup:
                         act_work, act_dur, status_update = lookup[key]
                         
-                        # Update columns
                         if 'actual_workout' in header_indices:
                             cols[header_indices['actual_workout']] = act_work
                         if 'actual_duration' in header_indices:
@@ -269,7 +294,6 @@ def update_weekly_plan(df_master):
                         if 'status' in header_indices:
                             cols[header_indices['status']] = status_update
                         
-                        # Rebuild line
                         new_line = "| " + " | ".join(cols) + " |\n"
                         new_lines.append(new_line)
                     else:
@@ -277,10 +301,8 @@ def update_weekly_plan(df_master):
                 else:
                     new_lines.append(line)
             except:
-                # Fallback if parsing fails
                 new_lines.append(line)
         else:
-            # End of table or other content
             new_lines.append(line)
 
     # 3. Write Back
@@ -316,7 +338,6 @@ def main():
             print_header("SYNCING WEEKLY PLAN TO MASTER")
             count_added = 0
             
-            # Normalize Dates
             df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
             df_plan['Date_Norm'] = pd.to_datetime(df_plan['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
 
@@ -336,7 +357,6 @@ def main():
 
                 if (p_date_norm, p_workout) not in existing_keys:
                     print(f"[NEW PLAN ROW] Adding: {p_date_norm} - {p_workout}")
-                    # Initialize with empty strings
                     new_row = {c: "" for c in MASTER_COLUMNS}
                     new_row.update({
                         'Date': p_date_norm,
