@@ -286,6 +286,28 @@ def load_master_db():
     
     return pd.DataFrame(data)
 
+def extract_ftp():
+    """Extracts FTP from endurance_plan.md. Defaults to 265 if not found."""
+    default_ftp = 100.0
+    if not os.path.exists(PLAN_FILE):
+        return default_ftp
+        
+    try:
+        with open(PLAN_FILE, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+        # Regex to find "Current FTP: 265" or "FTP: 265" case insensitive
+        match = re.search(r'(?:Current )?FTP:\s*(\d+)', content, re.IGNORECASE)
+        if match:
+            ftp_val = float(match.group(1))
+            print(f"⚡ Found FTP in Plan: {ftp_val}")
+            return ftp_val
+    except Exception as e:
+        print(f"⚠️ Error reading FTP: {e}")
+        
+    print(f"⚠️ FTP not found in plan. Using default: {default_ftp}")
+    return default_ftp
+
 def clean_corrupt_data(df):
     if 'activityType' in df.columns:
         def fix_type(val):
@@ -631,6 +653,7 @@ def main():
 
         # 5. HYDRATE
         print("Hydrating calculated fields...")
+        current_ftp = extract_ftp() # Get dynamic FTP
         
         for idx, row in df_master.iterrows():
             act_type = str(row.get('activityType', '')).lower()
@@ -643,7 +666,7 @@ def main():
             try:
                 duration = float(row.get('duration', 0))
                 np_val = float(row.get('normPower', 0))
-                ftp = 265.0 
+                ftp = current_ftp # Use dynamic FTP
             except: continue 
 
             if duration > 0 and np_val > 0:
