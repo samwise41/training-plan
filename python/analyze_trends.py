@@ -5,12 +5,10 @@ import numpy as np
 from datetime import datetime, timedelta
 
 # --- CONFIG ---
-# Assuming this script runs inside /python/ folder
-# We go up one level to find the REPO ROOT
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_FILE = os.path.join(REPO_ROOT, 'python', 'my_garmin_data_ALL.json')
 
-# *** FIX: Changed from COACH_BRIEFING.md to coaching_brief.md to match main script ***
+# *** TARGET FILE: COACH_BRIEFING.md ***
 OUTPUT_FILE = os.path.join(REPO_ROOT, 'COACH_BRIEFING.md')
 
 # --- SPORT ID CONSTANTS ---
@@ -100,7 +98,6 @@ def analyze_metric(df, col_name, config):
 def get_sport_filter(row, sport_type):
     act_type = row.get('activityType', {})
     
-    # Check 1: Direct ID Match
     type_id = act_type.get('typeId')
     parent_id = act_type.get('parentTypeId')
     
@@ -108,7 +105,6 @@ def get_sport_filter(row, sport_type):
     if type_id in target_ids or parent_id in target_ids:
         return True
         
-    # Check 2: String Fallback
     key = act_type.get('typeKey', '').lower()
     parent_key = act_type.get('parentTypeKey', '').lower()
     
@@ -132,7 +128,6 @@ def main():
     is_bike = df.apply(lambda x: get_sport_filter(x, 'BIKE'), axis=1)
     is_swim = df.apply(lambda x: get_sport_filter(x, 'SWIM'), axis=1)
 
-    # Calculate Metrics
     df['aerobic_efficiency'] = np.where(
         is_bike & (df['avgPower'] > 0) & (df['averageHR'] > 0),
         df['avgPower'] / df['averageHR'], np.nan
