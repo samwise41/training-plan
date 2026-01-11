@@ -82,7 +82,9 @@ def load_master_db():
     return pd.DataFrame(data)
 
 def clean_corrupt_data(df):
-    """Fixes dictionary strings in activityType."""
+    """Fixes dictionary strings in activityType and removes legacy Rest Days."""
+    
+    # 1. Fix corrupt Dictionary strings
     if 'activityType' in df.columns:
         def fix_type(val):
             val = str(val).strip()
@@ -96,6 +98,33 @@ def clean_corrupt_data(df):
             return val
         print("🧹 Cleaning corrupt activityType columns...")
         df['activityType'] = df['activityType'].apply(fix_type)
+
+    # 2. Retroactively remove Pending Rest Days
+    # If a row is "Pending" and looks like "Rest Day", delete it.
+    if 'Planned Workout' in df.columns and 'Status' in df.columns:
+        original_count = len(df)
+        
+        def is_garbage_rest(row):
+            # Check if Status is 'Pending' (meaning no actual data attached yet)
+            status = str(row.get('Status', '')).lower()
+            if status != 'pending': return False
+            
+            # Check if Workout Name implies Rest
+            name = str(row.get('Planned Workout', '')).lower()
+            clean_name = re.sub(r'[^a-z0-9]', '', name) # remove brackets/symbols
+            
+            if 'restday' in clean_name or 'rest' == clean_name or 'off' == clean_name:
+                return True
+            return False
+
+        # Keep rows that are NOT garbage rest days
+        mask = ~df.apply(is_garbage_rest, axis=1)
+        df = df[mask]
+        
+        dropped = original_count - len(df)
+        if dropped > 0:
+            print(f"🧹 Removed {dropped} existing 'Rest Day' rows from Master DB.")
+            
     return df
 
 def extract_weekly_table():
@@ -192,11 +221,14 @@ def main():
             for _, p_row in df_plan.iterrows():
                 p_date_norm = p_row['Date_Norm']
                 p_workout = str(p_row.get('Planned Workout', '')).strip()
+                p_workout_clean = re.sub(r'[^a-zA-Z0-9\s]', '', p_workout.lower()) # Remove brackets for checking
                 
                 if pd.isna(p_date_norm): continue 
                 
-                # --- FILTER: Skip Rest Days ---
-                if 'rest day' in p_workout.lower():
+                # --- FILTER: Strict Rest Day Skipping ---
+                # Check for "Rest Day", "Rest", "Off", or "[Rest Day]"
+                if 'rest day' in p_workout_clean or p_workout_clean in ['rest', 'off', 'day off']:
+                    print(f"   [SKIP] Rest detected: {p_date_norm} - {p_workout}")
                     continue
 
                 if (p_date_norm, p_workout) not in existing_keys:
@@ -293,7 +325,7 @@ def main():
                     df_master.at[idx, 'Actual Duration'] = f"{dur_sec/60:.1f}"
                 except: pass
 
-                # Map Telemetry - EXPLICITLY INCLUDING INTENSITY FACTOR
+                # Map Telemetry
                 cols_to_map = [
                     'duration', 'distance', 'averageHR', 'maxHR', 
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -315,9 +347,6 @@ def main():
             g_id = str(g.get('activityId'))
             if g_id not in claimed_ids:
                 
-                # Filter specific sport types if needed (Run/Bike/Swim)
-                # sportTypeId: 1=Run, 2=Bike, 5=Swim (checking mostly for safety)
-                
                 new_row = {c: "" for c in MASTER_COLUMNS}
                 new_row['Planned Workout'] = 'Unplanned'
                 new_row['Status'] = 'COMPLETED'
@@ -329,7 +358,7 @@ def main():
                 new_row['Actual Workout'] = raw_name
                 new_row['activityType'] = g.get('activityType', {}).get('typeKey', '')
                 
-                # Map Telemetry - EXPLICITLY INCLUDING INTENSITY FACTOR
+                # Map Telemetry
                 cols_to_map = [
                     'duration', 'distance', 'averageHR', 'maxHR', 
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -349,7 +378,7 @@ def main():
             print(f"Adding {len(unplanned_rows)} unplanned rows.")
             df_master = pd.concat([df_master, pd.DataFrame(unplanned_rows)], ignore_index=True)
 
-        # 5. HYDRATE (Final cleanup for Run/Bike TSS/IF)
+        # 5. HYDRATE
         print("Hydrating calculated fields...")
         
         for idx, row in df_master.iterrows():
@@ -370,19 +399,16 @@ def main():
             if duration > 0 and np_val > 0:
                 intensity = np_val / ftp
                 
-                # Hydrate IF if missing
                 existing_if = str(row.get('intensityFactor', '')).strip()
                 if not existing_if or existing_if == 'nan' or float(existing_if) == 0:
                      df_master.at[idx, 'intensityFactor'] = f"{intensity:.2f}"
 
-                # Hydrate TSS if missing
                 existing_tss = str(row.get('trainingStressScore', '')).strip()
                 if not existing_tss or existing_tss == 'nan' or float(existing_tss) == 0:
                     tss = (duration * np_val * intensity) / (ftp * 3600) * 100
                     df_master.at[idx, 'trainingStressScore'] = f"{tss:.1f}"
 
         # 6. SAVE
-        # Strict Date Sort
         df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
         df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
         
