@@ -136,12 +136,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21501230950,
@@ -256,12 +256,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21491950789,
@@ -487,12 +487,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21482224757,
@@ -630,12 +630,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21471583079,
@@ -862,12 +862,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21460455111,
@@ -982,12 +982,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21450339268,
@@ -1125,12 +1125,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21430613393,
@@ -1268,12 +1268,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21419915623,
@@ -1500,12 +1500,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21414583520,
@@ -1624,12 +1624,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21402836501,
@@ -1767,12 +1767,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21392665719,
@@ -1999,12 +1999,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21365025939,
@@ -2141,12 +2141,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21363993117,
@@ -2260,12 +2260,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21355282531,
@@ -2493,12 +2493,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": true,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": true
+        "parent": false
     },
     {
         "activityId": 21347428905,
@@ -2636,12 +2636,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21341393579,
@@ -2778,12 +2778,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21331728746,
@@ -2916,12 +2916,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21331586325,
@@ -3058,12 +3058,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": true,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": true
+        "parent": false
     },
     {
         "activityId": 21309912155,
@@ -3246,12 +3246,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21305772239,
@@ -3366,12 +3366,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21298044597,
@@ -3599,12 +3599,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": true,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": true
+        "parent": false
     },
     {
         "activityId": 21289830125,
@@ -3741,12 +3741,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21272208595,
@@ -3884,12 +3884,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21248283077,
@@ -4025,12 +4025,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21247412842,
@@ -4238,12 +4238,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21237874811,
@@ -4471,12 +4471,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21233520275,
@@ -4614,12 +4614,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21220528664,
@@ -4846,12 +4846,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21212937186,
@@ -4989,12 +4989,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21201288872,
@@ -5109,12 +5109,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": true,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": true
+        "parent": false
     },
     {
         "activityId": 21186856698,
@@ -5289,12 +5289,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21183998146,
@@ -5409,12 +5409,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21175545787,
@@ -5529,12 +5529,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": true,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": true
+        "parent": false
     },
     {
         "activityId": 21171009238,
@@ -5672,12 +5672,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21158636550,
@@ -5919,12 +5919,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21149163183,
@@ -6061,12 +6061,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21139107284,
@@ -6181,12 +6181,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21114574435,
@@ -6360,12 +6360,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21106121388,
@@ -6548,12 +6548,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21095755582,
@@ -6668,12 +6668,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21088747868,
@@ -6811,12 +6811,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21079887240,
@@ -6931,12 +6931,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21062564187,
@@ -7107,12 +7107,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21052251510,
@@ -7285,12 +7285,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21044929035,
@@ -7427,12 +7427,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21035833949,
@@ -7547,12 +7547,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 21026701403,
@@ -7734,12 +7734,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": true,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": true
+        "parent": false
     },
     {
         "activityId": 21019742111,
@@ -7853,12 +7853,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 20996439411,
@@ -7995,12 +7995,12 @@
         "autoCalcCalories": false,
         "favorite": false,
         "decoDive": false,
-        "elevationCorrected": false,
         "atpActivity": false,
-        "parent": false,
+        "pr": false,
+        "elevationCorrected": false,
         "purposeful": false,
         "manualActivity": false,
-        "pr": false
+        "parent": false
     },
     {
         "activityId": 20995549971,
