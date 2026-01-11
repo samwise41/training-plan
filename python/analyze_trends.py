@@ -5,19 +5,19 @@ import numpy as np
 from datetime import datetime, timedelta
 
 # --- CONFIG ---
+# Assuming this script runs inside /python/ folder
+# We go up one level to find the REPO ROOT
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_FILE = os.path.join(REPO_ROOT, 'python', 'my_garmin_data_ALL.json')
-OUTPUT_FILE = os.path.join(REPO_ROOT, 'COACH_BRIEFING.md')
 
-# --- SPORT ID CONSTANTS (The "Source of Truth") ---
-# 1 = Running (Road, Trail, Treadmill, etc.)
-# 2 = Cycling (Road, Indoor, MTB, Gravel, etc.)
-# 5 = Swimming (Lap, Open Water) -- Note: Garmin sometimes uses different IDs for Open Water (e.g. 26).
-# We will use a robust check that falls back to string if ID fails.
+# *** FIX: Changed from COACH_BRIEFING.md to coaching_brief.md to match main script ***
+OUTPUT_FILE = os.path.join(REPO_ROOT, 'coaching_brief.md')
+
+# --- SPORT ID CONSTANTS ---
 SPORT_IDS = {
     'RUN': [1],
     'BIKE': [2],
-    'SWIM': [5, 26, 18] # 5=Lap, 26=Open Water, 18=Some Multisport Swim legs
+    'SWIM': [5, 26, 18] 
 }
 
 METRICS = {
@@ -98,13 +98,9 @@ def analyze_metric(df, col_name, config):
     return results
 
 def get_sport_filter(row, sport_type):
-    """
-    Robust check for sport type using ID first, then key fallback.
-    Garmin JSON usually puts ID in activityType['typeId'] or activityType['parentTypeId'].
-    """
     act_type = row.get('activityType', {})
     
-    # Check 1: Direct ID Match (Most Robust)
+    # Check 1: Direct ID Match
     type_id = act_type.get('typeId')
     parent_id = act_type.get('parentTypeId')
     
@@ -112,7 +108,7 @@ def get_sport_filter(row, sport_type):
     if type_id in target_ids or parent_id in target_ids:
         return True
         
-    # Check 2: String Fallback (Safety Net)
+    # Check 2: String Fallback
     key = act_type.get('typeKey', '').lower()
     parent_key = act_type.get('parentTypeKey', '').lower()
     
@@ -127,55 +123,43 @@ def main():
     df = load_data()
     
     if df.empty:
-        with open(OUTPUT_FILE, 'w') as f:
-            f.write("# Error: No Data Found\n")
+        print("DF Empty")
         return
 
     df['startTime_dt'] = pd.to_datetime(df['startTimeLocal'])
     
-    # --- APPLY FILTERS ---
-    # We pre-calculate boolean masks for speed
     is_run = df.apply(lambda x: get_sport_filter(x, 'RUN'), axis=1)
     is_bike = df.apply(lambda x: get_sport_filter(x, 'BIKE'), axis=1)
     is_swim = df.apply(lambda x: get_sport_filter(x, 'SWIM'), axis=1)
 
-    # --- CALCULATE METRICS ---
-    
-    # Bike: EF (Power/HR)
-    # Logic: Must be a Bike ride AND have Power AND have HR
+    # Calculate Metrics
     df['aerobic_efficiency'] = np.where(
         is_bike & (df['avgPower'] > 0) & (df['averageHR'] > 0),
         df['avgPower'] / df['averageHR'], np.nan
     )
     
-    # Bike: Torque (Power/Cadence)
     df['torque_efficiency'] = np.where(
         is_bike & (df['avgPower'] > 0) & (df['averageBikingCadenceInRevPerMinute'] > 0),
         df['avgPower'] / df['averageBikingCadenceInRevPerMinute'], np.nan
     )
 
-    # Run: Economy (Speed/HR)
-    # Speed is usually m/s. Convert to m/min for readable "Economy" metric
     df['run_speed_m_min'] = df['averageSpeed'] * 60
     df['run_economy'] = np.where(
         is_run & (df['averageHR'] > 0),
         df['run_speed_m_min'] / df['averageHR'], np.nan
     )
 
-    # Run: Stiffness (Speed/Power)
     df['run_stiffness'] = np.where(
         is_run & (df['avgPower'] > 0),
         (df['averageSpeed'] * 100) / df['avgPower'], np.nan
     )
 
-    # Swim: Efficiency (Speed/HR)
     df['swim_speed_m_min'] = df['averageSpeed'] * 60
     df['swim_efficiency'] = np.where(
         is_swim & (df['averageHR'] > 0),
         df['swim_speed_m_min'] / df['averageHR'], np.nan
     )
 
-    # Direct Mappings
     df['ground_contact'] = df.get('avgGroundContactTime', np.nan)
     df['vertical_osc'] = df.get('avgVerticalOscillation', np.nan)
     df['vo2_max'] = df.get('vO2MaxValue', np.nan)
@@ -184,9 +168,9 @@ def main():
     if 'trainingStressScore' not in df.columns:
         df['trainingStressScore'] = np.nan
 
-    # --- WRITE REPORT ---
     print(f"Writing briefing to: {OUTPUT_FILE}")
-    with open(OUTPUT_FILE, 'w') as f:
+    
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         f.write("# 🤖 AI Coach Context Briefing\n")
         f.write(f"**Last Updated:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
         
