@@ -76,14 +76,14 @@ def load_markdown_table(file_path):
     # Parse into DataFrame
     df = pd.read_csv(StringIO(''.join(cleaned_lines)), sep='|', skipinitialspace=True)
     
-    # Clean column names: strip whitespace AND remove markdown bolding (**)
+    # Clean column names (strip whitespace and markdown bolding)
     df.columns = [c.strip().replace('**', '') for c in df.columns]
     
     # Drop the first/last empty columns created by leading/trailing pipes
     if df.shape[1] > 1:
         df = df.iloc[:, 1:-1] 
     
-    # Clean string data and headers
+    # Clean string data
     for col in df.columns:
         if df[col].dtype == object:
             df[col] = df[col].astype(str).str.strip()
@@ -124,7 +124,6 @@ def get_ftp_from_plan():
     with open(PLAN_FILE, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Regex to find "Cycling FTP: 241" or "**Cycling FTP:** 241"
     match = re.search(r'Cycling FTP:.*?(\d+)\s*W', content, re.IGNORECASE)
     if match:
         return int(match.group(1))
@@ -190,24 +189,17 @@ def extract_weekly_schedule_from_plan():
         if in_section and '|' in line:
             table_lines.append(line)
             
-    # Clean headers
     cleaned_lines = [line for line in table_lines if '---' not in line]
     if not cleaned_lines:
         return pd.DataFrame()
         
     df = pd.read_csv(StringIO(''.join(cleaned_lines)), sep='|', skipinitialspace=True)
-    
-    # CRITICAL FIX: Clean markdown bolding (**) from headers
     df.columns = [c.strip().replace('**', '') for c in df.columns]
-    
     df = df.iloc[:, 1:-1]
     
-    # Ensure date format
     if 'Date' in df.columns:
         df['Date'] = pd.to_datetime(df['Date'], format='%Y-%m-%d', errors='coerce').dt.date
-    else:
-        print("❌ Error: 'Date' column not found in Weekly Schedule. Check markdown headers.")
-        
+    
     return df
 
 # --- MAIN LOGIC ---
@@ -224,227 +216,162 @@ def main():
     # Load Data
     print("\n--- STEP 2: LOAD DATA ---")
     master_df = load_markdown_table(MASTER_DB_FILE)
-    print(f"   -> Loaded Master Database: {len(master_df)} rows.")
-    
     plan_df = extract_weekly_schedule_from_plan()
-    print(f"   -> Loaded Weekly Plan: {len(plan_df)} rows.")
     
     with open(GARMIN_JSON_FILE, 'r') as f:
         garmin_data = json.load(f)
-    print(f"   -> Loaded Local Garmin Data: {len(garmin_data)} activities.")
+
+    # Build Map (ActivityID -> Data)
+    garmin_id_map = {clean_id(a['activityId']): a for a in garmin_data}
+    
+    # Build Map (Date, SportID -> Activity)
+    garmin_date_map = {}
+    for act in garmin_data:
+        date_str = act['startTimeLocal'][:10]
+        sport_id = act['sportTypeId']
+        garmin_date_map[(date_str, sport_id)] = act
 
     # 2. Add Current Week from Plan to Master
     print("\n--- STEP 3: SYNC WEEKLY PLAN TO MASTER ---")
-    
-    # Identify dates currently in Master DB to avoid duplicates
     existing_dates = set(master_df['Date'].dropna())
-    
-    # Filter plan rows that are NOT in master DB
     new_plan_rows = plan_df[~plan_df['Date'].isin(existing_dates)].copy()
     
     if not new_plan_rows.empty:
-        # Align columns (Master has more columns than Plan)
         for col in master_df.columns:
             if col not in new_plan_rows.columns:
-                new_plan_rows[col] = "" # Initialize missing cols
-        
-        # Concat to top
+                new_plan_rows[col] = "" 
         master_df = pd.concat([new_plan_rows, master_df], ignore_index=True)
-        # Sort desc
         master_df = master_df.sort_values(by='Date', ascending=False).reset_index(drop=True)
-        print(f"   + Added {len(new_plan_rows)} new planned workouts to the database.")
+        print(f"   + Added {len(new_plan_rows)} new planned workouts.")
     else:
-        print("   - No new planned workouts found in the weekly schedule.")
+        print("   - No new planned workouts found.")
 
-    # 3. Map Garmin Data
-    print("\n--- STEP 4: MAP PLANNED WORKOUTS TO GARMIN ---")
-    
-    # Build a lookup for Garmin data: (Date_String, SportId) -> Activity
-    garmin_map = {}
-    for act in garmin_data:
-        date_str = act['startTimeLocal'][:10] # YYYY-MM-DD
-        sport_id = act['sportTypeId']
-        key = (date_str, sport_id)
-        # Store, prefer existing key if multiple (usually keeps first/latest due to sort)
-        if key not in garmin_map:
-            garmin_map[key] = act
-
+    # 3. Process Rows (Match & TSS)
+    print("\n--- STEP 4: PROCESS ROWS (Match & TSS) ---")
     ftp = get_ftp_from_plan()
-    print(f"   * Using FTP: {ftp}W for TSS calculations")
+    print(f"   * Using FTP: {ftp}W")
 
-    # Iterate master rows
     for idx, row in master_df.iterrows():
-        # DEBUG: Only log rows that look incomplete
         current_id = clean_id(row.get('activityId', ''))
         
+        # A. LINKING (If no ID)
         if not current_id:
             date_str = str(row['Date'])
             planned_txt = str(row.get('Planned Workout', '')).upper()
-            
-            # Determine target sport
             target_sport = None
             tag = ""
-            if '[RUN]' in planned_txt: 
-                target_sport = 1
-                tag = "[RUN]"
-            elif '[BIKE]' in planned_txt: 
-                target_sport = 2
-                tag = "[BIKE]"
-            elif '[SWIM]' in planned_txt: 
-                target_sport = 5
-                tag = "[SWIM]"
+            
+            if '[RUN]' in planned_txt: target_sport = 1; tag = "[RUN]"
+            elif '[BIKE]' in planned_txt: target_sport = 2; tag = "[BIKE]"
+            elif '[SWIM]' in planned_txt: target_sport = 5; tag = "[SWIM]"
             
             if target_sport:
-                # Try to match
-                found_act = garmin_map.get((date_str, target_sport))
-                
+                found_act = garmin_date_map.get((date_str, target_sport))
                 if found_act:
-                    print(f"   -> MATCH FOUND: Linked '{found_act['activityName']}' to planned workout on {date_str}.")
-                    # Update Linking Cols
+                    print(f"   -> MATCH FOUND: Linked '{found_act['activityName']}' ({date_str})")
                     master_df.at[idx, 'Match Status'] = 'Linked'
                     master_df.at[idx, 'Status'] = 'COMPLETED'
-                    
-                    # Update Name
                     master_df.at[idx, 'Actual Workout'] = f"{tag} {found_act['activityName']}"
                     
-                    # Update Duration (Sec to Min)
                     if found_act.get('duration'):
-                        dur_min = round(found_act['duration'] / 60, 1)
-                        master_df.at[idx, 'Actual Duration'] = dur_min
+                        master_df.at[idx, 'Actual Duration'] = round(found_act['duration'] / 60, 1)
 
-                    # Populate Telemetry
                     for col in TELEMETRY_COLUMNS:
                         val = found_act.get(col, '')
                         if col == 'activityType': val = val.get('typeKey', '') if isinstance(val, dict) else val
-                        
-                        # Ensure ID is cleaned string
                         if col == 'activityId': val = clean_id(val)
-                        
                         if col in master_df.columns:
                             master_df.at[idx, col] = val
-                else:
-                    pass
+                    
+                    current_id = clean_id(found_act.get('activityId')) # Set ID for TSS step below
 
-        # B. TSS CALCULATION LOGIC (For rows with ID but missing TSS)
-        aid = clean_id(master_df.at[idx, 'activityId'])
-        tss = master_df.at[idx, 'trainingStressScore']
-        
-        # Check if ID exists AND TSS is missing/zero
-        has_id = (aid != '')
-        needs_tss = (pd.isna(tss) or tss == '' or str(tss) == '0.0' or (isinstance(tss, (int, float)) and float(tss) == 0))
-        
-        # Check if sport is Bike (2) or Run (1)
-        # Use existing sportTypeId column
-        s_id_val = master_df.at[idx, 'sportTypeId']
-        try:
-            sport_type = int(float(s_id_val)) if s_id_val and s_id_val != '' else 0
-        except:
-            sport_type = 0
+        # B. BACKFILL & TSS (If we have an ID)
+        if current_id and current_id in garmin_id_map:
+            # 1. Backfill missing telemetry from JSON (Heals rows with ID but missing data)
+            act_data = garmin_id_map[current_id]
             
-        is_valid_sport = sport_type in [1, 2]
+            # Check for critical TSS inputs
+            if pd.isna(master_df.at[idx, 'normPower']) or master_df.at[idx, 'normPower'] == '':
+                master_df.at[idx, 'normPower'] = act_data.get('normPower', '')
+            if pd.isna(master_df.at[idx, 'intensityFactor']) or master_df.at[idx, 'intensityFactor'] == '':
+                master_df.at[idx, 'intensityFactor'] = act_data.get('intensityFactor', '')
+            if pd.isna(master_df.at[idx, 'duration']) or master_df.at[idx, 'duration'] == '':
+                master_df.at[idx, 'duration'] = act_data.get('duration', '')
+            if pd.isna(master_df.at[idx, 'sportTypeId']) or master_df.at[idx, 'sportTypeId'] == '':
+                master_df.at[idx, 'sportTypeId'] = act_data.get('sportTypeId', '')
 
-        if has_id and needs_tss and is_valid_sport:
+            # 2. Check and Calculate TSS
+            tss = master_df.at[idx, 'trainingStressScore']
+            sport_val = master_df.at[idx, 'sportTypeId']
+            
+            needs_tss = (pd.isna(tss) or tss == '' or str(tss) == '0.0' or float(tss if tss else 0) == 0)
+            
             try:
-                # Get raw data needed for formula
-                dur_val = master_df.at[idx, 'duration'] # Seconds
-                dur_sec = float(dur_val) if dur_val and dur_val != '' else 0
-                
-                # Fallback to Actual Duration * 60
-                if dur_sec == 0:
-                    act_dur = master_df.at[idx, 'Actual Duration']
-                    dur_sec = float(act_dur) * 60 if act_dur and act_dur != '' else 0
-                
-                np_val = master_df.at[idx, 'normPower']
-                np_float = float(np_val) if np_val and np_val != '' else 0
-                
-                if_val = master_df.at[idx, 'intensityFactor']
-                if_float = float(if_val) if if_val and if_val != '' else 0
-                
-                if dur_sec > 0 and np_float > 0 and if_float > 0 and ftp > 0:
-                    # Formula: (Duration_Sec * NP * IF) / (FTP * 3600) * 100
-                    calc_tss = (dur_sec * np_float * if_float) / (ftp * 3600) * 100
-                    master_df.at[idx, 'trainingStressScore'] = round(calc_tss, 1)
-                    print(f"      -> Calculated TSS: {round(calc_tss, 1)} for row {idx} (ID: {aid})")
+                is_valid_sport = int(float(sport_val)) in [1, 2] if sport_val else False
             except:
-                pass 
+                is_valid_sport = False
+            
+            if needs_tss and is_valid_sport:
+                try:
+                    dur = float(master_df.at[idx, 'duration'])
+                    np_val = float(master_df.at[idx, 'normPower'])
+                    if_val = float(master_df.at[idx, 'intensityFactor'])
+                    
+                    if dur > 0 and np_val > 0 and if_val > 0:
+                        calc_tss = (dur * np_val * if_val) / (ftp * 3600) * 100
+                        master_df.at[idx, 'trainingStressScore'] = round(calc_tss, 1)
+                        print(f"      -> TSS Calculated: {round(calc_tss, 1)} (ID: {current_id})")
+                    else:
+                        print(f"      -> TSS Skipped (ID: {current_id}): Missing metrics (Dur:{dur}, NP:{np_val}, IF:{if_val})")
+                except Exception as e:
+                    print(f"      -> TSS Error (ID: {current_id}): {e}")
 
     # 4. Inject Extra Activities
-    print("\n--- STEP 5: INJECT UNPLANNED GARMIN ACTIVITIES ---")
-    
-    # Re-scan dataframe for IDs to ensure we capture newly linked ones
-    # Use clean_id to ensure format matches Garmin JSON
-    current_db_ids = master_df['activityId'].apply(clean_id).tolist()
-    existing_ids_set = set(current_db_ids)
-    # Remove empty strings from set
-    existing_ids_set.discard('')
-    
-    print(f"   * Database currently contains {len(existing_ids_set)} valid activity IDs.")
+    print("\n--- STEP 5: INJECT UNPLANNED ACTIVITIES ---")
+    current_db_ids = set(master_df['activityId'].apply(clean_id).tolist())
+    current_db_ids.discard('')
     
     extras = []
     
-    # LOGGING LOOP
-    for i, act in enumerate(garmin_data):
+    for act in garmin_data:
         aid = clean_id(act.get('activityId'))
         sport_id = act.get('sportTypeId')
-        act_name = act.get('activityName', 'Unknown')
-        act_date = act.get('startTimeLocal', 'Unknown Date')[:10]
-
-        # Detailed logging for the first 10 items or specific debug items
-        is_target_sport = sport_id in TARGET_SPORT_IDS
-        is_in_db = aid in existing_ids_set
         
-        # Log everything for now to trace the missing activity
-        print(f"   [Checking Item {i}] ID: {aid} | Sport: {sport_id} | Date: {act_date} | Name: {act_name}")
-        
-        if not is_target_sport:
-             print(f"       -> SKIPPED: Sport ID {sport_id} not in target list {TARGET_SPORT_IDS}")
-             continue
-
-        if is_in_db:
-             print(f"       -> SKIPPED: ID {aid} already exists in Master DB.")
-             continue
-        
-        # If we get here, it's a target sport AND not in DB
-        print(f"       -> ✅ FOUND NEW: Adding {act_name}")
-        
-        # Create a new row
-        new_row = {col: '' for col in master_df.columns}
-        
-        # Basic Info
-        start_local = act.get('startTimeLocal', '')
-        if start_local:
-            new_row['Date'] = datetime.datetime.strptime(start_local[:10], '%Y-%m-%d').date()
-            new_row['Day'] = new_row['Date'].strftime('%A')
+        if sport_id in TARGET_SPORT_IDS and aid not in current_db_ids:
+            print(f"   + Found Unplanned: {act.get('activityName')} on {act.get('startTimeLocal')[:10]}")
+            new_row = {col: '' for col in master_df.columns}
             
-        new_row['Status'] = 'COMPLETED'
-        new_row['Match Status'] = 'Linked'
-        
-        tag = SPORT_ID_TO_TAG.get(sport_id, '[EXTRA]')
-        new_row['Actual Workout'] = f"{tag} {act.get('activityName','')}"
-        
-        if act.get('duration'):
-            new_row['Actual Duration'] = round(act['duration'] / 60, 1)
-        
-        # Telemetry
-        for col in TELEMETRY_COLUMNS:
-            val = act.get(col, '')
-            if col == 'activityType': val = val.get('typeKey', '') if isinstance(val, dict) else val
-            if col == 'activityId': val = clean_id(val)
+            # Basic Info
+            start_local = act.get('startTimeLocal', '')
+            if start_local:
+                new_row['Date'] = datetime.datetime.strptime(start_local[:10], '%Y-%m-%d').date()
+                new_row['Day'] = new_row['Date'].strftime('%A')
             
-            if col in new_row:
-                new_row[col] = val
-                
-        extras.append(new_row)
-        existing_ids_set.add(aid) # Prevent duplicates in loop
+            new_row['Status'] = 'COMPLETED'
+            new_row['Match Status'] = 'Linked'
+            tag = SPORT_ID_TO_TAG.get(sport_id, '[EXTRA]')
+            new_row['Actual Workout'] = f"{tag} {act.get('activityName','')}"
+            if act.get('duration'):
+                new_row['Actual Duration'] = round(act['duration'] / 60, 1)
+            
+            # Telemetry
+            for col in TELEMETRY_COLUMNS:
+                val = act.get(col, '')
+                if col == 'activityType': val = val.get('typeKey', '') if isinstance(val, dict) else val
+                if col == 'activityId': val = clean_id(val)
+                if col in new_row:
+                    new_row[col] = val
+            
+            extras.append(new_row)
+            current_db_ids.add(aid)
             
     if extras:
-        print(f"\n   => Injecting {len(extras)} new activities into Master DB...")
+        print(f"   => Injecting {len(extras)} new activities.")
         extras_df = pd.DataFrame(extras)
         master_df = pd.concat([master_df, extras_df], ignore_index=True)
-        # Sort again
         master_df = master_df.sort_values(by='Date', ascending=False).reset_index(drop=True)
     else:
-        print("\n   - No extra activities found to add.")
+        print("   - No unplanned activities to add.")
 
     # 5. Save
     print("\n--- STEP 6: SAVE DATABASE ---")
