@@ -670,7 +670,7 @@ def main():
         if current_ftp:
             print(f"ℹ️  Using Extracted FTP: {current_ftp} Watts")
         else:
-            current_ftp = 241.0
+            current_ftp = 241
             print(f"⚠️ FTP not found in plan. Defaulting to {current_ftp} Watts")
 
         for idx, row in df_master.iterrows():
