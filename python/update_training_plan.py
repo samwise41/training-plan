@@ -265,14 +265,14 @@ def main():
 
     # Iterate master rows
     for idx, row in master_df.iterrows():
-        
-        # A. LINKING LOGIC (If no activity ID)
+        # DEBUG: Only log rows that look incomplete
         current_id = clean_id(row.get('activityId', ''))
         
         if not current_id:
             date_str = str(row['Date'])
             planned_txt = str(row.get('Planned Workout', '')).upper()
             
+            # Determine target sport
             target_sport = None
             tag = ""
             if '[RUN]' in planned_txt: 
@@ -314,8 +314,8 @@ def main():
                         if col in master_df.columns:
                             master_df.at[idx, col] = val
                 else:
-                    # Log that we looked but didn't find
-                    # print(f"      - No Garmin match found for {planned_txt} on {date_str}")
+                    # Log failure to match if date suggests it happened recently (optional verbosity)
+                    # print(f"      [DEBUG] No Garmin match for {planned_txt} on {date_str}")
                     pass
 
         # B. TSS CALCULATION LOGIC (For rows with ID but missing TSS)
@@ -327,7 +327,6 @@ def main():
         needs_tss = (pd.isna(tss) or tss == '' or str(tss) == '0.0' or (isinstance(tss, (int, float)) and float(tss) == 0))
         
         # Check if sport is Bike (2) or Run (1)
-        # Use existing sportTypeId column
         s_id_val = master_df.at[idx, 'sportTypeId']
         try:
             sport_type = int(float(s_id_val)) if s_id_val and s_id_val != '' else 0
@@ -366,68 +365,79 @@ def main():
     
     # Re-scan dataframe for IDs to ensure we capture newly linked ones
     # Use clean_id to ensure format matches Garmin JSON
-    existing_ids = set(master_df['activityId'].apply(clean_id).tolist())
+    current_db_ids = master_df['activityId'].apply(clean_id).tolist()
+    existing_ids_set = set(current_db_ids)
     # Remove empty strings from set
-    existing_ids.discard('')
+    existing_ids_set.discard('')
     
-    print(f"   * Database currently contains {len(existing_ids)} linked activities.")
+    print(f"   * Database currently contains {len(existing_ids_set)} valid activity IDs.")
     
     extras = []
     
-    for act in garmin_data:
+    # LOGGING LOOP
+    for i, act in enumerate(garmin_data):
         aid = clean_id(act.get('activityId'))
         sport_id = act.get('sportTypeId')
         act_name = act.get('activityName', 'Unknown')
         act_date = act.get('startTimeLocal', 'Unknown Date')[:10]
+
+        # Detailed logging for the first 10 items or specific debug items
+        # Removing limit to show ALL for troubleshooting per request
         
-        # Only Run(1), Bike(2), Swim(5), Other(255)
-        # AND check if ID is NOT in our set
-        if sport_id in TARGET_SPORT_IDS:
-            if aid not in existing_ids:
+        is_target_sport = sport_id in TARGET_SPORT_IDS
+        is_in_db = aid in existing_ids_set
+        
+        print(f"   [Checking Item {i}] ID: {aid} | Sport: {sport_id} | Date: {act_date} | Name: {act_name}")
+        
+        if not is_target_sport:
+             print(f"       -> SKIPPED: Sport ID {sport_id} not in target list {TARGET_SPORT_IDS}")
+             continue
+
+        if is_in_db:
+             print(f"       -> SKIPPED: ID {aid} already exists in Master DB.")
+             continue
+        
+        # If we get here, it's a target sport AND not in DB
+        print(f"       -> ✅ FOUND NEW: Adding {act_name}")
+        
+        # Create a new row
+        new_row = {col: '' for col in master_df.columns}
+        
+        # Basic Info
+        start_local = act.get('startTimeLocal', '')
+        if start_local:
+            new_row['Date'] = datetime.datetime.strptime(start_local[:10], '%Y-%m-%d').date()
+            new_row['Day'] = new_row['Date'].strftime('%A')
+            
+        new_row['Status'] = 'COMPLETED'
+        new_row['Match Status'] = 'Linked'
+        
+        tag = SPORT_ID_TO_TAG.get(sport_id, '[EXTRA]')
+        new_row['Actual Workout'] = f"{tag} {act.get('activityName','')}"
+        
+        if act.get('duration'):
+            new_row['Actual Duration'] = round(act['duration'] / 60, 1)
+        
+        # Telemetry
+        for col in TELEMETRY_COLUMNS:
+            val = act.get(col, '')
+            if col == 'activityType': val = val.get('typeKey', '') if isinstance(val, dict) else val
+            if col == 'activityId': val = clean_id(val)
+            
+            if col in new_row:
+                new_row[col] = val
                 
-                # Create a new row
-                new_row = {col: '' for col in master_df.columns}
-                
-                # Basic Info
-                start_local = act.get('startTimeLocal', '')
-                if start_local:
-                    new_row['Date'] = datetime.datetime.strptime(start_local[:10], '%Y-%m-%d').date()
-                    new_row['Day'] = new_row['Date'].strftime('%A')
-                    
-                new_row['Status'] = 'COMPLETED'
-                new_row['Match Status'] = 'Linked'
-                
-                tag = SPORT_ID_TO_TAG.get(sport_id, '[EXTRA]')
-                new_row['Actual Workout'] = f"{tag} {act.get('activityName','')}"
-                
-                if act.get('duration'):
-                    new_row['Actual Duration'] = round(act['duration'] / 60, 1)
-                
-                # Telemetry
-                for col in TELEMETRY_COLUMNS:
-                    val = act.get(col, '')
-                    if col == 'activityType': val = val.get('typeKey', '') if isinstance(val, dict) else val
-                    if col == 'activityId': val = clean_id(val)
-                    
-                    if col in new_row:
-                        new_row[col] = val
-                        
-                extras.append(new_row)
-                existing_ids.add(aid) # Prevent duplicates in loop
-                print(f"   + FOUND NEW: {act_name} on {act_date} (ID: {aid})")
-            else:
-                # Debug log for skipped items
-                # print(f"     - Skipped '{act_name}' ({aid}) - Already in DB.")
-                pass
+        extras.append(new_row)
+        existing_ids_set.add(aid) # Prevent duplicates in loop
             
     if extras:
-        print(f"   => Injecting {len(extras)} new activities into Master DB...")
+        print(f"\n   => Injecting {len(extras)} new activities into Master DB...")
         extras_df = pd.DataFrame(extras)
         master_df = pd.concat([master_df, extras_df], ignore_index=True)
         # Sort again
         master_df = master_df.sort_values(by='Date', ascending=False).reset_index(drop=True)
     else:
-        print("   - No extra activities found to add.")
+        print("\n   - No extra activities found to add.")
 
     # 5. Save
     print("\n--- STEP 6: SAVE DATABASE ---")
