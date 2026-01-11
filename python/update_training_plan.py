@@ -82,9 +82,7 @@ def load_master_db():
     return pd.DataFrame(data)
 
 def clean_corrupt_data(df):
-    """Fixes dictionary strings in activityType and removes legacy Rest Days."""
-    
-    # 1. Fix corrupt Dictionary strings
+    """Fixes dictionary strings in activityType only. Does NOT delete rows."""
     if 'activityType' in df.columns:
         def fix_type(val):
             val = str(val).strip()
@@ -98,33 +96,6 @@ def clean_corrupt_data(df):
             return val
         print("🧹 Cleaning corrupt activityType columns...")
         df['activityType'] = df['activityType'].apply(fix_type)
-
-    # 2. Retroactively remove Pending Rest Days
-    # If a row is "Pending" and looks like "Rest Day", delete it.
-    if 'Planned Workout' in df.columns and 'Status' in df.columns:
-        original_count = len(df)
-        
-        def is_garbage_rest(row):
-            # Check if Status is 'Pending' (meaning no actual data attached yet)
-            status = str(row.get('Status', '')).lower()
-            if status != 'pending': return False
-            
-            # Check if Workout Name implies Rest
-            name = str(row.get('Planned Workout', '')).lower()
-            clean_name = re.sub(r'[^a-z0-9]', '', name) # remove brackets/symbols
-            
-            if 'restday' in clean_name or 'rest' == clean_name or 'off' == clean_name:
-                return True
-            return False
-
-        # Keep rows that are NOT garbage rest days
-        mask = ~df.apply(is_garbage_rest, axis=1)
-        df = df[mask]
-        
-        dropped = original_count - len(df)
-        if dropped > 0:
-            print(f"🧹 Removed {dropped} existing 'Rest Day' rows from Master DB.")
-            
     return df
 
 def extract_weekly_table():
@@ -221,18 +192,18 @@ def main():
             for _, p_row in df_plan.iterrows():
                 p_date_norm = p_row['Date_Norm']
                 p_workout = str(p_row.get('Planned Workout', '')).strip()
-                p_workout_clean = re.sub(r'[^a-zA-Z0-9\s]', '', p_workout.lower()) # Remove brackets for checking
+                p_workout_clean = re.sub(r'[^a-zA-Z0-9\s]', '', p_workout.lower()) 
                 
                 if pd.isna(p_date_norm): continue 
                 
-                # --- FILTER: Strict Rest Day Skipping ---
-                # Check for "Rest Day", "Rest", "Off", or "[Rest Day]"
+                # --- FILTER: Strict Rest Day Skipping (Only for NEW rows) ---
                 if 'rest day' in p_workout_clean or p_workout_clean in ['rest', 'off', 'day off']:
-                    print(f"   [SKIP] Rest detected: {p_date_norm} - {p_workout}")
+                    print(f"   [SKIP] Rest detected in Plan: {p_date_norm} - {p_workout}")
                     continue
 
                 if (p_date_norm, p_workout) not in existing_keys:
                     print(f"[NEW PLAN ROW] Adding: {p_date_norm} - {p_workout}")
+                    # Initialize with empty strings to prevent future NaNs
                     new_row = {c: "" for c in MASTER_COLUMNS}
                     new_row.update({
                         'Date': p_date_norm,
@@ -278,7 +249,6 @@ def main():
                     cand_id = str(cand.get('activityId'))
                     if cand_id in claimed_ids: continue
 
-                    # Check Sport Tag vs Garmin Type
                     g_type = cand.get('activityType', {}).get('typeKey', '').lower()
                     
                     is_run = '[RUN]' in planned_txt and 'running' in g_type
@@ -289,7 +259,6 @@ def main():
                         match = cand
                         break
                 
-                # Fallback: Single activity matches single planned row
                 if not match and len(candidates) == 1:
                     cand = candidates[0]
                     if str(cand.get('activityId')) not in claimed_ids:
@@ -303,7 +272,6 @@ def main():
                 df_master.at[idx, 'Match Status'] = 'Linked'
                 df_master.at[idx, 'activityId'] = m_id
                 
-                # Update Name
                 prefix = ""
                 g_type = match.get('activityType', {}).get('typeKey', '').lower()
                 if 'running' in g_type: prefix = "[RUN]"
@@ -311,7 +279,6 @@ def main():
                 elif 'swimming' in g_type: prefix = "[SWIM]"
                 
                 raw_name = match.get('activityName', 'Activity')
-                # Avoid double prefixing
                 if prefix and prefix not in raw_name:
                     new_name = f"{prefix} {raw_name}"
                 else:
@@ -347,8 +314,10 @@ def main():
             g_id = str(g.get('activityId'))
             if g_id not in claimed_ids:
                 
+                # Use empty string for planned cols to avoid 'nan'
                 new_row = {c: "" for c in MASTER_COLUMNS}
-                new_row['Planned Workout'] = 'Unplanned'
+                new_row['Planned Workout'] = "" 
+                new_row['Planned Duration'] = ""
                 new_row['Status'] = 'COMPLETED'
                 new_row['Match Status'] = 'Unplanned'
                 new_row['Date'] = g.get('startTimeLocal', '')[:10]
@@ -358,7 +327,6 @@ def main():
                 new_row['Actual Workout'] = raw_name
                 new_row['activityType'] = g.get('activityType', {}).get('typeKey', '')
                 
-                # Map Telemetry
                 cols_to_map = [
                     'duration', 'distance', 'averageHR', 'maxHR', 
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -409,8 +377,11 @@ def main():
                     df_master.at[idx, 'trainingStressScore'] = f"{tss:.1f}"
 
         # 6. SAVE
+        # Sort
         df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
         df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
+        
+        # NOTE: Removed automatic NaN cleanup as requested.
         
         print(f"Saving {len(df_master)} rows to Master DB...")
         with open(MASTER_DB, 'w', encoding='utf-8') as f:
