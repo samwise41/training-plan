@@ -510,6 +510,9 @@ def main():
             df_plan['Date_Norm'] = pd.to_datetime(df_plan['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
 
             existing_keys = set(zip(df_master['Date_Norm'], df_master['Planned Workout'].str.strip()))
+            
+            # --- NEW: Filter for workouts today or earlier ---
+            today_str = datetime.now().strftime('%Y-%m-%d')
 
             for _, p_row in df_plan.iterrows():
                 p_date_norm = p_row['Date_Norm']
@@ -518,6 +521,11 @@ def main():
                 
                 if pd.isna(p_date_norm): continue 
                 
+                # --- CHECK: Is the planned date in the future? ---
+                if p_date_norm > today_str:
+                    # Skip adding future workouts to Master DB
+                    continue
+
                 if 'rest day' in p_workout_clean or p_workout_clean in ['rest', 'off', 'day off']:
                     print(f"   [SKIP] Rest detected in Plan: {p_date_norm} - {p_workout}")
                     continue
@@ -537,7 +545,7 @@ def main():
                     existing_keys.add((p_date_norm, p_workout))
                     count_added += 1
             
-            print(f"✅ Sync Complete. Added {count_added} new planned workouts.")
+            print(f"✅ Sync Complete. Added {count_added} new planned workouts (up to {today_str}).")
             if 'Date_Norm' in df_master.columns: df_master.drop(columns=['Date_Norm'], inplace=True)
 
         # 3. LINKING
@@ -670,7 +678,7 @@ def main():
         if current_ftp:
             print(f"ℹ️  Using Extracted FTP: {current_ftp} Watts")
         else:
-            current_ftp = 100
+            current_ftp = 241.0
             print(f"⚠️ FTP not found in plan. Defaulting to {current_ftp} Watts")
 
         for idx, row in df_master.iterrows():
