@@ -6,7 +6,7 @@ import subprocess
 import traceback
 import re
 import ast
-import sys # <--- Added to ensure correct Python interpreter usage
+import sys
 from datetime import datetime
 
 # --- CONFIGURATION ---
@@ -15,9 +15,10 @@ ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 
 PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
-BRIEF_FILE = os.path.join(ROOT_DIR, 'coaching_brief.md') 
+BRIEF_FILE = os.path.join(ROOT_DIR, 'COACH_BRIEFING.md') 
+
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
-GARMIN_FETCH_CMD = [sys.executable, os.path.join(SCRIPT_DIR, "fetch_garmin.py")] # Use sys.executable
+GARMIN_FETCH_CMD = [sys.executable, os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
 TRENDS_SCRIPT = os.path.join(SCRIPT_DIR, "analyze_trends.py") 
 
 MASTER_COLUMNS = [
@@ -38,30 +39,25 @@ def print_header(msg):
 
 def run_garmin_fetch():
     print(f"📡 Triggering Garmin Fetch...")
-    # Fix: Use the full path from the command list we built
     fetch_script_path = GARMIN_FETCH_CMD[1]
     if not os.path.exists(fetch_script_path):
         print(f"⚠️ Warning: Fetch script not found at {fetch_script_path}")
         return
     try:
         env = os.environ.copy()
-        # Use sys.executable to ensure we use the same python environment
         subprocess.run(GARMIN_FETCH_CMD, check=True, env=env, cwd=SCRIPT_DIR)
         print("✅ Garmin Data Synced.")
     except Exception as e:
         print(f"⚠️ Warning: Fetch failed: {e}")
 
 def run_trend_analysis():
-    """Executes the external trend analysis script and PRINTS output for debugging."""
     print_header("RUNNING TREND ANALYSIS")
-    
     if not os.path.exists(TRENDS_SCRIPT):
         print(f"⚠️ Warning: Trend script not found at {TRENDS_SCRIPT}")
         return
 
     try:
         print(f"   Executing: {TRENDS_SCRIPT}")
-        # Capture output so we can see if it crashes
         result = subprocess.run(
             [sys.executable, TRENDS_SCRIPT], 
             cwd=SCRIPT_DIR, 
@@ -69,7 +65,6 @@ def run_trend_analysis():
             text=True
         )
         
-        # Print the output from the sub-script
         if result.stdout:
             print("   --- Script Output ---")
             print(result.stdout)
@@ -92,12 +87,13 @@ def git_push_changes():
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
         
-        # Explicitly add all files including the brief
-        files_to_add = [MASTER_DB, PLAN_FILE, GARMIN_JSON]
-        if os.path.exists(BRIEF_FILE):
-            files_to_add.append(BRIEF_FILE)
-            
+        # --- FIX: Force Add All Files (No Exists Check) ---
+        files_to_add = [MASTER_DB, PLAN_FILE, GARMIN_JSON, BRIEF_FILE]
+        
+        print(f"   Target Brief File: {BRIEF_FILE}")
         print(f"   Adding files: {files_to_add}")
+        
+        # We allow git add to fail if file is missing so we see the error
         subprocess.run(["git", "add"] + files_to_add, check=True)
         
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
@@ -131,7 +127,6 @@ def load_master_db():
     return pd.DataFrame(data)
 
 def clean_corrupt_data(df):
-    """Fixes dictionary strings in activityType only. Does NOT delete rows."""
     if 'activityType' in df.columns:
         def fix_type(val):
             val = str(val).strip()
@@ -168,7 +163,6 @@ def extract_weekly_table():
         print("⚠️ No 'Weekly Schedule' table found in Plan.")
         return pd.DataFrame()
 
-    # Parse Header aggressively
     raw_header = [h.strip() for h in table_lines[0].strip('|').split('|')]
     
     col_map = {}
@@ -204,22 +198,17 @@ def extract_weekly_table():
     return df
 
 def update_weekly_plan(df_master):
-    """Updates Status, Actual Workout, and Duration in the weekly plan file using Date+Sport matching."""
     if not os.path.exists(PLAN_FILE): return
 
     print_header("UPDATING WEEKLY PLAN VISUALS")
 
-    # 1. Create Lookup from Master DB
-    # Key: (Date, SportTag) -> Value: (Actual Workout, Actual Duration, Status)
     lookup = {}
-    
     df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
     
     for _, row in df_master.iterrows():
         d = row.get('Date_Norm')
         p_work = str(row.get('Planned Workout', '')).upper()
         
-        # Identify Sport Tag for matching
         sport_tag = None
         if '[RUN]' in p_work: sport_tag = 'RUN'
         elif '[BIKE]' in p_work: sport_tag = 'BIKE'
@@ -228,15 +217,11 @@ def update_weekly_plan(df_master):
         a_work = str(row.get('Actual Workout', '')).strip()
         a_dur = str(row.get('Actual Duration', '')).strip()
         
-        # Only store if we have a matched/completed row
         if d and sport_tag and (a_work or a_dur):
-            # Clean 'nan' for display
             if a_work.lower() == 'nan': a_work = ""
             if a_dur.lower() == 'nan': a_dur = ""
-            
             lookup[(d, sport_tag)] = (a_work, a_dur, "COMPLETED")
 
-    # 2. Read and Modify the Plan File
     with open(PLAN_FILE, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
@@ -247,36 +232,28 @@ def update_weekly_plan(df_master):
     for line in lines:
         stripped = line.strip()
         
-        # Detect Table Start & Parse Headers
         if not table_started:
             if stripped.startswith('|') and 'date' in stripped.lower() and 'day' in stripped.lower():
                 table_started = True
                 headers = [h.strip().lower() for h in stripped.strip('|').split('|')]
-                
-                # Map headers to indices
                 for i, h in enumerate(headers):
                     if 'date' in h: header_indices['date'] = i
                     elif 'planned workout' in h: header_indices['planned_workout'] = i
                     elif 'actual workout' in h: header_indices['actual_workout'] = i
                     elif 'actual duration' in h: header_indices['actual_duration'] = i
                     elif 'status' in h: header_indices['status'] = i
-            
             new_lines.append(line)
             continue
         
-        # Process Table Rows
         if table_started and stripped.startswith('|') and '---' not in stripped:
             cols = [c.strip() for c in stripped.strip('|').split('|')]
-            
             try:
-                # Extract Key info from this row
                 if 'date' in header_indices and 'planned_workout' in header_indices:
                     row_date_raw = cols[header_indices['date']]
                     row_plan_raw = cols[header_indices['planned_workout']].upper()
                     
                     row_date = pd.to_datetime(row_date_raw, errors='coerce').strftime('%Y-%m-%d')
                     
-                    # Identify Tag in this row
                     row_tag = None
                     if '[RUN]' in row_plan_raw: row_tag = 'RUN'
                     elif '[BIKE]' in row_plan_raw: row_tag = 'BIKE'
@@ -305,7 +282,6 @@ def update_weekly_plan(df_master):
         else:
             new_lines.append(line)
 
-    # 3. Write Back
     with open(PLAN_FILE, 'w', encoding='utf-8') as f:
         f.writelines(new_lines)
     
@@ -316,7 +292,6 @@ def main():
         print_header("STARTING MIGRATION (SYNC & FIX)")
         run_garmin_fetch()
 
-        # 1. Load & Clean Data
         df_master = load_master_db()
         df_master = clean_corrupt_data(df_master) 
         
@@ -350,7 +325,6 @@ def main():
                 
                 if pd.isna(p_date_norm): continue 
                 
-                # --- FILTER: Strict Rest Day Skipping (Only for NEW rows) ---
                 if 'rest day' in p_workout_clean or p_workout_clean in ['rest', 'off', 'day off']:
                     print(f"   [SKIP] Rest detected in Plan: {p_date_norm} - {p_workout}")
                     continue
@@ -373,7 +347,7 @@ def main():
             print(f"✅ Sync Complete. Added {count_added} new planned workouts.")
             if 'Date_Norm' in df_master.columns: df_master.drop(columns=['Date_Norm'], inplace=True)
 
-        # 3. LINKING (Iterative)
+        # 3. LINKING
         claimed_ids = set() 
         print_header("LINKING GARMIN DATA")
         
@@ -387,14 +361,12 @@ def main():
             candidates = garmin_by_date.get(date, [])
             match = None
 
-            # A. Already has ID? Re-fetch data
             if current_id and current_id != 'nan':
                  for cand in candidates:
                      if str(cand.get('activityId')) == current_id:
                          match = cand
                          break
             
-            # B. No ID? Search for matching sport
             if not match and candidates and (not current_id or current_id == 'nan'):
                 planned_txt = str(row.get('Planned Workout', '')).upper()
                 
@@ -445,7 +417,6 @@ def main():
                     df_master.at[idx, 'Actual Duration'] = f"{dur_sec/60:.1f}"
                 except: pass
 
-                # Map Telemetry
                 cols_to_map = [
                     'duration', 'distance', 'averageHR', 'maxHR', 
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -467,7 +438,6 @@ def main():
             g_id = str(g.get('activityId'))
             if g_id not in claimed_ids:
                 
-                # Use empty string for planned cols to avoid 'nan'
                 new_row = {c: "" for c in MASTER_COLUMNS}
                 new_row['Planned Workout'] = "" 
                 new_row['Planned Duration'] = ""
@@ -506,7 +476,6 @@ def main():
             act_type = str(row.get('activityType', '')).lower()
             plan_type = str(row.get('Planned Workout', '')).lower()
             
-            # Scope: Only Run/Bike
             is_run_bike = ('run' in act_type or 'run' in plan_type or 
                            'cycl' in act_type or 'bik' in act_type or 'virtual_ride' in act_type)
             if not is_run_bike: continue
