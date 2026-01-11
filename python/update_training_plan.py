@@ -157,30 +157,37 @@ def extract_weekly_table():
     return df
 
 def update_weekly_plan(df_master):
-    """Updates 'Actual Workout' and 'Actual Duration' in the weekly plan file."""
+    """Updates Status, Actual Workout, and Duration in the weekly plan file using Date+Sport matching."""
     if not os.path.exists(PLAN_FILE): return
 
     print_header("UPDATING WEEKLY PLAN VISUALS")
 
     # 1. Create Lookup from Master DB
-    # Key: (Date, Planned Workout) -> Value: (Actual Workout, Actual Duration)
+    # Key: (Date, SportTag) -> Value: (Actual Workout, Actual Duration, Status)
     lookup = {}
     
     df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
     
     for _, row in df_master.iterrows():
         d = row.get('Date_Norm')
-        p_work = str(row.get('Planned Workout', '')).strip()
+        p_work = str(row.get('Planned Workout', '')).upper()
+        
+        # Identify Sport Tag for matching
+        sport_tag = None
+        if '[RUN]' in p_work: sport_tag = 'RUN'
+        elif '[BIKE]' in p_work: sport_tag = 'BIKE'
+        elif '[SWIM]' in p_work: sport_tag = 'SWIM'
+        
         a_work = str(row.get('Actual Workout', '')).strip()
         a_dur = str(row.get('Actual Duration', '')).strip()
         
-        # Only store if we have actual data
-        if d and p_work and (a_work or a_dur):
-            # Clean up 'nan' strings for display
+        # Only store if we have a matched/completed row
+        if d and sport_tag and (a_work or a_dur):
+            # Clean 'nan' for display
             if a_work.lower() == 'nan': a_work = ""
             if a_dur.lower() == 'nan': a_dur = ""
             
-            lookup[(d, p_work)] = (a_work, a_dur)
+            lookup[(d, sport_tag)] = (a_work, a_dur, "COMPLETED")
 
     # 2. Read and Modify the Plan File
     with open(PLAN_FILE, 'r', encoding='utf-8') as f:
@@ -193,17 +200,21 @@ def update_weekly_plan(df_master):
     for line in lines:
         stripped = line.strip()
         
-        # Detect Table Start
+        # Detect Table Start & Parse Headers
         if not table_started:
-            if stripped.startswith('|') and 'date' in stripped.lower():
+            # Check for header row (must contain Date and Day)
+            if stripped.startswith('|') and 'date' in stripped.lower() and 'day' in stripped.lower():
                 table_started = True
-                # Parse Header Indices
                 headers = [h.strip().lower() for h in stripped.strip('|').split('|')]
+                
+                # Map headers to indices
                 for i, h in enumerate(headers):
                     if 'date' in h: header_indices['date'] = i
                     elif 'planned workout' in h: header_indices['planned_workout'] = i
                     elif 'actual workout' in h: header_indices['actual_workout'] = i
                     elif 'actual duration' in h: header_indices['actual_duration'] = i
+                    elif 'status' in h: header_indices['status'] = i
+            
             new_lines.append(line)
             continue
         
@@ -211,35 +222,42 @@ def update_weekly_plan(df_master):
         if table_started and stripped.startswith('|') and '---' not in stripped:
             cols = [c.strip() for c in stripped.strip('|').split('|')]
             
-            # Check if we can identify this row
             try:
-                # Extract Date and Planned Workout from this row
-                row_date_raw = cols[header_indices['date']]
-                row_plan_raw = cols[header_indices['planned_workout']]
-                
-                # Normalize Date
-                row_date = pd.to_datetime(row_date_raw, errors='coerce').strftime('%Y-%m-%d')
-                
-                # Check Lookup
-                key = (row_date, row_plan_raw)
-                
-                if key in lookup:
-                    actual_work, actual_dur = lookup[key]
+                # Extract Key info from this row
+                if 'date' in header_indices and 'planned_workout' in header_indices:
+                    row_date_raw = cols[header_indices['date']]
+                    row_plan_raw = cols[header_indices['planned_workout']].upper()
                     
-                    # Update Columns
-                    if 'actual_workout' in header_indices:
-                        cols[header_indices['actual_workout']] = actual_work
-                    if 'actual_duration' in header_indices:
-                        cols[header_indices['actual_duration']] = actual_dur
+                    row_date = pd.to_datetime(row_date_raw, errors='coerce').strftime('%Y-%m-%d')
                     
-                    # Reconstruct Line
-                    # Use " | " separator and ensure ends have pipes
-                    new_line = "| " + " | ".join(cols) + " |\n"
-                    new_lines.append(new_line)
+                    # Identify Tag in this row
+                    row_tag = None
+                    if '[RUN]' in row_plan_raw: row_tag = 'RUN'
+                    elif '[BIKE]' in row_plan_raw: row_tag = 'BIKE'
+                    elif '[SWIM]' in row_plan_raw: row_tag = 'SWIM'
+                    
+                    key = (row_date, row_tag)
+                    
+                    if key in lookup:
+                        act_work, act_dur, status_update = lookup[key]
+                        
+                        # Update columns
+                        if 'actual_workout' in header_indices:
+                            cols[header_indices['actual_workout']] = act_work
+                        if 'actual_duration' in header_indices:
+                            cols[header_indices['actual_duration']] = act_dur
+                        if 'status' in header_indices:
+                            cols[header_indices['status']] = status_update
+                        
+                        # Rebuild line
+                        new_line = "| " + " | ".join(cols) + " |\n"
+                        new_lines.append(new_line)
+                    else:
+                        new_lines.append(line)
                 else:
                     new_lines.append(line)
             except:
-                # If parsing fails (e.g. alignment issue), keep original line
+                # Fallback if parsing fails
                 new_lines.append(line)
         else:
             # End of table or other content
@@ -249,8 +267,7 @@ def update_weekly_plan(df_master):
     with open(PLAN_FILE, 'w', encoding='utf-8') as f:
         f.writelines(new_lines)
     
-    print("✅ Weekly plan updated with actuals.")
-
+    print("✅ Weekly plan updated with actuals and status.")
 
 def main():
     try:
@@ -299,7 +316,7 @@ def main():
 
                 if (p_date_norm, p_workout) not in existing_keys:
                     print(f"[NEW PLAN ROW] Adding: {p_date_norm} - {p_workout}")
-                    # Initialize with empty strings to prevent future NaNs
+                    # Initialize with empty strings
                     new_row = {c: "" for c in MASTER_COLUMNS}
                     new_row.update({
                         'Date': p_date_norm,
@@ -330,7 +347,7 @@ def main():
             candidates = garmin_by_date.get(date, [])
             match = None
 
-            # A. Already has ID? Re-fetch data for it to ensure telemetry is fresh
+            # A. Already has ID? Re-fetch data
             if current_id and current_id != 'nan':
                  for cand in candidates:
                      if str(cand.get('activityId')) == current_id:
@@ -473,7 +490,6 @@ def main():
                     df_master.at[idx, 'trainingStressScore'] = f"{tss:.1f}"
 
         # 6. SAVE
-        # Sort
         df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
         df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
         
@@ -489,7 +505,7 @@ def main():
                     vals.append(val)
                 f.write("| " + " | ".join(vals) + " |\n")
 
-        # 7. UPDATE WEEKLY PLAN (New Step)
+        # 7. UPDATE WEEKLY PLAN
         update_weekly_plan(df_master)
 
         print("✅ Success: Migration Complete.")
