@@ -1,0 +1,42 @@
+name: Upodate Master Database
+
+on:
+  schedule:
+    # Run at 6:00, 7:00, 8:00, and 10:15 AM MST (13:00, 14:00, 15:00, 17:15 UTC)
+    - cron: '0 13 * * *'
+    - cron: '0 14 * * *'
+    - cron: '0 15 * * *'
+    - cron: '15 17 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-data:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # FIX: Added 'garminconnect' to the list
+        pip install pandas requests garminconnect
+
+    - name: Run Data Migration & Sync
+      env:
+        GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+        GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        GH_PAT: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        python python/migrate_weekly_data.py
