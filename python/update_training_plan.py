@@ -56,6 +56,39 @@ METRICS = {
 def print_header(msg):
     print(f"\n{'='*60}\n{msg}\n{'='*60}")
 
+# --- FTP EXTRACTION LOGIC ---
+def extract_ftp(text):
+    """
+    Scans text for the 'Cycling FTP' label and returns the integer value.
+    Handles various markdown formats like "**Cycling FTP:**" or "Cycling FTP:".
+    """
+    if not text:
+        return None
+    
+    # Regex explanation:
+    # Cycling FTP  -> specific anchor phrase
+    # [:\*]* -> matches any combination of colons or asterisks (markdown)
+    # \s* -> matches any amount of whitespace
+    # (\d+)        -> captures the number (the FTP value)
+    pattern = r"Cycling FTP[:\*]*\s*(\d+)"
+    
+    match = re.search(pattern, text, re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return None
+
+def get_current_ftp():
+    """Reads the plan file and extracts the current FTP."""
+    if not os.path.exists(PLAN_FILE):
+        return None
+    try:
+        with open(PLAN_FILE, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return extract_ftp(content)
+    except Exception as e:
+        print(f"⚠️ Could not read FTP from plan: {e}")
+        return None
+
 def run_garmin_fetch():
     print(f"📡 Triggering Garmin Fetch...")
     fetch_script_path = GARMIN_FETCH_CMD[1]
@@ -632,6 +665,14 @@ def main():
         # 5. HYDRATE
         print("Hydrating calculated fields...")
         
+        # --- NEW: Retrieve FTP dynamically before loop ---
+        current_ftp = get_current_ftp()
+        if current_ftp:
+            print(f"ℹ️  Using Extracted FTP: {current_ftp} Watts")
+        else:
+            current_ftp = 241.0
+            print(f"⚠️ FTP not found in plan. Defaulting to {current_ftp} Watts")
+
         for idx, row in df_master.iterrows():
             act_type = str(row.get('activityType', '')).lower()
             plan_type = str(row.get('Planned Workout', '')).lower()
@@ -643,7 +684,8 @@ def main():
             try:
                 duration = float(row.get('duration', 0))
                 np_val = float(row.get('normPower', 0))
-                ftp = 241.0 
+                # Using the variable we set above instead of hardcoding
+                ftp = float(current_ftp)
             except: continue 
 
             if duration > 0 and np_val > 0:
