@@ -76,8 +76,9 @@ def load_markdown_table(file_path):
     # Parse into DataFrame
     df = pd.read_csv(StringIO(''.join(cleaned_lines)), sep='|', skipinitialspace=True)
     
-    # Clean column names (strip whitespace) and remove empty edge columns
-    df.columns = [c.strip() for c in df.columns]
+    # Clean column names: strip whitespace AND remove markdown bolding (**)
+    df.columns = [c.strip().replace('**', '') for c in df.columns]
+    
     # Drop the first/last empty columns created by leading/trailing pipes
     if df.shape[1] > 1:
         df = df.iloc[:, 1:-1] 
@@ -88,7 +89,8 @@ def load_markdown_table(file_path):
             df[col] = df[col].astype(str).str.strip()
             
     # Ensure Date is datetime object
-    df['Date'] = pd.to_datetime(df['Date'], format='%Y-%m-%d', errors='coerce').dt.date
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'], format='%Y-%m-%d', errors='coerce').dt.date
     
     # Force Activity ID to be a clean string
     if 'activityId' in df.columns:
@@ -194,11 +196,18 @@ def extract_weekly_schedule_from_plan():
         return pd.DataFrame()
         
     df = pd.read_csv(StringIO(''.join(cleaned_lines)), sep='|', skipinitialspace=True)
-    df.columns = [c.strip() for c in df.columns]
+    
+    # CRITICAL FIX: Clean markdown bolding (**) from headers
+    df.columns = [c.strip().replace('**', '') for c in df.columns]
+    
     df = df.iloc[:, 1:-1]
     
     # Ensure date format
-    df['Date'] = pd.to_datetime(df['Date'], format='%Y-%m-%d', errors='coerce').dt.date
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'], format='%Y-%m-%d', errors='coerce').dt.date
+    else:
+        print("❌ Error: 'Date' column not found in Weekly Schedule. Check markdown headers.")
+        
     return df
 
 # --- MAIN LOGIC ---
@@ -314,8 +323,6 @@ def main():
                         if col in master_df.columns:
                             master_df.at[idx, col] = val
                 else:
-                    # Log failure to match if date suggests it happened recently (optional verbosity)
-                    # print(f"      [DEBUG] No Garmin match for {planned_txt} on {date_str}")
                     pass
 
         # B. TSS CALCULATION LOGIC (For rows with ID but missing TSS)
@@ -327,6 +334,7 @@ def main():
         needs_tss = (pd.isna(tss) or tss == '' or str(tss) == '0.0' or (isinstance(tss, (int, float)) and float(tss) == 0))
         
         # Check if sport is Bike (2) or Run (1)
+        # Use existing sportTypeId column
         s_id_val = master_df.at[idx, 'sportTypeId']
         try:
             sport_type = int(float(s_id_val)) if s_id_val and s_id_val != '' else 0
@@ -382,11 +390,10 @@ def main():
         act_date = act.get('startTimeLocal', 'Unknown Date')[:10]
 
         # Detailed logging for the first 10 items or specific debug items
-        # Removing limit to show ALL for troubleshooting per request
-        
         is_target_sport = sport_id in TARGET_SPORT_IDS
         is_in_db = aid in existing_ids_set
         
+        # Log everything for now to trace the missing activity
         print(f"   [Checking Item {i}] ID: {aid} | Sport: {sport_id} | Date: {act_date} | Name: {act_name}")
         
         if not is_target_sport:
