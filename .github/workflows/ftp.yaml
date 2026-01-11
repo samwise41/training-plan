@@ -1,4 +1,4 @@
-name: FTP Pull
+name: Weekly Training Data Sync
 
 on:
   schedule:
@@ -39,4 +39,3 @@ jobs:
       run: |
         # This points to the NEW script
         python python/get_ftp.py
-git push
