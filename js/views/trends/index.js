@@ -51,11 +51,6 @@ window.resetTrendDefaults = () => {
     renderDynamicCharts('trend-charts-container', logData, chartState);
 };
 
-// Expose the analysis tool helper
-window.App = window.App || {};
-window.App.updateDurationAnalysis = () => updateDurationAnalysis(logData);
-
-
 // --- MAIN RENDERER ---
 
 export function renderTrends(mergedLogData) {
@@ -106,3 +101,6 @@ export function renderTrends(mergedLogData) {
 
     return { html: volumeSection + trendsSection + ftpSection + adherenceSection + durationSection };
 }
+
+// Re-export the analysis helper so App.js can use it
+export { updateDurationAnalysis };
