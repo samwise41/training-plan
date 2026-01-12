@@ -42,14 +42,15 @@ export const parseEvents = (planMd) => {
     let colMap = {
         date: -1, name: -1, priority: -1, 
         swimGoal: -1, bikeGoal: -1, runGoal: -1, 
-        elevGoal: -1 // New field
+        elevGoal: -1 
     };
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
+        const lowerLine = line.toLowerCase();
         
-        // 1. Detect Header and Map Columns
-        if (line.includes('| **Date** |')) { 
+        // STRICTER CHECK: Must contain "Date" AND "Event Type" to avoid grabbing the Weekly Schedule
+        if (lowerLine.includes('| **date** |') && lowerLine.includes('event type')) { 
             inTable = true; 
             const headers = line.replace(/^\||\|$/g, '').split('|').map(h => h.trim().toLowerCase());
             
@@ -60,7 +61,6 @@ export const parseEvents = (planMd) => {
                 else if (h.includes('swim goal')) colMap.swimGoal = idx;
                 else if (h.includes('bike goal')) colMap.bikeGoal = idx;
                 else if (h.includes('run goal')) colMap.runGoal = idx;
-                // Smart match for "Elevation" or "Climb"
                 else if (h.includes('elevation') || h.includes('climb')) colMap.elevGoal = idx;
             });
             continue; 
@@ -72,7 +72,6 @@ export const parseEvents = (planMd) => {
             const cleanLine = line.replace(/^\||\|$/g, '');
             const cols = cleanLine.split('|').map(c => c.trim());
             
-            // Only process if we have enough columns for the basic date/name
             if (cols.length >= 2 && colMap.date > -1) {
                 events.push({
                     dateStr: cols[colMap.date],
@@ -81,7 +80,6 @@ export const parseEvents = (planMd) => {
                     swimGoal: colMap.swimGoal > -1 ? cols[colMap.swimGoal] : '',
                     bikeGoal: colMap.bikeGoal > -1 ? cols[colMap.bikeGoal] : '',
                     runGoal:  colMap.runGoal > -1  ? cols[colMap.runGoal] : '',
-                    // Use the dynamic map to find elevation
                     bikeElevGoal: colMap.elevGoal > -1 ? cols[colMap.elevGoal] : '' 
                 });
             }
