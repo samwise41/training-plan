@@ -268,3 +268,4 @@
 | COMPLETED | Thursday rsday | [BIKE] Mid-Week Aerobic Volume | 90 mins | [BIKE] Harrogate Virtual Cycling | 85.7 | **Winter Strategy Applied.** Full volume restored. Zone 2 (134-180W). |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | COMPLETED | Friday | [RUN] Aerobic Maintenance | 45 mins | [RUN] Roy - Zone 2 - 45 Minutes | 51.8 | Zone 2 (140-152 bpm). Easy aerobic miles. |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | PLANNED | Saturday | [BIKE] Long Steady Distance | 2.0 Hours | [BIKE] Richmond Virtual Cycling | 120.6 | Zone 2 (134-180W). **Winter Cap Applied.** Practice fueling every 45m. |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+
