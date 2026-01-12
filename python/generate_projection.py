@@ -3,48 +3,52 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import matplotlib.dates as mdates
+import matplotlib.patches as mpatches
 
-# --- CONFIGURATION (Based on Endurance Plan Rules) ---
-START_DATE = datetime(2025, 12, 29) # Start of the year's training logic
-END_DATE = datetime(2026, 9, 13)    # Through the 70.3 Race
+# --- CONFIGURATION ---
+START_DATE = datetime(2025, 12, 29)
+END_DATE = datetime(2026, 9, 13)
+
+# Sport Colors (Matches your Dashboard)
+C_SWIM = "#06b6d4"  # Cyan
+C_RUN  = "#f59e0b"  # Amber
+C_BIKE = "#3b82f6"  # Blue
+C_SAT  = "#ffffff"  # White line for Sat ride
+
+# Phase Background Colors (Subtle)
+PHASE_COLORS = {
+    "Base":    "#1e293b", # Slate 800
+    "Build":   "#312e81", # Indigo 900
+    "Peak":    "#064e3b", # Emerald 900
+    "Century": "#451a03", # Amber 900
+    "70.3":    "#450a0a"  # Red 900
+}
+
 RACE_DATES = {
     datetime(2026, 6, 20): "Jordanelle",
     datetime(2026, 8, 15): "Century",
     datetime(2026, 9, 11): "70.3"
 }
 
-# Standard Weekday Volume (Mon-Fri) based on "Microcycle Templates"
-# Mon(1h) + Tue(45m) + Wed(45m) + Thu(90m) + Fri(60m) = ~4.5 to 5 hours base
-WEEKDAY_BASE_HOURS = 4.75 
-
-def get_phase_info(date):
-    """Returns Phase Name, Sat Duration, and Color based on date."""
+# --- HELPER FUNCTIONS ---
+def get_phase_name(date):
     d = date.month * 100 + date.day
-    
-    # Phase 1: Base/Prep (Now - Feb 28)
-    if d <= 228:
-        # Winter Strategy: Sat capped at 2.0h
-        return "Phase 1: Base", 2.0, "#3b82f6" # Blue
-    
-    # Phase 2: Tri-Build (Mar 1 - May 15)
-    elif d <= 515:
-        # Step Ladder: Increases 30m every month
-        if date.month == 3: return "Phase 2: Build", 3.0, "#8b5cf6" # Purple
-        if date.month == 4: return "Phase 2: Build", 3.5, "#8b5cf6"
-        return "Phase 2: Build", 4.0, "#8b5cf6"
+    if d <= 228: return "Base"
+    elif d <= 515: return "Build"
+    elif d <= 620: return "Peak"
+    elif d <= 816: return "Century"
+    else: return "70.3"
 
-    # Phase 3: Peak/Taper (May 16 - June 20)
-    elif d <= 620:
-        return "Phase 3: Peak", 4.0, "#10b981" # Emerald
-
-    # Phase 4: Century Pivot (June 21 - Aug 16)
-    elif d <= 816:
-        # Big volume jump for Century
-        return "Phase 4: Century", 5.0, "#f59e0b" # Amber
-
-    # Phase 5: 70.3 Final (Aug 17 - Sept 11)
-    else:
-        return "Phase 5: 70.3", 4.5, "#ef4444" # Red
+def get_sat_volume(date, phase):
+    # Returns Saturday Ride Hours based on Phase rules
+    if phase == "Base": return 2.0
+    if phase == "Build":
+        if date.month == 3: return 3.0
+        if date.month == 4: return 3.5
+        return 4.0
+    if phase == "Peak": return 4.0
+    if phase == "Century": return 5.0
+    return 4.5
 
 # --- SIMULATION LOOP ---
 weeks = []
@@ -52,45 +56,50 @@ current_date = START_DATE
 week_num = 1
 
 while current_date <= END_DATE:
-    phase_name, sat_hours, color = get_phase_info(current_date)
+    phase = get_phase_name(current_date)
+    sat_hours = get_sat_volume(current_date, phase)
     
-    # Identify Race Week (Check if any race falls in this Mon-Sun window)
+    # Check Modifiers
     week_end = current_date + timedelta(days=6)
     is_race_week = any(current_date <= r <= week_end for r in RACE_DATES)
-    
-    # Logic: 3 Weeks Load, 1 Week Deload
-    # We reset the counter slightly for phases, but generally Week 4, 8, 12... are deloads
     is_deload = (week_num % 4 == 0)
     
-    total_vol = WEEKDAY_BASE_HOURS + sat_hours
+    # Load Modifier (1.0 = Normal, 0.6 = Deload, 0.5 = Race)
+    load_mod = 1.0
     note = ""
-
+    
     if is_race_week:
-        # Taper Protocol: 50% Volume
-        total_vol *= 0.5
-        sat_hours *= 0.5
+        load_mod = 0.5
         note = "RACE"
-        bar_color = "#ec4899" # Pink for Race
     elif is_deload:
-        # Deload Protocol: 60% Volume
-        total_vol *= 0.6
-        sat_hours *= 0.6
+        load_mod = 0.6
         note = "Deload"
-        bar_color = "#64748b" # Slate for Deload
-    else:
-        # Normal Load
-        bar_color = color
-        if week_num % 4 == 1 and week_num > 1:
-            note = "Step Up"
+    
+    # --- CALCULATE SPLITS (Projected) ---
+    # 1. Swim: Approx 2 sessions x 45m = 1.5h base
+    swim_vol = 1.5 * load_mod
+    
+    # 2. Run: Approx 2-3 sessions = 2.0h base
+    run_vol = 2.0 * load_mod
+    
+    # 3. Bike: Weekday Base (2.5h) + Saturday Long Ride
+    # The bike takes the brunt of the volume scaling
+    weekday_bike = 2.5 * load_mod
+    sat_bike = sat_hours * load_mod # Saturday scales with deloads too
+    bike_vol = weekday_bike + sat_bike
+    
+    total_vol = swim_vol + run_vol + bike_vol
 
     weeks.append({
         "date": current_date,
-        "week_label": f"{current_date.month}/{current_date.day}",
+        "label": f"{current_date.month}/{current_date.day}",
+        "phase": phase,
+        "swim": swim_vol,
+        "run": run_vol,
+        "bike": bike_vol,
         "total": total_vol,
-        "sat": sat_hours,
-        "color": bar_color,
-        "note": note,
-        "phase": phase_name
+        "sat_raw": sat_bike, # Actual duration of Sat ride
+        "note": note
     })
     
     current_date += timedelta(days=7)
@@ -98,48 +107,78 @@ while current_date <= END_DATE:
 
 # --- PLOTTING ---
 df = pd.DataFrame(weeks)
-fig, ax1 = plt.subplots(figsize=(14, 7), facecolor='#0f172a') # Dark background
+fig, ax1 = plt.subplots(figsize=(15, 8), facecolor='#0f172a')
 ax1.set_facecolor('#0f172a')
 
-# Bar Chart (Total Volume)
-bars = ax1.bar(df['week_label'], df['total'], color=df['color'], alpha=0.9, width=0.6, label='Total Volume')
+# 1. DRAW BACKGROUND PHASES
+# We need to find the index where phases change
+phase_changes = df['phase'].ne(df['phase'].shift()).cumsum()
+for group_id, group in df.groupby(phase_changes):
+    start_idx = group.index[0] - 0.5
+    end_idx = group.index[-1] + 0.5
+    phase_name = group.iloc[0]['phase']
+    color = PHASE_COLORS.get(phase_name, "#1e293b")
+    
+    # Draw Rectangle
+    ax1.axvspan(start_idx, end_idx, color=color, alpha=0.6, zorder=0)
+    
+    # Add Label at top
+    mid_point = (start_idx + end_idx) / 2
+    ax1.text(mid_point, df['total'].max() + 1.5, phase_name.upper(), 
+             color=color, ha='center', fontweight='bold', fontsize=10, 
+             bbox=dict(facecolor='white', alpha=0.8, edgecolor='none', pad=2))
 
-# Line Chart (Sat Ride)
+# 2. STACKED BARS
+# Order: Swim (bottom), Run (middle), Bike (top)
+p1 = ax1.bar(df.index, df['swim'], width=0.7, color=C_SWIM, label='Swim', alpha=0.9, zorder=3)
+p2 = ax1.bar(df.index, df['run'], bottom=df['swim'], width=0.7, color=C_RUN, label='Run', alpha=0.9, zorder=3)
+p3 = ax1.bar(df.index, df['bike'], bottom=df['swim']+df['run'], width=0.7, color=C_BIKE, label='Bike', alpha=0.9, zorder=3)
+
+# 3. SATURDAY LINE (Secondary Axis)
 ax2 = ax1.twinx()
-ax2.plot(df['week_label'], df['sat'], color='#fbbf24', marker='o', linewidth=2, markersize=6, label='Sat Long Ride')
+ax2.plot(df.index, df['sat_raw'], color=C_SAT, marker='o', linewidth=1.5, markersize=4, linestyle='--', label='Sat Long Ride', zorder=4)
 
-# Formatting
-ax1.set_ylabel('Total Weekly Hours', color='white', fontsize=12)
-ax2.set_ylabel('Long Ride Hours', color='#fbbf24', fontsize=12)
-ax1.set_title('Projected Training Volume: Path to 70.3 (2026)', color='white', fontsize=16, fontweight='bold', pad=20)
+# 4. FORMATTING
+ax1.set_ylabel('Weekly Hours', color='white', fontsize=12)
+ax2.set_ylabel('Sat Ride Hours', color=C_SAT, fontsize=12)
+ax1.set_title('2026 Training Load Projection (Stacked by Sport)', color='white', fontsize=16, fontweight='bold', pad=30)
 
-# Axis Colors
-ax1.tick_params(axis='x', colors='#94a3b8', rotation=45)
+# X-Axis Labels (Show every 2nd week to avoid clutter)
+ax1.set_xticks(df.index[::2])
+ax1.set_xticklabels(df['label'][::2], rotation=45, color='#94a3b8')
+
+# Y-Axis Styling
 ax1.tick_params(axis='y', colors='#94a3b8')
-ax2.tick_params(axis='y', colors='#fbbf24')
-for spine in ax1.spines.values(): spine.set_edgecolor('#334155')
-for spine in ax2.spines.values(): spine.set_visible(False)
+ax2.tick_params(axis='y', colors=C_SAT)
+ax1.grid(color='#334155', linestyle=':', linewidth=0.5, axis='y', alpha=0.5, zorder=0)
 
-# Grid
-ax1.grid(color='#334155', linestyle='--', linewidth=0.5, axis='y', alpha=0.5)
+# Spines
+for ax in [ax1, ax2]:
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_color('#334155')
+    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
 
-# Annotations (Deloads / Races)
+# 5. LEGEND & ANNOTATIONS
+# Custom Legend
+handles = [
+    mpatches.Patch(color=C_BIKE, label='Bike'),
+    mpatches.Patch(color=C_RUN, label='Run'),
+    mpatches.Patch(color=C_SWIM, label='Swim'),
+    plt.Line2D([], [], color=C_SAT, linestyle='--', marker='o', label='Sat Long Ride')
+]
+ax1.legend(handles=handles, loc='upper left', frameon=False, labelcolor='white', bbox_to_anchor=(0, 1.02), ncol=4)
+
+# Note Labels (Race/Deload)
 for i, row in df.iterrows():
     if row['note']:
-        height = row['total'] + 0.2
-        color = 'white' if row['note'] == 'Step Up' else '#ec4899' if row['note'] == 'RACE' else '#94a3b8'
-        weight = 'bold' if row['note'] == 'RACE' else 'normal'
-        ax1.text(i, height, row['note'], ha='center', va='bottom', color=color, fontsize=8, fontweight=weight)
-
-# Legend
-lines, labels = ax1.get_legend_handles_labels()
-lines2, labels2 = ax2.get_legend_handles_labels()
-ax1.legend(lines + lines2, labels + labels2, loc='upper left', frameon=False, labelcolor='white')
-
-# Phase Background Shading (Optional visual separation)
-# We can calculate indices where phases change if needed, but color coding bars handles this well.
+        # Position text just above the bar
+        y_pos = row['total'] + 0.2
+        txt = row['note']
+        color = 'white' if txt == "Step Up" else '#f472b6' if txt == "RACE" else '#94a3b8'
+        weight = 'bold' if txt == "RACE" else 'normal'
+        ax1.text(i, y_pos, txt, ha='center', va='bottom', color=color, fontsize=7, rotation=90, fontweight=weight)
 
 plt.tight_layout()
 plt.savefig('projected_volume_2026.png', dpi=300, bbox_inches='tight')
-print("✅ Chart generated: projected_volume_2026.png")
-plt.show()
+print("✅ Stacked Chart Generated")
