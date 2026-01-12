@@ -15,7 +15,7 @@ C_BIKE = "#8b5cf6"  # Violet
 C_RUN  = "#ec4899"  # Pink
 C_SAT  = "#ffffff"  # White line
 
-# 2. PHASE BOX COLORS (Your custom scheme)
+# 2. PHASE BOX COLORS
 PHASE_COLORS = {
     "Base":    "#94a3b8", # Grey (Slate)
     "Build":   "#3b82f6", # Blue
@@ -77,7 +77,7 @@ while current_date <= END_DATE:
         load_mod = 0.6
         note = "Deload"
     
-    # Projected Splits (Estimated distribution)
+    # Projected Splits
     swim_vol = 1.5 * load_mod
     run_vol = 2.0 * load_mod
     
@@ -109,18 +109,23 @@ fig, ax1 = plt.subplots(figsize=(16, 9), facecolor='#0f172a')
 ax1.set_facecolor('#0f172a')
 
 # 1. STACKED BARS
+# New Order: Run (Bottom) -> Swim (Middle) -> Bike (Top)
 ind = np.arange(len(df))
-# Stack Order: Swim (Base) -> Bike (Middle) -> Run (Top) 
-p1 = ax1.bar(ind, df['swim'], width=0.6, color=C_SWIM, label='Swim', zorder=3)
-p2 = ax1.bar(ind, df['bike'], bottom=df['swim'], width=0.6, color=C_BIKE, label='Bike', zorder=3)
-p3 = ax1.bar(ind, df['run'], bottom=df['swim']+df['bike'], width=0.6, color=C_RUN, label='Run', zorder=3)
+
+p1 = ax1.bar(ind, df['run'], width=0.6, color=C_RUN, label='Run', zorder=3)
+p2 = ax1.bar(ind, df['swim'], bottom=df['run'], width=0.6, color=C_SWIM, label='Swim', zorder=3)
+p3 = ax1.bar(ind, df['bike'], bottom=df['run']+df['swim'], width=0.6, color=C_BIKE, label='Bike', zorder=3)
 
 # 2. SATURDAY LINE (Secondary Axis)
 ax2 = ax1.twinx()
 ax2.plot(ind, df['sat_raw'], color=C_SAT, marker='o', linewidth=1.5, markersize=4, linestyle=':', label='Sat Long Ride', zorder=4)
 
-# 3. PHASE BOXES
-# Find where phases change to draw distinct boxes
+# 3. SET AXIS LIMITS (Create Headroom)
+# Increase max Y by 25% to prevent overlap with header/legend
+max_y = df['total'].max()
+ax1.set_ylim(0, max_y * 1.25)
+
+# 4. PHASE BOXES
 phase_changes = df['phase'].ne(df['phase'].shift()).cumsum()
 
 for group_id, group in df.groupby(phase_changes):
@@ -132,7 +137,7 @@ for group_id, group in df.groupby(phase_changes):
     phase_max_h = group['total'].max()
     box_color = PHASE_COLORS.get(phase_name, "white")
     
-    # Draw Rectangle (Box)
+    # Draw Rectangle
     rect = Rectangle(
         (start_idx - 0.45, 0),       # xy
         (end_idx - start_idx) + 0.9, # width
@@ -147,11 +152,12 @@ for group_id, group in df.groupby(phase_changes):
     
     # Label Box
     mid_point = (start_idx + end_idx) / 2
+    # Place label slightly above the box
     ax1.text(mid_point, phase_max_h + 1.5, phase_name.upper(), 
              color=box_color, ha='center', va='bottom', fontweight='bold', fontsize=11, 
              bbox=dict(facecolor='#0f172a', edgecolor='none', alpha=0.8, pad=0))
 
-# 4. FORMATTING
+# 5. FORMATTING
 ax1.set_ylabel('Weekly Hours', color='white', fontsize=12)
 ax2.set_ylabel('Sat Ride Hours', color=C_SAT, fontsize=12)
 ax1.set_title('2026 Training Load Projection', color='white', fontsize=18, fontweight='bold', pad=40)
@@ -165,21 +171,22 @@ ax1.tick_params(axis='y', colors='#94a3b8')
 ax2.tick_params(axis='y', colors=C_SAT)
 ax1.grid(color='#334155', linestyle=':', linewidth=0.5, axis='y', alpha=0.3, zorder=0)
 
-# Remove Chart Borders (Spines)
+# Remove Chart Borders
 for ax in [ax1, ax2]:
     ax.spines['top'].set_visible(False)
     ax.spines['bottom'].set_color('#334155')
     ax.spines['left'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
-# 5. LEGEND & ANNOTATIONS
+# 6. LEGEND & ANNOTATIONS
+# Reordered Legend to match visual stack (Bike top, Swim mid, Run bot)
 handles = [
-    mpatches.Patch(color=C_RUN, label='Run'),
     mpatches.Patch(color=C_BIKE, label='Bike'),
     mpatches.Patch(color=C_SWIM, label='Swim'),
+    mpatches.Patch(color=C_RUN, label='Run'),
     plt.Line2D([], [], color=C_SAT, linestyle=':', marker='o', label='Sat Long Ride')
 ]
-ax1.legend(handles=handles, loc='upper left', frameon=False, labelcolor='white', bbox_to_anchor=(0, 1.05), ncol=4)
+ax1.legend(handles=handles, loc='upper left', frameon=False, labelcolor='white', bbox_to_anchor=(0, 1.0), ncol=4)
 
 # Race/Deload Labels
 for i, row in df.iterrows():
@@ -192,4 +199,4 @@ for i, row in df.iterrows():
 
 plt.tight_layout()
 plt.savefig('projected_volume_2026.png', dpi=300, bbox_inches='tight')
-print("✅ Stacked Chart with Custom Phase Colors Generated")
+print("✅ Stacked Chart Updated (Order: Run->Swim->Bike)")
