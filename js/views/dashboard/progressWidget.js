@@ -1,12 +1,12 @@
 // js/views/dashboard/progressWidget.js
 import { getSportColorVar } from './utils.js';
 
-// --- Internal Helper: Streak Calculators ---
-// (These remain unchanged, using full history)
+// --- Internal Helper: Streak Calculators (History Based) ---
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
     const today = new Date(); today.setHours(0,0,0,0);
     const dayOfWeek = today.getDay(); 
+    // Start of current week (Monday)
     const currentWeekStart = new Date(today); 
     currentWeekStart.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
     
@@ -14,11 +14,12 @@ function calculateDailyStreak(fullLogData) {
     fullLogData.forEach(item => {
         if (!item.date) return;
         const d = new Date(item.date); d.setHours(0,0,0,0);
+        // Normalize to Monday-based week bucket
         const day = d.getDay(); 
         const weekStart = new Date(d); 
         weekStart.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
         
-        if (weekStart >= currentWeekStart) return; 
+        if (weekStart >= currentWeekStart) return; // Ignore current incomplete week
         
         const key = weekStart.toISOString().split('T')[0];
         if (!weeksMap[key]) weeksMap[key] = { failed: false };
@@ -90,7 +91,7 @@ function calculateVolumeStreak(fullLogData) {
 
 // --- Main Component ---
 export function renderProgressWidget(workouts, fullLogData) {
-    // 1. Define Current Week Window (Monday - Sunday)
+    // 1. Strictly Define Current Week (Monday - Sunday) relative to Today
     const today = new Date();
     today.setHours(0,0,0,0);
     const currentDay = today.getDay(); // 0=Sun, 1=Mon...
@@ -119,18 +120,19 @@ export function renderProgressWidget(workouts, fullLogData) {
     let expectedSoFar = 0; 
     const totalDailyMarkers = {};
 
+    // Improved Detection: Checks various keywords
     const detectSport = (txt) => {
         if (!txt) return 'Other';
         const t = txt.toUpperCase();
-        if (t.includes('RUN') || t.includes('JOG')) return 'Run';
-        if (t.includes('BIKE') || t.includes('CYCL') || t.includes('RIDE') || t.includes('ZWIFT')) return 'Bike';
-        if (t.includes('SWIM') || t.includes('POOL')) return 'Swim';
+        if (t.includes('RUN') || t.includes('JOG') || t.includes('TREADMILL')) return 'Run';
+        if (t.includes('BIKE') || t.includes('CYCL') || t.includes('RIDE') || t.includes('ZWIFT') || t.includes('MTB') || t.includes('INDOOR')) return 'Bike';
+        if (t.includes('SWIM') || t.includes('POOL') || t.includes('LAP') || t.includes('WATER')) return 'Swim';
         return 'Other';
     };
 
     const now = new Date(); 
 
-    // 3. Process PLANNED Data (From endurance_plan.md)
+    // 3. Process PLANNED Data (Strictly from passed Plan Workouts)
     if (workouts) {
         workouts.forEach(w => {
             const d = new Date(w.date);
@@ -151,6 +153,7 @@ export function renderProgressWidget(workouts, fullLogData) {
                 totalDailyMarkers[dateKey] += planDur;
 
                 // Sport Specific Plan
+                // Use planName for detection
                 const planSport = detectSport(w.planName);
                 if (sportStats[planSport]) {
                     sportStats[planSport].planned += planDur;
@@ -161,7 +164,7 @@ export function renderProgressWidget(workouts, fullLogData) {
         });
     }
 
-    // 4. Process ACTUAL Data (From MASTER_TRAINING_DATABASE.md)
+    // 4. Process ACTUAL Data (Strictly from Master DB)
     if (fullLogData) {
         fullLogData.forEach(item => {
             if (!item.date) return;
@@ -174,12 +177,16 @@ export function renderProgressWidget(workouts, fullLogData) {
                 if (actDur > 0) {
                     totalActual += actDur;
                     
-                    // Determine sport from Actual Workout Name
-                    const actualName = item.actualWorkout || item.type || "";
-                    const actSport = detectSport(actualName);
+                    // Determine sport by checking BOTH Name and Type
+                    // This ensures we catch "Pool Swimming" even if the workout name is empty
+                    const combinedText = ((item.actualWorkout || '') + ' ' + (item.type || '')).trim();
+                    const actSport = detectSport(combinedText);
                     
                     if (sportStats[actSport]) {
                         sportStats[actSport].actual += actDur;
+                    } else {
+                        // Fallback to Other if mapped weirdly
+                        sportStats.Other.actual += actDur;
                     }
                 }
             }
