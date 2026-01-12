@@ -2,11 +2,8 @@ name: Weekly Training Data Sync
 
 on:
   schedule:
-    # Run at 6:00, 7:00, 8:00, and 10:15 AM MST (13:00, 14:00, 15:00, 17:15 UTC)
-    - cron: '0 13 * * *'
-    - cron: '0 14 * * *'
-    - cron: '0 15 * * *'
-    - cron: '15 17 * * *'
+    # Run at 6:00, 7:00, 8:00, 9:00, 10:00, 11:00 MST
+    - cron: '0 13,14,15,16,17,18 * * *'
   workflow_dispatch:
 
 permissions:
