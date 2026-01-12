@@ -124,9 +124,9 @@ export function renderProgressWidget(workouts, fullLogData) {
         if (!txt) return 'Other';
         const t = txt.toUpperCase();
 
-        if (t.toLowerCase().includes('[RUN]').toLowerCase())) return 'Run';
-        if (t.toLowerCase()includes('[BIKE]')toLowerCase() ) return 'Bike';
-        if (t.toLowerCase()includes('[SWIM]')toLowerCase() ) return 'Swim';
+        if (lowerT.includes('[run]')) return 'Run';
+        if (lowerT.includes('[bike]')) return 'Bike';
+        if (lowerT.includes('[swim]')) return 'Swim';
         
         return 'Other';
     };
