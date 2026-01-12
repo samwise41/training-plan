@@ -480,6 +480,13 @@ def update_weekly_plan(df_master):
     
     print("✅ Weekly plan updated with actuals and status.")
 
+def detect_sport(text):
+    t = text.upper()
+    if '[RUN]' in t or 'RUN' in t or 'JOG' in t: return 'RUN'
+    if '[BIKE]' in t or 'BIKE' in t or 'CYCLE' in t or 'RIDE' in t or 'ZWIFT' in t: return 'BIKE'
+    if '[SWIM]' in t or 'SWIM' in t or 'POOL' in t: return 'SWIM'
+    return 'OTHER'
+
 def main():
     try:
         print_header("STARTING MIGRATION (SYNC & FIX)")
@@ -511,7 +518,7 @@ def main():
 
             existing_keys = set(zip(df_master['Date_Norm'], df_master['Planned Workout'].str.strip()))
             
-            # --- NEW: Filter for workouts today or earlier ---
+            # Filter for workouts today or earlier
             today_str = datetime.now().strftime('%Y-%m-%d')
 
             for _, p_row in df_plan.iterrows():
@@ -521,9 +528,8 @@ def main():
                 
                 if pd.isna(p_date_norm): continue 
                 
-                # --- CHECK: Is the planned date in the future? ---
+                # Only sync current or past days
                 if p_date_norm > today_str:
-                    # Skip adding future workouts to Master DB
                     continue
 
                 if 'rest day' in p_workout_clean or p_workout_clean in ['rest', 'off', 'day off']:
@@ -562,33 +568,36 @@ def main():
             candidates = garmin_by_date.get(date, [])
             match = None
 
+            # 3a. Match by ID (Existing Link)
             if current_id and current_id != 'nan':
                  for cand in candidates:
                      if str(cand.get('activityId')) == current_id:
                          match = cand
                          break
             
+            # 3b. Match by Type (Strict)
             if not match and candidates and (not current_id or current_id == 'nan'):
                 planned_txt = str(row.get('Planned Workout', '')).upper()
+                planned_type = detect_sport(planned_txt)
                 
                 for cand in candidates:
                     cand_id = str(cand.get('activityId'))
                     if cand_id in claimed_ids: continue
 
-                    g_type = cand.get('activityType', {}).get('typeKey', '').lower()
+                    g_type_str = cand.get('activityType', {}).get('typeKey', '').lower()
                     
-                    is_run = '[RUN]' in planned_txt and 'running' in g_type
-                    is_bike = '[BIKE]' in planned_txt and ('cycling' in g_type or 'biking' in g_type or 'virtual' in g_type)
-                    is_swim = '[SWIM]' in planned_txt and 'swimming' in g_type
+                    # Normalize Garmin Types
+                    g_sport = 'OTHER'
+                    if 'running' in g_type_str: g_sport = 'RUN'
+                    elif 'cycling' in g_type_str or 'biking' in g_type_str or 'virtual_ride' in g_type_str: g_sport = 'BIKE'
+                    elif 'swimming' in g_type_str: g_sport = 'SWIM'
                     
-                    if is_run or is_bike or is_swim:
+                    # Strict Check: Only link if sports match
+                    if planned_type != 'OTHER' and planned_type == g_sport:
                         match = cand
                         break
                 
-                if not match and len(candidates) == 1:
-                    cand = candidates[0]
-                    if str(cand.get('activityId')) not in claimed_ids:
-                        match = cand
+                # --- NOTE: The "Blind Fallback" (match if len=1) has been removed ---
 
             if match:
                 m_id = str(match.get('activityId'))
@@ -673,7 +682,7 @@ def main():
         # 5. HYDRATE
         print("Hydrating calculated fields...")
         
-        # --- NEW: Retrieve FTP dynamically before loop ---
+        # --- Retrieve FTP dynamically ---
         current_ftp = get_current_ftp()
         if current_ftp:
             print(f"ℹ️  Using Extracted FTP: {current_ftp} Watts")
@@ -692,7 +701,6 @@ def main():
             try:
                 duration = float(row.get('duration', 0))
                 np_val = float(row.get('normPower', 0))
-                # Using the variable we set above instead of hardcoding
                 ftp = float(current_ftp)
             except: continue 
 
