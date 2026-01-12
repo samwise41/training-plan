@@ -18,7 +18,7 @@
     // --- 1. IMPORT MODULES ---
     const parserMod = await safeImport('./parser.js', 'Parser');
     const trendsMod = await safeImport('./views/trends/index.js', 'Trends');
-    const gearMod = await safeImport('./views/gear.js', 'Gear');
+    const gearMod = await safeImport('./views/gear/index.js', 'Gear');
     const zonesMod = await safeImport('./views/zones.js', 'Zones');
     const roadmapMod = await safeImport('./views/roadmap.js', 'Roadmap');
     const dashMod = await safeImport('./views/dashboard/index.js', 'Dashboard');
