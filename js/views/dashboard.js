@@ -434,7 +434,7 @@ function buildProgressWidget(workouts, fullLogData) {
 
     const today = new Date(); today.setHours(23, 59, 59, 999); 
     let totalPlanned = 0; 
-    let totalActual = 0; // Recalculated from logs
+    let totalActual = 0; 
     let expectedSoFar = 0; 
     const totalDailyMarkers = {};
     
@@ -444,7 +444,17 @@ function buildProgressWidget(workouts, fullLogData) {
         Swim: { planned: 0, actual: 0, dailyMarkers: {} } 
     };
 
-    // 2. Sum PLANNED from Weekly Schedule (workouts array)
+    // Helper for strictly text-based detection
+    const detectSport = (txt) => {
+        if (!txt) return null;
+        const t = txt.toLowerCase();
+        if (t.includes('run') || t.includes('jog')) return 'Run';
+        if (t.includes('bike') || t.includes('cycl') || t.includes('rid') || t.includes('zwift') || t.includes('mtb')) return 'Bike';
+        if (t.includes('swim') || t.includes('pool')) return 'Swim';
+        return 'Other';
+    };
+
+    // 2. Sum PLANNED - Strictly from "Planned Workout" column (w.planName)
     workouts.forEach(w => {
         const plan = w.plannedDuration || 0; 
         const dateKey = w.date.toISOString().split('T')[0];
@@ -455,14 +465,17 @@ function buildProgressWidget(workouts, fullLogData) {
         if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0; 
         totalDailyMarkers[dateKey] += plan;
 
-        if (sportStats[w.type]) { 
-            sportStats[w.type].planned += plan; 
-            if (!sportStats[w.type].dailyMarkers[dateKey]) sportStats[w.type].dailyMarkers[dateKey] = 0; 
-            sportStats[w.type].dailyMarkers[dateKey] += plan; 
+        // Use the helper on the Plan Name text
+        const type = detectSport(w.planName) || 'Other';
+
+        if (sportStats[type]) { 
+            sportStats[type].planned += plan; 
+            if (!sportStats[type].dailyMarkers[dateKey]) sportStats[type].dailyMarkers[dateKey] = 0; 
+            sportStats[type].dailyMarkers[dateKey] += plan; 
         }
     });
 
-    // 3. Sum ACTUAL from Full Logs (Decoupled from plan rows)
+    // 3. Sum ACTUAL - Strictly from "Actual Workout" column text
     if (fullLogData) {
         fullLogData.forEach(item => {
             if (!item.date) return;
@@ -474,12 +487,16 @@ function buildProgressWidget(workouts, fullLogData) {
                 if (act > 0) {
                     totalActual += act;
                     
-                    // Normalize Sport Type
-                    let type = 'Other';
-                    const rawType = (item.type || '').toLowerCase();
-                    if (rawType.includes('run') || rawType.includes('jog')) type = 'Run';
-                    else if (rawType.includes('bik') || rawType.includes('cycl') || rawType.includes('rid') || rawType.includes('zwift')) type = 'Bike';
-                    else if (rawType.includes('swim') || rawType.includes('pool')) type = 'Swim';
+                    // Prioritize "Actual Workout" field, fallback to name/type if needed
+                    const actualText = item.actualWorkout || item.name || '';
+                    let type = detectSport(actualText);
+                    
+                    // If text detection fails, try the type field as a fallback
+                    if (!type || type === 'Other') {
+                        type = detectSport(item.type);
+                    }
+                    
+                    if (!type) type = 'Other';
 
                     if (sportStats[type]) {
                         sportStats[type].actual += act;
@@ -546,7 +563,7 @@ function buildProgressWidget(workouts, fullLogData) {
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Daily Streak</span>
                 <div class="flex items-center gap-2" title="Consecutive weeks where every single workout was Completed">
                     <i class="fa-solid fa-calendar-day ${getStreakColor(dailyStreak)}"></i>
-                    <span class="text-lg font-bold ${getStreakColor(dailyStreak)}">${dailyStreak} Wks</span>
+                    <span class="text-lg font-bold ${getStreakColor(dailyStreak)}\">${dailyStreak} Wks</span>
                 </div>
             </div>
             <div>
