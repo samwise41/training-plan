@@ -157,7 +157,7 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 
 | **Status** | **Day** | **Planned Workout** | **Planned Duration** | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** |
 |:---|:---|:---|:---|:---|:---|:---|:---|
-| COMPLETED | Monday | [BIKE] Strength / Hill Focus | 40 mins | [BIKE] North Ayrshire Virtual Cycling | 45.7 | **Deload.** Focus: Low Cadence (60-65 rpm) intervals to fix low Torque Efficiency (1.90). | 2026-01-12 |
+| COMPLETED | Monday | [BIKE] Strength / Hill Focus | 40 mins | [BIKE] North Ayrshire Virtual Cycling | 45.7 | **Deload.** Focus: Low Cadence (60-65 rpm) intervals to fix low Torque Efficiency (1.90) . | 2026-01-12 |
 | PLANNED | Tuesday | [SWIM] Technique Focus | 30 mins | | | **Deload.** Use a Pull Buoy if ankle kicking is painful. Focus: Smooth rotation. | 2026-01-13 |
 | PLANNED | Wednesday | [BIKE] Zwift Race | 45 mins | | | **Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus. | 2026-01-14 |
 | PLANNED | Thursday | [BIKE] Zone 2 Endurance | 45 mins | | | **Deload.** Easy spin. Zone 2 (134-180W). Keep it smooth. | 2026-01-15 |
