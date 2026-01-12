@@ -22,7 +22,7 @@
     const zonesMod = await safeImport('./views/zones.js', 'Zones');
     const roadmapMod = await safeImport('./views/roadmap.js', 'Roadmap');
     const dashMod = await safeImport('./views/dashboard/index.js', 'Dashboard');
-    const readinessMod = await safeImport('./views/readiness.js', 'Readiness');
+    const readinessMod = await safeImport('./views/readiness/index.js', 'Readiness');
     const metricsMod = await safeImport('./views/metrics/index.js', 'Metrics');
 
     // --- 2. DESTRUCTURE FUNCTIONS ---
