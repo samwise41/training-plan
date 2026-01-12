@@ -4,7 +4,21 @@ import { parseDur, formatTime } from './utils.js';
 const SPORT_CONFIG = {
     swim: { color: 'icon-swim', icon: 'fa-person-swimming', label: 'Swim' },
     bike: { color: 'icon-bike', icon: 'fa-person-biking', label: 'Bike' },
+    bikeElev: { color: 'icon-bike', icon: 'fa-mountain', label: 'Bike (Climb)' },
     run:  { color: 'icon-run',  icon: 'fa-person-running',  label: 'Run' }
+};
+
+// FIX: Handle commas in numbers (e.g. "4,000")
+const parseElev = (str) => {
+    if (!str) return 0;
+    // Remove commas before parsing
+    const cleanStr = str.replace(/,/g, ''); 
+    const match = cleanStr.match(/[\d\.]+/);
+    return match ? parseFloat(match[0]) : 0;
+};
+
+const formatElev = (ft) => {
+    return Math.round(ft).toLocaleString() + " ft";
 };
 
 export const renderGuide = () => `
@@ -49,16 +63,23 @@ export const renderEventList = (events, stats) => {
         const tgtSwim = parseDur(e.swimGoal);
         const tgtBike = parseDur(e.bikeGoal);
         const tgtRun  = parseDur(e.runGoal);
+        const tgtBikeElev = parseElev(e.bikeElevGoal); 
+
+        // Convert stats (meters) to feet
+        const currentBikeElevFt = (stats.maxBikeElev || 0) * 3.28084;
 
         const getPct = (curr, tgt) => tgt > 0 ? Math.min(Math.round((curr/tgt)*100), 100) : 0;
+        
         const swimPct = getPct(stats.maxSwim, tgtSwim);
         const bikePct = getPct(stats.maxBike, tgtBike);
         const runPct  = getPct(stats.maxRun, tgtRun);
+        const bikeElevPct = getPct(currentBikeElevFt, tgtBikeElev);
 
         const activePcts = [];
         if (tgtSwim > 0) activePcts.push(swimPct);
         if (tgtBike > 0) activePcts.push(bikePct);
         if (tgtRun > 0)  activePcts.push(runPct);
+        if (tgtBikeElev > 0) activePcts.push(bikeElevPct);
         
         const readinessScore = activePcts.length > 0 ? Math.min(...activePcts) : 0;
 
@@ -72,11 +93,16 @@ export const renderEventList = (events, stats) => {
         const days = daysDiff % 7;
         const timeString = `${weeks}W ${days}D TO GO`;
 
-        const buildBar = (type, current, target, pct) => {
+        const buildBar = (type, current, target, pct, isElev = false) => {
+            // CRITICAL CHECK: If target is 0, bar is hidden.
             if (!target || target === 0) return ''; 
+            
             const config = SPORT_CONFIG[type];
             const barColor = pct >= 85 ? 'bg-emerald-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-red-500');
             
+            const displayCurrent = isElev ? formatElev(current) : formatTime(current);
+            const displayTarget  = isElev ? formatElev(target) : formatTime(target);
+
             return `
                 <div class="mb-5 last:mb-0">
                     <div class="flex justify-between items-end mb-1">
@@ -85,7 +111,7 @@ export const renderEventList = (events, stats) => {
                             <span class="text-xs font-bold text-slate-400">${config.label}</span>
                         </div>
                         <div class="text-right">
-                             <span class="text-xs font-bold text-white">${formatTime(current)} / ${formatTime(target)}</span>
+                             <span class="text-xs font-bold text-white">${displayCurrent} / ${displayTarget}</span>
                         </div>
                     </div>
                     <div class="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden relative">
@@ -120,6 +146,7 @@ export const renderEventList = (events, stats) => {
                 <div class="md:w-3/4 w-full">
                     ${buildBar('swim', stats.maxSwim, tgtSwim, swimPct)}
                     ${buildBar('bike', stats.maxBike, tgtBike, bikePct)}
+                    ${buildBar('bikeElev', currentBikeElevFt, tgtBikeElev, bikeElevPct, true)}
                     ${buildBar('run', stats.maxRun, tgtRun, runPct)}
                 </div>
             </div>

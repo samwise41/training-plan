@@ -5,6 +5,7 @@ export const getTrainingStats = (mergedLogData) => {
     let maxSwim = 0;
     let maxBike = 0;
     let maxRun = 0;
+    let maxBikeElev = 0;
 
     const lookbackDate = new Date();
     lookbackDate.setDate(lookbackDate.getDate() - 30);
@@ -18,12 +19,16 @@ export const getTrainingStats = (mergedLogData) => {
             else if (typeof d.duration === 'string') dur = parseDur(d.duration);
             
             if (d.type === 'Swim') maxSwim = Math.max(maxSwim, dur);
-            if (d.type === 'Bike') maxBike = Math.max(maxBike, dur);
+            if (d.type === 'Bike') {
+                maxBike = Math.max(maxBike, dur);
+                // Ensure elevationGain exists, default to 0
+                maxBikeElev = Math.max(maxBikeElev, d.elevationGain || 0);
+            }
             if (d.type === 'Run') maxRun = Math.max(maxRun, dur);
         }
     });
 
-    return { maxSwim, maxBike, maxRun };
+    return { maxSwim, maxBike, maxRun, maxBikeElev };
 };
 
 export const parseEvents = (planMd) => {
@@ -33,24 +38,54 @@ export const parseEvents = (planMd) => {
     let inTable = false;
     let events = [];
     
+    // Dynamic Column Mapping
+    let colMap = {
+        date: -1, name: -1, priority: -1, 
+        swimGoal: -1, bikeGoal: -1, runGoal: -1, 
+        elevGoal: -1 
+    };
+
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (line.includes('| **Date** |')) { inTable = true; continue; }
+        const lowerLine = line.toLowerCase();
+        
+        // STRICTER CHECK: Must contain "Date" AND "Event Type" to avoid grabbing the Weekly Schedule
+        if (lowerLine.includes('| **date** |') && lowerLine.includes('event type')) { 
+            inTable = true; 
+            const headers = line.replace(/^\||\|$/g, '').split('|').map(h => h.trim().toLowerCase());
+            
+            headers.forEach((h, idx) => {
+                if (h.includes('date')) colMap.date = idx;
+                else if (h.includes('event type')) colMap.name = idx;
+                else if (h.includes('priority')) colMap.priority = idx;
+                else if (h.includes('swim goal')) colMap.swimGoal = idx;
+                else if (h.includes('bike goal')) colMap.bikeGoal = idx;
+                else if (h.includes('run goal')) colMap.runGoal = idx;
+                else if (h.includes('elevation') || h.includes('climb')) colMap.elevGoal = idx;
+            });
+            continue; 
+        }
+
         if (inTable && line.startsWith('| :---')) continue; 
+
         if (inTable && line.startsWith('|')) {
             const cleanLine = line.replace(/^\||\|$/g, '');
             const cols = cleanLine.split('|').map(c => c.trim());
-            if (cols.length >= 2) {
+            
+            if (cols.length >= 2 && colMap.date > -1) {
                 events.push({
-                    dateStr: cols[0],
-                    name: cols[1],
-                    priority: cols[3] || 'C',
-                    swimGoal: cols[7] || '',
-                    bikeGoal: cols[9] || '',
-                    runGoal: cols[11] || ''
+                    dateStr: cols[colMap.date],
+                    name: cols[colMap.name],
+                    priority: colMap.priority > -1 ? cols[colMap.priority] : 'C',
+                    swimGoal: colMap.swimGoal > -1 ? cols[colMap.swimGoal] : '',
+                    bikeGoal: colMap.bikeGoal > -1 ? cols[colMap.bikeGoal] : '',
+                    runGoal:  colMap.runGoal > -1  ? cols[colMap.runGoal] : '',
+                    bikeElevGoal: colMap.elevGoal > -1 ? cols[colMap.elevGoal] : '' 
                 });
             }
-        } else if (inTable && line === '') { inTable = false; }
+        } else if (inTable && line === '') { 
+            inTable = false; 
+        }
     }
 
     events.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
