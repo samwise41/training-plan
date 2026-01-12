@@ -9,7 +9,7 @@ The Master Training Plan is to provide structured training for the athlete over 
 
 The primary "A" races and secondary objectives for the 2026 season.
 
-| **Date** | **Event Type** | **Goal** | **Priority** |  **Course Profile** | **Training Implication** | **Swim Distance** | **Swim Goal** | **Bike Distance** | **Bike Goal** | **Run Distance** | **Run Goal** | **Bike Elevation** |
+| **Date** | **Event Type** | **Goal** | **Priority** |  **Course Profile** | **Training Implication** | **Swim Distance** | **Swim Goal** | **Bike Distance** | **Bike Goal** | **Run Distance** | **Run Goal** | **Elevation Goal** |
 | :--- | :--- | :--- | :--- |  :--- | :--- | :--- | :--- | :--- | :--- |  :--- | :--- | :--- | 
 | June 20, 2026 | Jordanelle Olympic Triathlon | Finish ~ 2:30:00 | **A-Race** |  Hilly Bike / Flat Run | Needs low-cadence/high-torque bike intervals (Strength Endurance). | 1.5 k | 00:30:00 | 25 Miles | 1:14:00  | 10 k |  00:50:33 | 1202 |
 | Aug 15, 2026 | CF Ride for Life Century Ride | Finish ~ 5:30:00 | **A-Race** |  4000+ ft of climb over two mountains  | Needs sustained Z2 endurance (4-5h saddle time). | | | 100 Miles | 5:30:00 | | | 4938 | 
