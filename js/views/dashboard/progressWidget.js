@@ -1,12 +1,12 @@
 // js/views/dashboard/progressWidget.js
 import { getSportColorVar } from './utils.js';
 
-// --- Internal Helper: Streak Calculators (History Based) ---
+// --- Internal Helper: Streak Calculators ---
+// (Unchanged logic for streaks)
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
     const today = new Date(); today.setHours(0,0,0,0);
     const dayOfWeek = today.getDay(); 
-    // Start of current week (Monday)
     const currentWeekStart = new Date(today); 
     currentWeekStart.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
     
@@ -14,12 +14,11 @@ function calculateDailyStreak(fullLogData) {
     fullLogData.forEach(item => {
         if (!item.date) return;
         const d = new Date(item.date); d.setHours(0,0,0,0);
-        // Normalize to Monday-based week bucket
         const day = d.getDay(); 
         const weekStart = new Date(d); 
         weekStart.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
         
-        if (weekStart >= currentWeekStart) return; // Ignore current incomplete week
+        if (weekStart >= currentWeekStart) return; 
         
         const key = weekStart.toISOString().split('T')[0];
         if (!weeksMap[key]) weeksMap[key] = { failed: false };
@@ -91,7 +90,7 @@ function calculateVolumeStreak(fullLogData) {
 
 // --- Main Component ---
 export function renderProgressWidget(workouts, fullLogData) {
-    // 1. Strictly Define Current Week (Monday - Sunday) relative to Today
+    // 1. Strictly Define Current Week (Monday - Sunday)
     const today = new Date();
     today.setHours(0,0,0,0);
     const currentDay = today.getDay(); // 0=Sun, 1=Mon...
@@ -120,40 +119,35 @@ export function renderProgressWidget(workouts, fullLogData) {
     let expectedSoFar = 0; 
     const totalDailyMarkers = {};
 
-    // Improved Detection: Checks various keywords
+    // --- STRICT SIMPLE DETECTION ---
     const detectSport = (txt) => {
         if (!txt) return 'Other';
         const t = txt.toUpperCase();
-        if (t.includes('RUN') || t.includes('JOG') || t.includes('TREADMILL')) return 'Run';
-        if (t.includes('BIKE') || t.includes('CYCL') || t.includes('RIDE') || t.includes('ZWIFT') || t.includes('MTB') || t.includes('INDOOR')) return 'Bike';
-        if (t.includes('SWIM') || t.includes('POOL') || t.includes('LAP') || t.includes('WATER')) return 'Swim';
+
+        if (t.includes('[RUN]') || t.includes('[JOG]')) return 'Run';
+        if (t.includes('[BIKE]') || t.includes('[RIDE]') || t.includes('[CYCLE]')) return 'Bike';
+        if (t.includes('[SWIM]') || t.includes('[POOL]')) return 'Swim';
+        
         return 'Other';
     };
 
     const now = new Date(); 
 
-    // 3. Process PLANNED Data (Strictly from passed Plan Workouts)
+    // 3. Process PLANNED Data
     if (workouts) {
         workouts.forEach(w => {
             const d = new Date(w.date);
-            // Strict Filter: Current Week Only
             if (d >= monday && d <= sunday) {
                 const planDur = w.plannedDuration || 0;
                 const dateKey = w.date.toISOString().split('T')[0];
                 
                 totalPlanned += planDur;
-                
-                // Pacing logic: Expected so far if date is past or today
-                if (w.date < now) {
-                    expectedSoFar += planDur;
-                }
+                if (w.date < now) expectedSoFar += planDur;
 
-                // Global Markers
                 if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
                 totalDailyMarkers[dateKey] += planDur;
 
-                // Sport Specific Plan
-                // Use planName for detection
+                // Check Plan Name for Tags
                 const planSport = detectSport(w.planName);
                 if (sportStats[planSport]) {
                     sportStats[planSport].planned += planDur;
@@ -164,28 +158,24 @@ export function renderProgressWidget(workouts, fullLogData) {
         });
     }
 
-    // 4. Process ACTUAL Data (Strictly from Master DB)
+    // 4. Process ACTUAL Data
     if (fullLogData) {
         fullLogData.forEach(item => {
             if (!item.date) return;
             const d = new Date(item.date);
             
-            // Strict Filter: Current Week Only
             if (d >= monday && d <= sunday) {
                 const actDur = parseFloat(item.actualDuration) || 0;
                 
                 if (actDur > 0) {
                     totalActual += actDur;
                     
-                    // Determine sport by checking BOTH Name and Type
-                    // This ensures we catch "Pool Swimming" even if the workout name is empty
-                    const combinedText = ((item.actualWorkout || '') + ' ' + (item.type || '')).trim();
-                    const actSport = detectSport(combinedText);
+                    // STRICTLY check only the 'actualWorkout' field for tags
+                    const actSport = detectSport(item.actualWorkout);
                     
                     if (sportStats[actSport]) {
                         sportStats[actSport].actual += actDur;
                     } else {
-                        // Fallback to Other if mapped weirdly
                         sportStats.Other.actual += actDur;
                     }
                 }
@@ -193,7 +183,7 @@ export function renderProgressWidget(workouts, fullLogData) {
         });
     }
 
-    // 5. HTML Generation Helpers
+    // 5. HTML Generation
     const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false, sportType = 'All') => {
         const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0; 
         const displayPct = rawPct; 
