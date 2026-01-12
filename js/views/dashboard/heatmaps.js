@@ -175,21 +175,16 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
 
-    // --- SPORT DETECTION LOGIC ---
-    // Uses activityName (or actualName) to determine the sport type
+    // --- SPORT DETECTION LOGIC (STRICT) ---
+    // STRICT RULE: Only match if [BIKE], [RUN], [SWIM] are present in activityName or actualName.
+    // No other fallback.
     const detectSport = (item) => {
+        // Combine names, default to empty string
         const name = (item.activityName || item.actualName || '').toUpperCase();
         
-        if (name.includes('RUN') || name.includes('JOG')) return 'Run';
-        if (name.includes('BIKE') || name.includes('CYCL') || name.includes('ZWIFT')) return 'Bike';
-        if (name.includes('SWIM') || name.includes('POOL')) return 'Swim';
-        if (name.includes('STRENGTH') || name.includes('WEIGHT') || name.includes('GYM')) return 'Strength';
-        
-        // Fallback to existing type field if name analysis fails
-        const type = (item.type || '').toUpperCase();
-        if (type === 'RUN') return 'Run';
-        if (type === 'BIKE') return 'Bike';
-        if (type === 'SWIM') return 'Swim';
+        if (name.includes('[RUN]')) return 'Run';
+        if (name.includes('[BIKE]')) return 'Bike';
+        if (name.includes('[SWIM]')) return 'Swim';
         
         return 'Other';
     };
