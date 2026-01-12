@@ -7,20 +7,21 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
 
 # ==========================================
-# 🎨 COLOR CONFIGURATION (MATCHING STYLES.CSS)
+# 🎨 COLOR CONFIGURATION
 # ==========================================
-C_SWIM = "#0ea5e9"  # Sky Blue (from --color-swim)
-C_BIKE = "#8b5cf6"  # Violet (from --color-bike)
-C_RUN  = "#ec4899"  # Pink (from --color-run)
-C_SAT  = "#ffffff"  # White (High contrast for the line)
+# 1. SPORT COLORS (Matches styles.css)
+C_SWIM = "#0ea5e9"  # Sky Blue
+C_BIKE = "#8b5cf6"  # Violet
+C_RUN  = "#ec4899"  # Pink
+C_SAT  = "#ffffff"  # White line
 
-# Phase Box Colors (Borders)
+# 2. PHASE BOX COLORS (Your custom scheme)
 PHASE_COLORS = {
-    "Base":    "#94a3b8", # Slate 400
-    "Build":   "#a78bfa", # Purple 400
-    "Peak":    "#34d399", # Emerald 400
-    "Century": "#fb923c", # Orange 400
-    "70.3":    "#f87171"  # Red 400
+    "Base":    "#94a3b8", # Grey (Slate)
+    "Build":   "#3b82f6", # Blue
+    "Peak":    "#eab308", # Yellow
+    "Century": "#f97316", # Orange
+    "70.3":    "#ef4444"  # Red
 }
 # ==========================================
 
@@ -191,4 +192,4 @@ for i, row in df.iterrows():
 
 plt.tight_layout()
 plt.savefig('projected_volume_2026.png', dpi=300, bbox_inches='tight')
-print("✅ Stacked Chart with Phase Boxes Generated")
+print("✅ Stacked Chart with Custom Phase Colors Generated")
