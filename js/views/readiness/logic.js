@@ -5,6 +5,7 @@ export const getTrainingStats = (mergedLogData) => {
     let maxSwim = 0;
     let maxBike = 0;
     let maxRun = 0;
+    let maxBikeElev = 0; // New Metric
 
     const lookbackDate = new Date();
     lookbackDate.setDate(lookbackDate.getDate() - 30);
@@ -18,12 +19,15 @@ export const getTrainingStats = (mergedLogData) => {
             else if (typeof d.duration === 'string') dur = parseDur(d.duration);
             
             if (d.type === 'Swim') maxSwim = Math.max(maxSwim, dur);
-            if (d.type === 'Bike') maxBike = Math.max(maxBike, dur);
+            if (d.type === 'Bike') {
+                maxBike = Math.max(maxBike, dur);
+                maxBikeElev = Math.max(maxBikeElev, d.elevationGain || 0); // Track max climb
+            }
             if (d.type === 'Run') maxRun = Math.max(maxRun, dur);
         }
     });
 
-    return { maxSwim, maxBike, maxRun };
+    return { maxSwim, maxBike, maxRun, maxBikeElev };
 };
 
 export const parseEvents = (planMd) => {
@@ -47,7 +51,8 @@ export const parseEvents = (planMd) => {
                     priority: cols[3] || 'C',
                     swimGoal: cols[7] || '',
                     bikeGoal: cols[9] || '',
-                    runGoal: cols[11] || ''
+                    runGoal: cols[11] || '',
+                    bikeElevGoal: cols[12] || '' // Capture new column (Index 12)
                 });
             }
         } else if (inTable && line === '') { inTable = false; }
