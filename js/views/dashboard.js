@@ -231,9 +231,6 @@ const toLocalYMD = (dateInput) => {
     return `${year}-${month}-${day}`;
 };
 
-// ... (Rest of buildGenericHeatmap, calculateDailyStreak, etc. remains unchanged below)
-// Make sure to retain all the functions below this line from the previous file to ensure everything works!
-
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
     const dataMap = {}; 
@@ -425,14 +422,72 @@ function calculateVolumeStreak(fullLogData) {
 }
 
 function buildProgressWidget(workouts, fullLogData) {
+    // 1. Determine Week Boundaries from the Plan
+    if (!workouts || workouts.length === 0) return '';
+    
+    // Normalize dates to ensure we capture the whole range
+    const dates = workouts.map(w => w.date.getTime());
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+    minDate.setHours(0,0,0,0);
+    maxDate.setHours(23,59,59,999);
+
     const today = new Date(); today.setHours(23, 59, 59, 999); 
-    let totalPlanned = 0; let totalActual = 0; let expectedSoFar = 0; const totalDailyMarkers = {};
-    const sportStats = { Bike: { planned: 0, actual: 0, dailyMarkers: {} }, Run: { planned: 0, actual: 0, dailyMarkers: {} }, Swim: { planned: 0, actual: 0, dailyMarkers: {} } };
+    let totalPlanned = 0; 
+    let totalActual = 0; // Recalculated from logs
+    let expectedSoFar = 0; 
+    const totalDailyMarkers = {};
+    
+    const sportStats = { 
+        Bike: { planned: 0, actual: 0, dailyMarkers: {} }, 
+        Run: { planned: 0, actual: 0, dailyMarkers: {} }, 
+        Swim: { planned: 0, actual: 0, dailyMarkers: {} } 
+    };
+
+    // 2. Sum PLANNED from Weekly Schedule (workouts array)
     workouts.forEach(w => {
-        const plan = w.plannedDuration || 0; const act = w.actualDuration || 0; const dateKey = w.date.toISOString().split('T')[0];
-        totalPlanned += plan; totalActual += act; if (w.date <= today) expectedSoFar += plan; if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0; totalDailyMarkers[dateKey] += plan;
-        if (sportStats[w.type]) { sportStats[w.type].planned += plan; sportStats[w.type].actual += act; if (!sportStats[w.type].dailyMarkers[dateKey]) sportStats[w.type].dailyMarkers[dateKey] = 0; sportStats[w.type].dailyMarkers[dateKey] += plan; }
+        const plan = w.plannedDuration || 0; 
+        const dateKey = w.date.toISOString().split('T')[0];
+        
+        totalPlanned += plan; 
+        if (w.date <= today) expectedSoFar += plan; 
+        
+        if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0; 
+        totalDailyMarkers[dateKey] += plan;
+
+        if (sportStats[w.type]) { 
+            sportStats[w.type].planned += plan; 
+            if (!sportStats[w.type].dailyMarkers[dateKey]) sportStats[w.type].dailyMarkers[dateKey] = 0; 
+            sportStats[w.type].dailyMarkers[dateKey] += plan; 
+        }
     });
+
+    // 3. Sum ACTUAL from Full Logs (Decoupled from plan rows)
+    if (fullLogData) {
+        fullLogData.forEach(item => {
+            if (!item.date) return;
+            const d = new Date(item.date);
+            
+            // Only count if within the schedule's week window
+            if (d >= minDate && d <= maxDate) {
+                const act = item.actualDuration || 0;
+                if (act > 0) {
+                    totalActual += act;
+                    
+                    // Normalize Sport Type
+                    let type = 'Other';
+                    const rawType = (item.type || '').toLowerCase();
+                    if (rawType.includes('run') || rawType.includes('jog')) type = 'Run';
+                    else if (rawType.includes('bik') || rawType.includes('cycl') || rawType.includes('rid') || rawType.includes('zwift')) type = 'Bike';
+                    else if (rawType.includes('swim') || rawType.includes('pool')) type = 'Swim';
+
+                    if (sportStats[type]) {
+                        sportStats[type].actual += act;
+                    }
+                }
+            }
+        });
+    }
 
     const getSportColorVar = (type) => {
         if (type === 'Bike') return 'var(--color-bike)';
