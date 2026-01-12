@@ -39,32 +39,6 @@ export const parseZoneTables = (planMd) => {
     const zoneSection = Parser.getSection(planMd, "Training Zones");
     if (!zoneSection) return '<div class="text-slate-500 italic p-4">No zone data found in plan.</div>';
     
-    // The original file relied on Parser._parseTableBlock or similar logic implicitly via Parser
-    // But looking closely at the original file provided, it used a specific parsing block
-    // inside the render function. I will preserve that exact logic here.
-    
-    // Original logic:
-    // It appears the original file might have been using a helper or just returning the raw HTML 
-    // if the parser handles it. However, based on the snippet provided in context,
-    // the original file had: `const parseZoneTables = () => { ... }` inside renderZones?
-    // Wait, the snippet shows `import { Parser } from '../parser.js';` and then `renderZones`.
-    // It seems the logic for parsing the table into the grid HTML was likely inside `Parser` 
-    // or done inline. 
-    
-    // To be safe and exact, I will delegate to Parser if that's what the original did, 
-    // OR if the original file had inline parsing logic for the grid, I will put it here.
-    
-    // RE-READING THE SNIPPET:
-    // The snippet shows `${parseZoneTables()}` being called in the HTML string.
-    // But the definition of `parseZoneTables` is NOT in the snippet you uploaded earlier for `zones.js`.
-    // It seems `parseZoneTables` was likely defined inside `renderZones` or imported.
-    
-    // ASSUMPTION: Based on your previous files, `Parser` likely has a method or you want the logic
-    // that converts the markdown table into the colored grid cards.
-    
-    // Since I must reproduce the exact behavior, I will assume the logic that generates 
-    // the "Zone 1", "Zone 2" cards from the Markdown table.
-    
     const lines = zoneSection.split('\n');
     let html = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
     
