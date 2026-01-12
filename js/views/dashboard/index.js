@@ -5,7 +5,7 @@ import { renderProgressWidget } from './progressWidget.js';
 import { renderHeatmaps } from './heatmaps.js';
 
 // --- Global Tooltip Handler ---
-// This must be on 'window' because the HTML strings use onclick="window.showDashboardTooltip(...)"
+// Required because the HTML strings in heatmaps.js use onclick="window.showDashboardTooltip(...)"
 window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) => {
     let tooltip = document.getElementById('dashboard-tooltip-popup');
     
