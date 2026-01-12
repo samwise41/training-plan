@@ -70,14 +70,13 @@ export const Parser = {
         // Header Indices
         let dateIdx = -1, statusIdx = -1, planWorkoutIdx = -1, planDurIdx = -1;
         let actWorkoutIdx = -1, actDurIdx = -1, notesIdx = -1;
-        // NEW: rawDurIdx for the "duration" column (seconds)
         let rawDurIdx = -1;
 
         let hrIdx = -1, powerIdx = -1, speedIdx = -1, tssIdx = -1, activityIdIdx = -1, cadenceIdx = -1; 
         let teLabelIdx = -1;
         
-        // NEW: Indices for Growth Metrics & Normalized Power
-        let vo2Idx = -1, gctIdx = -1, vertIdx = -1, anaerobicIdx = -1, normPowerIdx = -1;
+        // NEW: Indices for Growth Metrics & Normalized Power & Elevation
+        let vo2Idx = -1, gctIdx = -1, vertIdx = -1, anaerobicIdx = -1, normPowerIdx = -1, elevIdx = -1;
 
         let data = [];
 
@@ -94,7 +93,6 @@ export const Parser = {
                         else if (h.includes('planned duration')) planDurIdx = index;
                         else if (h.includes('actual duration')) actDurIdx = index;
                         
-                        // Strict check for "duration" (Garmin seconds) to avoid matching "planned duration"
                         else if (h === 'duration') rawDurIdx = index;
 
                         else if (h.includes('actual workout')) actWorkoutIdx = index;
@@ -112,7 +110,8 @@ export const Parser = {
                         else if (h.includes('groundcontact')) gctIdx = index;
                         else if (h.includes('verticaloscillation')) vertIdx = index;
                         else if (h.includes('anaerobictraining')) anaerobicIdx = index;
-                        else if (h.includes('normpower')) normPowerIdx = index; 
+                        else if (h.includes('normpower')) normPowerIdx = index;
+                        else if (h.includes('elevationgain')) elevIdx = index; // Detect Elevation
                     });
                     if (dateIdx !== -1) break; 
                 }
@@ -136,7 +135,7 @@ export const Parser = {
             const statusStr = getCol(statusIdx).toLowerCase();
             const planDurStr = getCol(planDurIdx);
             const actDurStr = getCol(actDurIdx);
-            const rawDurStr = getCol(rawDurIdx); // Seconds from Garmin
+            const rawDurStr = getCol(rawDurIdx); 
             const actualWorkoutStr = getCol(actWorkoutIdx);
             const notesStr = getCol(notesIdx);
 
@@ -149,12 +148,12 @@ export const Parser = {
             const activityId = getCol(activityIdIdx);
             const trainingEffectLabel = getCol(teLabelIdx);
 
-            // NEW: Parse Advanced Metrics
             const vO2MaxValue = parseFloat(getCol(vo2Idx)) || 0;
             const avgGroundContactTime = parseFloat(getCol(gctIdx)) || 0;
             const avgVerticalOscillation = parseFloat(getCol(vertIdx)) || 0;
             const anaerobicTrainingEffect = parseFloat(getCol(anaerobicIdx)) || 0;
             const normPower = parseFloat(getCol(normPowerIdx)) || 0; 
+            const elevationGain = parseFloat(getCol(elevIdx)) || 0; // Extract Elevation
 
             let date = null;
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -169,9 +168,6 @@ export const Parser = {
                 const type = this._getType(planStr);
                 const actualType = this._getType(actualWorkoutStr);
 
-                // --- DURATION LOGIC FIX ---
-                // Priority 1: Use 'duration' column (seconds) if valid (from Garmin)
-                // Priority 2: Use 'Actual Duration' text parsing (Fallback)
                 let actDurVal = 0;
                 const rawSeconds = parseFloat(rawDurStr);
                 
@@ -200,15 +196,14 @@ export const Parser = {
                     plannedDuration: this._parseTime(planDurStr),
                     actualDuration: actDurVal,
                     notes: notesStr,
-                    // Existing
                     avgHR, avgPower, avgSpeed, tss, ef, avgCadence, activityId, trainingEffectLabel,
-                    // NEW: Pass these through so metrics.js can read them
                     vO2MaxValue, 
                     avgGroundContactTime, 
                     avgVerticalOscillation, 
                     anaerobicTrainingEffect,
                     normPower, 
-                    trainingStressScore: tss 
+                    trainingStressScore: tss,
+                    elevationGain // Store it
                 });
             }
         }
