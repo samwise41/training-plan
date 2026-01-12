@@ -1,24 +1,24 @@
 // js/views/zones/index.js
 import { getBiometricsData, parseZoneTables } from './logic.js';
-import { renderHeader, renderFtpButton } from './components.js';
+import { renderGauge, renderStatsGrid, renderButton } from './components.js';
 
 export function renderZones(planMd) {
     // 1. Process Data
     const bio = getBiometricsData(planMd);
     
-    // 2. Generate HTML Strings
-    const headerHtml = renderHeader(bio);
-    const zonesGridHtml = parseZoneTables(planMd); // This generates the HTML directly now
-    const buttonHtml = renderFtpButton();
+    // 2. Generate HTML Components
+    const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
+    const statsHtml = renderStatsGrid(bio);
+    const zonesGridHtml = parseZoneTables(planMd);
+    const buttonHtml = renderButton();
 
-    // 3. Assemble View
+    // 3. Assemble Final View (Exact order from original)
     return `
-        <div class="max-w-6xl mx-auto">
-            ${headerHtml}
-            <div id="zone-grid">
-                ${zonesGridHtml}
-            </div>
-            ${buttonHtml}
+        ${gaugeHtml}
+        ${statsHtml}
+        <div id="zone-grid">
+            ${zonesGridHtml}
         </div>
+        ${buttonHtml}
     `;
 }
