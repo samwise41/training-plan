@@ -8,14 +8,15 @@ const SPORT_CONFIG = {
     run:  { color: 'icon-run',  icon: 'fa-person-running',  label: 'Run' }
 };
 
-// Helper to handle "4000 ft" string -> number
+// FIX: Handle commas in numbers (e.g. "4,000")
 const parseElev = (str) => {
     if (!str) return 0;
-    const match = str.match(/[\d\.]+/);
+    // Remove commas before parsing
+    const cleanStr = str.replace(/,/g, ''); 
+    const match = cleanStr.match(/[\d\.]+/);
     return match ? parseFloat(match[0]) : 0;
 };
 
-// Helper to format display (assumes input is Feet)
 const formatElev = (ft) => {
     return Math.round(ft).toLocaleString() + " ft";
 };
@@ -62,9 +63,9 @@ export const renderEventList = (events, stats) => {
         const tgtSwim = parseDur(e.swimGoal);
         const tgtBike = parseDur(e.bikeGoal);
         const tgtRun  = parseDur(e.runGoal);
-        const tgtBikeElev = parseElev(e.bikeElevGoal); // Goal in Feet
+        const tgtBikeElev = parseElev(e.bikeElevGoal); 
 
-        // Convert current stats (Meters) to Feet for comparison
+        // Convert stats (meters) to feet
         const currentBikeElevFt = (stats.maxBikeElev || 0) * 3.28084;
 
         const getPct = (curr, tgt) => tgt > 0 ? Math.min(Math.round((curr/tgt)*100), 100) : 0;
@@ -93,7 +94,9 @@ export const renderEventList = (events, stats) => {
         const timeString = `${weeks}W ${days}D TO GO`;
 
         const buildBar = (type, current, target, pct, isElev = false) => {
+            // CRITICAL CHECK: If target is 0, bar is hidden.
             if (!target || target === 0) return ''; 
+            
             const config = SPORT_CONFIG[type];
             const barColor = pct >= 85 ? 'bg-emerald-500' : (pct >= 60 ? 'bg-yellow-500' : 'bg-red-500');
             
