@@ -303,4 +303,3 @@ export function renderProgressWidget(workouts, fullLogData) {
         </div>
     </div>`;
 }
-
