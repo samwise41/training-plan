@@ -7,21 +7,20 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
 
 # ==========================================
-# 🎨 COLOR CONFIGURATION (UPDATE THESE!)
+# 🎨 COLOR CONFIGURATION (MATCHING STYLES.CSS)
 # ==========================================
-# Open your styles.css and copy the HEX codes for your sports here:
-C_SWIM = "#06b6d4"  # Replace with your Swim Color (currently Cyan)
-C_BIKE = "#3b82f6"  # Replace with your Bike Color (currently Blue)
-C_RUN  = "#f59e0b"  # Replace with your Run Color (currently Amber)
-C_SAT  = "#ffffff"  # Color for the Saturday Long Ride line
+C_SWIM = "#0ea5e9"  # Sky Blue (from --color-swim)
+C_BIKE = "#8b5cf6"  # Violet (from --color-bike)
+C_RUN  = "#ec4899"  # Pink (from --color-run)
+C_SAT  = "#ffffff"  # White (High contrast for the line)
 
 # Phase Box Colors (Borders)
 PHASE_COLORS = {
-    "Base":    "#94a3b8", # Slate
-    "Build":   "#a78bfa", # Purple
-    "Peak":    "#34d399", # Emerald
-    "Century": "#fb923c", # Orange
-    "70.3":    "#f87171"  # Red
+    "Base":    "#94a3b8", # Slate 400
+    "Build":   "#a78bfa", # Purple 400
+    "Peak":    "#34d399", # Emerald 400
+    "Century": "#fb923c", # Orange 400
+    "70.3":    "#f87171"  # Red 400
 }
 # ==========================================
 
@@ -111,7 +110,6 @@ ax1.set_facecolor('#0f172a')
 # 1. STACKED BARS
 ind = np.arange(len(df))
 # Stack Order: Swim (Base) -> Bike (Middle) -> Run (Top) 
-# (You can swap these if you prefer a different stack order)
 p1 = ax1.bar(ind, df['swim'], width=0.6, color=C_SWIM, label='Swim', zorder=3)
 p2 = ax1.bar(ind, df['bike'], bottom=df['swim'], width=0.6, color=C_BIKE, label='Bike', zorder=3)
 p3 = ax1.bar(ind, df['run'], bottom=df['swim']+df['bike'], width=0.6, color=C_RUN, label='Run', zorder=3)
