@@ -3,9 +3,14 @@ import { getSportColorVar } from './utils.js';
 
 // --- Internal Helper: Streak Calculators ---
 function calculateDailyStreak(fullLogData) {
-    if (!fullLogData || fullLogData.length === 0) return 0;
+    if (!fullLogData || fullLogData.length === 0) {
+        console.log("Streak Calc: No data available.");
+        return 0;
+    }
+
     const today = new Date(); today.setHours(0,0,0,0);
     const dayOfWeek = today.getDay(); 
+    // Align to Monday start for consistency
     const currentWeekStart = new Date(today); 
     currentWeekStart.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
     
@@ -42,6 +47,9 @@ function calculateDailyStreak(fullLogData) {
         streak++; 
         checkDate.setDate(checkDate.getDate() - 7);
     }
+    
+    // DEBUG LOG
+    console.log(`🔥 Daily Streak Calculated: ${streak} weeks`);
     return streak;
 }
 
@@ -84,11 +92,18 @@ function calculateVolumeStreak(fullLogData) {
         }
         checkDate.setDate(checkDate.getDate() - 7);
     }
+
+    // DEBUG LOG
+    console.log(`🔥 Volume Streak Calculated: ${streak} weeks`);
     return streak;
 }
 
 // --- Main Component ---
 export function renderProgressWidget(workouts, fullLogData) {
+    console.group("🚀 Progress Widget Debug Start");
+    console.log("Input Workouts:", workouts?.length || 0);
+    console.log("Input Log Data:", fullLogData?.length || 0);
+
     // 1. Strictly Define Current Week (Monday - Sunday)
     const today = new Date();
     today.setHours(0,0,0,0);
@@ -104,6 +119,8 @@ export function renderProgressWidget(workouts, fullLogData) {
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23,59,59,999);
+
+    console.log(`📅 Current Week Window: ${monday.toDateString()} to ${sunday.toDateString()}`);
 
     // 2. Initialize Stats
     const sportStats = { 
@@ -133,10 +150,12 @@ export function renderProgressWidget(workouts, fullLogData) {
     const now = new Date(); 
 
     // 3. Process PLANNED Data
+    let plannedCount = 0;
     if (workouts) {
         workouts.forEach(w => {
             const d = new Date(w.date);
             if (d >= monday && d <= sunday) {
+                plannedCount++;
                 const planDur = w.plannedDuration || 0;
                 const dateKey = w.date.toISOString().split('T')[0];
                 
@@ -147,7 +166,6 @@ export function renderProgressWidget(workouts, fullLogData) {
                 totalDailyMarkers[dateKey] += planDur;
 
                 // Check Plan Name for Tags (or use type if tags missing in plan)
-                // We use planName here as requested for the GREY bars
                 const planSport = detectSport(w.planName);
                 if (sportStats[planSport]) {
                     sportStats[planSport].planned += planDur;
@@ -157,10 +175,11 @@ export function renderProgressWidget(workouts, fullLogData) {
             }
         });
     }
+    console.log(`📝 Planned Workouts found in window: ${plannedCount}. Total Minutes: ${totalPlanned}`);
 
     // 4. Process ACTUAL Data
-    // DEBUG: Log the filtering to console
     const debugActuals = [];
+    const debugSkipped = [];
 
     if (fullLogData) {
         fullLogData.forEach(item => {
@@ -174,7 +193,6 @@ export function renderProgressWidget(workouts, fullLogData) {
                 if (actDur > 0) {
                     totalActual += actDur;
                     
-                    // FIX: Use 'actualName' property from Parser, NOT 'actualWorkout'
                     const nameToCheck = item.actualName || "";
                     const actSport = detectSport(nameToCheck);
                     
@@ -186,15 +204,24 @@ export function renderProgressWidget(workouts, fullLogData) {
                         sportStats.Other.actual += actDur;
                     }
                 }
+            } else {
+                // Keep track of a few skipped items just to check logic
+                if (debugSkipped.length < 5) {
+                    debugSkipped.push({ date: item.date, reason: "Outside Date Range" });
+                }
             }
         });
     }
 
-    console.log("📊 Progress Widget Debug:", { 
-        weekStart: monday.toDateString(), 
-        weekEnd: sunday.toDateString(),
-        capturedActuals: debugActuals 
-    });
+    console.log("✅ Captured Actuals:", debugActuals);
+    if (debugActuals.length === 0) {
+        console.warn("⚠️ No actuals captured! Sample skipped items:", debugSkipped);
+        if (fullLogData && fullLogData.length > 0) {
+            console.log("Sample First Log Date:", fullLogData[0].date);
+        }
+    }
+
+    console.groupEnd(); // End Debug Group
 
     // 5. HTML Generation
     const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false, sportType = 'All') => {
