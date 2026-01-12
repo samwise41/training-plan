@@ -85,13 +85,15 @@ export function renderDashboard(planMd, mergedLogData) {
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
     if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
 
+    // 1. Parse Planned Workouts from ENDURANCE PLAN MD
     const workouts = Parser._parseTableBlock(scheduleSection);
     workouts.sort((a, b) => a.date - b.date);
 
-    const fullLogData = mergedLogData || Parser.parseTrainingLog(planMd);
+    // 2. Use Master DB data (mergedLogData) for Actuals
+    const fullLogData = mergedLogData || []; 
 
     // --- WIDGET CONSTRUCTION ---
-    const progressHtml = buildProgressWidget(workouts, fullLogData); // The existing weekly progress
+    const progressHtml = buildProgressWidget(workouts, fullLogData); 
     
     // --- SMART EVENT MAP (For Heatmap) ---
     const eventMap = {};
@@ -154,6 +156,7 @@ export function renderDashboard(planMd, mergedLogData) {
             let statusColorClass = "text-white"; 
             let cardBorder = 'border border-slate-700 hover:border-slate-600'; 
             
+            // NOTE: Card status still uses row-level matching from Parser for individual card display
             if (w.completed) { 
                 statusText = "COMPLETED"; 
                 statusColorClass = "text-emerald-500"; 
@@ -454,7 +457,8 @@ function buildProgressWidget(workouts, fullLogData) {
         return 'Other';
     };
 
-    // 2. Sum PLANNED - Strictly from "Planned Workout" column (w.planName)
+    // 2. Sum PLANNED - STRICTLY from "Planned Workout" column (w.planName)
+    // This source is the Endurance Plan MD
     workouts.forEach(w => {
         const plan = w.plannedDuration || 0; 
         const dateKey = w.date.toISOString().split('T')[0];
@@ -475,7 +479,8 @@ function buildProgressWidget(workouts, fullLogData) {
         }
     });
 
-    // 3. Sum ACTUAL - Strictly from "Actual Workout" column text
+    // 3. Sum ACTUAL - STRICTLY from "Actual Workout" column in Master DB
+    // This source is the MASTER DB (passed as mergedLogData)
     if (fullLogData) {
         fullLogData.forEach(item => {
             if (!item.date) return;
@@ -483,18 +488,17 @@ function buildProgressWidget(workouts, fullLogData) {
             
             // Only count if within the schedule's week window
             if (d >= minDate && d <= maxDate) {
-                const act = item.actualDuration || 0;
+                // strict field usage: actualDuration
+                const act = parseFloat(item.actualDuration) || 0; 
+                
                 if (act > 0) {
                     totalActual += act;
                     
-                    // Prioritize "Actual Workout" field, fallback to name/type if needed
-                    const actualText = item.actualWorkout || item.name || '';
-                    let type = detectSport(actualText);
+                    // strict field usage: actualWorkout (column in Master DB)
+                    // The Parser converts "Actual Workout" -> "actualWorkout"
+                    const actualText = (item.actualWorkout || '').toLowerCase();
                     
-                    // If text detection fails, try the type field as a fallback
-                    if (!type || type === 'Other') {
-                        type = detectSport(item.type);
-                    }
+                    let type = detectSport(actualText);
                     
                     if (!type) type = 'Other';
 
@@ -563,7 +567,7 @@ function buildProgressWidget(workouts, fullLogData) {
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Daily Streak</span>
                 <div class="flex items-center gap-2" title="Consecutive weeks where every single workout was Completed">
                     <i class="fa-solid fa-calendar-day ${getStreakColor(dailyStreak)}"></i>
-                    <span class="text-lg font-bold ${getStreakColor(dailyStreak)}\">${dailyStreak} Wks</span>
+                    <span class="text-lg font-bold ${getStreakColor(dailyStreak)}">${dailyStreak} Wks</span>
                 </div>
             </div>
             <div>
