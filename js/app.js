@@ -17,18 +17,21 @@
 
     // --- 1. IMPORT MODULES ---
     const parserMod = await safeImport('./parser.js', 'Parser');
-    const trendsMod = await safeImport('./views/trends.js', 'Trends');
-    const gearMod = await safeImport('./views/gear.js', 'Gear');
-    const zonesMod = await safeImport('./views/zones.js', 'Zones');
-    const roadmapMod = await safeImport('./views/roadmap.js', 'Roadmap');
-    const dashMod = await safeImport('./views/dashboard.js', 'Dashboard');
-    const readinessMod = await safeImport('./views/readiness.js', 'Readiness');
-    const metricsMod = await safeImport('./views/metrics.js', 'Metrics'); 
+    const trendsMod = await safeImport('./views/trends/index.js', 'Trends');
+    const gearMod = await safeImport('./views/gear/index.js', 'Gear');
+    const zonesMod = await safeImport('./views/zones/index.js', 'Zones');
+    const roadmapMod = await safeImport('./views/roadmap/index.js', 'Roadmap');
+    const dashMod = await safeImport('./views/dashboard/index.js', 'Dashboard');
+    const readinessMod = await safeImport('./views/readiness/index.js', 'Readiness');
+    const metricsMod = await safeImport('./views/metrics/index.js', 'Metrics');
 
     // --- 2. DESTRUCTURE FUNCTIONS ---
     const Parser = parserMod?.Parser || { parseTrainingLog: () => [], getSection: () => "" };
     const { renderTrends, updateDurationAnalysis } = trendsMod || { renderTrends: () => ({html: ''}) };
-    const { renderGear, updateGearResult } = gearMod || { renderGear: () => ({html: ''}) };
+    const { renderGear, updateGearResult } = gearMod || { 
+        renderGear: () => ({ html: '<div class="p-4 text-red-500">Gear module failed to load. Check console for details.</div>', gearData: null }),
+        updateGearResult: () => {} // <--- ADD THIS LINE
+    };
     const { renderZones } = zonesMod || { renderZones: () => '' };
     const { renderRoadmap } = roadmapMod || { renderRoadmap: () => '' };
     const { renderDashboard } = dashMod || { renderDashboard: () => '' };
