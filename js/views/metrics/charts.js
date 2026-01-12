@@ -3,6 +3,15 @@ import { METRIC_DEFINITIONS } from './definitions.js';
 import { calculateTrend, getTrendIcon } from './utils.js';
 import { extractMetricData } from './table.js'; // Reuse logic
 
+// --- NEW: Formulas for specific metrics ---
+const METRIC_FORMULAS = {
+    'endurance': '(Norm Power / Avg HR)',      // Aerobic Efficiency
+    'strength': '(Torque / Output)',           // Torque Efficiency
+    'run': '(Avg Power / Avg Speed)',          // Running Economy
+    'swim': '(Avg Speed / Stroke Rate)',       // Swim Efficiency
+    'mechanical': '(Vert Osc / GCT)'           // Mechanical Stiffness
+};
+
 const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
     const unitLabel = def.rangeInfo.split(' ').pop(); 
@@ -33,12 +42,20 @@ const buildMetricChart = (displayData, fullData, key) => {
             </div>
         </div>`;
 
+    // --- NEW: Subtitle Logic ---
+    const formula = METRIC_FORMULAS[key] || '';
+    const titleHtml = `
+        <h3 class="text-xs font-bold text-white flex items-center gap-2">
+            <i class="fa-solid ${def.icon}" style="color: ${color}"></i> 
+            ${def.title}
+            ${formula ? `<span class="text-[10px] font-normal opacity-50 ml-1 font-mono">${formula}</span>` : ''}
+        </h3>
+    `;
+
     if (!displayData || displayData.length < 2) {
         return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 h-full flex flex-col justify-between">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <h3 class="text-xs font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid ${def.icon}" style="color: ${color}"></i> ${def.title}
-                </h3>
+                ${titleHtml}
             </div>
             <div class="flex-1 flex items-center justify-center"><p class="text-xs text-slate-500 italic">No data available.</p></div>
         </div>`;
@@ -81,6 +98,34 @@ const buildMetricChart = (displayData, fullData, key) => {
         <text x="${pad.l - 6}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(1)}</text>
     `;
 
+    // --- NEW: X-Axis Date Labels ---
+    let xAxisLabelsHtml = '';
+    if (displayData.length > 1) {
+        const targetCount = 5; // Start, End, and ~3 intermediates
+        const step = (displayData.length - 1) / (targetCount - 1);
+        const indices = new Set();
+        
+        for (let j = 0; j < targetCount; j++) {
+            indices.add(Math.round(j * step));
+        }
+        
+        indices.forEach(index => {
+            if (index < displayData.length) {
+                const d = displayData[index];
+                const xPos = getX(d, index);
+                const dateObj = new Date(d.date);
+                // Format: Jan 1
+                const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                
+                let anchor = 'middle';
+                if (index === 0) anchor = 'start';
+                if (index === displayData.length - 1) anchor = 'end';
+                
+                xAxisLabelsHtml += `<text x="${xPos}" y="${height - 5}" text-anchor="${anchor}" font-size="9" fill="#64748b">${label}</text>`;
+            }
+        });
+    }
+
     const chartTrend = calculateTrend(displayData);
     let trendHtml = chartTrend ? `<line x1="${getX(null, 0)}" y1="${getY(chartTrend.startVal)}" x2="${getX(null, displayData.length - 1)}" y2="${getY(chartTrend.endVal)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5" />` : '';
     
@@ -96,10 +141,7 @@ const buildMetricChart = (displayData, fullData, key) => {
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 h-full flex flex-col hover:border-slate-600 transition-colors">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded flex items-center justify-center bg-slate-800 border border-slate-700">
-                        <i class="fa-solid ${def.icon} text-sm" style="color: ${color}"></i>
-                    </div>
-                    <h3 class="text-xs font-bold text-white uppercase tracking-wide leading-none">${def.title}</h3>
+                    ${titleHtml}
                 </div>
                 <div class="flex items-center gap-3">
                     ${indicatorsHtml}
@@ -112,6 +154,7 @@ const buildMetricChart = (displayData, fullData, key) => {
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
                     ${yAxisLine}
                     ${axisLabelsHtml}
+                    ${xAxisLabelsHtml}
                     ${refLinesHtml}
                     ${trendHtml}
                     <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9" />

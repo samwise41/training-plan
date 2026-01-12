@@ -2,6 +2,15 @@
 import { METRIC_DEFINITIONS } from './definitions.js';
 import { checkSport, calculateTrend, getTrendIcon, aggregateWeeklyTSS } from './utils.js';
 
+// --- NEW: Formulas for specific metrics (Matches charts.js) ---
+const METRIC_FORMULAS = {
+    'endurance': '(Norm Power / Avg HR)',
+    'strength': '(Torque / Output)',
+    'run': '(Avg Power / Avg Speed)',
+    'swim': '(Avg Speed / Stroke Rate)',
+    'mechanical': '(Vert Osc / GCT)'
+};
+
 // --- DATA EXTRACTION HELPER (Exported for use in Charts) ---
 export const extractMetricData = (data, key) => {
     const isInt = (item, labels) => {
@@ -73,12 +82,21 @@ export const renderSummaryTable = (allData) => {
                 <i class="fa-solid ${def.icon} text-xs group-hover:text-white transition-colors" style="color: ${def.colorVar}"></i>
             </div>`;
 
+        // --- NEW: Formula display logic ---
+        const formula = METRIC_FORMULAS[key] || '';
+        const titleHtml = `
+            <div class="font-bold text-slate-200">
+                ${def.title}
+                ${formula ? `<span class="text-[10px] font-normal opacity-50 ml-1 font-mono">${formula}</span>` : ''}
+            </div>
+        `;
+
         rows += `
             <tr class="border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors">
                 <td class="px-4 py-3 flex items-center gap-3">
                     ${iconCell}
                     <div>
-                        <div class="font-bold text-slate-200">${def.title}</div>
+                        ${titleHtml}
                         <div class="text-[9px] text-slate-500 font-mono">${def.rangeInfo}</div>
                     </div>
                 </td>

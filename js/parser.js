@@ -70,6 +70,9 @@ export const Parser = {
         // Header Indices
         let dateIdx = -1, statusIdx = -1, planWorkoutIdx = -1, planDurIdx = -1;
         let actWorkoutIdx = -1, actDurIdx = -1, notesIdx = -1;
+        // NEW: rawDurIdx for the "duration" column (seconds)
+        let rawDurIdx = -1;
+
         let hrIdx = -1, powerIdx = -1, speedIdx = -1, tssIdx = -1, activityIdIdx = -1, cadenceIdx = -1; 
         let teLabelIdx = -1;
         
@@ -89,8 +92,12 @@ export const Parser = {
                         else if (h.includes('status')) statusIdx = index;
                         else if (h.includes('planned workout')) planWorkoutIdx = index;
                         else if (h.includes('planned duration')) planDurIdx = index;
-                        else if (h.includes('actual workout')) actWorkoutIdx = index;
                         else if (h.includes('actual duration')) actDurIdx = index;
+                        
+                        // Strict check for "duration" (Garmin seconds) to avoid matching "planned duration"
+                        else if (h === 'duration') rawDurIdx = index;
+
+                        else if (h.includes('actual workout')) actWorkoutIdx = index;
                         else if (h.includes('notes') || h.includes('target')) notesIdx = index;
                         else if (h.includes('averagehr')) hrIdx = index;
                         else if (h.includes('avgpower')) powerIdx = index;
@@ -105,7 +112,7 @@ export const Parser = {
                         else if (h.includes('groundcontact')) gctIdx = index;
                         else if (h.includes('verticaloscillation')) vertIdx = index;
                         else if (h.includes('anaerobictraining')) anaerobicIdx = index;
-                        else if (h.includes('normpower')) normPowerIdx = index; // <--- The Missing Link
+                        else if (h.includes('normpower')) normPowerIdx = index; 
                     });
                     if (dateIdx !== -1) break; 
                 }
@@ -129,6 +136,7 @@ export const Parser = {
             const statusStr = getCol(statusIdx).toLowerCase();
             const planDurStr = getCol(planDurIdx);
             const actDurStr = getCol(actDurIdx);
+            const rawDurStr = getCol(rawDurIdx); // Seconds from Garmin
             const actualWorkoutStr = getCol(actWorkoutIdx);
             const notesStr = getCol(notesIdx);
 
@@ -146,7 +154,7 @@ export const Parser = {
             const avgGroundContactTime = parseFloat(getCol(gctIdx)) || 0;
             const avgVerticalOscillation = parseFloat(getCol(vertIdx)) || 0;
             const anaerobicTrainingEffect = parseFloat(getCol(anaerobicIdx)) || 0;
-            const normPower = parseFloat(getCol(normPowerIdx)) || 0; // <--- Capture Value
+            const normPower = parseFloat(getCol(normPowerIdx)) || 0; 
 
             let date = null;
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -160,7 +168,19 @@ export const Parser = {
             if (date && !isNaN(date.getTime())) {
                 const type = this._getType(planStr);
                 const actualType = this._getType(actualWorkoutStr);
-                const actDurVal = this._parseTime(actDurStr);
+
+                // --- DURATION LOGIC FIX ---
+                // Priority 1: Use 'duration' column (seconds) if valid (from Garmin)
+                // Priority 2: Use 'Actual Duration' text parsing (Fallback)
+                let actDurVal = 0;
+                const rawSeconds = parseFloat(rawDurStr);
+                
+                if (!isNaN(rawSeconds) && rawSeconds > 0) {
+                    actDurVal = Math.round(rawSeconds / 60);
+                } else {
+                    actDurVal = this._parseTime(actDurStr);
+                }
+                
                 const isCompleted = statusStr.match(/completed|done|yes|x|exact|found/) || (actDurVal > 0);
 
                 let ef = 0;
@@ -187,8 +207,8 @@ export const Parser = {
                     avgGroundContactTime, 
                     avgVerticalOscillation, 
                     anaerobicTrainingEffect,
-                    normPower, // <--- Add to Object
-                    trainingStressScore: tss // Alias for compatibility with metrics.js
+                    normPower, 
+                    trainingStressScore: tss 
                 });
             }
         }

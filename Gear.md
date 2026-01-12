@@ -47,3 +47,5 @@ This master reference guide is built from your personal logs and gear kit.
 * **The "Darkness" Rule:** Dress for **5 degrees colder** than forecast if before sunrise.
 * **The "Warm-Up" Rule:** Better to be chilly for the first 1-2 miles than hot for the rest of the activity.
 * **Face Protection:** Use Balaclava for all cycling under 45°F to prevent face pain.
+
+

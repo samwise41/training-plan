@@ -2,9 +2,9 @@
 import { parseDur, formatTime } from './utils.js';
 
 const SPORT_CONFIG = {
-    swim: { color: 'text-swim', icon: 'fa-person-swimming', label: 'Swim' },
-    bike: { color: 'text-bike', icon: 'fa-person-biking', label: 'Bike' },
-    run:  { color: 'text-run',  icon: 'fa-person-running',  label: 'Run' }
+    swim: { color: 'icon-swim', icon: 'fa-person-swimming', label: 'Swim' },
+    bike: { color: 'icon-bike', icon: 'fa-person-biking', label: 'Bike' },
+    run:  { color: 'icon-run',  icon: 'fa-person-running',  label: 'Run' }
 };
 
 export const renderGuide = () => `
