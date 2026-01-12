@@ -28,7 +28,10 @@
     // --- 2. DESTRUCTURE FUNCTIONS ---
     const Parser = parserMod?.Parser || { parseTrainingLog: () => [], getSection: () => "" };
     const { renderTrends, updateDurationAnalysis } = trendsMod || { renderTrends: () => ({html: ''}) };
-    const { renderGear, updateGearResult } = gearMod || { renderGear: () => ({html: ''}) };
+    const { renderGear, updateGearResult } = gearMod || { 
+        renderGear: () => ({ html: '<div class="p-4 text-red-500">Gear module failed to load. Check console for details.</div>', gearData: null }),
+        updateGearResult: () => {} // <--- ADD THIS LINE
+    };
     const { renderZones } = zonesMod || { renderZones: () => '' };
     const { renderRoadmap } = roadmapMod || { renderRoadmap: () => '' };
     const { renderDashboard } = dashMod || { renderDashboard: () => '' };
