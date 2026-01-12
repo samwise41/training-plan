@@ -171,9 +171,28 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// --- Internal Builder: Activity Heatmap (Sport Types) ---
+// --- NEW Internal Builder: Activity Heatmap (Sport Types) ---
 function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
+
+    // --- SPORT DETECTION LOGIC ---
+    // Uses activityName (or actualName) to determine the sport type
+    const detectSport = (item) => {
+        const name = (item.activityName || item.actualName || '').toUpperCase();
+        
+        if (name.includes('RUN') || name.includes('JOG')) return 'Run';
+        if (name.includes('BIKE') || name.includes('CYCL') || name.includes('ZWIFT')) return 'Bike';
+        if (name.includes('SWIM') || name.includes('POOL')) return 'Swim';
+        if (name.includes('STRENGTH') || name.includes('WEIGHT') || name.includes('GYM')) return 'Strength';
+        
+        // Fallback to existing type field if name analysis fails
+        const type = (item.type || '').toUpperCase();
+        if (type === 'RUN') return 'Run';
+        if (type === 'BIKE') return 'Bike';
+        if (type === 'SWIM') return 'Swim';
+        
+        return 'Other';
+    };
     
     // Map: Date -> { sports: Set(), totalAct: 0 }
     const activityMap = {};
@@ -182,7 +201,8 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
             const key = dateToKeyFn(item.date);
             if (!activityMap[key]) activityMap[key] = { sports: new Set(), totalAct: 0 };
             
-            activityMap[key].sports.add(item.type || 'Other');
+            const detected = detectSport(item);
+            activityMap[key].sports.add(detected);
             activityMap[key].totalAct += item.actualDuration;
         }
     });
