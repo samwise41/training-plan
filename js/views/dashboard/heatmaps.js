@@ -82,6 +82,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         let totalPlan = 0; let totalAct = 0; let isRestType = false; 
         let sportLabel = "--";
         const uniqueTypes = new Set();
+        let detailList = [];
 
         if (dayData && dayData.length > 0) { 
             dayData.forEach(d => { 
@@ -89,6 +90,11 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
                 totalAct += (d.actualDuration || 0); 
                 if (d.type === 'Rest') isRestType = true;
                 if (d.type && d.type !== 'Rest') uniqueTypes.add(d.type);
+
+                // Build Detail String
+                const name = (d.actualName || d.planName || 'Workout').replace(/['"]/g, ""); 
+                const dur = d.actualDuration || 0;
+                detailList.push(`${name} (${dur}m)`);
             }); 
             if (uniqueTypes.size > 0) {
                 sportLabel = Array.from(uniqueTypes).join(' + ');
@@ -97,6 +103,8 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
             }
         }
         
+        const detailStr = detailList.join('<br>');
+
         if (eventName) sportLabel = "Event";
 
         const hasActivity = (totalPlan > 0 || totalAct > 0 || isRestType || eventName); 
@@ -122,8 +130,9 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         if (dayOfWeek === 0 && !hasActivity && !eventName) { colorClass = ''; inlineStyle = 'opacity: 0;'; }
 
         const hexColor = getHexColor(colorClass);
+        // Pass detailStr as the last argument
         const clickAttr = hasActivity || isFuture ? 
-            `onclick="window.showDashboardTooltip(event, '${dateKey}', ${totalPlan}, ${totalAct}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}', '${sportLabel}')"` : '';
+            `onclick="window.showDashboardTooltip(event, '${dateKey}', ${totalPlan}, ${totalAct}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}', '${sportLabel}', '${detailStr}')"` : '';
         const cursorClass = (hasActivity || isFuture) ? 'cursor-pointer hover:opacity-80' : '';
 
         cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" ${clickAttr}></div>`;
@@ -176,29 +185,28 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
     if (!fullLog) fullLog = [];
 
     // --- SPORT DETECTION LOGIC (STRICT) ---
-    // STRICT RULE: Only match if [BIKE], [RUN], [SWIM] are present in activityName or actualName.
-    // No other fallback.
     const detectSport = (item) => {
-        // Combine names, default to empty string
         const name = (item.activityName || item.actualName || '').toUpperCase();
-        
         if (name.includes('[RUN]')) return 'Run';
         if (name.includes('[BIKE]')) return 'Bike';
         if (name.includes('[SWIM]')) return 'Swim';
-        
         return 'Other';
     };
     
-    // Map: Date -> { sports: Set(), totalAct: 0 }
+    // Map: Date -> { sports: Set(), totalAct: 0, details: [] }
     const activityMap = {};
     fullLog.forEach(item => {
         if (item.actualDuration > 0) {
             const key = dateToKeyFn(item.date);
-            if (!activityMap[key]) activityMap[key] = { sports: new Set(), totalAct: 0 };
+            if (!activityMap[key]) activityMap[key] = { sports: new Set(), totalAct: 0, details: [] };
             
             const detected = detectSport(item);
             activityMap[key].sports.add(detected);
             activityMap[key].totalAct += item.actualDuration;
+
+            // Collect details
+            const name = (item.activityName || item.actualName || 'Activity').replace(/['"]/g, "");
+            activityMap[key].details.push(`${name} (${item.actualDuration}m)`);
         }
     });
 
@@ -221,7 +229,7 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
         
         let style = '';
         let colorClass = 'bg-slate-800'; 
-        let tooltipSports = '';
+        let detailStr = '';
         let totalMinutes = 0;
         let hasActivity = false;
 
@@ -229,7 +237,7 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
             hasActivity = true;
             totalMinutes = entry.totalAct;
             const sports = Array.from(entry.sports);
-            tooltipSports = sports.join(' + ');
+            detailStr = entry.details.join('<br>'); // Combine workouts
 
             if (sports.length === 1) {
                 // Single sport
@@ -257,7 +265,7 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
         }
 
         const clickAttr = hasActivity ? 
-            `onclick="window.showDashboardTooltip(event, '${dateKey}', 0, ${totalMinutes}, 'Completed', '#fff', '${tooltipSports}')"` : '';
+            `onclick="window.showDashboardTooltip(event, '${dateKey}', 0, ${totalMinutes}, 'Completed', '#fff', 'Activity', '${detailStr}')"` : '';
         const cursorClass = hasActivity ? 'cursor-pointer hover:opacity-80' : '';
 
         cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${style}" ${clickAttr}></div>`;
@@ -329,7 +337,7 @@ export function renderHeatmaps(fullLogData, planMd) {
     // 2. NEW Activity Heatmap (Trailing)
     const heatmapActivityHtml = buildActivityHeatmap(fullLogData, startTrailing, endOfWeek, "Activity Log (Workout Types)", toLocalYMD, "heatmap-activity-scroll");
 
-    // 3. RESTORED Annual Overview (Full Year)
+    // 3. Annual Overview (Full Year)
     const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`, toLocalYMD, null);
 
     setTimeout(() => {
