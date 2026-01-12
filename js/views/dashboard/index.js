@@ -5,8 +5,8 @@ import { renderProgressWidget } from './progressWidget.js';
 import { renderHeatmaps } from './heatmaps.js';
 
 // --- Global Tooltip Handler ---
-// Required because the HTML strings in heatmaps.js use onclick="window.showDashboardTooltip(...)"
-window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) => {
+// Updated to accept 'details' param
+window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType, details) => {
     let tooltip = document.getElementById('dashboard-tooltip-popup');
     
     if (!tooltip) {
@@ -15,6 +15,13 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) =>
         tooltip.className = 'z-50 bg-slate-900 border border-slate-600 p-3 rounded-md shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed min-w-[140px]';
         document.body.appendChild(tooltip);
     }
+
+    // Optional: Only show details section if details exist
+    const detailsHtml = details ? `
+        <div class="mt-2 pt-2 border-t border-slate-700 border-dashed text-slate-400 font-mono text-[10px] leading-tight text-left">
+            ${details}
+        </div>
+    ` : '';
 
     tooltip.innerHTML = `
         <div class="text-center">
@@ -33,6 +40,7 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType) =>
             <div class="text-[11px] font-bold mt-1 uppercase tracking-wide" style="color: ${color}">
                 ${label}
             </div>
+            ${detailsHtml}
         </div>
     `;
 
