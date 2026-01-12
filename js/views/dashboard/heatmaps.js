@@ -171,7 +171,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// --- NEW Internal Builder: Activity Heatmap (Sport Types) ---
+// --- Internal Builder: Activity Heatmap (Sport Types) ---
 function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
     
@@ -304,11 +304,18 @@ export function renderHeatmaps(fullLogData, planMd) {
     const startTrailing = new Date(endOfWeek); 
     startTrailing.setMonth(startTrailing.getMonth() - 6);
     
-    // 1. Existing Consistency Heatmap
+    // Annual Calculation
+    const startYear = new Date(today.getFullYear(), 0, 1); 
+    const endYear = new Date(today.getFullYear(), 11, 31);
+    
+    // 1. Existing Consistency Heatmap (Trailing)
     const heatmapTrailingHtml = buildGenericHeatmap(fullLogData, eventMap, startTrailing, endOfWeek, "Recent Consistency (Trailing 6 Months)", toLocalYMD, "heatmap-trailing-scroll");
     
-    // 2. NEW Activity Heatmap
+    // 2. NEW Activity Heatmap (Trailing)
     const heatmapActivityHtml = buildActivityHeatmap(fullLogData, startTrailing, endOfWeek, "Activity Log (Workout Types)", toLocalYMD, "heatmap-activity-scroll");
+
+    // 3. RESTORED Annual Overview (Full Year)
+    const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`, toLocalYMD, null);
 
     setTimeout(() => {
         const scrollIds = ['heatmap-trailing-scroll', 'heatmap-activity-scroll'];
@@ -322,6 +329,9 @@ export function renderHeatmaps(fullLogData, planMd) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
             ${heatmapTrailingHtml}
             ${heatmapActivityHtml}
+        </div>
+        <div class="mt-8">
+            ${heatmapYearHtml}
         </div>
     `;
 }
