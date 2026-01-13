@@ -1,24 +1,23 @@
 # 🤖 AI Coach Context Briefing
-**Last Updated:** 2026-01-13 23:42
+**Last Updated:** 2026-01-13 23:47
 
 ## 1. Physiological Trends
 | Metric | Target | 30d Trend | 90d Trend | 6m Trend | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Aerobic Efficiency** | 1.3-1.7 EF | ↘️ Declining (Avg: 1.17) | ↘️ Declining (Avg: 1.17) | -- | ⚠️ Low |
-| **Torque Efficiency** | 2.5-3.5 W/RPM | ↗️ Improving (Avg: 1.98) | ↗️ Improving (Avg: 1.95) | -- | ⚠️ Low |
-| **Run Economy** | 1.0-1.6 m/beat | ↗️ Improving (Avg: 1.17) | ➡️ Stable (Avg: 1.16) | -- | ✅ |
-| **Run Stiffness** | 0.75-0.95 ratio | ↘️ Declining (Avg: 0.85) | ➡️ Stable (Avg: 0.85) | -- | ✅ |
-| **Swim Efficiency** | 0.3-0.6 m/beat | ↘️ Declining (Avg: 0.50) | ↗️ Improving (Avg: 0.41) | -- | ✅ |
-| **Ground Contact** | 220-260 ms | ↘️ Improving (Avg: 277.92) | ↗️ Worsening (Avg: 275.66) | -- | ⚠️ High |
-| **Vertical Osc** | 6.0-9.0 cm | ↗️ Worsening (Avg: 9.36) | ↘️ Improving (Avg: 9.43) | -- | ⚠️ High |
-| **Vo2 Max** | 45-60 ml/kg | ↗️ Improving (Avg: 51.86) | ↗️ Improving (Avg: 50.91) | -- | ✅ |
-| **Anaerobic Impact** | 2.0-4.0 TE | ↘️ Declining (Avg: 0.44) | ↘️ Declining (Avg: 0.73) | -- | ⚠️ Low |
-| **Weekly Tss** | 300-600 TSS | ➡️ Stable (Avg: 54) | ↘️ Declining (Avg: 49) | -- | ⚠️ Low |
+| **Aerobic Efficiency** | 1.3-1.7 EF | ↗️ Improving (Avg: 1.14) | ↗️ Improving (Avg: 1.14) | -- | ⚠️ Low |
+| **Torque Efficiency** | 2.5-3.5 W/RPM | ↗️ Improving (Avg: 1.93) | ↗️ Improving (Avg: 1.93) | -- | ⚠️ Low |
+| **Run Economy** | 1.0-1.6 m/beat | ➡️ Stable (Avg: 1.19) | ➡️ Stable (Avg: 1.19) | -- | ✅ |
+| **Run Stiffness** | 0.75-0.95 ratio | ↘️ Declining (Avg: 0.85) | ↘️ Declining (Avg: 0.85) | -- | ✅ |
+| **Swim Efficiency** | 0.3-0.6 m/beat | ➡️ Stable (Avg: 0.34) | ➡️ Stable (Avg: 0.34) | -- | ✅ |
+| **Ground Contact** | 220-260 ms | ↗️ Worsening (Avg: 277.30) | ↗️ Worsening (Avg: 277.30) | -- | ⚠️ High |
+| **Vertical Osc** | 6.0-9.0 cm | ↗️ Worsening (Avg: 9.41) | ↗️ Worsening (Avg: 9.41) | -- | ⚠️ High |
+| **Vo2 Max** | 45-60 ml/kg | ➡️ Stable (Avg: 52.40) | ➡️ Stable (Avg: 52.40) | -- | ✅ |
+| **Anaerobic Impact** | 2.0-4.0 TE | ↗️ Improving (Avg: 0.24) | ↗️ Improving (Avg: 0.24) | -- | ⚠️ Low |
+| **Weekly Tss** | 300-600 TSS | Not enough data | Not enough data | -- | ⚪ No Data |
 
 ## 2. Actionable Alerts
-- **aerobic_efficiency** is 1.17 (Target: >1.3).
-- **torque_efficiency** is 1.98 (Target: >2.5).
-- **ground_contact** is 277.92 (Target: <260).
-- **vertical_osc** is 9.36 (Target: <9.0).
-- **anaerobic_impact** is 0.44 (Target: >2.0).
-- **weekly_tss** is 53.85 (Target: >300).
+- **aerobic_efficiency** is 1.14 (Target: >1.3).
+- **torque_efficiency** is 1.93 (Target: >2.5).
+- **ground_contact** is 277.30 (Target: <260).
+- **vertical_osc** is 9.41 (Target: <9.0).
+- **anaerobic_impact** is 0.24 (Target: >2.0).
