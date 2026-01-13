@@ -58,26 +58,15 @@ def print_header(msg):
 
 # --- HELPER: COMPARE VALUES ---
 def is_value_different(db_val, json_val):
-    """
-    Returns True if the database value differs significantly from the JSON value.
-    Handles float tolerance and string normalization.
-    """
     str_db = str(db_val).strip()
-    # If DB is empty, it's not a 'modification', it's just missing. Return False.
-    if not str_db or str_db.lower() == 'nan':
-        return False
-        
+    if not str_db or str_db.lower() == 'nan': return False
     try:
-        # Try Float Comparison
         f_db = float(str_db)
         f_json = float(json_val)
-        # 0.1 tolerance for rounding differences
         return abs(f_db - f_json) > 0.1
     except:
-        # String Comparison
         return str_db != str(json_val).strip()
 
-# --- FTP EXTRACTION LOGIC ---
 def extract_ftp(text):
     if not text: return None
     pattern = r"Cycling FTP[:\*]*\s*(\d+)"
@@ -107,7 +96,6 @@ def run_garmin_fetch():
     except Exception as e:
         print(f"⚠️ Warning: Fetch failed: {e}")
 
-# --- INTERNAL TREND FUNCTIONS ---
 def calculate_slope(series):
     if len(series) < 3: return 0.0
     y = series.values
@@ -124,12 +112,10 @@ def determine_trend(slope, good_direction):
 def analyze_metric(df, col_name, config):
     now = datetime.now()
     results = {}
-    
     if col_name == 'weekly_tss':
         if 'trainingStressScore' not in df.columns: return {'30d': 'No Data'}
         df_tss = df.dropna(subset=['trainingStressScore']).set_index('startTime_dt')
         weekly_series = df_tss['trainingStressScore'].resample('W-MON').sum()
-        
         for days in [30, 90, 180]:
             cutoff = now - timedelta(days=days)
             subset = weekly_series[weekly_series.index >= cutoff]
@@ -142,12 +128,8 @@ def analyze_metric(df, col_name, config):
             results[f'{days}d'] = f"{trend_desc} (Avg: {avg_val:.0f})"
             if days == 30: results['current'] = avg_val
         return results
-
-    if col_name not in df.columns:
-        return {'30d': 'No Data', '90d': 'No Data', '6m': 'No Data'}
-
+    if col_name not in df.columns: return {'30d': 'No Data', '90d': 'No Data', '6m': 'No Data'}
     df_clean = df.dropna(subset=[col_name]).sort_values('startTimeLocal')
-    
     for days in [30, 90, 180]:
         cutoff = now - timedelta(days=days)
         subset = df_clean[df_clean['startTime_dt'] >= cutoff]
@@ -159,7 +141,6 @@ def analyze_metric(df, col_name, config):
         avg_val = subset[col_name].mean()
         results[f'{days}d'] = f"{trend_desc} (Avg: {avg_val:.2f})"
         if days == 30: results['current'] = avg_val
-
     return results
 
 def get_sport_filter(row, sport_type):
@@ -177,26 +158,19 @@ def get_sport_filter(row, sport_type):
 
 def run_internal_trend_analysis():
     print_header("RUNNING INTERNAL TREND ANALYSIS")
-    
     if not os.path.exists(GARMIN_JSON):
         print("❌ Garmin JSON not found for analysis.")
         return
-
     try:
-        with open(GARMIN_JSON, 'r') as f:
-            data = json.load(f)
+        with open(GARMIN_JSON, 'r') as f: data = json.load(f)
         df = pd.DataFrame(data)
-        
         if df.empty:
             print("❌ Garmin DataFrame is empty.")
             return
-
         df['startTime_dt'] = pd.to_datetime(df['startTimeLocal'])
-        
         is_run = df.apply(lambda x: get_sport_filter(x, 'RUN'), axis=1)
         is_bike = df.apply(lambda x: get_sport_filter(x, 'BIKE'), axis=1)
         is_swim = df.apply(lambda x: get_sport_filter(x, 'SWIM'), axis=1)
-
         df['aerobic_efficiency'] = np.where(is_bike & (df['avgPower'] > 0) & (df['averageHR'] > 0), df['avgPower'] / df['averageHR'], np.nan)
         df['torque_efficiency'] = np.where(is_bike & (df['avgPower'] > 0) & (df['averageBikingCadenceInRevPerMinute'] > 0), df['avgPower'] / df['averageBikingCadenceInRevPerMinute'], np.nan)
         df['run_speed_m_min'] = df['averageSpeed'] * 60
@@ -208,9 +182,7 @@ def run_internal_trend_analysis():
         df['vertical_osc'] = df.get('avgVerticalOscillation', np.nan)
         df['vo2_max'] = df.get('vO2MaxValue', np.nan)
         df['anaerobic_impact'] = df.get('anaerobicTrainingEffect', np.nan)
-        
         if 'trainingStressScore' not in df.columns: df['trainingStressScore'] = np.nan
-
         print(f"Writing briefing to: {BRIEF_FILE}")
         with open(BRIEF_FILE, 'w', encoding='utf-8') as f:
             f.write("# 🤖 AI Coach Context Briefing\n")
@@ -218,7 +190,6 @@ def run_internal_trend_analysis():
             f.write("## 1. Physiological Trends\n")
             f.write("| Metric | Target | 30d Trend | 90d Trend | 6m Trend | Status |\n")
             f.write("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
-
             alerts = []
             for key, conf in METRICS.items():
                 stats = analyze_metric(df, key, conf)
@@ -234,12 +205,10 @@ def run_internal_trend_analysis():
                     if conf['good'] == 'down': alerts.append(f"**{key}** is {current:.2f} (Target: <{r_max}).")
                 unit = conf['unit']
                 f.write(f"| **{key.replace('_', ' ').title()}** | {r_min}-{r_max} {unit} | {stats.get('30d', '--')} | {stats.get('90d', '--')} | {stats.get('6m', '--')} | {status_icon} |\n")
-
             f.write("\n## 2. Actionable Alerts\n")
             if alerts:
                 for a in alerts: f.write(f"- {a}\n")
-            else:
-                f.write("- All systems Nominal.\n")
+            else: f.write("- All systems Nominal.\n")
         print("✅ Briefing generated successfully.")
     except Exception as e:
         print(f"❌ Trend Analysis Failed: {e}")
@@ -300,9 +269,7 @@ def clean_corrupt_data(df):
     return df
 
 def extract_weekly_table():
-    if not os.path.exists(PLAN_FILE): 
-        print("⚠️ Plan file not found.")
-        return pd.DataFrame()
+    if not os.path.exists(PLAN_FILE): return pd.DataFrame()
     with open(PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
     table_lines, found_header = [], False
     for line in lines:
@@ -312,9 +279,7 @@ def extract_weekly_table():
             continue
         if (s.startswith('# ') or s.startswith('## ')) and len(table_lines) > 2: break
         if '|' in s: table_lines.append(s)
-    if not found_header or not table_lines: 
-        print("⚠️ No 'Weekly Schedule' table found in Plan.")
-        return pd.DataFrame()
+    if not found_header or not table_lines: return pd.DataFrame()
     raw_header = [h.strip() for h in table_lines[0].strip('|').split('|')]
     col_map = {}
     for i, h in enumerate(raw_header):
@@ -485,8 +450,10 @@ def main():
                 m_id = str(match.get('activityId'))
                 claimed_ids.add(m_id)
                 df_master.at[idx, 'Status'] = 'COMPLETED'
-                # Default status
-                df_master.at[idx, 'Match Status'] = 'Linked'
+                # Default status if not modified
+                if str(df_master.at[idx, 'Match Status']) != 'Linked (modified)':
+                    df_master.at[idx, 'Match Status'] = 'Linked'
+                
                 df_master.at[idx, 'activityId'] = m_id
                 prefix = ""
                 g_type = match.get('activityType', {}).get('typeKey', '').lower()
@@ -503,7 +470,6 @@ def main():
                     df_master.at[idx, 'Actual Duration'] = f"{dur_sec/60:.1f}"
                 except: pass
 
-                # --- MAPPING UPDATED HERE ---
                 cols_to_map = [
                     'duration', 'distance', 'averageHR', 'maxHR', 
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -517,30 +483,44 @@ def main():
                     'avgGroundContactTime'
                 ]
                 
-                # --- NEW CONFLICT DETECTION LOGIC ---
                 is_row_modified = False
                 for col in cols_to_map:
                     val = match.get(col, '')
                     current_db_val = str(df_master.at[idx, col]).strip()
                     
-                    # 1. GAP FILL: If DB is empty, fill it.
                     if (not current_db_val or current_db_val == 'nan') and val is not None and val != "":
                          df_master.at[idx, col] = val
-                    
-                    # 2. CONFLICT CHECK: If DB has value, compare it.
                     elif current_db_val and val is not None and val != "":
                         if is_value_different(current_db_val, val):
                             is_row_modified = True
                 
-                # Update status if modification detected
                 if is_row_modified:
                     df_master.at[idx, 'Match Status'] = 'Linked (modified)'
 
         print("Handling Unplanned Workouts...")
         unplanned_rows = []
         all_garmin = [item for sublist in garmin_by_date.values() for item in sublist]
+        
+        # --- NEW FILTER: ALLOW ONLY RUN/BIKE/SWIM (1, 2, 5) & 255 ---
+        ALLOWED_SPORT_TYPES = [1, 2, 5, 255]
+
         for g in all_garmin:
             g_id = str(g.get('activityId'))
+            
+            # --- SPORT ID FILTER ---
+            # Check both 'sportTypeId' (top) and 'activityType.typeId' (nested)
+            c_type = g.get('activityType', {}).get('typeId')
+            c_sport = g.get('sportTypeId')
+            
+            is_valid_type = False
+            if c_type in ALLOWED_SPORT_TYPES: is_valid_type = True
+            if c_sport in ALLOWED_SPORT_TYPES: is_valid_type = True
+            
+            if not is_valid_type:
+                # Skip Strength, Walking, Yoga, etc.
+                continue
+            # -----------------------
+
             if g_id not in claimed_ids:
                 new_row = {c: "" for c in MASTER_COLUMNS}
                 new_row['Planned Workout'] = "" 
@@ -553,7 +533,6 @@ def main():
                 new_row['Actual Workout'] = raw_name
                 new_row['activityType'] = g.get('activityType', {}).get('typeKey', '')
                 
-                # Update Unplanned Mapping too!
                 cols_to_map = [
                     'duration', 'distance', 'averageHR', 'maxHR', 
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
