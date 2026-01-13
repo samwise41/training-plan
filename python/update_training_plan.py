@@ -20,10 +20,10 @@ BRIEF_FILE = os.path.join(ROOT_DIR, 'COACH_BRIEFING.md')
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 GARMIN_FETCH_CMD = [sys.executable, os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
 
-# Updated Schema with RPE and Feeling
+# Updated Schema: RPE and Feeling moved to the END
 MASTER_COLUMNS = [
     'Status', 'Day', 'Planned Workout', 'Planned Duration', 
-    'Actual Workout', 'Actual Duration', 'Notes / Targets', 'RPE', 'Feeling', 'Date', 'Match Status',
+    'Actual Workout', 'Actual Duration', 'Notes / Targets', 'Date', 'Match Status',
     'activityId', 'activityName', 'activityType', 'sportTypeId',
     'duration', 'distance', 'averageHR', 'maxHR', 
     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -31,7 +31,7 @@ MASTER_COLUMNS = [
     'averageSpeed', 'maxSpeed', 
     'averageBikingCadenceInRevPerMinute', 'averageRunningCadenceInStepsPerMinute',
     'avgStrideLength', 'avgVerticalOscillation', 'avgGroundContactTime',
-    'vO2MaxValue', 'calories', 'elevationGain'
+    'vO2MaxValue', 'calories', 'elevationGain', 'RPE', 'Feeling'
 ]
 
 # --- TREND ANALYSIS CONFIG ---
@@ -501,16 +501,29 @@ def main():
                             is_row_modified = True
                 
                 # --- SPECIAL MAP: RPE / FEELING ---
-                rpe_map = {'perceivedEffort': 'RPE', 'feeling': 'Feeling'}
-                for json_k, md_col in rpe_map.items():
-                    val = match.get(json_k)
-                    current_db = str(df_master.at[idx, md_col]).strip()
-                    if val is not None and val != "":
-                        val_str = str(val)
-                        # Map only if empty or different
-                        if not current_db or current_db == 'nan' or current_db == 'None' or current_db != val_str:
-                             df_master.at[idx, md_col] = val_str
-                             is_row_modified = True
+                # Check different JSON keys depending on structure (summary vs selfEvaluation)
+                
+                # 1. Check for 'perceivedEffort' (Root Level)
+                rpe_val = match.get('perceivedEffort')
+                if rpe_val is None and 'summaryDTO' in match:
+                     # 2. Check summaryDTO for 'directWorkoutRpe' and convert (0-100 -> 1-10)
+                     raw_rpe = match['summaryDTO'].get('directWorkoutRpe')
+                     if raw_rpe: rpe_val = int(raw_rpe / 10)
+                
+                # 1. Check for 'feeling' (Root Level)
+                feel_val = match.get('feeling')
+                if feel_val is None and 'summaryDTO' in match:
+                     # 2. Check summaryDTO for 'directWorkoutFeel' and convert (0-100 -> 1-5)
+                     raw_feel = match['summaryDTO'].get('directWorkoutFeel')
+                     if raw_feel: feel_val = int((raw_feel / 25) + 1)
+
+                if rpe_val is not None:
+                     df_master.at[idx, 'RPE'] = str(rpe_val)
+                     is_row_modified = True
+                
+                if feel_val is not None:
+                     df_master.at[idx, 'Feeling'] = str(feel_val)
+                     is_row_modified = True
                 
                 if is_row_modified:
                     df_master.at[idx, 'Match Status'] = 'Linked (modified)'
@@ -557,8 +570,17 @@ def main():
                 for col in cols_to_map: new_row[col] = g.get(col, '')
                 
                 # Capture RPE/Feeling for Unplanned too
-                if 'perceivedEffort' in g: new_row['RPE'] = g['perceivedEffort']
-                if 'feeling' in g: new_row['Feeling'] = g['feeling']
+                rpe_val = g.get('perceivedEffort')
+                if rpe_val is None and 'summaryDTO' in g:
+                     raw_rpe = g['summaryDTO'].get('directWorkoutRpe')
+                     if raw_rpe: rpe_val = int(raw_rpe / 10)
+                if rpe_val: new_row['RPE'] = str(rpe_val)
+
+                feel_val = g.get('feeling')
+                if feel_val is None and 'summaryDTO' in g:
+                     raw_feel = g['summaryDTO'].get('directWorkoutFeel')
+                     if raw_feel: feel_val = int((raw_feel / 25) + 1)
+                if feel_val: new_row['Feeling'] = str(feel_val)
 
                 try: new_row['Actual Duration'] = f"{float(g.get('duration', 0))/60:.1f}"
                 except: pass
