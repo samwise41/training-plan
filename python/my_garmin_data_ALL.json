@@ -259,7 +259,9 @@
         "atpActivity": false,
         "pr": false,
         "parent": false,
-        "favorite": false
+        "favorite": false,
+        "perceivedEffort": 4,
+        "feeling": 4
     },
     {
         "activityId": 21502893617,
@@ -523,7 +525,9 @@
         "atpActivity": false,
         "pr": false,
         "parent": false,
-        "favorite": false
+        "favorite": false,
+        "perceivedEffort": 4,
+        "feeling": 4
     },
     {
         "activityId": 21491950789,
@@ -754,7 +758,9 @@
         "atpActivity": false,
         "pr": false,
         "parent": false,
-        "favorite": false
+        "favorite": false,
+        "perceivedEffort": 3,
+        "feeling": 3
     },
     {
         "activityId": 21482224757,
@@ -1129,7 +1135,9 @@
         "atpActivity": false,
         "pr": false,
         "parent": false,
-        "favorite": false
+        "favorite": false,
+        "perceivedEffort": 5,
+        "feeling": 2
     },
     {
         "activityId": 21460455111,
@@ -1249,7 +1257,9 @@
         "atpActivity": false,
         "pr": false,
         "parent": false,
-        "favorite": false
+        "favorite": false,
+        "perceivedEffort": 5,
+        "feeling": 3
     },
     {
         "activityId": 21450339268,
@@ -1767,7 +1777,9 @@
         "atpActivity": false,
         "pr": false,
         "parent": false,
-        "favorite": false
+        "favorite": false,
+        "perceivedEffort": 3,
+        "feeling": 2
     },
     {
         "activityId": 21414583520,
@@ -2266,7 +2278,9 @@
         "atpActivity": false,
         "pr": false,
         "parent": false,
-        "favorite": false
+        "favorite": false,
+        "perceivedEffort": 3,
+        "feeling": 4
     },
     {
         "activityId": 21365025939,
@@ -2527,7 +2541,9 @@
         "atpActivity": false,
         "pr": false,
         "parent": false,
-        "favorite": false
+        "favorite": false,
+        "perceivedEffort": 4,
+        "feeling": 3
     },
     {
         "activityId": 21355282531,
@@ -2760,7 +2776,9 @@
         "atpActivity": false,
         "pr": true,
         "parent": false,
-        "favorite": false
+        "favorite": false,
+        "perceivedEffort": 7,
+        "feeling": 3
     },
     {
         "activityId": 21347428905,
