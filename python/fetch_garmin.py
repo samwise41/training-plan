@@ -1,4 +1,3 @@
-
 import json
 import os
 from garminconnect import Garmin
@@ -8,7 +7,7 @@ from garminconnect import Garmin
 # regardless of where GitHub Actions initiates the run.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 JSON_FILE = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
-FETCH_LIMIT = 50 
+FETCH_LIMIT = 20  # Reduced slightly to prevent API timeouts since we are doing deep fetches
 
 # --- CREDENTIALS ---
 # GitHub Actions injects these from your Repository Secrets
@@ -47,7 +46,7 @@ def main():
         print(f"❌ Login Failed: {e}")
         return
 
-    # 2. Fetch
+    # 2. Fetch Summary List
     print(f"📡 Fetching last {FETCH_LIMIT} activities...")
     try:
         new_activities = client.get_activities(0, FETCH_LIMIT)
@@ -56,20 +55,40 @@ def main():
         print(f"❌ Fetch Failed: {e}")
         return
 
-    # 3. Merge
-    print("🔄 Merging with local archive...")
+    # 3. Merge & Deep Fetch RPE
+    print("🔄 Merging with local archive and checking for RPE...")
     existing_data = load_existing_data()
     db = {str(item['activityId']): item for item in existing_data}
     
     new_count = 0
     update_count = 0
+    
     for act in new_activities:
         aid = str(act['activityId'])
+        
+        # Only fetch deep details if it's a NEW activity (to save API time)
         if aid not in db:
+            try:
+                # 1. Fetch full activity details to get Self Evaluation
+                # This is an extra API call per new activity
+                full_details = client.get_activity(aid)
+                
+                # 2. Extract subjective data if it exists
+                if 'selfEvaluation' in full_details:
+                    evaluation = full_details['selfEvaluation']
+                    # Flatten these into the main object for easy access later
+                    act['perceivedEffort'] = evaluation.get('perceivedEffort', None) # RPE (1-10)
+                    act['feeling'] = evaluation.get('feeling', None)                 # Feeling (1-5)
+                    print(f"      + Captured RPE ({act.get('perceivedEffort')}) & Feeling ({act.get('feeling')}) for {aid}")
+            except Exception as e:
+                print(f"      ⚠️ Failed to fetch details for {aid}: {e}")
+            
             db[aid] = act
             new_count += 1
         else:
-            db[aid] = act 
+            # Optional: If you want to force update existing records with RPE, 
+            # you could add logic here, but generally we skip to save time.
+            db[aid].update(act) 
             update_count += 1
 
     print(f"   - Added: {new_count} | Updated: {update_count}")
