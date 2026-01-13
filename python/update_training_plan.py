@@ -634,10 +634,15 @@ def main():
                     'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain'
                 ]
                 
+                # PROPOSED (Safe Gap-Fill)
                 for col in cols_to_map:
                     val = match.get(col, '')
-                    if val is not None and val != "":
-                         df_master.at[idx, col] = val
+                    # Check if the DB is currently empty for this cell
+                    current_db_val = str(df_master.at[idx, col]).strip()
+    
+    # Only update if DB is empty AND Garmin has data
+    if (not current_db_val or current_db_val == 'nan') and val is not None and val != "":
+         df_master.at[idx, col] = val
 
         # 4. UNPLANNED APPEND
         print("Handling Unplanned Workouts...")
