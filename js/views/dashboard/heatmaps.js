@@ -1,5 +1,4 @@
 // --- NEW Internal Builder: Activity Heatmap (Sport Types) ---
-
 function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
 
