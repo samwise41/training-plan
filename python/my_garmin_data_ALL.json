@@ -132,14 +132,14 @@
         "endTimeGMT": "2026-01-12 13:49:00",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21521650444,
@@ -252,14 +252,14 @@
         "endTimeGMT": "2026-01-12 12:35:42",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21502893617,
@@ -396,14 +396,14 @@
         "endTimeGMT": "2026-01-10 15:07:08",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21501230950,
@@ -516,14 +516,14 @@
         "endTimeGMT": "2026-01-10 12:41:42",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21491950789,
@@ -747,14 +747,14 @@
         "endTimeGMT": "2026-01-09 13:53:00",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21482224757,
@@ -890,14 +890,14 @@
         "endTimeGMT": "2026-01-08 14:03:00",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21471583079,
@@ -1122,14 +1122,14 @@
         "endTimeGMT": "2026-01-07 13:35:21",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21460455111,
@@ -1242,14 +1242,14 @@
         "endTimeGMT": "2026-01-06 12:40:38",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21450339268,
@@ -1385,14 +1385,14 @@
         "endTimeGMT": "2026-01-05 13:41:14",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21430613393,
@@ -1528,14 +1528,14 @@
         "endTimeGMT": "2026-01-03 14:18:58",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21419915623,
@@ -1760,14 +1760,14 @@
         "endTimeGMT": "2026-01-02 13:34:54",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21414583520,
@@ -1884,14 +1884,14 @@
         "endTimeGMT": "2026-01-01 20:55:31",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21402836501,
@@ -2027,14 +2027,14 @@
         "endTimeGMT": "2025-12-31 13:48:19",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21392665719,
@@ -2259,14 +2259,14 @@
         "endTimeGMT": "2025-12-30 13:34:43",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21365025939,
@@ -2401,14 +2401,14 @@
         "endTimeGMT": "2025-12-27 14:41:22",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21363993117,
@@ -2520,14 +2520,14 @@
         "endTimeGMT": "2025-12-27 13:04:19",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21355282531,
@@ -2753,14 +2753,14 @@
         "endTimeGMT": "2025-12-26 13:44:33",
         "qualifyingDive": false,
         "pr": true,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21347428905,
@@ -2896,14 +2896,14 @@
         "endTimeGMT": "2025-12-25 13:24:58",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21341393579,
@@ -3038,14 +3038,14 @@
         "endTimeGMT": "2025-12-24 15:27:46",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21331728746,
@@ -3176,14 +3176,14 @@
         "endTimeGMT": "2025-12-23 13:48:35",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21331586325,
@@ -3318,14 +3318,14 @@
         "endTimeGMT": "2025-12-23 13:31:54",
         "qualifyingDive": false,
         "pr": true,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21309912155,
@@ -3506,14 +3506,14 @@
         "endTimeGMT": "2025-12-20 22:33:35",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21305772239,
@@ -3626,14 +3626,14 @@
         "endTimeGMT": "2025-12-20 12:48:22",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21298044597,
@@ -3859,14 +3859,14 @@
         "endTimeGMT": "2025-12-19 13:53:39",
         "qualifyingDive": false,
         "pr": true,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21289830125,
@@ -4001,14 +4001,14 @@
         "endTimeGMT": "2025-12-18 13:43:40",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21272208595,
@@ -4144,14 +4144,14 @@
         "endTimeGMT": "2025-12-16 13:53:00",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21248283077,
@@ -4285,14 +4285,14 @@
         "endTimeGMT": "2025-12-13 17:01:58",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21247412842,
@@ -4498,14 +4498,14 @@
         "endTimeGMT": "2025-12-13 15:28:01",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21237874811,
@@ -4731,14 +4731,14 @@
         "endTimeGMT": "2025-12-12 13:49:35",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21233520275,
@@ -4874,14 +4874,14 @@
         "endTimeGMT": "2025-12-11 23:07:08",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21220528664,
@@ -5106,14 +5106,14 @@
         "endTimeGMT": "2025-12-10 14:17:21",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21212937186,
@@ -5249,14 +5249,14 @@
         "endTimeGMT": "2025-12-09 17:48:07",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21201288872,
@@ -5369,14 +5369,14 @@
         "endTimeGMT": "2025-12-08 12:43:14",
         "qualifyingDive": false,
         "pr": true,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21186856698,
@@ -5549,14 +5549,14 @@
         "endTimeGMT": "2025-12-06 18:13:52",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21183998146,
@@ -5669,14 +5669,14 @@
         "endTimeGMT": "2025-12-06 12:46:32",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21175545787,
@@ -5789,14 +5789,14 @@
         "endTimeGMT": "2025-12-05 12:47:20",
         "qualifyingDive": false,
         "pr": true,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21171009238,
@@ -5932,14 +5932,14 @@
         "endTimeGMT": "2025-12-04 21:10:08",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21158636550,
@@ -6179,14 +6179,14 @@
         "endTimeGMT": "2025-12-03 14:04:09",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21149163183,
@@ -6321,14 +6321,14 @@
         "endTimeGMT": "2025-12-02 14:10:14",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21139107284,
@@ -6441,14 +6441,14 @@
         "endTimeGMT": "2025-12-01 12:39:16",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21114574435,
@@ -6620,14 +6620,14 @@
         "endTimeGMT": "2025-11-28 15:04:16",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21106121388,
@@ -6808,14 +6808,14 @@
         "endTimeGMT": "2025-11-27 15:18:43",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21095755582,
@@ -6928,14 +6928,14 @@
         "endTimeGMT": "2025-11-26 12:39:00",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21088747868,
@@ -7071,14 +7071,14 @@
         "endTimeGMT": "2025-11-25 17:28:14",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21079887240,
@@ -7191,14 +7191,14 @@
         "endTimeGMT": "2025-11-24 18:11:44",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21062564187,
@@ -7367,14 +7367,14 @@
         "endTimeGMT": "2025-11-22 17:55:16",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21052251510,
@@ -7545,14 +7545,14 @@
         "endTimeGMT": "2025-11-21 15:38:52",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21044929035,
@@ -7687,14 +7687,14 @@
         "endTimeGMT": "2025-11-20 18:21:52",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21035833949,
@@ -7807,14 +7807,14 @@
         "endTimeGMT": "2025-11-19 18:26:32",
         "qualifyingDive": false,
         "pr": false,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21026701403,
@@ -7994,14 +7994,14 @@
         "endTimeGMT": "2025-11-18 19:07:20",
         "qualifyingDive": false,
         "pr": true,
+        "autoCalcCalories": false,
         "favorite": false,
         "purposeful": false,
         "manualActivity": false,
-        "parent": false,
-        "autoCalcCalories": false,
         "elevationCorrected": false,
         "atpActivity": false,
-        "decoDive": false
+        "decoDive": false,
+        "parent": false
     },
     {
         "activityId": 21019742111,
