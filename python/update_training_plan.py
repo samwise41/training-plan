@@ -487,7 +487,8 @@ def main():
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
                     'avgPower', 'maxPower', 'normPower', 'trainingStressScore', 'intensityFactor',
                     'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain',
-                    # ADDED COLUMNS:
+                    # ADDED MISSING COLUMNS:
+                    'activityName', 'sportTypeId',
                     'averageBikingCadenceInRevPerMinute', 
                     'averageRunningCadenceInStepsPerMinute',
                     'avgStrideLength', 
@@ -525,6 +526,7 @@ def main():
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
                     'avgPower', 'maxPower', 'normPower', 'trainingStressScore', 'intensityFactor',
                     'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain',
+                    'activityName', 'sportTypeId',
                     'averageBikingCadenceInRevPerMinute', 
                     'averageRunningCadenceInStepsPerMinute',
                     'avgStrideLength', 
