@@ -58,26 +58,16 @@ def print_header(msg):
 
 # --- FTP EXTRACTION LOGIC ---
 def extract_ftp(text):
-    """
-    Scans text for the 'Cycling FTP' label and returns the integer value.
-    Handles various markdown formats like "**Cycling FTP:**" or "Cycling FTP:".
-    """
-    if not text:
-        return None
-    
+    if not text: return None
     pattern = r"Cycling FTP[:\*]*\s*(\d+)"
     match = re.search(pattern, text, re.IGNORECASE)
-    if match:
-        return int(match.group(1))
+    if match: return int(match.group(1))
     return None
 
 def get_current_ftp():
-    """Reads the plan file and extracts the current FTP."""
-    if not os.path.exists(PLAN_FILE):
-        return None
+    if not os.path.exists(PLAN_FILE): return None
     try:
-        with open(PLAN_FILE, 'r', encoding='utf-8') as f:
-            content = f.read()
+        with open(PLAN_FILE, 'r', encoding='utf-8') as f: content = f.read()
         return extract_ftp(content)
     except Exception as e:
         print(f"⚠️ Could not read FTP from plan: {e}")
@@ -107,10 +97,8 @@ def calculate_slope(series):
 def determine_trend(slope, good_direction):
     if abs(slope) < 0.001: return "➡️ Stable"
     is_up = slope > 0
-    if good_direction == 'up':
-        return "↗️ Improving" if is_up else "↘️ Declining"
-    else: 
-        return "↗️ Worsening" if is_up else "↘️ Improving"
+    if good_direction == 'up': return "↗️ Improving" if is_up else "↘️ Declining"
+    else: return "↗️ Worsening" if is_up else "↘️ Improving"
 
 def analyze_metric(df, col_name, config):
     now = datetime.now()
@@ -188,48 +176,24 @@ def run_internal_trend_analysis():
         is_bike = df.apply(lambda x: get_sport_filter(x, 'BIKE'), axis=1)
         is_swim = df.apply(lambda x: get_sport_filter(x, 'SWIM'), axis=1)
 
-        # Calculate Metrics
-        df['aerobic_efficiency'] = np.where(
-            is_bike & (df['avgPower'] > 0) & (df['averageHR'] > 0),
-            df['avgPower'] / df['averageHR'], np.nan
-        )
-        
-        df['torque_efficiency'] = np.where(
-            is_bike & (df['avgPower'] > 0) & (df['averageBikingCadenceInRevPerMinute'] > 0),
-            df['avgPower'] / df['averageBikingCadenceInRevPerMinute'], np.nan
-        )
-
+        df['aerobic_efficiency'] = np.where(is_bike & (df['avgPower'] > 0) & (df['averageHR'] > 0), df['avgPower'] / df['averageHR'], np.nan)
+        df['torque_efficiency'] = np.where(is_bike & (df['avgPower'] > 0) & (df['averageBikingCadenceInRevPerMinute'] > 0), df['avgPower'] / df['averageBikingCadenceInRevPerMinute'], np.nan)
         df['run_speed_m_min'] = df['averageSpeed'] * 60
-        df['run_economy'] = np.where(
-            is_run & (df['averageHR'] > 0),
-            df['run_speed_m_min'] / df['averageHR'], np.nan
-        )
-
-        df['run_stiffness'] = np.where(
-            is_run & (df['avgPower'] > 0),
-            (df['averageSpeed'] * 100) / df['avgPower'], np.nan
-        )
-
+        df['run_economy'] = np.where(is_run & (df['averageHR'] > 0), df['run_speed_m_min'] / df['averageHR'], np.nan)
+        df['run_stiffness'] = np.where(is_run & (df['avgPower'] > 0), (df['averageSpeed'] * 100) / df['avgPower'], np.nan)
         df['swim_speed_m_min'] = df['averageSpeed'] * 60
-        df['swim_efficiency'] = np.where(
-            is_swim & (df['averageHR'] > 0),
-            df['swim_speed_m_min'] / df['averageHR'], np.nan
-        )
-
+        df['swim_efficiency'] = np.where(is_swim & (df['averageHR'] > 0), df['swim_speed_m_min'] / df['averageHR'], np.nan)
         df['ground_contact'] = df.get('avgGroundContactTime', np.nan)
         df['vertical_osc'] = df.get('avgVerticalOscillation', np.nan)
         df['vo2_max'] = df.get('vO2MaxValue', np.nan)
         df['anaerobic_impact'] = df.get('anaerobicTrainingEffect', np.nan)
         
-        if 'trainingStressScore' not in df.columns:
-            df['trainingStressScore'] = np.nan
+        if 'trainingStressScore' not in df.columns: df['trainingStressScore'] = np.nan
 
         print(f"Writing briefing to: {BRIEF_FILE}")
-        
         with open(BRIEF_FILE, 'w', encoding='utf-8') as f:
             f.write("# 🤖 AI Coach Context Briefing\n")
             f.write(f"**Last Updated:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
-            
             f.write("## 1. Physiological Trends\n")
             f.write("| Metric | Target | 30d Trend | 90d Trend | 6m Trend | Status |\n")
             f.write("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
@@ -239,17 +203,14 @@ def run_internal_trend_analysis():
                 stats = analyze_metric(df, key, conf)
                 current = stats.get('current', 0)
                 r_min, r_max = conf['range']
-                
                 status_icon = "✅"
-                if current == 0:
-                    status_icon = "⚪ No Data"
+                if current == 0: status_icon = "⚪ No Data"
                 elif current < r_min: 
                     status_icon = "⚠️ Low"
                     if conf['good'] == 'up': alerts.append(f"**{key}** is {current:.2f} (Target: >{r_min}).")
                 elif current > r_max: 
                     status_icon = "⚠️ High"
                     if conf['good'] == 'down': alerts.append(f"**{key}** is {current:.2f} (Target: <{r_max}).")
-                
                 unit = conf['unit']
                 f.write(f"| **{key.replace('_', ' ').title()}** | {r_min}-{r_max} {unit} | {stats.get('30d', '--')} | {stats.get('90d', '--')} | {stats.get('6m', '--')} | {status_icon} |\n")
 
@@ -258,7 +219,6 @@ def run_internal_trend_analysis():
                 for a in alerts: f.write(f"- {a}\n")
             else:
                 f.write("- All systems Nominal.\n")
-                
         print("✅ Briefing generated successfully.")
     except Exception as e:
         print(f"❌ Trend Analysis Failed: {e}")
@@ -271,22 +231,16 @@ def git_push_changes():
     try:
         subprocess.run(["git", "config", "user.name", "github-actions"], check=True)
         subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
-        
-        # Force add files
         files_to_add = [MASTER_DB, PLAN_FILE, GARMIN_JSON, BRIEF_FILE]
         print(f"   Adding files: {files_to_add}")
         subprocess.run(["git", "add"] + files_to_add, check=True)
-        
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
         if status:
             print("   Changes detected. Committing...")
             msg = f"Auto-Sync: Master DB, Plan & Brief {datetime.now().strftime('%Y-%m-%d')}"
             subprocess.run(["git", "commit", "-m", msg], check=True)
-            
-            # --- FIX FOR REJECTED PUSH: PULL BEFORE PUSH ---
             print("   Pulling remote changes to avoid conflicts...")
             subprocess.run(["git", "pull", "--rebase"], check=True)
-            
             print("   Pushing to remote...")
             subprocess.run(["git", "push"], check=True)
             print("✅ Successfully pushed to GitHub!")
@@ -296,13 +250,9 @@ def git_push_changes():
         print(f"⚠️ Git Push Failed: {e}")
 
 def load_master_db():
-    if not os.path.exists(MASTER_DB):
-        return pd.DataFrame(columns=MASTER_COLUMNS)
-    
-    with open(MASTER_DB, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+    if not os.path.exists(MASTER_DB): return pd.DataFrame(columns=MASTER_COLUMNS)
+    with open(MASTER_DB, 'r', encoding='utf-8') as f: lines = f.readlines()
     if len(lines) < 3: return pd.DataFrame(columns=MASTER_COLUMNS)
-    
     header = [h.strip() for h in lines[0].strip('|').split('|')]
     data = []
     for line in lines[2:]:
@@ -310,7 +260,6 @@ def load_master_db():
         row = [c.strip() for c in line.strip('|').split('|')]
         if len(row) < len(header): row += [''] * (len(header) - len(row))
         data.append(dict(zip(header, row)))
-    
     return pd.DataFrame(data)
 
 def clean_corrupt_data(df):
@@ -333,10 +282,7 @@ def extract_weekly_table():
     if not os.path.exists(PLAN_FILE): 
         print("⚠️ Plan file not found.")
         return pd.DataFrame()
-        
-    with open(PLAN_FILE, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-
+    with open(PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
     table_lines, found_header = [], False
     for line in lines:
         s = line.strip()
@@ -345,13 +291,10 @@ def extract_weekly_table():
             continue
         if (s.startswith('# ') or s.startswith('## ')) and len(table_lines) > 2: break
         if '|' in s: table_lines.append(s)
-
     if not found_header or not table_lines: 
         print("⚠️ No 'Weekly Schedule' table found in Plan.")
         return pd.DataFrame()
-
     raw_header = [h.strip() for h in table_lines[0].strip('|').split('|')]
-    
     col_map = {}
     for i, h in enumerate(raw_header):
         clean_h = h.lower().replace(' ', '')
@@ -360,65 +303,43 @@ def extract_weekly_table():
         elif 'plannedworkout' in clean_h: col_map['Planned Workout'] = i
         elif 'plannedduration' in clean_h or 'dur(min)' in clean_h: col_map['Planned Duration'] = i
         elif 'notes' in clean_h: col_map['Notes'] = i
-
     data = []
     for line in table_lines[1:]:
         if '---' in line: continue
         row_vals = [c.strip() for c in line.strip('|').split('|')]
-        
         row_dict = {}
         for col_name, idx in col_map.items():
-            if idx < len(row_vals):
-                row_dict[col_name] = row_vals[idx]
-            else:
-                row_dict[col_name] = ""
+            if idx < len(row_vals): row_dict[col_name] = row_vals[idx]
+            else: row_dict[col_name] = ""
         data.append(row_dict)
-    
     df = pd.DataFrame(data)
     print(f"✅ Extracted {len(df)} rows from Weekly Plan.")
-    
-    if 'Date' not in df.columns:
-        print("❌ CRITICAL ERROR: Could not find 'Date' column in Markdown table.")
-        print(f"Headers found: {raw_header}")
-        return pd.DataFrame() 
-
     return df
 
 def update_weekly_plan(df_master):
     if not os.path.exists(PLAN_FILE): return
-
     print_header("UPDATING WEEKLY PLAN VISUALS")
-
     lookup = {}
     df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
-    
     for _, row in df_master.iterrows():
         d = row.get('Date_Norm')
         p_work = str(row.get('Planned Workout', '')).upper()
-        
         sport_tag = None
         if '[RUN]' in p_work: sport_tag = 'RUN'
         elif '[BIKE]' in p_work: sport_tag = 'BIKE'
         elif '[SWIM]' in p_work: sport_tag = 'SWIM'
-        
         a_work = str(row.get('Actual Workout', '')).strip()
         a_dur = str(row.get('Actual Duration', '')).strip()
-        
         if d and sport_tag and (a_work or a_dur):
             if a_work.lower() == 'nan': a_work = ""
             if a_dur.lower() == 'nan': a_dur = ""
             lookup[(d, sport_tag)] = (a_work, a_dur, "COMPLETED")
-
-    with open(PLAN_FILE, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-    
+    with open(PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
     new_lines = []
     table_started = False
     header_indices = {}
-    
     for line in lines:
         stripped = line.strip()
-        
         if not table_started:
             if stripped.startswith('|') and 'date' in stripped.lower() and 'day' in stripped.lower():
                 table_started = True
@@ -431,47 +352,30 @@ def update_weekly_plan(df_master):
                     elif 'status' in h: header_indices['status'] = i
             new_lines.append(line)
             continue
-        
         if table_started and stripped.startswith('|') and '---' not in stripped:
             cols = [c.strip() for c in stripped.strip('|').split('|')]
             try:
                 if 'date' in header_indices and 'planned_workout' in header_indices:
                     row_date_raw = cols[header_indices['date']]
                     row_plan_raw = cols[header_indices['planned_workout']].upper()
-                    
                     row_date = pd.to_datetime(row_date_raw, errors='coerce').strftime('%Y-%m-%d')
-                    
                     row_tag = None
                     if '[RUN]' in row_plan_raw: row_tag = 'RUN'
                     elif '[BIKE]' in row_plan_raw: row_tag = 'BIKE'
                     elif '[SWIM]' in row_plan_raw: row_tag = 'SWIM'
-                    
                     key = (row_date, row_tag)
-                    
                     if key in lookup:
                         act_work, act_dur, status_update = lookup[key]
-                        
-                        if 'actual_workout' in header_indices:
-                            cols[header_indices['actual_workout']] = act_work
-                        if 'actual_duration' in header_indices:
-                            cols[header_indices['actual_duration']] = act_dur
-                        if 'status' in header_indices:
-                            cols[header_indices['status']] = status_update
-                        
+                        if 'actual_workout' in header_indices: cols[header_indices['actual_workout']] = act_work
+                        if 'actual_duration' in header_indices: cols[header_indices['actual_duration']] = act_dur
+                        if 'status' in header_indices: cols[header_indices['status']] = status_update
                         new_line = "| " + " | ".join(cols) + " |\n"
                         new_lines.append(new_line)
-                    else:
-                        new_lines.append(line)
-                else:
-                    new_lines.append(line)
-            except:
-                new_lines.append(line)
-        else:
-            new_lines.append(line)
-
-    with open(PLAN_FILE, 'w', encoding='utf-8') as f:
-        f.writelines(new_lines)
-    
+                    else: new_lines.append(line)
+                else: new_lines.append(line)
+            except: new_lines.append(line)
+        else: new_lines.append(line)
+    with open(PLAN_FILE, 'w', encoding='utf-8') as f: f.writelines(new_lines)
     print("✅ Weekly plan updated with actuals and status.")
 
 def detect_sport(text):
@@ -485,51 +389,32 @@ def main():
     try:
         print_header("STARTING MIGRATION (SYNC & FIX)")
         run_garmin_fetch()
-
         df_master = load_master_db()
         df_master = clean_corrupt_data(df_master) 
-        
         df_plan = extract_weekly_table()
-        if df_plan.empty:
-            print("❌ Aborting Sync: No valid plan data found.")
+        if df_plan.empty: print("❌ Aborting Sync: No valid plan data found.")
         
-        with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
-            garmin_data = json.load(f)
-        
+        with open(GARMIN_JSON, 'r', encoding='utf-8') as f: garmin_data = json.load(f)
         garmin_by_date = {}
         for g in garmin_data:
             d = g.get('startTimeLocal', '')[:10]
             if d not in garmin_by_date: garmin_by_date[d] = []
             garmin_by_date[d].append(g)
 
-        # 2. SYNC PLAN -> MASTER
         if not df_plan.empty:
             print_header("SYNCING WEEKLY PLAN TO MASTER")
             count_added = 0
-            
             df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
             df_plan['Date_Norm'] = pd.to_datetime(df_plan['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
-
             existing_keys = set(zip(df_master['Date_Norm'], df_master['Planned Workout'].str.strip()))
-            
-            # Filter for workouts today or earlier
             today_str = datetime.now().strftime('%Y-%m-%d')
-
             for _, p_row in df_plan.iterrows():
                 p_date_norm = p_row['Date_Norm']
                 p_workout = str(p_row.get('Planned Workout', '')).strip()
                 p_workout_clean = re.sub(r'[^a-zA-Z0-9\s]', '', p_workout.lower()) 
-                
                 if pd.isna(p_date_norm): continue 
-                
-                # Only sync current or past days
-                if p_date_norm > today_str:
-                    continue
-
-                if 'rest day' in p_workout_clean or p_workout_clean in ['rest', 'off', 'day off']:
-                    print(f"   [SKIP] Rest detected in Plan: {p_date_norm} - {p_workout}")
-                    continue
-
+                if p_date_norm > today_str: continue
+                if 'rest day' in p_workout_clean or p_workout_clean in ['rest', 'off', 'day off']: continue
                 if (p_date_norm, p_workout) not in existing_keys:
                     print(f"[NEW PLAN ROW] Adding: {p_date_norm} - {p_workout}")
                     new_row = {c: "" for c in MASTER_COLUMNS}
@@ -544,106 +429,85 @@ def main():
                     df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
                     existing_keys.add((p_date_norm, p_workout))
                     count_added += 1
-            
             print(f"✅ Sync Complete. Added {count_added} new planned workouts (up to {today_str}).")
             if 'Date_Norm' in df_master.columns: df_master.drop(columns=['Date_Norm'], inplace=True)
 
-        # 3. LINKING
         claimed_ids = set() 
         print_header("LINKING GARMIN DATA")
-        
         for idx, row in df_master.iterrows():
             date = str(row.get('Date', '')).strip()
             try: date = pd.to_datetime(date).strftime('%Y-%m-%d')
             except: pass
-
             current_id = str(row.get('activityId', '')).strip()
-            
             candidates = garmin_by_date.get(date, [])
             match = None
-
-            # 3a. Match by ID (Existing Link)
             if current_id and current_id != 'nan':
                  for cand in candidates:
                      if str(cand.get('activityId')) == current_id:
                          match = cand
                          break
-            
-            # 3b. Match by Type (Strict)
             if not match and candidates and (not current_id or current_id == 'nan'):
                 planned_txt = str(row.get('Planned Workout', '')).upper()
                 planned_type = detect_sport(planned_txt)
-                
                 for cand in candidates:
                     cand_id = str(cand.get('activityId'))
                     if cand_id in claimed_ids: continue
-
                     g_type_str = cand.get('activityType', {}).get('typeKey', '').lower()
-                    
-                    # Normalize Garmin Types
                     g_sport = 'OTHER'
                     if 'running' in g_type_str: g_sport = 'RUN'
                     elif 'cycling' in g_type_str or 'biking' in g_type_str or 'virtual_ride' in g_type_str: g_sport = 'BIKE'
                     elif 'swimming' in g_type_str: g_sport = 'SWIM'
-                    
-                    # Strict Check: Only link if sports match
                     if planned_type != 'OTHER' and planned_type == g_sport:
                         match = cand
                         break
-                
             if match:
                 m_id = str(match.get('activityId'))
                 claimed_ids.add(m_id)
-                
                 df_master.at[idx, 'Status'] = 'COMPLETED'
                 df_master.at[idx, 'Match Status'] = 'Linked'
                 df_master.at[idx, 'activityId'] = m_id
-                
                 prefix = ""
                 g_type = match.get('activityType', {}).get('typeKey', '').lower()
                 if 'running' in g_type: prefix = "[RUN]"
                 elif 'cycling' in g_type or 'virtual' in g_type: prefix = "[BIKE]"
                 elif 'swimming' in g_type: prefix = "[SWIM]"
-                
                 raw_name = match.get('activityName', 'Activity')
-                if prefix and prefix not in raw_name:
-                    new_name = f"{prefix} {raw_name}"
-                else:
-                    new_name = raw_name
-                
+                if prefix and prefix not in raw_name: new_name = f"{prefix} {raw_name}"
+                else: new_name = raw_name
                 df_master.at[idx, 'Actual Workout'] = new_name
                 df_master.at[idx, 'activityType'] = g_type
-                
                 try:
                     dur_sec = float(match.get('duration', 0))
                     df_master.at[idx, 'Actual Duration'] = f"{dur_sec/60:.1f}"
-                except: 
-                    pass
+                except: pass
 
+                # --- MAPPING UPDATED HERE ---
                 cols_to_map = [
                     'duration', 'distance', 'averageHR', 'maxHR', 
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
                     'avgPower', 'maxPower', 'normPower', 'trainingStressScore', 'intensityFactor',
-                    'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain'
+                    'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain',
+                    # ADDED COLUMNS:
+                    'averageBikingCadenceInRevPerMinute', 
+                    'averageRunningCadenceInStepsPerMinute',
+                    'avgStrideLength', 
+                    'avgVerticalOscillation', 
+                    'avgGroundContactTime'
                 ]
                 
                 for col in cols_to_map:
                     val = match.get(col, '')
                     current_db_val = str(df_master.at[idx, col]).strip()
-                    
-                    # SAFE UPDATE: Only fill if DB is currently empty (or 'nan')
+                    # SAFE UPDATE LOGIC
                     if (not current_db_val or current_db_val == 'nan') and val is not None and val != "":
                          df_master.at[idx, col] = val
 
-        # 4. UNPLANNED APPEND
         print("Handling Unplanned Workouts...")
         unplanned_rows = []
         all_garmin = [item for sublist in garmin_by_date.values() for item in sublist]
-        
         for g in all_garmin:
             g_id = str(g.get('activityId'))
             if g_id not in claimed_ids:
-                
                 new_row = {c: "" for c in MASTER_COLUMNS}
                 new_row['Planned Workout'] = "" 
                 new_row['Planned Duration'] = ""
@@ -651,68 +515,55 @@ def main():
                 new_row['Match Status'] = 'Unplanned'
                 new_row['Date'] = g.get('startTimeLocal', '')[:10]
                 new_row['activityId'] = g_id
-                
                 raw_name = g.get('activityName', 'Unplanned')
                 new_row['Actual Workout'] = raw_name
                 new_row['activityType'] = g.get('activityType', {}).get('typeKey', '')
                 
+                # Update Unplanned Mapping too!
                 cols_to_map = [
                     'duration', 'distance', 'averageHR', 'maxHR', 
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
                     'avgPower', 'maxPower', 'normPower', 'trainingStressScore', 'intensityFactor',
-                    'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain'
+                    'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain',
+                    'averageBikingCadenceInRevPerMinute', 
+                    'averageRunningCadenceInStepsPerMinute',
+                    'avgStrideLength', 
+                    'avgVerticalOscillation', 
+                    'avgGroundContactTime'
                 ]
-                for col in cols_to_map:
-                     new_row[col] = g.get(col, '')
-
-                try:
-                    new_row['Actual Duration'] = f"{float(g.get('duration', 0))/60:.1f}"
+                for col in cols_to_map: new_row[col] = g.get(col, '')
+                try: new_row['Actual Duration'] = f"{float(g.get('duration', 0))/60:.1f}"
                 except: pass
-
                 unplanned_rows.append(new_row)
 
         if unplanned_rows:
             print(f"Adding {len(unplanned_rows)} unplanned rows.")
             df_master = pd.concat([df_master, pd.DataFrame(unplanned_rows)], ignore_index=True)
 
-        # 5. HYDRATE
         print("Hydrating calculated fields...")
-        
-        # --- Retrieve FTP dynamically ---
-        current_ftp = get_current_ftp()
-        if current_ftp:
-            print(f"ℹ️  Using Extracted FTP: {current_ftp} Watts")
-        else:
-            current_ftp = 241.0
-            print(f"⚠️ FTP not found in plan. Defaulting to {current_ftp} Watts")
+        current_ftp = get_current_ftp() or 241.0
+        print(f"ℹ️  Using FTP: {current_ftp} Watts")
 
         for idx, row in df_master.iterrows():
             act_type = str(row.get('activityType', '')).lower()
             plan_type = str(row.get('Planned Workout', '')).lower()
-            
-            is_run_bike = ('run' in act_type or 'run' in plan_type or 
-                           'cycl' in act_type or 'bik' in act_type or 'virtual_ride' in act_type)
+            is_run_bike = ('run' in act_type or 'run' in plan_type or 'cycl' in act_type or 'bik' in act_type or 'virtual_ride' in act_type)
             if not is_run_bike: continue
-
             try:
                 duration = float(row.get('duration', 0))
                 np_val = float(row.get('normPower', 0))
                 ftp = float(current_ftp)
             except: continue 
-
             if duration > 0 and np_val > 0:
                 intensity = np_val / ftp
-                
                 existing_if = str(row.get('intensityFactor', '')).strip()
                 if not existing_if or existing_if == 'nan' or float(existing_if) == 0:
                      df_master.at[idx, 'intensityFactor'] = f"{intensity:.2f}"
-
                 existing_tss = str(row.get('trainingStressScore', '')).strip()
                 if not existing_tss or existing_tss == 'nan' or float(existing_tss) == 0:
                     tss = (duration * np_val * intensity) / (ftp * 3600) * 100
                     df_master.at[idx, 'trainingStressScore'] = f"{tss:.1f}"
 
-        # 6. SAVE
         df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
         df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
         
@@ -728,12 +579,8 @@ def main():
                     vals.append(val)
                 f.write("| " + " | ".join(vals) + " |\n")
 
-        # 7. UPDATE WEEKLY PLAN
         update_weekly_plan(df_master)
-
-        # 8. ANALYZE TRENDS (INTERNAL)
         run_internal_trend_analysis()
-
         print("✅ Success: Migration Complete.")
         git_push_changes()
 
