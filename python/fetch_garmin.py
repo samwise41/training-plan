@@ -3,14 +3,11 @@ import os
 from garminconnect import Garmin
 
 # --- CONFIGURATION ---
-# This ensures the script always finds the JSON file relative to itself, 
-# regardless of where GitHub Actions initiates the run.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 JSON_FILE = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
-FETCH_LIMIT = 20  # Reduced slightly to prevent API timeouts since we are doing deep fetches
+FETCH_LIMIT = 20
 
 # --- CREDENTIALS ---
-# GitHub Actions injects these from your Repository Secrets
 EMAIL = os.environ.get('GARMIN_EMAIL')
 PASSWORD = os.environ.get('GARMIN_PASSWORD')
 
@@ -19,79 +16,108 @@ def load_existing_data():
         try:
             with open(JSON_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except Exception as e:
-            print(f"⚠️ Could not read existing JSON: {e}")
+        except:
             return []
     return []
 
 def save_data(data):
-    # Sort by date descending
     data.sort(key=lambda x: x.get('startTimeLocal', ''), reverse=True)
     with open(JSON_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4)
-    print(f"💾 Saved {len(data)} total activities to {JSON_FILE}")
+    print(f"💾 Saved {len(data)} activities.")
 
 def main():
-    # 1. Validation for Automation
     if not EMAIL or not PASSWORD:
-        print("❌ Error: GARMIN_EMAIL or GARMIN_PASSWORD environment variables are missing.")
-        print("Check your GitHub Repository Secrets and your YAML 'env' section.")
+        print("❌ Error: Credentials missing.")
         return
 
     try:
-        print("🔐 Authenticating with Garmin Connect...")
+        print("🔐 Authenticating...")
         client = Garmin(EMAIL, PASSWORD)
         client.login()
     except Exception as e:
         print(f"❌ Login Failed: {e}")
         return
 
-    # 2. Fetch Summary List
-    print(f"📡 Fetching last {FETCH_LIMIT} activities...")
+    print(f"📡 Fetching summaries for last {FETCH_LIMIT} activities...")
     try:
         new_activities = client.get_activities(0, FETCH_LIMIT)
-        print(f"✅ Retrieved {len(new_activities)} activities from Garmin.")
     except Exception as e:
         print(f"❌ Fetch Failed: {e}")
         return
 
-    # 3. Merge & Deep Fetch RPE
-    print("🔄 Merging with local archive and checking for RPE...")
+    print("🔄 performing Deep Fetch for RPE data...")
     existing_data = load_existing_data()
     db = {str(item['activityId']): item for item in existing_data}
     
     new_count = 0
-    update_count = 0
-    
+    updated_count = 0
+
     for act in new_activities:
         aid = str(act['activityId'])
+        is_new = aid not in db
         
-        # Only fetch deep details if it's a NEW activity (to save API time)
-        if aid not in db:
+        # Fetch if new OR if existing record is missing RPE
+        should_fetch = is_new or (aid in db and 'perceivedEffort' not in db[aid])
+        
+        if should_fetch:
             try:
-                # 1. Fetch full activity details to get Self Evaluation
-                # This is an extra API call per new activity
-                full_details = client.get_activity(aid)
+                # DEEP FETCH
+                full = client.get_activity(aid)
                 
-                # 2. Extract subjective data if it exists
-                if 'selfEvaluation' in full_details:
-                    evaluation = full_details['selfEvaluation']
-                    # Flatten these into the main object for easy access later
-                    act['perceivedEffort'] = evaluation.get('perceivedEffort', None) # RPE (1-10)
-                    act['feeling'] = evaluation.get('feeling', None)                 # Feeling (1-5)
-                    print(f"      + Captured RPE ({act.get('perceivedEffort')}) & Feeling ({act.get('feeling')}) for {aid}")
+                rpe = None
+                feeling = None
+                
+                # --- LOCATION 1: summaryDTO (Your Finding) ---
+                if 'summaryDTO' in full:
+                    # Garmin uses 0-100 scale. We convert to 1-10 and 1-5.
+                    raw_rpe = full['summaryDTO'].get('directWorkoutRpe')
+                    raw_feel = full['summaryDTO'].get('directWorkoutFeel')
+                    
+                    if raw_rpe is not None:
+                        rpe = int(raw_rpe / 10) # 30 -> 3
+                    
+                    if raw_feel is not None:
+                        # 0=Terrible, 25=Weak, 50=Normal, 75=Strong, 100=Very Strong
+                        # Map 0-100 -> 1-5
+                        feeling = int((raw_feel / 25) + 1) 
+
+                # --- LOCATION 2: selfEvaluation (Root) ---
+                elif 'selfEvaluation' in full:
+                    rpe = full['selfEvaluation'].get('perceivedEffort')
+                    feeling = full['selfEvaluation'].get('feeling')
+
+                # --- LOCATION 3: metadataDTO ---
+                elif 'metadataDTO' in full and 'selfEvaluation' in full['metadataDTO']:
+                    rpe = full['metadataDTO']['selfEvaluation'].get('perceivedEffort')
+                    feeling = full['metadataDTO']['selfEvaluation'].get('feeling')
+
+                # SAVE DATA
+                if rpe is not None:
+                    act['perceivedEffort'] = rpe
+                    if not is_new:
+                        db[aid]['perceivedEffort'] = rpe
+                        updated_count += 1
+                
+                if feeling is not None:
+                    act['feeling'] = feeling
+                    if not is_new:
+                        db[aid]['feeling'] = feeling
+                        
+                if rpe or feeling:
+                    print(f"   + Found RPE ({rpe}) / Feel ({feeling}) for {act['activityName']}")
+
             except Exception as e:
-                print(f"      ⚠️ Failed to fetch details for {aid}: {e}")
-            
+                # Keep going even if one activity fails
+                pass
+
+        if is_new:
             db[aid] = act
             new_count += 1
-        else:
-            # Optional: If you want to force update existing records with RPE, 
-            # you could add logic here, but generally we skip to save time.
-            db[aid].update(act) 
-            update_count += 1
+        elif aid in db:
+            db[aid].update(act)
 
-    print(f"   - Added: {new_count} | Updated: {update_count}")
+    print(f"   - Added: {new_count} | Updated RPE on: {updated_count}")
     save_data(list(db.values()))
 
 if __name__ == "__main__":
