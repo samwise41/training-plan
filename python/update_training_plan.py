@@ -20,9 +20,10 @@ BRIEF_FILE = os.path.join(ROOT_DIR, 'COACH_BRIEFING.md')
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 GARMIN_FETCH_CMD = [sys.executable, os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
 
+# Updated Schema with RPE and Feeling
 MASTER_COLUMNS = [
     'Status', 'Day', 'Planned Workout', 'Planned Duration', 
-    'Actual Workout', 'Actual Duration', 'Notes / Targets', 'Date', 'Match Status',
+    'Actual Workout', 'Actual Duration', 'Notes / Targets', 'RPE', 'Feeling', 'Date', 'Match Status',
     'activityId', 'activityName', 'activityType', 'sportTypeId',
     'duration', 'distance', 'averageHR', 'maxHR', 
     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -377,6 +378,12 @@ def main():
         run_garmin_fetch()
         df_master = load_master_db()
         df_master = clean_corrupt_data(df_master) 
+        
+        # Ensure new columns exist in DataFrame even if not in file
+        for col in MASTER_COLUMNS:
+            if col not in df_master.columns:
+                df_master[col] = ""
+
         df_plan = extract_weekly_table()
         if df_plan.empty: print("❌ Aborting Sync: No valid plan data found.")
         
@@ -450,7 +457,6 @@ def main():
                 m_id = str(match.get('activityId'))
                 claimed_ids.add(m_id)
                 df_master.at[idx, 'Status'] = 'COMPLETED'
-                # Default status if not modified
                 if str(df_master.at[idx, 'Match Status']) != 'Linked (modified)':
                     df_master.at[idx, 'Match Status'] = 'Linked'
                 
@@ -494,32 +500,35 @@ def main():
                         if is_value_different(current_db_val, val):
                             is_row_modified = True
                 
+                # --- SPECIAL MAP: RPE / FEELING ---
+                rpe_map = {'perceivedEffort': 'RPE', 'feeling': 'Feeling'}
+                for json_k, md_col in rpe_map.items():
+                    val = match.get(json_k)
+                    current_db = str(df_master.at[idx, md_col]).strip()
+                    if val is not None and val != "":
+                        val_str = str(val)
+                        # Map only if empty or different
+                        if not current_db or current_db == 'nan' or current_db == 'None' or current_db != val_str:
+                             df_master.at[idx, md_col] = val_str
+                             is_row_modified = True
+                
                 if is_row_modified:
                     df_master.at[idx, 'Match Status'] = 'Linked (modified)'
 
         print("Handling Unplanned Workouts...")
         unplanned_rows = []
         all_garmin = [item for sublist in garmin_by_date.values() for item in sublist]
-        
-        # --- NEW FILTER: ALLOW ONLY RUN/BIKE/SWIM (1, 2, 5) & 255 ---
         ALLOWED_SPORT_TYPES = [1, 2, 5, 255]
 
         for g in all_garmin:
             g_id = str(g.get('activityId'))
-            
-            # --- SPORT ID FILTER ---
-            # Check both 'sportTypeId' (top) and 'activityType.typeId' (nested)
             c_type = g.get('activityType', {}).get('typeId')
             c_sport = g.get('sportTypeId')
-            
             is_valid_type = False
             if c_type in ALLOWED_SPORT_TYPES: is_valid_type = True
             if c_sport in ALLOWED_SPORT_TYPES: is_valid_type = True
             
-            if not is_valid_type:
-                # Skip Strength, Walking, Yoga, etc.
-                continue
-            # -----------------------
+            if not is_valid_type: continue
 
             if g_id not in claimed_ids:
                 new_row = {c: "" for c in MASTER_COLUMNS}
@@ -546,6 +555,11 @@ def main():
                     'avgGroundContactTime'
                 ]
                 for col in cols_to_map: new_row[col] = g.get(col, '')
+                
+                # Capture RPE/Feeling for Unplanned too
+                if 'perceivedEffort' in g: new_row['RPE'] = g['perceivedEffort']
+                if 'feeling' in g: new_row['Feeling'] = g['feeling']
+
                 try: new_row['Actual Duration'] = f"{float(g.get('duration', 0))/60:.1f}"
                 except: pass
                 unplanned_rows.append(new_row)
