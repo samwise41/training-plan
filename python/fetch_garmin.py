@@ -5,7 +5,7 @@ from garminconnect import Garmin
 # --- CONFIGURATION ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 JSON_FILE = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
-FETCH_LIMIT = 20
+FETCH_LIMIT = 400
 
 # --- CREDENTIALS ---
 EMAIL = os.environ.get('GARMIN_EMAIL')
