@@ -65,13 +65,7 @@ def extract_ftp(text):
     if not text:
         return None
     
-    # Regex explanation:
-    # Cycling FTP  -> specific anchor phrase
-    # [:\*]* -> matches any combination of colons or asterisks (markdown)
-    # \s* -> matches any amount of whitespace
-    # (\d+)        -> captures the number (the FTP value)
     pattern = r"Cycling FTP[:\*]*\s*(\d+)"
-    
     match = re.search(pattern, text, re.IGNORECASE)
     if match:
         return int(match.group(1))
@@ -597,8 +591,6 @@ def main():
                         match = cand
                         break
                 
-                # --- NOTE: The "Blind Fallback" (match if len=1) has been removed ---
-
             if match:
                 m_id = str(match.get('activityId'))
                 claimed_ids.add(m_id)
@@ -625,7 +617,8 @@ def main():
                 try:
                     dur_sec = float(match.get('duration', 0))
                     df_master.at[idx, 'Actual Duration'] = f"{dur_sec/60:.1f}"
-                except: pass
+                except: 
+                    pass
 
                 cols_to_map = [
                     'duration', 'distance', 'averageHR', 'maxHR', 
@@ -634,15 +627,13 @@ def main():
                     'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain'
                 ]
                 
-                # PROPOSED (Safe Gap-Fill)
                 for col in cols_to_map:
                     val = match.get(col, '')
-                    # Check if the DB is currently empty for this cell
                     current_db_val = str(df_master.at[idx, col]).strip()
-    
-    # Only update if DB is empty AND Garmin has data
-    if (not current_db_val or current_db_val == 'nan') and val is not None and val != "":
-         df_master.at[idx, col] = val
+                    
+                    # SAFE UPDATE: Only fill if DB is currently empty (or 'nan')
+                    if (not current_db_val or current_db_val == 'nan') and val is not None and val != "":
+                         df_master.at[idx, col] = val
 
         # 4. UNPLANNED APPEND
         print("Handling Unplanned Workouts...")
