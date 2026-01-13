@@ -179,7 +179,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     `;
 }
 
-// --- NEW Internal Builder: Activity Heatmap (Sport Types) ---
+// --- Internal Builder: Activity Heatmap (Sport Types) ---
 function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
 
@@ -257,7 +257,8 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
             }
         }
 
-        // --- FIXED: Hide Sunday if no activity (regardless of past/future) ---
+        // --- VISIBILITY LOGIC ---
+        // Hide Sunday if no activity (regardless of past/future).
         if (dayOfWeek === 0 && !hasActivity) {
             style = 'opacity: 0;';
             colorClass = '';
@@ -317,11 +318,16 @@ export function renderHeatmaps(fullLogData, planMd) {
     const today = new Date();
     today.setHours(0,0,0,0);
 
+    // --- DATE RANGE LOGIC FIX ---
+    // Ensure we always render up to the upcoming Saturday.
+    // This forces the "current week" column to complete.
     const endOfWeek = new Date(today); 
     const dayOfWeek = endOfWeek.getDay(); 
-    const distToSunday = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); 
-    endOfWeek.setDate(endOfWeek.getDate() + distToSunday); 
-    if (dayOfWeek === 0) endOfWeek.setDate(endOfWeek.getDate()); 
+    
+    // If today is Sunday(0), add 6 days to get to Saturday.
+    // If today is Saturday(6), add 0 days.
+    const distToSaturday = 6 - dayOfWeek;
+    endOfWeek.setDate(endOfWeek.getDate() + distToSaturday); 
 
     const startTrailing = new Date(endOfWeek); 
     startTrailing.setMonth(startTrailing.getMonth() - 6);
@@ -333,7 +339,7 @@ export function renderHeatmaps(fullLogData, planMd) {
     // 1. Existing Consistency Heatmap (Trailing)
     const heatmapTrailingHtml = buildGenericHeatmap(fullLogData, eventMap, startTrailing, endOfWeek, "Recent Consistency (Trailing 6 Months)", toLocalYMD, "heatmap-trailing-scroll");
     
-    // 2. NEW Activity Heatmap (Trailing)
+    // 2. Activity Heatmap (Trailing)
     const heatmapActivityHtml = buildActivityHeatmap(fullLogData, startTrailing, endOfWeek, "Activity Log (Workout Types)", toLocalYMD, "heatmap-activity-scroll");
 
     // 3. Annual Overview (Full Year)
