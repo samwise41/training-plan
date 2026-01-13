@@ -56,6 +56,27 @@ METRICS = {
 def print_header(msg):
     print(f"\n{'='*60}\n{msg}\n{'='*60}")
 
+# --- HELPER: COMPARE VALUES ---
+def is_value_different(db_val, json_val):
+    """
+    Returns True if the database value differs significantly from the JSON value.
+    Handles float tolerance and string normalization.
+    """
+    str_db = str(db_val).strip()
+    # If DB is empty, it's not a 'modification', it's just missing. Return False.
+    if not str_db or str_db.lower() == 'nan':
+        return False
+        
+    try:
+        # Try Float Comparison
+        f_db = float(str_db)
+        f_json = float(json_val)
+        # 0.1 tolerance for rounding differences
+        return abs(f_db - f_json) > 0.1
+    except:
+        # String Comparison
+        return str_db != str(json_val).strip()
+
 # --- FTP EXTRACTION LOGIC ---
 def extract_ftp(text):
     if not text: return None
@@ -464,6 +485,7 @@ def main():
                 m_id = str(match.get('activityId'))
                 claimed_ids.add(m_id)
                 df_master.at[idx, 'Status'] = 'COMPLETED'
+                # Default status
                 df_master.at[idx, 'Match Status'] = 'Linked'
                 df_master.at[idx, 'activityId'] = m_id
                 prefix = ""
@@ -487,7 +509,6 @@ def main():
                     'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
                     'avgPower', 'maxPower', 'normPower', 'trainingStressScore', 'intensityFactor',
                     'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain',
-                    # ADDED MISSING COLUMNS:
                     'activityName', 'sportTypeId',
                     'averageBikingCadenceInRevPerMinute', 
                     'averageRunningCadenceInStepsPerMinute',
@@ -496,12 +517,24 @@ def main():
                     'avgGroundContactTime'
                 ]
                 
+                # --- NEW CONFLICT DETECTION LOGIC ---
+                is_row_modified = False
                 for col in cols_to_map:
                     val = match.get(col, '')
                     current_db_val = str(df_master.at[idx, col]).strip()
-                    # SAFE UPDATE LOGIC
+                    
+                    # 1. GAP FILL: If DB is empty, fill it.
                     if (not current_db_val or current_db_val == 'nan') and val is not None and val != "":
                          df_master.at[idx, col] = val
+                    
+                    # 2. CONFLICT CHECK: If DB has value, compare it.
+                    elif current_db_val and val is not None and val != "":
+                        if is_value_different(current_db_val, val):
+                            is_row_modified = True
+                
+                # Update status if modification detected
+                if is_row_modified:
+                    df_master.at[idx, 'Match Status'] = 'Linked (modified)'
 
         print("Handling Unplanned Workouts...")
         unplanned_rows = []
