@@ -74,8 +74,6 @@ export const Parser = {
 
         let hrIdx = -1, powerIdx = -1, speedIdx = -1, tssIdx = -1, activityIdIdx = -1, cadenceIdx = -1; 
         let teLabelIdx = -1;
-        
-        // Indices for Growth Metrics & Normalized Power & Elevation
         let vo2Idx = -1, gctIdx = -1, vertIdx = -1, anaerobicIdx = -1, normPowerIdx = -1, elevIdx = -1;
         
         // --- NEW: Subjective Indices ---
@@ -95,9 +93,7 @@ export const Parser = {
                         else if (h.includes('planned workout')) planWorkoutIdx = index;
                         else if (h.includes('planned duration')) planDurIdx = index;
                         else if (h.includes('actual duration')) actDurIdx = index;
-                        
                         else if (h === 'duration') rawDurIdx = index;
-
                         else if (h.includes('actual workout')) actWorkoutIdx = index;
                         else if (h.includes('notes') || h.includes('target')) notesIdx = index;
                         else if (h.includes('averagehr')) hrIdx = index;
@@ -163,6 +159,7 @@ export const Parser = {
             const elevationGain = parseFloat(getCol(elevIdx)) || 0; 
 
             // --- NEW: Extract RPE and Feeling ---
+            // We keep these as strings initially to check if they exist ("" vs "0")
             const rpe = getCol(rpeIdx);       
             const feeling = getCol(feelIdx);
 
@@ -215,7 +212,7 @@ export const Parser = {
                     normPower, 
                     trainingStressScore: tss,
                     elevationGain,
-                    // --- NEW: Pass RPE to Charts ---
+                    // --- NEW: Pass data to Charts ---
                     RPE: rpe,        
                     Feeling: feeling
                 });
