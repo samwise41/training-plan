@@ -76,8 +76,9 @@ export const Parser = {
         let teLabelIdx = -1;
         let vo2Idx = -1, gctIdx = -1, vertIdx = -1, anaerobicIdx = -1, normPowerIdx = -1, elevIdx = -1;
         
-        // --- NEW: Subjective Indices ---
+        // --- NEW: Indices ---
         let rpeIdx = -1, feelIdx = -1;
+        let sportTypeIdx = -1, actTypeIdx = -1;
 
         let data = [];
 
@@ -112,9 +113,11 @@ export const Parser = {
                         else if (h.includes('normpower')) normPowerIdx = index;
                         else if (h.includes('elevationgain')) elevIdx = index;
                         
-                        // --- NEW: Map Subjective Columns ---
+                        // --- NEW: Map Additional Columns ---
                         else if (h === 'rpe') rpeIdx = index;
                         else if (h === 'feeling') feelIdx = index;
+                        else if (h.includes('sporttypeid')) sportTypeIdx = index;
+                        else if (h.includes('activitytype')) actTypeIdx = index;
                     });
                     if (dateIdx !== -1) break; 
                 }
@@ -158,10 +161,11 @@ export const Parser = {
             const normPower = parseFloat(getCol(normPowerIdx)) || 0; 
             const elevationGain = parseFloat(getCol(elevIdx)) || 0; 
 
-            // --- NEW: Extract RPE and Feeling ---
-            // We keep these as strings initially to check if they exist ("" vs "0")
+            // --- NEW: Extract Raw Data ---
             const rpe = getCol(rpeIdx);       
             const feeling = getCol(feelIdx);
+            const sportTypeId = getCol(sportTypeIdx);
+            const activityType = getCol(actTypeIdx);
 
             let date = null;
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -214,7 +218,9 @@ export const Parser = {
                     elevationGain,
                     // --- NEW: Pass data to Charts ---
                     RPE: rpe,        
-                    Feeling: feeling
+                    Feeling: feeling,
+                    sportTypeId,
+                    activityType
                 });
             }
         }
