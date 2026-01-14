@@ -20,7 +20,7 @@ BRIEF_FILE = os.path.join(ROOT_DIR, 'COACH_BRIEFING.md')
 GARMIN_JSON = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
 GARMIN_FETCH_CMD = [sys.executable, os.path.join(SCRIPT_DIR, "fetch_garmin.py")]
 
-# Updated Schema: RPE and Feeling moved to the END
+# Updated Schema: RPE and Feeling at the END
 MASTER_COLUMNS = [
     'Status', 'Day', 'Planned Workout', 'Planned Duration', 
     'Actual Workout', 'Actual Duration', 'Notes / Targets', 'Date', 'Match Status',
@@ -41,17 +41,19 @@ SPORT_IDS = {
     'SWIM': [5, 26, 18] 
 }
 
+# Added subjective_efficiency here
 METRICS = {
-    'aerobic_efficiency': {'unit': 'EF', 'good': 'up', 'range': (1.3, 1.7)},
-    'torque_efficiency':  {'unit': 'W/RPM', 'good': 'up', 'range': (2.5, 3.5)},
-    'run_economy':        {'unit': 'm/beat', 'good': 'up', 'range': (1.0, 1.6)},
-    'run_stiffness':      {'unit': 'ratio', 'good': 'up', 'range': (0.75, 0.95)},
-    'swim_efficiency':    {'unit': 'm/beat', 'good': 'up', 'range': (0.3, 0.6)},
-    'ground_contact':     {'unit': 'ms', 'good': 'down', 'range': (220, 260)},
-    'vertical_osc':       {'unit': 'cm', 'good': 'down', 'range': (6.0, 9.0)},
-    'vo2_max':            {'unit': 'ml/kg', 'good': 'up', 'range': (45, 60)},
-    'anaerobic_impact':   {'unit': 'TE', 'good': 'up', 'range': (2.0, 4.0)},
-    'weekly_tss':         {'unit': 'TSS', 'good': 'up', 'range': (300, 600)}
+    'aerobic_efficiency':    {'unit': 'EF', 'good': 'up', 'range': (1.3, 1.7)},
+    'subjective_efficiency': {'unit': 'W/RPE', 'good': 'up', 'range': (25, 50)}, # NEW
+    'torque_efficiency':     {'unit': 'W/RPM', 'good': 'up', 'range': (2.5, 3.5)},
+    'run_economy':           {'unit': 'm/beat', 'good': 'up', 'range': (1.0, 1.6)},
+    'run_stiffness':         {'unit': 'ratio', 'good': 'up', 'range': (0.75, 0.95)},
+    'swim_efficiency':       {'unit': 'm/beat', 'good': 'up', 'range': (0.3, 0.6)},
+    'ground_contact':        {'unit': 'ms', 'good': 'down', 'range': (220, 260)},
+    'vertical_osc':          {'unit': 'cm', 'good': 'down', 'range': (6.0, 9.0)},
+    'vo2_max':               {'unit': 'ml/kg', 'good': 'up', 'range': (45, 60)},
+    'anaerobic_impact':      {'unit': 'TE', 'good': 'up', 'range': (2.0, 4.0)},
+    'weekly_tss':            {'unit': 'TSS', 'good': 'up', 'range': (300, 600)}
 }
 
 def print_header(msg):
@@ -130,7 +132,11 @@ def analyze_metric(df, col_name, config):
             if days == 30: results['current'] = avg_val
         return results
     if col_name not in df.columns: return {'30d': 'No Data', '90d': 'No Data', '6m': 'No Data'}
+    
+    # Filter valid data
     df_clean = df.dropna(subset=[col_name]).sort_values('startTimeLocal')
+    df_clean = df_clean[df_clean[col_name] > 0] # Filter out zeros
+    
     for days in [30, 90, 180]:
         cutoff = now - timedelta(days=days)
         subset = df_clean[df_clean['startTime_dt'] >= cutoff]
@@ -146,6 +152,7 @@ def analyze_metric(df, col_name, config):
 
 def get_sport_filter(row, sport_type):
     act_type = row.get('activityType', {})
+    if isinstance(act_type, str): return False
     type_id = act_type.get('typeId')
     parent_id = act_type.get('parentTypeId')
     target_ids = SPORT_IDS.get(sport_type, [])
@@ -172,7 +179,21 @@ def run_internal_trend_analysis():
         is_run = df.apply(lambda x: get_sport_filter(x, 'RUN'), axis=1)
         is_bike = df.apply(lambda x: get_sport_filter(x, 'BIKE'), axis=1)
         is_swim = df.apply(lambda x: get_sport_filter(x, 'SWIM'), axis=1)
+        
+        # --- 1. Physiological Efficiency ---
         df['aerobic_efficiency'] = np.where(is_bike & (df['avgPower'] > 0) & (df['averageHR'] > 0), df['avgPower'] / df['averageHR'], np.nan)
+        
+        # --- 2. Subjective Efficiency (NEW) ---
+        if 'perceivedEffort' in df.columns:
+            df['rpe_numeric'] = pd.to_numeric(df['perceivedEffort'], errors='coerce')
+            df['subjective_efficiency'] = np.where(
+                is_bike & (df['avgPower'] > 0) & (df['rpe_numeric'] > 0), 
+                df['avgPower'] / df['rpe_numeric'], 
+                np.nan
+            )
+        else:
+            df['subjective_efficiency'] = np.nan
+
         df['torque_efficiency'] = np.where(is_bike & (df['avgPower'] > 0) & (df['averageBikingCadenceInRevPerMinute'] > 0), df['avgPower'] / df['averageBikingCadenceInRevPerMinute'], np.nan)
         df['run_speed_m_min'] = df['averageSpeed'] * 60
         df['run_economy'] = np.where(is_run & (df['averageHR'] > 0), df['run_speed_m_min'] / df['averageHR'], np.nan)
@@ -184,6 +205,7 @@ def run_internal_trend_analysis():
         df['vo2_max'] = df.get('vO2MaxValue', np.nan)
         df['anaerobic_impact'] = df.get('anaerobicTrainingEffect', np.nan)
         if 'trainingStressScore' not in df.columns: df['trainingStressScore'] = np.nan
+        
         print(f"Writing briefing to: {BRIEF_FILE}")
         with open(BRIEF_FILE, 'w', encoding='utf-8') as f:
             f.write("# 🤖 AI Coach Context Briefing\n")
@@ -501,19 +523,13 @@ def main():
                             is_row_modified = True
                 
                 # --- SPECIAL MAP: RPE / FEELING ---
-                # Check different JSON keys depending on structure (summary vs selfEvaluation)
-                
-                # 1. Check for 'perceivedEffort' (Root Level)
                 rpe_val = match.get('perceivedEffort')
                 if rpe_val is None and 'summaryDTO' in match:
-                     # 2. Check summaryDTO for 'directWorkoutRpe' and convert (0-100 -> 1-10)
                      raw_rpe = match['summaryDTO'].get('directWorkoutRpe')
                      if raw_rpe: rpe_val = int(raw_rpe / 10)
                 
-                # 1. Check for 'feeling' (Root Level)
                 feel_val = match.get('feeling')
                 if feel_val is None and 'summaryDTO' in match:
-                     # 2. Check summaryDTO for 'directWorkoutFeel' and convert (0-100 -> 1-5)
                      raw_feel = match['summaryDTO'].get('directWorkoutFeel')
                      if raw_feel: feel_val = int((raw_feel / 25) + 1)
 
