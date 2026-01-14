@@ -33,21 +33,20 @@ export function renderMetrics(allData) {
     const tableSection = buildCollapsibleSection('metrics-table-section', 'Physiological Trends', tableHtml, true);
 
     // --- CHART SECTION HEADERS ---
-    const buildSectionHeader = (title, icon, color) => `
+    const buildSectionHeader = (title, icon, colorClass) => `
         <div class="col-span-full mt-6 mb-2 flex items-center gap-2 border-b border-slate-700/50 pb-2">
-            <i class="fa-solid ${icon} ${color}"></i>
+            <i class="fa-solid ${icon} ${colorClass}"></i>
             <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">${title}</h3>
         </div>`;
 
     const chartsGrid = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
             ${buildSectionHeader('Health & Readiness', 'fa-battery-full', 'text-emerald-400')}
             <div id="metric-chart-health_rhr"></div>
             <div id="metric-chart-health_hrv"></div>
             <div id="metric-chart-health_sleep"></div>
-            <div class="hidden md:block"></div> // ...
-            
-            ${buildSectionHeader('General Fitness', 'fa-heart-pulse', 'icon-all')}
+            <div class="hidden md:block"></div> ${buildSectionHeader('General Fitness', 'fa-heart-pulse', 'icon-all')}
             <div id="metric-chart-vo2max"></div>
             <div id="metric-chart-tss"></div>
             <div id="metric-chart-anaerobic"></div>
