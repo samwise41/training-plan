@@ -9,7 +9,7 @@ import time
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 OUTPUT_FILE = os.path.join(ROOT_DIR, 'garmind_data', 'garmin_health.md')
-DAYS_TO_FETCH = 60  # How far back to look
+DAYS_TO_FETCH = 60 
 
 # --- CREDENTIALS ---
 EMAIL = os.environ.get('GARMIN_EMAIL')
@@ -19,7 +19,6 @@ def init_garmin():
     if not EMAIL or not PASSWORD:
         print("❌ Error: Credentials missing.")
         sys.exit(1)
-    
     try:
         print("🔐 Authenticating with Garmin Connect...")
         client = Garmin(EMAIL, PASSWORD)
@@ -29,95 +28,99 @@ def init_garmin():
         print(f"❌ Login Failed: {e}")
         sys.exit(1)
 
-# --- NEW: INSPECTION HELPER ---
-def inspect_sample(data):
+# --- DYNAMIC DATA EXTRACTOR ---
+def flatten_health_data(summary):
     """
-    Prints every field available in the daily health summary.
-    This runs only once per execution to avoid log spam.
+    Automatically extracts all useful scalar metrics from the daily summary
+    so we don't have to hardcode every single field name.
     """
-    if not data: return
-
-    print("\n" + "="*60)
-    print("🔍 HEALTH DATA FIELD INSPECTION (SAMPLE)")
-    print("="*60)
+    row = {}
+    if not summary: return row
     
-    # Sort keys alphabetically for easier reading
-    for key in sorted(data.keys()):
-        val = data[key]
-        val_str = str(val)
-        
-        # Truncate very long values (like nested lists)
-        if len(val_str) > 100: val_str = val_str[:100] + "..."
-        
-        if val is None or val == "":
-            print(f"   ⚪ {key}: <empty>")
-        else:
-            print(f"   🔹 {key}: {val_str}")
-            
-    print("="*60 + "\n")
+    # 1. Standardize Date
+    if 'calendarDate' in summary:
+        row['Date'] = summary['calendarDate']
+    
+    # 2. Calculated Conversions (Make these readable)
+    if 'sleepingSeconds' in summary and summary['sleepingSeconds']:
+        row['Sleep Hours'] = round(summary['sleepingSeconds'] / 3600, 1)
+    
+    # 3. Dynamic Extraction (The "Capture Everything" Logic)
+    # We map ugly API keys to nice readable column headers
+    field_map = {
+        'restingHeartRate': 'Resting HR',
+        'minHeartRate': 'Min HR',
+        'maxHeartRate': 'Max HR',
+        'averageStressLevel': 'Stress Avg',
+        'maxStressLevel': 'Stress Max',
+        'totalSteps': 'Steps',
+        'totalDistanceMeters': 'Distance (m)',
+        'floorsClimbed': 'Floors',
+        'activeCalories': 'Active Cals',
+        'bmrCalories': 'BMR Cals',
+        'moderateIntensityMinutes': 'Mod Minutes',
+        'vigorousIntensityMinutes': 'Vig Minutes',
+        'bodyBatteryHighestValue': 'Body Batt Max',
+        'bodyBatteryLowestValue': 'Body Batt Min',
+        'sleepScore': 'Sleep Score',
+        'hrvStatusBalanced': 'HRV Status'
+    }
+
+    for api_key, nice_name in field_map.items():
+        if api_key in summary and summary[api_key] is not None:
+            row[nice_name] = summary[api_key]
+
+    # 4. Fallback: specific Fallback for Body Battery if 'HighestValue' key changes
+    if 'Body Batt Max' not in row and 'maxBodyBattery' in summary:
+        row['Body Batt Max'] = summary['maxBodyBattery']
+    
+    return row
 
 def fetch_daily_stats(client, start_date, end_date):
     print(f"📡 Fetching Health Data from {start_date} to {end_date}...")
     
     days = (end_date - start_date).days + 1
-    data = []
-    has_inspected = False # Ensure we only inspect once
+    all_data = []
 
     for i in range(days):
         current_date = end_date - timedelta(days=i)
         date_str = current_date.isoformat()
         
         try:
-            # 1. Fetch Daily Summary
             summary = client.get_user_summary(date_str)
             
-            # --- TRIGGER INSPECTION (First successful fetch only) ---
-            if not has_inspected and summary:
-                inspect_sample(summary)
-                has_inspected = True
-            # --------------------------------------------------------
-            
-            # 2. Extract Key Metrics
-            rhr = summary.get('restingHeartRate')
-            total_steps = summary.get('totalSteps')
-            avg_stress = summary.get('averageStressLevel')
-            body_batt_max = summary.get('maxBodyBattery')
-            body_batt_min = summary.get('minBodyBattery')
-            
-            # 3. Sleep Data
-            sleep_sec = summary.get('sleepingSeconds')
-            sleep_hrs = round(sleep_sec / 3600, 1) if sleep_sec else None
-            sleep_score = summary.get('sleepScore')
+            # --- USE DYNAMIC EXTRACTOR ---
+            row = flatten_health_data(summary)
+            # -----------------------------
 
-            # Only add if we have relevant data
-            if rhr or sleep_hrs:
-                print(f"   ✅ {date_str}: RHR {rhr} | Sleep {sleep_hrs}h | Stress {avg_stress}")
-                data.append({
-                    'Date': date_str,
-                    'Resting HR': rhr if rhr else '--',
-                    'Sleep Hours': sleep_hrs if sleep_hrs else '--',
-                    'Sleep Score': sleep_score if sleep_score else '--',
-                    'Stress Avg': avg_stress if avg_stress else '--',
-                    'Body Batt Max': body_batt_max if body_batt_max else '--',
-                    'Steps': total_steps if total_steps else '--'
-                })
+            if row:
+                # Log a few key stats to console just to show it's working
+                rhr = row.get('Resting HR', '--')
+                sleep = row.get('Sleep Hours', '--')
+                print(f"   ✅ {date_str}: RHR {rhr} | Sleep {sleep}h")
+                all_data.append(row)
             else:
-                print(f"   ⚠️ {date_str}: No significant health data.")
+                print(f"   ⚠️ {date_str}: No data.")
                 
         except Exception as e:
-            print(f"   ❌ {date_str}: Error fetching ({str(e)})")
+            print(f"   ❌ {date_str}: Error ({str(e)})")
         
-        time.sleep(0.5) # Rate limiting
+        time.sleep(0.5) 
 
-    return data
+    return all_data
 
 def save_to_markdown(data):
     if not data:
         print("⚠️ No data to save.")
         return
 
+    # Create DataFrame
     df = pd.DataFrame(data)
     
+    # Smart Column Sorting: Date first, then the rest
+    cols = ['Date'] + [c for c in df.columns if c != 'Date']
+    df = df[cols]
+
     # Ensure directory exists
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     
@@ -132,10 +135,8 @@ def save_to_markdown(data):
 
 def main():
     client = init_garmin()
-    
     today = date.today()
     start_date = today - timedelta(days=DAYS_TO_FETCH)
-    
     health_data = fetch_daily_stats(client, start_date, today)
     save_to_markdown(health_data)
 
