@@ -89,15 +89,25 @@ def detect_sport(text):
     return 'OTHER'
 
 def get_garmin_sport(act):
-    # Helper to normalize Garmin sport types
+    # Helper to normalize Garmin sport types for grouping
     t = act.get('activityType', {}).get('typeKey', '').lower()
     if 'running' in t: return 'RUN'
     if 'cycling' in t or 'biking' in t or 'virtual_ride' in t: return 'BIKE'
     if 'swimming' in t: return 'SWIM'
     return 'OTHER'
 
-# --- CORE LOGIC: BUNDLING ---
-def aggregate_activities(activities):
+def is_value_different(db_val, json_val):
+    str_db = str(db_val).strip()
+    if not str_db or str_db.lower() == 'nan': return False
+    try:
+        f_db = float(str_db)
+        f_json = float(json_val)
+        return abs(f_db - f_json) > 0.1
+    except:
+        return str_db != str(json_val).strip()
+
+# --- AGGREGATION LOGIC ---
+def bundle_activities(activities):
     """Merges a list of activities into one weighted record."""
     if not activities: return None
     if len(activities) == 1: return activities[0]
@@ -137,7 +147,14 @@ def aggregate_activities(activities):
     
     # 4. Metadata
     combined['activityName'] = f"{main_act.get('activityName')} (+{len(activities)-1})"
+    # IMPORTANT: Store CSV of IDs to track claimed status
     combined['activityId'] = ",".join(str(a.get('activityId')) for a in activities)
+
+    # 5. RPE/Feeling (Take from main activity)
+    if 'perceivedEffort' not in combined and 'perceivedEffort' in main_act:
+        combined['perceivedEffort'] = main_act['perceivedEffort']
+    if 'feeling' not in combined and 'feeling' in main_act:
+        combined['feeling'] = main_act['feeling']
 
     return combined
 
@@ -176,7 +193,7 @@ def cluster_activities_by_time(candidates, target_sport=None):
         # Check Gap
         prev_act = current_cluster[-1]
         
-        # Check Sport Consistency (only bundle same sports)
+        # Check Sport Consistency (only bundle same sports together)
         if get_garmin_sport(prev_act) != get_garmin_sport(act):
              clusters.append(current_cluster)
              current_cluster = [act]
@@ -197,8 +214,8 @@ def cluster_activities_by_time(candidates, target_sport=None):
             
     if current_cluster: clusters.append(current_cluster)
 
-    # Aggregate each cluster
-    results = [aggregate_activities(c) for c in clusters]
+    # Aggregate each cluster into a single dict
+    results = [bundle_activities(c) for c in clusters]
     return results
 
 # --- MAIN SYNC ---
@@ -289,7 +306,11 @@ def sync():
         
         # Don't overwrite if manually linked (unless empty)
         current_id = str(row.get('activityId', '')).strip()
-        if current_id and current_id != 'nan' and ',' in current_id: continue 
+        if current_id and current_id != 'nan' and ',' in current_id: 
+            # If already a bundle in DB, mark its parts as claimed so we don't duplicate in Unplanned
+            for sub_id in current_id.split(','):
+                claimed_ids.add(sub_id.strip())
+            continue 
 
         # --- LOGIC: Find Best Bundle ---
         # 1. Generate all valid bundles for this sport on this day
@@ -304,7 +325,6 @@ def sync():
             if any(bid in claimed_ids for bid in b_ids): continue
             
             # Simple heuristic: Pick the first valid bundle we find
-            # (Since they are sorted by time, this usually maps AM plan to AM ride)
             best_match = bundle
             break
         
@@ -345,10 +365,9 @@ def sync():
                 if raw: feel_val = int((raw / 25) + 1)
             if feel_val: df_master.at[idx, 'Feeling'] = str(feel_val)
 
-    # 3. Handle Unplanned (Bundling Leftovers)
+    # 3. Handle Unplanned (Also Bundled)
     unplanned_rows = []
     
-    # Re-scan all dates to find unclaimed items
     for date_key, day_activities in garmin_by_date.items():
         # Get all bundles for this day (Any Sport)
         all_day_bundles = cluster_activities_by_time(day_activities, target_sport=None)
@@ -356,8 +375,9 @@ def sync():
         for bundle in all_day_bundles:
             b_ids = str(bundle['activityId']).split(',')
             
-            # If ANY part of this bundle is claimed, ignore the whole thing
-            # (Because the parts were either used in a Planned match, or handled)
+            # CRITICAL CHECK:
+            # If ANY part of this bundle is claimed, ignore the whole thing.
+            # This prevents adding "Warmup" as unplanned if "Race" matched the plan.
             if any(bid in claimed_ids for bid in b_ids): continue
             
             # Create Unplanned Entry
@@ -372,7 +392,6 @@ def sync():
             for col in cols_to_map:
                 if col in bundle: new_row[col] = bundle[col]
             
-            # RPE/Feeling for Unplanned
             rpe_val = bundle.get('perceivedEffort')
             if rpe_val is None and 'summaryDTO' in bundle:
                  raw_rpe = bundle['summaryDTO'].get('directWorkoutRpe')
@@ -384,7 +403,7 @@ def sync():
             
             unplanned_rows.append(new_row)
             
-            # Mark as claimed so we don't duplicate
+            # Mark these as claimed so we don't duplicate them in a different pass
             for bid in b_ids: claimed_ids.add(bid)
 
     if unplanned_rows:
