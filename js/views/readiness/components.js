@@ -29,9 +29,9 @@ export const renderGuide = () => `
         </div>
         <div class="grid grid-cols-3 text-center py-4 px-2">
             <div class="flex flex-col items-center">
-                <div class="w-3 h-3 rounded-full bg-emerald-500 mb-2 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                <span class="text-[10px] font-black text-emerald-500 uppercase">Race Ready</span>
-                <span class="text-[10px] text-slate-400">85% - 100%</span>
+                <div class="w-3 h-3 rounded-full bg-red-500 mb-2 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+                <span class="text-[10px] font-black text-red-500 uppercase">Warning</span>
+                <span class="text-[10px] text-slate-400">&lt; 60%</span>
             </div>
             <div class="flex flex-col items-center border-x border-slate-700">
                 <div class="w-3 h-3 rounded-full bg-yellow-500 mb-2 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div>
@@ -39,9 +39,9 @@ export const renderGuide = () => `
                 <span class="text-[10px] text-slate-400">60% - 84%</span>
             </div>
             <div class="flex flex-col items-center">
-                <div class="w-3 h-3 rounded-full bg-red-500 mb-2 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
-                <span class="text-[10px] font-black text-red-500 uppercase">Warning</span>
-                <span class="text-[10px] text-slate-400">&lt; 60%</span>
+                <div class="w-3 h-3 rounded-full bg-emerald-500 mb-2 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                <span class="text-[10px] font-black text-emerald-500 uppercase">Race Ready</span>
+                <span class="text-[10px] text-slate-400">85% - 100%</span>
             </div>
         </div>
         <div class="bg-slate-900/30 p-2 text-center border-t border-slate-700/50">
