@@ -1,8 +1,9 @@
 
 ## 🏥 Health & Readiness (Latest: 2026-01-14)
-* **Resting HR:** None bpm
-* **HRV Status:** None ms
+* **Resting HR:** -- bpm
+* **HRV Status:** 94 ms
 * **Sleep Score:** 80/100
+* **Body Battery:** --/100
 * ** AI Auto-Regulation:** **HIGH** - Green light for Key Workouts.
 
 # 🤖 AI Coach Context Briefing
