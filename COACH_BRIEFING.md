@@ -1,11 +1,11 @@
 # 🤖 AI Coach Context Briefing
-**Last Updated:** 2026-01-14 16:30
+**Last Updated:** 2026-01-14 16:35
 
 ## 1. Physiological Trends
 | Metric | Target | 30d Trend | 90d Trend | 6m Trend | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Aerobic Efficiency** | 1.3-1.7 EF | ↘️ Declining (Avg: 1.15) | ↘️ Declining (Avg: 1.17) | -- | ⚠️ Low |
-| **Subjective Efficiency** | 25-50 W/RPE | ↘️ Declining (Avg: 29.02) | ↗️ Improving (Avg: 29.94) | -- | ✅ |
+| **Subjective Efficiency** | 25-50 W/RPE | ↘️ Declining (Avg: 28.05) | ↘️ Declining (Avg: 29.34) | -- | ✅ |
 | **Torque Efficiency** | 2.5-3.5 W/RPM | ↗️ Improving (Avg: 1.99) | ↗️ Improving (Avg: 1.96) | -- | ⚠️ Low |
 | **Run Economy** | 1.0-1.6 m/beat | ↗️ Improving (Avg: 1.17) | ↗️ Improving (Avg: 1.16) | -- | ✅ |
 | **Run Stiffness** | 0.75-0.95 ratio | ↘️ Declining (Avg: 0.85) | ↗️ Improving (Avg: 0.85) | -- | ✅ |
