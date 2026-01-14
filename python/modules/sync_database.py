@@ -179,7 +179,7 @@ def cluster_activities_by_time(candidates, target_sport=None):
 
     if not relevant: return []
 
-    # Sort by Start Time
+    # Sort by Start Time to ensure chaining (Warmup -> Ride -> Cool)
     relevant.sort(key=lambda x: x.get('startTimeLocal', ''))
 
     clusters = []
@@ -200,12 +200,18 @@ def cluster_activities_by_time(candidates, target_sport=None):
              continue
 
         prev_start = pd.to_datetime(prev_act.get('startTimeLocal'))
-        prev_dur = prev_act.get('duration', 0)
+        
+        # Use elapsedDuration if available for accurate "wall clock" end time
+        prev_dur = prev_act.get('elapsedDuration', prev_act.get('duration', 0))
         prev_end = prev_start + timedelta(seconds=prev_dur)
         
         curr_start = pd.to_datetime(act.get('startTimeLocal'))
+        
+        # Gap Calculation
         gap_minutes = (curr_start - prev_end).total_seconds() / 60.0
         
+        # Threshold: 60 minutes
+        # Note: If gap is negative (overlap), it's also <= 60, so it bundles.
         if gap_minutes <= 60:
             current_cluster.append(act)
         else:
@@ -325,6 +331,7 @@ def sync():
             if any(bid in claimed_ids for bid in b_ids): continue
             
             # Simple heuristic: Pick the first valid bundle we find
+            # (Since they are sorted by time, this usually maps AM plan to AM ride)
             best_match = bundle
             break
         
@@ -377,7 +384,6 @@ def sync():
             
             # CRITICAL CHECK:
             # If ANY part of this bundle is claimed, ignore the whole thing.
-            # This prevents adding "Warmup" as unplanned if "Race" matched the plan.
             if any(bid in claimed_ids for bid in b_ids): continue
             
             # Create Unplanned Entry
@@ -392,6 +398,7 @@ def sync():
             for col in cols_to_map:
                 if col in bundle: new_row[col] = bundle[col]
             
+            # RPE/Feeling for Unplanned
             rpe_val = bundle.get('perceivedEffort')
             if rpe_val is None and 'summaryDTO' in bundle:
                  raw_rpe = bundle['summaryDTO'].get('directWorkoutRpe')
