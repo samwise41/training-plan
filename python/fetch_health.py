@@ -29,22 +29,53 @@ def init_garmin():
         print(f"❌ Login Failed: {e}")
         sys.exit(1)
 
+# --- NEW: INSPECTION HELPER ---
+def inspect_sample(data):
+    """
+    Prints every field available in the daily health summary.
+    This runs only once per execution to avoid log spam.
+    """
+    if not data: return
+
+    print("\n" + "="*60)
+    print("🔍 HEALTH DATA FIELD INSPECTION (SAMPLE)")
+    print("="*60)
+    
+    # Sort keys alphabetically for easier reading
+    for key in sorted(data.keys()):
+        val = data[key]
+        val_str = str(val)
+        
+        # Truncate very long values (like nested lists)
+        if len(val_str) > 100: val_str = val_str[:100] + "..."
+        
+        if val is None or val == "":
+            print(f"   ⚪ {key}: <empty>")
+        else:
+            print(f"   🔹 {key}: {val_str}")
+            
+    print("="*60 + "\n")
+
 def fetch_daily_stats(client, start_date, end_date):
     print(f"📡 Fetching Health Data from {start_date} to {end_date}...")
     
     days = (end_date - start_date).days + 1
     data = []
+    has_inspected = False # Ensure we only inspect once
 
-    # Garmin API can be sensitive to rapid requests, so we loop carefully
-    # Optimization: 'get_user_summary' usually works for a single date
-    
     for i in range(days):
         current_date = end_date - timedelta(days=i)
         date_str = current_date.isoformat()
         
         try:
-            # 1. Fetch Daily Summary (Contains RHR, Steps, Stress)
+            # 1. Fetch Daily Summary
             summary = client.get_user_summary(date_str)
+            
+            # --- TRIGGER INSPECTION (First successful fetch only) ---
+            if not has_inspected and summary:
+                inspect_sample(summary)
+                has_inspected = True
+            # --------------------------------------------------------
             
             # 2. Extract Key Metrics
             rhr = summary.get('restingHeartRate')
@@ -53,15 +84,12 @@ def fetch_daily_stats(client, start_date, end_date):
             body_batt_max = summary.get('maxBodyBattery')
             body_batt_min = summary.get('minBodyBattery')
             
-            # 3. Fetch Sleep Data (Separate Endpoint usually required for details, 
-            # but summary often has 'sleepingSeconds')
+            # 3. Sleep Data
             sleep_sec = summary.get('sleepingSeconds')
             sleep_hrs = round(sleep_sec / 3600, 1) if sleep_sec else None
-            
-            # 4. Sleep Score (If available)
             sleep_score = summary.get('sleepScore')
 
-            # Only add if we have at least RHR or Sleep
+            # Only add if we have relevant data
             if rhr or sleep_hrs:
                 print(f"   ✅ {date_str}: RHR {rhr} | Sleep {sleep_hrs}h | Stress {avg_stress}")
                 data.append({
@@ -79,8 +107,7 @@ def fetch_daily_stats(client, start_date, end_date):
         except Exception as e:
             print(f"   ❌ {date_str}: Error fetching ({str(e)})")
         
-        # Polite delay
-        time.sleep(0.5)
+        time.sleep(0.5) # Rate limiting
 
     return data
 
