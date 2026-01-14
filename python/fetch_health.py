@@ -9,7 +9,7 @@ import time
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 OUTPUT_FILE = os.path.join(ROOT_DIR, 'garmind_data', 'garmin_health.md')
-DAYS_TO_FETCH = 60 
+DAYS_TO_FETCH = 300 
 
 # --- CREDENTIALS ---
 EMAIL = os.environ.get('GARMIN_EMAIL')
