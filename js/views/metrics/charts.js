@@ -4,10 +4,7 @@ import { calculateTrend, getTrendIcon } from './utils.js';
 import { extractMetricData } from './table.js';
 
 const METRIC_FORMULAS = {
-    // Health
-    'health_rhr': '(Resting BPM)',
-    'health_hrv': '(Overnight ms)',
-    'health_sleep': '(Score / 100)',
+
     
     // Subjective Efficiency
     'subjective_bike': '(Avg Power / RPE)',
@@ -251,28 +248,6 @@ export const updateCharts = (allData, timeRange) => {
         if (el) {
             let full;
             
-            // 1. HEALTH METRICS (Extract from Health Rows)
-            if (key.startsWith('health_')) {
-                full = allData
-                    .filter(d => d.isHealth) // Only grab rows marked as health
-                    .map(d => {
-                        let val = 0;
-                        if (key === 'health_rhr') val = d.rhr;
-                        if (key === 'health_hrv') val = d.hrv;
-                        if (key === 'health_sleep') val = d.sleep;
-                        
-                        if (val > 0) return { 
-                            date: d.date, 
-                            dateStr: d.dateStr || d.date.toISOString().split('T')[0], 
-                            val: val, 
-                            name: "Daily Health", 
-                            breakdown: `${val}` 
-                        };
-                        return null;
-                    })
-                    .filter(Boolean)
-                    .sort((a,b) => a.date - b.date);
-            }
             // 2. SUBJECTIVE (Extract from Activity Rows)
             else if (key === 'subjective_bike') full = calculateSubjectiveEfficiency(allData, 'bike');
             else if (key === 'subjective_run') full = calculateSubjectiveEfficiency(allData, 'run');
@@ -288,11 +263,6 @@ export const updateCharts = (allData, timeRange) => {
     };
 
     // --- RENDER IN ORDER ---
-
-    // 0. HEALTH
-    render('metric-chart-health_rhr', 'health_rhr');
-    render('metric-chart-health_hrv', 'health_hrv');
-    render('metric-chart-health_sleep', 'health_sleep');
 
     // 1. GENERAL FITNESS
     render('metric-chart-vo2max', 'vo2max');
