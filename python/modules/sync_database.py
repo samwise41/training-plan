@@ -349,7 +349,15 @@ def sync():
                 claimed_ids.add(str(m.get('activityId')))
 
             df_master.at[idx, 'Status'] = 'COMPLETED'
-            if str(df_master.at[idx, 'Match Status']) != 'Linked (modified)':
+            
+             # --- FIX: STATUS LOGIC ---
+            # If no planned workout text, or explicitly marked unplanned, set as Linked (Unplanned)
+            # This prevents it from flipping to 'Linked' or 'Linked (modified)'
+            current_status = str(df_master.at[idx, 'Match Status'])
+            planned_val = str(df_master.at[idx, 'Planned Workout']).strip()
+            if 'Unplanned' in current_status or not planned_val:
+                df_master.at[idx, 'Match Status'] = 'Linked (Unplanned)'
+            elif current_status != 'Linked (modified)':
                 df_master.at[idx, 'Match Status'] = 'Linked'
             
             df_master.at[idx, 'activityId'] = str(composite_match.get('activityId'))
