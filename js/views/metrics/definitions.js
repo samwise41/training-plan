@@ -29,6 +29,18 @@ export const METRIC_DEFINITIONS = {
         improvement: "• Technique<br>• Drag Reduction"
     },
     
+    // --- PHYSIOLOGICAL ---
+    vo2max: {
+        title: "VO2 Max", sport: "All", icon: "fa-lungs", colorVar: "#8b5cf6",
+        refMin: 45, refMax: 60, invertRanges: false, rangeInfo: "ml/kg/min",
+        description: "Maximum oxygen uptake estimate."
+    },
+    anaerobic: {
+        title: "Anaerobic Effect", sport: "All", icon: "fa-fire", colorVar: "#f97316",
+        refMin: 2.0, refMax: 4.0, invertRanges: false, rangeInfo: "2.0-4.0",
+        description: "High-intensity training load."
+    },
+    
     // --- EXISTING METRICS ---
     endurance: {
         title: "Aerobic Efficiency", sport: "Bike", icon: "fa-heart-pulse", colorVar: "var(--color-bike)",
