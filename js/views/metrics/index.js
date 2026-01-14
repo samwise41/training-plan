@@ -31,22 +31,36 @@ export function renderMetrics(allData) {
     const tableHtml = renderSummaryTable(cachedData);
     const tableSection = buildCollapsibleSection('metrics-table-section', 'Physiological Trends', tableHtml, true);
 
+    // --- REORGANIZED CHART GRIDS ---
+    const buildSectionHeader = (title, icon, color) => `
+        <div class="col-span-full mt-6 mb-2 flex items-center gap-2 border-b border-slate-700/50 pb-2">
+            <i class="fa-solid ${icon} ${color}"></i>
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">${title}</h3>
+        </div>`;
+
     const chartsGrid = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div id="metric-chart-subjective_bike"></div>
-            <div id="metric-chart-subjective_run"></div>
-            <div id="metric-chart-subjective_swim"></div>
             
-            <div id="metric-chart-endurance"></div>
-            <div id="metric-chart-strength"></div>
-            <div id="metric-chart-run"></div>
-            <div id="metric-chart-swim"></div> 
-            <div id="metric-chart-mechanical"></div>
-            <div id="metric-chart-gct"></div>
-            <div id="metric-chart-vert"></div>
+            ${buildSectionHeader('General Fitness', 'fa-heart-pulse', 'text-slate-400')}
             <div id="metric-chart-vo2max"></div>
             <div id="metric-chart-tss"></div>
             <div id="metric-chart-anaerobic"></div>
+
+            ${buildSectionHeader('Cycling Metrics', 'fa-person-biking', 'text-orange-400')}
+            <div id="metric-chart-subjective_bike"></div>
+            <div id="metric-chart-endurance"></div>
+            <div id="metric-chart-strength"></div>
+
+            ${buildSectionHeader('Running Metrics', 'fa-person-running', 'text-emerald-400')}
+            <div id="metric-chart-subjective_run"></div>
+            <div id="metric-chart-run"></div>
+            <div id="metric-chart-mechanical"></div>
+            <div id="metric-chart-gct"></div>
+            <div id="metric-chart-vert"></div>
+
+            ${buildSectionHeader('Swimming Metrics', 'fa-person-swimming', 'text-blue-400')}
+            <div id="metric-chart-subjective_swim"></div>
+            <div id="metric-chart-swim"></div> 
         </div>`;
     
     const chartsSection = buildCollapsibleSection('metrics-charts-section', 'Detailed Charts', chartsGrid, true);
