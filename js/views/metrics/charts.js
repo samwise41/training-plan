@@ -72,7 +72,7 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
 
 const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
-    if (!def) return '';
+    if (!def) return `<div class="p-4 text-xs text-red-400 border border-red-900 rounded bg-red-900/10">Definition missing for: ${key}</div>`;
 
     const unitLabel = def.rangeInfo.split(' ').pop(); 
     const color = def.colorVar;
@@ -157,7 +157,6 @@ const buildMetricChart = (displayData, fullData, key) => {
         <text x="${pad.l - 6}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(2)}</text>
     `;
 
-    // X-Axis Date Labels
     let xAxisLabelsHtml = '';
     if (displayData.length > 1) {
         const targetCount = 5; 
@@ -251,7 +250,6 @@ export const updateCharts = (allData, timeRange) => {
         }
     };
 
-    // --- RENDER ORDER (Matches HTML in Index.js) ---
     render('metric-chart-vo2max', 'vo2max');
     render('metric-chart-anaerobic', 'anaerobic');
     render('metric-chart-subjective_bike', 'subjective_bike');
