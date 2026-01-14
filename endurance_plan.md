@@ -159,7 +159,7 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 |:---|:---|:---|:---|:---|:---|:---|:---|
 | COMPLETED | Monday | [BIKE] Strength / Hill Focus | 40 mins | [BIKE] North Ayrshire Virtual Cycling | 45.7 | **Deload.** Focus: Low Cadence (60-65 rpm) intervals to fix low Torque Efficiency (1.90) . | 2026-01-12 |
 | COMPLETED | Tuesday | [SWIM] Technique Focus | 30 mins | [SWIM] Swim coaching session | 30.0 | **Deload.** Use a Pull Buoy if ankle kicking is painful. Focus: Smooth rotation. | 2026-01-13 |
-| PLANNED | Wednesday | [BIKE] Zwift Race | 45 mins | | | **Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus. | 2026-01-14 |
+| COMPLETED | Wednesday | [BIKE] Zwift Race | 45 mins | [BIKE] Zwift - Volcano Circuit CCW in Watopia | 17.9 | **Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus. | 2026-01-14 |
 | PLANNED | Thursday | [BIKE] Zone 2 Endurance | 45 mins | | | **Deload.** Easy spin. Zone 2 (134-180W). Keep it smooth. | 2026-01-15 |
 | PLANNED | Friday | [RUN] Easy / Base | 25 mins | | | **Ankle Test.** Flat surface only. Focus: High Cadence (175+ spm) to fix Ground Contact Time. | 2026-01-16 |
 | PLANNED | Saturday | [BIKE] Long Steady Distance | 75 mins | | | **Deload.** Reduced volume. Zone 2 Focus. Monitor Aerobic Efficiency. | 2026-01-17 |
