@@ -74,9 +74,11 @@ export const Parser = {
 
         let hrIdx = -1, powerIdx = -1, speedIdx = -1, tssIdx = -1, activityIdIdx = -1, cadenceIdx = -1; 
         let teLabelIdx = -1;
-        
-        // NEW: Indices for Growth Metrics & Normalized Power & Elevation
         let vo2Idx = -1, gctIdx = -1, vertIdx = -1, anaerobicIdx = -1, normPowerIdx = -1, elevIdx = -1;
+        
+        // --- NEW: Indices ---
+        let rpeIdx = -1, feelIdx = -1;
+        let sportTypeIdx = -1, actTypeIdx = -1;
 
         let data = [];
 
@@ -92,9 +94,7 @@ export const Parser = {
                         else if (h.includes('planned workout')) planWorkoutIdx = index;
                         else if (h.includes('planned duration')) planDurIdx = index;
                         else if (h.includes('actual duration')) actDurIdx = index;
-                        
                         else if (h === 'duration') rawDurIdx = index;
-
                         else if (h.includes('actual workout')) actWorkoutIdx = index;
                         else if (h.includes('notes') || h.includes('target')) notesIdx = index;
                         else if (h.includes('averagehr')) hrIdx = index;
@@ -105,13 +105,19 @@ export const Parser = {
                         else if (h.includes('averagebikingcadence')) cadenceIdx = index;
                         else if (h.includes('trainingeffectlabel')) teLabelIdx = index;
                         
-                        // NEW: Columns for Metrics.js
+                        // Metrics
                         else if (h.includes('vo2max')) vo2Idx = index;
                         else if (h.includes('groundcontact')) gctIdx = index;
                         else if (h.includes('verticaloscillation')) vertIdx = index;
                         else if (h.includes('anaerobictraining')) anaerobicIdx = index;
                         else if (h.includes('normpower')) normPowerIdx = index;
-                        else if (h.includes('elevationgain')) elevIdx = index; // Detect Elevation
+                        else if (h.includes('elevationgain')) elevIdx = index;
+                        
+                        // --- NEW: Map Additional Columns ---
+                        else if (h === 'rpe') rpeIdx = index;
+                        else if (h === 'feeling') feelIdx = index;
+                        else if (h.includes('sporttypeid')) sportTypeIdx = index;
+                        else if (h.includes('activitytype')) actTypeIdx = index;
                     });
                     if (dateIdx !== -1) break; 
                 }
@@ -153,7 +159,13 @@ export const Parser = {
             const avgVerticalOscillation = parseFloat(getCol(vertIdx)) || 0;
             const anaerobicTrainingEffect = parseFloat(getCol(anaerobicIdx)) || 0;
             const normPower = parseFloat(getCol(normPowerIdx)) || 0; 
-            const elevationGain = parseFloat(getCol(elevIdx)) || 0; // Extract Elevation
+            const elevationGain = parseFloat(getCol(elevIdx)) || 0; 
+
+            // --- NEW: Extract Raw Data ---
+            const rpe = getCol(rpeIdx);       
+            const feeling = getCol(feelIdx);
+            const sportTypeId = getCol(sportTypeIdx);
+            const activityType = getCol(actTypeIdx);
 
             let date = null;
             const ymdMatch = dateStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -203,7 +215,12 @@ export const Parser = {
                     anaerobicTrainingEffect,
                     normPower, 
                     trainingStressScore: tss,
-                    elevationGain // Store it
+                    elevationGain,
+                    // --- NEW: Pass data to Charts ---
+                    RPE: rpe,        
+                    Feeling: feeling,
+                    sportTypeId,
+                    activityType
                 });
             }
         }
