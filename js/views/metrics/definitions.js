@@ -8,6 +8,26 @@ export const SPORT_IDS = {
 
 export const METRIC_DEFINITIONS = {
     // --- 1. BIKE RPE EFFICIENCY ---
+
+    health_rhr: {
+        title: "Resting Heart Rate", sport: "Health", icon: "fa-bed-pulse", colorVar: "#ef4444",
+        refMin: 40, refMax: 55, invertRanges: true, rangeInfo: "40 – 55 bpm",
+        description: "Lowest HR during sleep. High values indicate fatigue or illness.",
+        improvement: "• Sleep Quality<br>• Reduce Alcohol"
+    },
+    health_hrv: {
+        title: "HRV Status (ms)", sport: "Health", icon: "fa-wave-square", colorVar: "#8b5cf6",
+        refMin: 40, refMax: 100, invertRanges: false, rangeInfo: "40 – 100 ms",
+        description: "Heart Rate Variability. Higher is generally better (parasympathetic dominance).",
+        improvement: "• Hydration<br>• Breathing Exercises"
+    },
+    health_sleep: {
+        title: "Sleep Score", sport: "Health", icon: "fa-moon", colorVar: "#3b82f6",
+        refMin: 80, refMax: 100, invertRanges: false, rangeInfo: "80 – 100",
+        description: "Garmin sleep quality score.",
+        improvement: "• Cold Room<br>• No Screens"
+    },
+    
     subjective_bike: {
         title: "Bike RPE Efficiency", sport: "Bike", icon: "fa-person-biking", colorVar: "var(--color-bike)",
         refMin: 25, refMax: 50, invertRanges: false, rangeInfo: "25 – 50 W/RPE",
