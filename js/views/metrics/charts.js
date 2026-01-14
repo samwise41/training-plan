@@ -4,27 +4,21 @@ import { calculateTrend, getTrendIcon } from './utils.js';
 import { extractMetricData } from './table.js';
 
 const METRIC_FORMULAS = {
-    // Subjective Efficiency
     'subjective_bike': '(Avg Power / RPE)',
     'subjective_run': '(Avg Speed / RPE)',
     'subjective_swim': '(Avg Speed / RPE)',
-    
-    // Standard
     'endurance': '(Norm Power / Avg HR)',
     'strength': '(Torque / Output)',
     'run': '(Avg Power / Avg Speed)',
     'swim': '(Avg Speed / Stroke Rate)',
     'mechanical': '(Vert Osc / GCT)',
-    
-    // General Fitness (Retained)
-    'vo2max': '(Garmin Estimate)',
-    'tss': '(Training Stress Score)'
+    'vo2max': '(Garmin Estimate)'
 };
 
 // --- Helper to calculate Subjective Efficiency per Sport ---
 const calculateSubjectiveEfficiency = (allData, sportMode) => {
     return allData
-        .filter(d => !d.isHealth) // Skip health rows
+        .filter(d => !d.isHealth) 
         .map(d => {
             const rpe = parseFloat(d.RPE);
             if (!rpe || rpe <= 0) return null;
@@ -33,7 +27,6 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
             let breakdown = "";
             let match = false;
 
-            // BIKE (Power / RPE)
             if (sportMode === 'bike') {
                 const isBike = d.sportTypeId == '2' || (d.activityType && d.activityType.includes('cycl')) || (d.actualType === 'Bike');
                 const pwr = parseFloat(d.avgPower);
@@ -43,7 +36,6 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
                     match = true;
                 }
             }
-            // RUN (Speed / RPE)
             else if (sportMode === 'run') {
                 const isRun = d.sportTypeId == '1' || (d.activityType && d.activityType.includes('run')) || (d.actualType === 'Run');
                 const spd = parseFloat(d.avgSpeed); 
@@ -53,7 +45,6 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
                     match = true;
                 }
             }
-            // SWIM (Speed / RPE)
             else if (sportMode === 'swim') {
                 const isSwim = d.sportTypeId == '5' || (d.activityType && d.activityType.includes('swim')) || (d.actualType === 'Swim');
                 const spd = parseFloat(d.avgSpeed);
@@ -81,13 +72,9 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
 
 const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
-    
-    // Safety check for missing definition
-    if (!def) {
-        return `<div class="bg-slate-800/30 border border-red-900/50 rounded-xl p-4 h-full flex items-center justify-center text-red-500 text-xs">Definition missing: ${key}</div>`;
-    }
+    if (!def) return '';
 
-    const unitLabel = def.rangeInfo ? def.rangeInfo.split(' ').pop() : ''; 
+    const unitLabel = def.rangeInfo.split(' ').pop(); 
     const color = def.colorVar;
 
     const now = new Date();
@@ -250,12 +237,11 @@ export const updateCharts = (allData, timeRange) => {
         if (el) {
             let full;
             
-            // 1. SUBJECTIVE EFFICIENCY (Your custom logic)
-            if (key === 'subjective_bike') full = calculateSubjectiveEfficiency(allData, 'bike');
-            else if (key === 'subjective_run') full = calculateSubjectiveEfficiency(allData, 'run');
-            else if (key === 'subjective_swim') full = calculateSubjectiveEfficiency(allData, 'swim');
-            
-            // 2. STANDARD & FITNESS
+            // 1. SUBJECTIVE EFFICIENCY
+            if (key.startsWith('subjective_')) {
+                full = calculateSubjectiveEfficiency(allData, key.split('_')[1]);
+            }
+            // 2. STANDARD
             else {
                 full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
             }
@@ -265,30 +251,20 @@ export const updateCharts = (allData, timeRange) => {
         }
     };
 
-    // --- RENDER ORDER ---
-
-    // 1. GENERAL FITNESS
+    // --- RENDER ORDER (Matches HTML in Index.js) ---
     render('metric-chart-vo2max', 'vo2max');
-    render('metric-chart-tss', 'tss');
     render('metric-chart-anaerobic', 'anaerobic');
-
-    // 2. CYCLING
     render('metric-chart-subjective_bike', 'subjective_bike');
+    render('metric-chart-subjective_run', 'subjective_run');
+    render('metric-chart-subjective_swim', 'subjective_swim');
     render('metric-chart-endurance', 'endurance');
     render('metric-chart-strength', 'strength');
-
-    // 3. RUNNING
-    render('metric-chart-subjective_run', 'subjective_run');
     render('metric-chart-run', 'run');
     render('metric-chart-mechanical', 'mechanical');
     render('metric-chart-gct', 'gct');
     render('metric-chart-vert', 'vert');
-
-    // 4. SWIMMING
-    render('metric-chart-subjective_swim', 'subjective_swim');
     render('metric-chart-swim', 'swim');
 
-    // Update Buttons
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
         if(btn) {
