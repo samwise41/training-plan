@@ -1,31 +1,49 @@
 import sys
-from modules import config, fetch_garmin, sync_database, analyze_trends, update_visuals, git_ops
+import os
+
+# Ensure we can import from local modules
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(SCRIPT_DIR)
+
+# Import our new modular components
+import fetch_garmin
+import analyze_trends
+from modules import config, sync_database, update_visuals, git_ops
 
 def main():
-    print("🚀 STARTING DAILY UPDATE WORKFLOW")
+    print("🚀 STARTING DAILY TRAINING SYNC")
+    print("==================================================")
 
-    # Step 1: Get Data
+    # STEP 1: Fetch from Garmin
+    # (Captures RPE, Feeling, and raw stats to JSON)
     try:
-        fetch_garmin.main() # Updates JSON
+        fetch_garmin.main()
     except Exception as e:
-        print(f"⚠️ Fetch warning: {e}")
+        print(f"⚠️ Garmin Fetch Warning: {e}")
+        # We continue even if fetch fails, so we can re-process existing data
 
-    # Step 2: Process Data
-    # (Matches Plan vs Actuals, Calculates RPE/Feeling/TSS)
-    sync_database.main() 
+    # STEP 2: Sync Database
+    # (Merges Plan + JSON -> Master DB)
+    # Returns the DataFrame so we don't have to reload it
+    df_master = sync_database.sync()
 
-    # Step 3: Analytics
-    # (Generates the Coach Briefing)
-    analyze_trends.main()
+    # STEP 3: Analyze Trends
+    # (Generates Coach Briefing from the fresh DB)
+    try:
+        analyze_trends.main()
+    except Exception as e:
+        print(f"⚠️ Analysis Warning: {e}")
 
-    # Step 4: Visuals
-    # (Updates the checkmarks in your endurance_plan.md)
-    update_visuals.main()
+    # STEP 4: Update Visuals
+    # (Updates checkmarks in the Markdown Plan)
+    if df_master is not None and not df_master.empty:
+        update_visuals.update_weekly_plan(df_master)
 
-    # Step 5: Save
+    # STEP 5: Save to GitHub
     git_ops.push_changes()
 
-    print("✅ WORKFLOW COMPLETE")
+    print("\n==================================================")
+    print("✅ DAILY SYNC COMPLETE")
 
 if __name__ == "__main__":
     main()
