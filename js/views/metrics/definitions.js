@@ -1,55 +1,41 @@
 // js/views/metrics/definitions.js
 
 export const SPORT_IDS = {
-    RUN: [1],      
-    BIKE: [2],     
-    SWIM: [5, 26, 18] 
+    RUN: [1],
+    BIKE: [2],
+    SWIM: [5, 26, 18]
 };
 
 export const METRIC_DEFINITIONS = {
-    // --- 1. BIKE RPE EFFICIENCY ---
-
-    health_rhr: {
-        title: "Resting Heart Rate", sport: "Health", icon: "fa-bed-pulse", colorVar: "#ef4444",
-        refMin: 40, refMax: 55, invertRanges: true, rangeInfo: "40 – 55 bpm",
-        description: "Lowest HR during sleep. High values indicate fatigue or illness.",
-        improvement: "• Sleep Quality<br>• Reduce Alcohol"
-    },
-    health_hrv: {
-        title: "HRV Status (ms)", sport: "Health", icon: "fa-wave-square", colorVar: "#8b5cf6",
-        refMin: 40, refMax: 100, invertRanges: false, rangeInfo: "40 – 100 ms",
-        description: "Heart Rate Variability. Higher is generally better (parasympathetic dominance).",
-        improvement: "• Hydration<br>• Breathing Exercises"
-    },
-    health_sleep: {
-        title: "Sleep Score", sport: "Health", icon: "fa-moon", colorVar: "#3b82f6",
-        refMin: 80, refMax: 100, invertRanges: false, rangeInfo: "80 – 100",
-        description: "Garmin sleep quality score.",
-        improvement: "• Cold Room<br>• No Screens"
-    },
-    
+    // --- SUBJECTIVE EFFICIENCY ---
     subjective_bike: {
-        title: "Bike RPE Efficiency", sport: "Bike", icon: "fa-person-biking", colorVar: "var(--color-bike)",
-        refMin: 25, refMax: 50, invertRanges: false, rangeInfo: "25 – 50 W/RPE",
-        description: "Power produced per unit of perceived effort. Higher is better.",
-        improvement: "• Aerobic Base<br>• Muscular Endurance"
+        title: "Bike Efficiency (Pwr/RPE)", sport: "Bike", icon: "fa-bolt", colorVar: "var(--color-bike)",
+        refMin: 20, refMax: 40, invertRanges: false, rangeInfo: "Watts per RPE point",
+        description: "Power produced per unit of perceived effort.",
+        improvement: "• Mental resilience<br>• Muscular endurance"
     },
-    // --- 2. RUN RPE EFFICIENCY ---
     subjective_run: {
-        title: "Run RPE Efficiency", sport: "Run", icon: "fa-person-running", colorVar: "var(--color-run)",
-        refMin: 0.6, refMax: 1.0, invertRanges: false, rangeInfo: "0.6 – 1.0 Spd/RPE",
-        description: "Speed (m/s) produced per unit of perceived effort.",
-        improvement: "• Run Economy<br>• Durability"
+        title: "Run Efficiency (Spd/RPE)", sport: "Run", icon: "fa-person-running", colorVar: "var(--color-run)",
+        refMin: 0.5, refMax: 1.0, invertRanges: false, rangeInfo: "Speed per RPE point",
+        description: "Speed maintained per unit of perceived effort.",
+        improvement: "• Tempo runs<br>• Pacing drills"
     },
-    // --- 3. SWIM RPE EFFICIENCY ---
     subjective_swim: {
-        title: "Swim RPE Efficiency", sport: "Swim", icon: "fa-person-swimming", colorVar: "var(--color-swim)",
-        refMin: 0.15, refMax: 0.3, invertRanges: false, rangeInfo: "0.15 – 0.3 Spd/RPE",
-        description: "Water speed (m/s) relative to effort.",
-        improvement: "• Technique<br>• Drag Reduction"
+        title: "Swim Efficiency (Spd/RPE)", sport: "Swim", icon: "fa-person-swimming", colorVar: "var(--color-swim)",
+        refMin: 0.5, refMax: 1.0, invertRanges: false, rangeInfo: "Speed per RPE point",
+        description: "Water speed per unit of perceived effort.",
+        improvement: "• Stroke technique<br>• Breathing drills"
     },
-    
-    // --- EXISTING METRICS ---
+
+    // --- PHYSIOLOGICAL ---
+    vo2max: {
+        title: "VO2 Max Estimate", sport: "All", icon: "fa-lungs", colorVar: "var(--color-all)",
+        refMin: 45, refMax: 60, invertRanges: false, rangeInfo: "ml/kg/min",
+        description: "Maximum oxygen volume your body can use.",
+        improvement: "• HIIT Intervals<br>• Threshold training"
+    },
+
+    // --- STANDARD METRICS ---
     endurance: {
         title: "Aerobic Efficiency", sport: "Bike", icon: "fa-heart-pulse", colorVar: "var(--color-bike)",
         refMin: 1.30, refMax: 1.70, invertRanges: false, rangeInfo: "1.30 – 1.70 EF",
@@ -91,18 +77,6 @@ export const METRIC_DEFINITIONS = {
         refMin: 6.0, refMax: 9.0, invertRanges: true, rangeInfo: "6.0 – 9.0 cm",
         description: "Vertical bounce.",
         improvement: "• Core Stability<br>• Hill Repeats"
-    },
-    vo2max: {
-        title: "VO₂ Max Trend", sport: "All", icon: "fa-lungs", colorVar: "var(--color-all)",
-        refMin: 45, refMax: 60, invertRanges: false, rangeInfo: "45 – 60+",
-        description: "Aerobic ceiling.",
-        improvement: "• VO2 Max Intervals<br>• Consistency"
-    },
-    tss: {
-        title: "Weekly TSS Load", sport: "All", icon: "fa-layer-group", colorVar: "var(--color-all)",
-        refMin: 300, refMax: 600, invertRanges: false, rangeInfo: "300 – 600 TSS",
-        description: "Total physiological load.",
-        improvement: "• Increase Volume<br>• Increase Intensity"
     },
     anaerobic: {
         title: "Anaerobic Impact", sport: "All", icon: "fa-fire", colorVar: "var(--color-all)",
