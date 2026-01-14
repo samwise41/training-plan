@@ -4,9 +4,17 @@ import { calculateTrend, getTrendIcon } from './utils.js';
 import { extractMetricData } from './table.js';
 
 const METRIC_FORMULAS = {
+    // Health
+    'health_rhr': '(Resting BPM)',
+    'health_hrv': '(Overnight ms)',
+    'health_sleep': '(Score / 100)',
+    
+    // Subjective Efficiency
     'subjective_bike': '(Avg Power / RPE)',
     'subjective_run': '(Avg Speed / RPE)',
     'subjective_swim': '(Avg Speed / RPE)',
+    
+    // Standard
     'endurance': '(Norm Power / Avg HR)',
     'strength': '(Torque / Output)',
     'run': '(Avg Power / Avg Speed)',
@@ -17,6 +25,7 @@ const METRIC_FORMULAS = {
 // --- Helper to calculate Subjective Efficiency per Sport ---
 const calculateSubjectiveEfficiency = (allData, sportMode) => {
     return allData
+        .filter(d => !d.isHealth) // Skip health rows
         .map(d => {
             const rpe = parseFloat(d.RPE);
             if (!rpe || rpe <= 0) return null;
@@ -59,7 +68,7 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
             if (match && val > 0) {
                 return {
                     date: d.date,
-                    dateStr: d.date.toISOString().split('T')[0],
+                    dateStr: d.dateStr || d.date.toISOString().split('T')[0],
                     val: val,
                     name: d.actualName || d.activityName || 'Activity',
                     breakdown: breakdown
@@ -73,7 +82,11 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
 
 const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
-    if (!def) return `<div class="p-4 text-red-500 text-xs">Error: Definition missing for ${key}</div>`;
+    
+    // Safety check for missing definition
+    if (!def) {
+        return `<div class="bg-slate-800/30 border border-red-900/50 rounded-xl p-4 h-full flex items-center justify-center text-red-500 text-xs">Definition missing: ${key}</div>`;
+    }
 
     const unitLabel = def.rangeInfo.split(' ').pop(); 
     const color = def.colorVar;
@@ -237,34 +250,72 @@ export const updateCharts = (allData, timeRange) => {
         const el = document.getElementById(id);
         if (el) {
             let full;
-            if (key === 'subjective_bike') full = calculateSubjectiveEfficiency(allData, 'bike');
+            
+            // 1. HEALTH METRICS (Extract from Health Rows)
+            if (key.startsWith('health_')) {
+                full = allData
+                    .filter(d => d.isHealth) // Only grab rows marked as health
+                    .map(d => {
+                        let val = 0;
+                        if (key === 'health_rhr') val = d.rhr;
+                        if (key === 'health_hrv') val = d.hrv;
+                        if (key === 'health_sleep') val = d.sleep;
+                        
+                        if (val > 0) return { 
+                            date: d.date, 
+                            dateStr: d.dateStr || d.date.toISOString().split('T')[0], 
+                            val: val, 
+                            name: "Daily Health", 
+                            breakdown: `${val}` 
+                        };
+                        return null;
+                    })
+                    .filter(Boolean)
+                    .sort((a,b) => a.date - b.date);
+            }
+            // 2. SUBJECTIVE (Extract from Activity Rows)
+            else if (key === 'subjective_bike') full = calculateSubjectiveEfficiency(allData, 'bike');
             else if (key === 'subjective_run') full = calculateSubjectiveEfficiency(allData, 'run');
             else if (key === 'subjective_swim') full = calculateSubjectiveEfficiency(allData, 'swim');
-            else full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
+            // 3. STANDARD (Extract from Activity Rows)
+            else {
+                full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
+            }
             
             const display = full.filter(d => d.date >= cutoff);
             el.innerHTML = buildMetricChart(display, full, key);
         }
     };
 
-    // Render grouped charts
+    // --- RENDER IN ORDER ---
+
+    // 0. HEALTH
+    render('metric-chart-health_rhr', 'health_rhr');
+    render('metric-chart-health_hrv', 'health_hrv');
+    render('metric-chart-health_sleep', 'health_sleep');
+
+    // 1. GENERAL FITNESS
     render('metric-chart-vo2max', 'vo2max');
     render('metric-chart-tss', 'tss');
     render('metric-chart-anaerobic', 'anaerobic');
 
+    // 2. CYCLING
     render('metric-chart-subjective_bike', 'subjective_bike');
     render('metric-chart-endurance', 'endurance');
     render('metric-chart-strength', 'strength');
 
+    // 3. RUNNING
     render('metric-chart-subjective_run', 'subjective_run');
     render('metric-chart-run', 'run');
     render('metric-chart-mechanical', 'mechanical');
     render('metric-chart-gct', 'gct');
     render('metric-chart-vert', 'vert');
 
+    // 4. SWIMMING
     render('metric-chart-subjective_swim', 'subjective_swim');
     render('metric-chart-swim', 'swim');
 
+    // Update Buttons
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
         if(btn) {
