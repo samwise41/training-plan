@@ -393,11 +393,10 @@ def sync():
             new_row['Match Status'] = 'Unplanned'
             new_row['Date'] = g_date
             
-            # --- NEW: POPULATE DAY OF WEEK ---
+            # --- NEW: POPULATE DAY OF WEEK (Robust Pandas Method) ---
             try:
-                # Calculate Day (e.g., 'Monday') from the date string
-                d_obj = datetime.strptime(g_date, '%Y-%m-%d')
-                new_row['Day'] = d_obj.strftime('%A')
+                if g_date:
+                    new_row['Day'] = pd.to_datetime(g_date).day_name()
             except:
                 pass
             # ---------------------------------
