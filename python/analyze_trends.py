@@ -19,23 +19,24 @@ SPORT_IDS = {
 }
 
 METRICS = {
-    'aerobic_efficiency': {'unit': 'EF', 'good': 'up', 'range': (1.3, 1.7)},
-    'torque_efficiency':  {'unit': 'W/RPM', 'good': 'up', 'range': (2.5, 3.5)},
-    'run_economy':        {'unit': 'm/beat', 'good': 'up', 'range': (1.0, 1.6)},
-    'run_stiffness':      {'unit': 'ratio', 'good': 'up', 'range': (0.75, 0.95)},
-    'swim_efficiency':    {'unit': 'm/beat', 'good': 'up', 'range': (0.3, 0.6)},
-    'ground_contact':     {'unit': 'ms', 'good': 'down', 'range': (220, 260)},
-    'vertical_osc':       {'unit': 'cm', 'good': 'down', 'range': (6.0, 9.0)},
-    'vo2_max':            {'unit': 'ml/kg', 'good': 'up', 'range': (45, 60)},
-    'anaerobic_impact':   {'unit': 'TE', 'good': 'up', 'range': (2.0, 4.0)},
-    'weekly_tss':         {'unit': 'TSS', 'good': 'up', 'range': (300, 600)}
+    'aerobic_efficiency':    {'unit': 'EF', 'good': 'up', 'range': (1.3, 1.7)},
+    'subjective_efficiency': {'unit': 'W/RPE', 'good': 'up', 'range': (25, 50)}, # NEW METRIC
+    'torque_efficiency':     {'unit': 'W/RPM', 'good': 'up', 'range': (2.5, 3.5)},
+    'run_economy':           {'unit': 'm/beat', 'good': 'up', 'range': (1.0, 1.6)},
+    'run_stiffness':         {'unit': 'ratio', 'good': 'up', 'range': (0.75, 0.95)},
+    'swim_efficiency':       {'unit': 'm/beat', 'good': 'up', 'range': (0.3, 0.6)},
+    'ground_contact':        {'unit': 'ms', 'good': 'down', 'range': (220, 260)},
+    'vertical_osc':          {'unit': 'cm', 'good': 'down', 'range': (6.0, 9.0)},
+    'vo2_max':               {'unit': 'ml/kg', 'good': 'up', 'range': (45, 60)},
+    'anaerobic_impact':      {'unit': 'TE', 'good': 'up', 'range': (2.0, 4.0)},
+    'weekly_tss':            {'unit': 'TSS', 'good': 'up', 'range': (300, 600)}
 }
 
 def load_data():
     if not os.path.exists(DATA_FILE):
         print(f"Error: Data file not found at {DATA_FILE}")
         return pd.DataFrame()
-    with open(DATA_FILE, 'r') as f:
+    with open(DATA_FILE, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return pd.DataFrame(data)
 
@@ -79,7 +80,9 @@ def analyze_metric(df, col_name, config):
     if col_name not in df.columns:
         return {'30d': 'No Data', '90d': 'No Data', '6m': 'No Data'}
 
+    # Filter out zeros or NaNs for the specific metric
     df_clean = df.dropna(subset=[col_name]).sort_values('startTimeLocal')
+    df_clean = df_clean[df_clean[col_name] > 0] # Ensure positive values
     
     for days in [30, 90, 180]:
         cutoff = now - timedelta(days=days)
@@ -97,6 +100,7 @@ def analyze_metric(df, col_name, config):
 
 def get_sport_filter(row, sport_type):
     act_type = row.get('activityType', {})
+    if isinstance(act_type, str): return False # Handle edge cases where it's just a string key
     
     type_id = act_type.get('typeId')
     parent_id = act_type.get('parentTypeId')
@@ -128,30 +132,45 @@ def main():
     is_bike = df.apply(lambda x: get_sport_filter(x, 'BIKE'), axis=1)
     is_swim = df.apply(lambda x: get_sport_filter(x, 'SWIM'), axis=1)
 
+    # --- 1. Aerobic Efficiency (Physiological) ---
+    # Power / Heart Rate
     df['aerobic_efficiency'] = np.where(
         is_bike & (df['avgPower'] > 0) & (df['averageHR'] > 0),
         df['avgPower'] / df['averageHR'], np.nan
     )
+
+    # --- 2. Subjective Efficiency (Mental/Fatigue) ---
+    # Power / RPE (Watts per unit of Perceived Exertion)
+    # Note: Requires RPE to be 1-10. If 0, we treat as NaN to avoid div/0
+    if 'perceivedEffort' in df.columns:
+        df['rpe'] = pd.to_numeric(df['perceivedEffort'], errors='coerce')
+        df['subjective_efficiency'] = np.where(
+            is_bike & (df['avgPower'] > 0) & (df['rpe'] > 0),
+            df['avgPower'] / df['rpe'], np.nan
+        )
+    else:
+        df['subjective_efficiency'] = np.nan
     
+    # --- 3. Torque Efficiency (Muscular) ---
     df['torque_efficiency'] = np.where(
         is_bike & (df['avgPower'] > 0) & (df['averageBikingCadenceInRevPerMinute'] > 0),
         df['avgPower'] / df['averageBikingCadenceInRevPerMinute'], np.nan
     )
 
-    df['run_speed_m_min'] = df['averageSpeed'] * 60
+    df['run_speed_m_min'] = df.get('averageSpeed', 0) * 60
     df['run_economy'] = np.where(
-        is_run & (df['averageHR'] > 0),
+        is_run & (df.get('averageHR', 0) > 0),
         df['run_speed_m_min'] / df['averageHR'], np.nan
     )
 
     df['run_stiffness'] = np.where(
-        is_run & (df['avgPower'] > 0),
-        (df['averageSpeed'] * 100) / df['avgPower'], np.nan
+        is_run & (df.get('avgPower', 0) > 0),
+        (df.get('averageSpeed', 0) * 100) / df['avgPower'], np.nan
     )
 
-    df['swim_speed_m_min'] = df['averageSpeed'] * 60
+    df['swim_speed_m_min'] = df.get('averageSpeed', 0) * 60
     df['swim_efficiency'] = np.where(
-        is_swim & (df['averageHR'] > 0),
+        is_swim & (df.get('averageHR', 0) > 0),
         df['swim_speed_m_min'] / df['averageHR'], np.nan
     )
 
