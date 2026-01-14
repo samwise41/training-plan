@@ -6,8 +6,9 @@ from garminconnect import Garmin
 from modules import config
 
 # --- CONFIGURATION ---
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_FILE = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
+# Reuse the shared config for paths
+JSON_FILE = config.GARMIN_JSON
+MASTER_DB = config.MASTER_DB
 
 def get_credentials():
     email = os.environ.get('GARMIN_EMAIL')
@@ -15,168 +16,181 @@ def get_credentials():
     return email, password
 
 def fetch_specific_activity(activity_id):
-    """Fetches a single activity (deep fetch) from Garmin if missing from JSON."""
-    print(f"🔎 Looking for Activity {activity_id} in JSON...")
+    """
+    1. Checks if the activity is already in the JSON file.
+    2. If not, logs into Garmin, performs a Deep Fetch, and appends it to JSON.
+    """
+    print(f"🔎 Looking for Activity {activity_id}...")
     
     data = []
     if os.path.exists(JSON_FILE):
         with open(JSON_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
     
-    # Check if exists
+    # Check if exists in local JSON
     match = next((x for x in data if str(x.get('activityId')) == str(activity_id)), None)
     
     if match:
-        print("   ✅ Found in local JSON.")
-        return match, data
+        print("   ✅ Found in local JSON cache.")
+        return match
     
     # Not found, fetch from Garmin
     print("   ⚠️ Not found locally. Fetching from Garmin...")
     email, password = get_credentials()
     if not email or not password:
-        print("   ❌ Error: Credentials missing. Cannot fetch.")
-        return None, data
+        print("   ❌ Error: Credentials missing. Cannot fetch from Garmin.")
+        return None
         
     try:
         client = Garmin(email, password)
         client.login()
         activity = client.get_activity(activity_id) # Deep fetch by default
         
-        # Normalize RPE/Feeling from Deep Data
+        # Normalize RPE/Feeling from Deep Data immediately
         if 'summaryDTO' in activity:
             raw_rpe = activity['summaryDTO'].get('directWorkoutRpe')
             raw_feel = activity['summaryDTO'].get('directWorkoutFeel')
             if raw_rpe: activity['perceivedEffort'] = int(raw_rpe / 10)
             if raw_feel: activity['feeling'] = int((raw_feel / 25) + 1)
         
-        # Append and Save
+        # Save to JSON
         data.append(activity)
-        # Sort desc
         data.sort(key=lambda x: x.get('startTimeLocal', ''), reverse=True)
         
         with open(JSON_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
-        print("   💾 Fetched and saved to JSON.")
-        return activity, data
+        print("   💾 Fetched from Garmin and saved to JSON.")
+        return activity
         
     except Exception as e:
-        print(f"   ❌ Fetch Error: {e}")
-        return None, data
+        print(f"   ❌ Garmin Fetch Error: {e}")
+        return None
 
-def update_database(activity_id, garmin_data):
-    print(f"📝 Updating Master Database for ID: {activity_id}...")
+def update_database_row(activity_id, garmin_data):
+    """
+    Reads the Master DB, finds the row with the matching activityId, 
+    and updates all metrics, name, and duration.
+    """
+    print(f"📝 Hydrating Master Database row for ID: {activity_id}...")
     
-    if not os.path.exists(config.MASTER_DB):
+    if not os.path.exists(MASTER_DB):
         print("   ❌ Database not found.")
         return
 
-    # Load DB
-    with open(config.MASTER_DB, 'r', encoding='utf-8') as f:
+    with open(MASTER_DB, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
+    # Parse Header
+    if len(lines) < 2: return
     header = [h.strip() for h in lines[0].strip('|').split('|')]
-    
-    # Map columns indices
     col_map = {name: i for i, name in enumerate(header)}
     
-    # Fields to update (Standard + RPE)
-    cols_to_map = [
+    # Columns to sync (Garmin JSON key -> DB Column)
+    # Note: DB columns matched to config.MASTER_COLUMNS
+    cols_to_sync = [
         'duration', 'distance', 'averageHR', 'maxHR', 
         'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
         'avgPower', 'maxPower', 'normPower', 'trainingStressScore', 'intensityFactor',
         'averageSpeed', 'maxSpeed', 'vO2MaxValue', 'calories', 'elevationGain',
-        'activityName', 'sportTypeId',
         'averageBikingCadenceInRevPerMinute', 
         'averageRunningCadenceInStepsPerMinute',
         'avgStrideLength', 'avgVerticalOscillation', 'avgGroundContactTime'
     ]
 
-    updated_rows = []
-    found = False
+    updated_lines = []
+    row_found = False
     
     for line in lines:
         if '|' not in line or '---' in line or 'Status' in line:
-            updated_rows.append(line)
+            updated_lines.append(line)
             continue
             
-        row = [c.strip() for c in line.strip('|').split('|')]
+        # Parse Row
+        cols = [c.strip() for c in line.strip('|').split('|')]
         
-        # Check if this row matches the ID
-        row_id = ""
-        if 'activityId' in col_map and col_map['activityId'] < len(row):
-            row_id = row[col_map['activityId']].strip()
+        # Check ID match
+        # We handle cases where the row might be shorter than the header
+        current_id = ""
+        if 'activityId' in col_map and col_map['activityId'] < len(cols):
+            current_id = cols[col_map['activityId']]
             
-        if row_id == str(activity_id):
-            found = True
-            print("   ✅ Found matching row in DB. Hydrating...")
+        if current_id == str(activity_id):
+            row_found = True
+            print("   ✅ Found matching row in DB. Updating...")
             
-            # 1. Update Name with [SPORT] prefix
+            # Expand row if it's too short
+            while len(cols) < len(header):
+                cols.append("")
+
+            # 1. Update Name & Type
             g_type = garmin_data.get('activityType', {}).get('typeKey', '').lower()
             prefix = "[RUN]" if 'run' in g_type else "[BIKE]" if 'cycl' in g_type or 'virt' in g_type else "[SWIM]" if 'swim' in g_type else ""
             raw_name = garmin_data.get('activityName', 'Activity')
             
-            if prefix and prefix not in raw_name: 
-                new_name = f"{prefix} {raw_name}"
-            else: 
-                new_name = raw_name
-                
-            if 'Actual Workout' in col_map:
-                row[col_map['Actual Workout']] = new_name
-                
-            # 2. Update Duration (Min)
+            # Format Name
+            if prefix and prefix not in raw_name: new_name = f"{prefix} {raw_name}"
+            else: new_name = raw_name
+            
+            if 'Actual Workout' in col_map: cols[col_map['Actual Workout']] = new_name
+            if 'activityType' in col_map: cols[col_map['activityType']] = g_type
+            if 'sportTypeId' in col_map: cols[col_map['sportTypeId']] = str(garmin_data.get('sportTypeId', ''))
+
+            # 2. Update Duration (Minutes)
             if 'Actual Duration' in col_map:
-                dur_sec = float(garmin_data.get('duration', 0))
-                row[col_map['Actual Duration']] = f"{dur_sec/60:.1f}"
-                
-            # 3. Update Activity Type
-            if 'activityType' in col_map:
-                row[col_map['activityType']] = g_type
+                try:
+                    dur_sec = float(garmin_data.get('duration', 0))
+                    cols[col_map['Actual Duration']] = f"{dur_sec/60:.1f}"
+                except: pass
 
-            # 4. Map Metrics
-            for col in cols_to_map:
-                if col in col_map and col in garmin_data:
-                     val = garmin_data[col]
-                     if val is not None:
-                         row[col_map[col]] = str(val)
+            # 3. Update Metrics
+            for key in cols_to_sync:
+                if key in col_map and key in garmin_data:
+                    val = garmin_data[key]
+                    if val is not None:
+                        cols[col_map[key]] = str(val)
 
-            # 5. Map RPE/Feeling
+            # 4. Update RPE/Feeling
             if 'RPE' in col_map:
                 rpe = garmin_data.get('perceivedEffort')
-                if rpe: row[col_map['RPE']] = str(rpe)
-                
+                if rpe: cols[col_map['RPE']] = str(rpe)
+            
             if 'Feeling' in col_map:
                 feel = garmin_data.get('feeling')
-                if feel: row[col_map['Feeling']] = str(feel)
+                if feel: cols[col_map['Feeling']] = str(feel)
 
-            # Reconstruct Line
-            new_line = "| " + " | ".join(row) + " |\n"
-            updated_rows.append(new_line)
+            # Rebuild Line
+            new_line = "| " + " | ".join(cols) + " |\n"
+            updated_lines.append(new_line)
         else:
-            updated_rows.append(line)
+            updated_lines.append(line)
 
-    if found:
-        with open(config.MASTER_DB, 'w', encoding='utf-8') as f:
-            f.writelines(updated_rows)
-        print("   ✅ Database saved successfully.")
+    if row_found:
+        with open(MASTER_DB, 'w', encoding='utf-8') as f:
+            f.writelines(updated_lines)
+        print("   ✅ Database updated successfully.")
     else:
-        print("   ❌ ID not found in database. Did you add it manually first?")
+        print(f"   ❌ Could not find row with activityId {activity_id} in Master DB.")
+        print("      (Did you paste the ID into the Markdown table first?)")
 
 def main():
-    # Parse ID from arguments
-    if len(sys.argv) < 2:
-        print("Usage: python hydrate_activity.py <ACTIVITY_ID>")
-        sys.exit(1)
-        
-    act_id = sys.argv[1]
-    
-    # 1. Fetch/Find Data
-    activity_data, _ = fetch_specific_activity(act_id)
-    
-    if activity_data:
-        # 2. Update Database
-        update_database(act_id, activity_data)
+    # Support command line arg or interactive input
+    if len(sys.argv) > 1:
+        act_id = sys.argv[1]
     else:
-        print("   ❌ Could not retrieve activity data.")
+        try:
+            act_id = input("Enter Activity ID to Hydrate: ").strip()
+        except:
+            print("❌ No input provided.")
+            return
+
+    if not act_id:
+        print("❌ Error: Activity ID is required.")
+        return
+
+    # Execute
+    data = fetch_specific_activity(act_id)
+    if data:
+        update_database_row(act_id, data)
 
 if __name__ == "__main__":
     main()
