@@ -199,22 +199,25 @@ def sync():
     today = datetime.now()
     cutoff_date = today - timedelta(days=SYNC_WINDOW_DAYS)
     cutoff_str = cutoff_date.strftime('%Y-%m-%d')
+    today_str = today.strftime('%Y-%m-%d')
 
-    # 1. Sync Plan to Master (Skip old plan items)
+    # 1. Sync Plan to Master (Skip old AND future plan items)
     if not df_plan.empty:
         count_added = 0
         df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
         df_plan['Date_Norm'] = pd.to_datetime(df_plan['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
         
         existing_keys = set(zip(df_master['Date_Norm'], df_master['Planned Workout'].str.strip()))
-        today_str = today.strftime('%Y-%m-%d')
         
         for _, p_row in df_plan.iterrows():
             p_date_norm = p_row['Date_Norm']
             p_workout = str(p_row.get('Planned Workout', '')).strip()
             
-            # FILTER: Ignore plan items older than window
-            if pd.isna(p_date_norm) or p_date_norm < cutoff_str: continue
+            # --- FIX: Filter BOTH ends of the timeline ---
+            # 1. Skip if older than sync window (don't re-add old stuff)
+            # 2. Skip if in the future (don't pre-populate future days)
+            if pd.isna(p_date_norm) or p_date_norm < cutoff_str or p_date_norm > today_str: 
+                continue
             
             p_clean = re.sub(r'[^a-zA-Z0-9\s]', '', p_workout.lower())
             if 'rest day' in p_clean or p_clean in ['rest', 'off', 'day off']: continue
@@ -240,9 +243,7 @@ def sync():
     # 2. Link Garmin Data
     claimed_ids = set()
     
-    # --- IMPORTANT: PRE-SCAN ALL IDs ---
-    # We must mark ALL existing DB rows as "claimed", even if they are old.
-    # This prevents the "Unplanned" step from seeing an old ID and re-adding it as new.
+    # PRE-SCAN ALL IDs (prevent Unplanned duplicates)
     for _, row in df_master.iterrows():
         eid = str(row.get('activityId', '')).strip()
         if eid and eid.lower() != 'nan':
@@ -285,15 +286,11 @@ def sync():
         
         for cand in candidates:
             cand_id = str(cand.get('activityId'))
-            
-            # Allow reuse ONLY if it's already attached to THIS row
             if cand_id in claimed_ids and cand_id not in current_ids: continue 
             
             is_match = False
-            # 1. ID Match
             if cand_id in current_ids:
                 is_match = True
-            # 2. Smart Match (only if row has no ID yet)
             elif not current_ids:
                 g_type_str = cand.get('activityType', {}).get('typeKey', '').lower()
                 g_sport = 'OTHER'
@@ -339,9 +336,8 @@ def sync():
                      df_master.at[idx, col] = val
                 elif current_db_val and val is not None and val != "":
                     if is_value_different(current_db_val, val):
-                        df_master.at[idx, col] = val # Update stats
+                        df_master.at[idx, col] = val 
             
-            # Map RPE/Feeling
             rpe_val = composite_match.get('perceivedEffort')
             feel_val = composite_match.get('feeling')
             
@@ -363,8 +359,8 @@ def sync():
         g_id = str(g.get('activityId'))
         g_date = g.get('startTimeLocal', '')[:10]
         
-        # FILTER: Do not add old unplanned activities
-        if g_date < cutoff_str: continue
+        # FILTER: Old AND Future
+        if g_date < cutoff_str or g_date > today_str: continue
 
         c_type = g.get('activityType', {}).get('typeId')
         c_sport = g.get('sportTypeId')
@@ -404,13 +400,12 @@ def sync():
             unplanned_rows.append(new_row)
 
     if unplanned_rows:
-        print(f"   + Added {len(unplanned_rows)} unplanned activities (from last {SYNC_WINDOW_DAYS} days).")
+        print(f"   + Added {len(unplanned_rows)} unplanned activities.")
         df_master = pd.concat([df_master, pd.DataFrame(unplanned_rows)], ignore_index=True)
 
-    # 4. Hydrate TSS/IF (Restricted by Date)
-    # Only calculate TSS for recent rows to save time
+    # 4. Hydrate TSS/IF
+    current_ftp = get_current_ftp() or 241.0
     for idx, row in df_master.iterrows():
-        # DATE CHECK
         r_date = str(row.get('Date', ''))
         if r_date < cutoff_str: continue
 
@@ -422,10 +417,6 @@ def sync():
         except: continue
         
         if duration > 0 and np_val > 0:
-            current_ftp = 241.0 # Default fallback
-            # Try to find FTP from plan if available
-            # (Skipped complex logic for speed, using fallback or previous known)
-
             intensity = np_val / current_ftp
             existing_if = str(row.get('intensityFactor', '')).strip()
             if not existing_if or existing_if == 'nan' or float(existing_if) == 0:
