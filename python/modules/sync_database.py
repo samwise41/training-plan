@@ -30,34 +30,26 @@ def load_master_db():
     for line in lines[2:]:
         if '|' not in line: continue
         row = [c.strip() for c in line.strip('|').split('|')]
-        # Pad row if short
         if len(row) < len(header): 
             row += [''] * (len(header) - len(row))
         data.append(dict(zip(header, row)))
     
     df = pd.DataFrame(data)
     
-    # --- FIX 1: AUTO-DEDUPLICATE ON LOAD ---
-    # If multiple rows have the same non-empty activityId, keep the first one.
+    # Auto-Deduplicate on Load
     if 'activityId' in df.columns:
-        # Create a mask for rows that HAVE an activity ID
         has_id = df['activityId'].str.strip().astype(bool)
-        
-        # Split into two groups: those with IDs and those without
         df_ids = df[has_id].copy()
         df_noids = df[~has_id].copy()
         
-        # Deduplicate the ID group
-        # We explode comma-separated IDs to check for uniqueness, but simple dedupe by the full string is safer for now
-        # to avoid breaking bundled rows.
         before_len = len(df_ids)
+        # Keep first occurrence of any ID
         df_ids = df_ids.drop_duplicates(subset=['activityId'], keep='first')
         after_len = len(df_ids)
         
         if before_len > after_len:
             print(f"🧹 Cleaned up {before_len - after_len} duplicate rows from Database.")
             
-        # Recombine
         df = pd.concat([df_ids, df_noids], ignore_index=True)
         
     return df
@@ -213,7 +205,6 @@ def sync():
     df_master = load_master_db()
     df_master = clean_corrupt_data(df_master)
     
-    # Ensure all columns exist
     for col in config.MASTER_COLUMNS:
         if col not in df_master.columns:
             df_master[col] = ""
@@ -275,16 +266,13 @@ def sync():
         print(f"   + Added {count_added} new planned workouts.")
 
     # 2. PRE-SCAN CLAIMED IDs
-    # This prevents duplicates by acknowledging what is ALREADY in the DB
     claimed_ids = set()
     for _, row in df_master.iterrows():
         eid = str(row.get('activityId', '')).strip()
         if eid and eid.lower() != 'nan':
-            # Split comma-separated IDs for bundled workouts
             for sub_id in eid.split(','):
                 claimed_ids.add(sub_id.strip())
 
-    # 3. Link Garmin Data
     cols_to_map = [
         'duration', 'distance', 'averageHR', 'maxHR', 
         'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -296,6 +284,7 @@ def sync():
         'avgStrideLength', 'avgVerticalOscillation', 'avgGroundContactTime'
     ]
 
+    # 3. Link Garmin Data
     for idx, row in df_master.iterrows():
         date_str = str(row.get('Date', '')).strip()
         try: 
@@ -318,9 +307,6 @@ def sync():
         matches = []
         for cand in candidates:
             cand_id = str(cand.get('activityId'))
-            
-            # Logic: If this ID is claimed by ANOTHER row, skip it.
-            # But if it's claimed by THIS row (current_ids), keep it.
             if cand_id in claimed_ids and cand_id not in current_ids: 
                 continue 
             
@@ -328,7 +314,6 @@ def sync():
             if cand_id in current_ids:
                 is_match = True
             elif not current_ids:
-                # Fallback: Match by Type
                 g_type_str = cand.get('activityType', {}).get('typeKey', '').lower()
                 g_sport = 'OTHER'
                 if 'running' in g_type_str: g_sport = 'RUN'
@@ -343,23 +328,24 @@ def sync():
 
         if matches:
             composite_match = bundle_activities(matches)
-            
-            # Update claimed IDs immediately
             for m in matches:
                 claimed_ids.add(str(m.get('activityId')))
 
             df_master.at[idx, 'Status'] = 'COMPLETED'
             
-             # --- FIX: STATUS LOGIC ---
+            # --- FIX: STATUS LOGIC ---
             # If no planned workout text, or explicitly marked unplanned, set as Linked (Unplanned)
             # This prevents it from flipping to 'Linked' or 'Linked (modified)'
             current_status = str(df_master.at[idx, 'Match Status'])
             planned_val = str(df_master.at[idx, 'Planned Workout']).strip()
+
             if 'Unplanned' in current_status or not planned_val:
                 df_master.at[idx, 'Match Status'] = 'Linked (Unplanned)'
             elif current_status != 'Linked (modified)':
                 df_master.at[idx, 'Match Status'] = 'Linked'
             
+            # --------------------------
+
             df_master.at[idx, 'activityId'] = str(composite_match.get('activityId'))
             
             g_type = composite_match.get('activityType', {}).get('typeKey', '').lower()
@@ -382,7 +368,13 @@ def sync():
                      df_master.at[idx, col] = val
                 elif current_db_val and val is not None and val != "":
                     if is_value_different(current_db_val, val):
-                        df_master.at[idx, col] = val 
+                        # Only mark as modified if it's a PLANNED workout
+                        if 'Unplanned' not in str(df_master.at[idx, 'Match Status']):
+                            df_master.at[idx, 'Match Status'] = 'Linked (modified)'
+                        # Always update value for unplanned, or if user permits overrides
+                        # (Here we respect manual edits for Planned workouts, but for Unplanned we assume sync is truth)
+                        if 'Unplanned' in str(df_master.at[idx, 'Match Status']):
+                             df_master.at[idx, col] = val
             
             rpe_val = composite_match.get('perceivedEffort')
             feel_val = composite_match.get('feeling')
@@ -395,7 +387,7 @@ def sync():
             if rpe_val is not None: df_master.at[idx, 'RPE'] = str(rpe_val)
             if feel_val is not None: df_master.at[idx, 'Feeling'] = str(feel_val)
 
-    # 4. Handle Unplanned
+    # 4. Handle Unplanned (New Rows)
     unplanned_rows = []
     all_garmin = [item for sublist in garmin_by_date.values() for item in sublist]
     
@@ -413,14 +405,13 @@ def sync():
         
         if not is_valid_type: continue
 
-        # --- FIX 2: PREVENT DUPLICATES ---
         if g_id not in claimed_ids:
-            # Claim it immediately so next loop doesn't add it again
             claimed_ids.add(g_id)
-
             new_row = {c: "" for c in config.MASTER_COLUMNS}
             new_row['Status'] = 'COMPLETED'
-            new_row['Match Status'] = 'Unplanned'
+            # --- FIX: Set correct status initially ---
+            new_row['Match Status'] = 'Linked (Unplanned)'
+            # -----------------------------------------
             new_row['Date'] = g_date
             try:
                 if g_date:
@@ -434,6 +425,18 @@ def sync():
             for col in cols_to_map:
                 if col in g: new_row[col] = g[col]
             
+            rpe_val = g.get('perceivedEffort')
+            if rpe_val is None and 'summaryDTO' in g:
+                 raw_rpe = g['summaryDTO'].get('directWorkoutRpe')
+                 if raw_rpe: rpe_val = int(raw_rpe / 10)
+            if rpe_val: new_row['RPE'] = str(rpe_val)
+
+            feel_val = g.get('feeling')
+            if feel_val is None and 'summaryDTO' in g:
+                 raw_feel = g['summaryDTO'].get('directWorkoutFeel')
+                 if raw_feel: feel_val = int((raw_feel / 25) + 1)
+            if feel_val: new_row['Feeling'] = str(feel_val)
+
             try: new_row['Actual Duration'] = f"{float(g.get('duration', 0))/60:.1f}"
             except: pass
             
@@ -469,8 +472,6 @@ def sync():
     df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
     df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
     
-    # --- FINAL DEDUPE SAFETY CHECK ---
-    # In case unplanned rows somehow duplicated existing ones, remove them.
     if 'activityId' in df_master.columns:
          has_id = df_master['activityId'].str.strip().astype(bool)
          df_ids = df_master[has_id].drop_duplicates(subset=['activityId'], keep='first')
@@ -478,7 +479,6 @@ def sync():
          df_master = pd.concat([df_ids, df_noids], ignore_index=True)
          df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
          df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
-    # --------------------------------
 
     print(f"💾 Saving {len(df_master)} rows to Master DB...")
     with open(config.MASTER_DB, 'w', encoding='utf-8') as f:
