@@ -113,7 +113,6 @@ def is_value_different(db_val, json_val):
     except:
         return str_db != str(json_val).strip()
 
-# --- FIXED: BUNDLING LOGIC (Scans ALL files for RPE) ---
 def bundle_activities(activities):
     """Combines multiple activities into a single weighted record."""
     if not activities: return None
@@ -154,15 +153,13 @@ def bundle_activities(activities):
     combined['maxPower'] = max((a.get('maxPower', 0) for a in activities), default=0)
     combined['maxSpeed'] = max((a.get('maxSpeed', 0) for a in activities), default=0)
 
-    # 5. Subjective Fields (THE FIX: Scan all activities for non-null RPE)
+    # 5. Subjective Fields (Scan all activities for non-null RPE)
     rpe = None
     feeling = None
-    
     for a in activities:
         if a.get('perceivedEffort') is not None:
             rpe = a.get('perceivedEffort')
-            break
-            
+            break   
     for a in activities:
         if a.get('feeling') is not None:
             feeling = a.get('feeling')
@@ -271,16 +268,23 @@ def sync():
         planned_type = detect_sport(planned_txt)
         
         matches = []
-        current_id = str(row.get('activityId', '')).strip()
+        current_id_str = str(row.get('activityId', '')).strip()
+        
+        # --- FIX: Handle bundled IDs in database (e.g., "123,456") ---
+        current_ids = []
+        if current_id_str and current_id_str.lower() != 'nan':
+             current_ids = [cid.strip() for cid in current_id_str.split(',') if cid.strip()]
         
         for cand in candidates:
             cand_id = str(cand.get('activityId'))
             if cand_id in claimed_ids: continue 
             
             is_match = False
-            if current_id and current_id != 'nan' and current_id == cand_id:
+            # 1. ID Match (Check against list of IDs)
+            if cand_id in current_ids:
                 is_match = True
-            elif (not current_id or current_id == 'nan'):
+            # 2. Sport Type Match (if no ID yet)
+            elif not current_ids:
                 g_type_str = cand.get('activityType', {}).get('typeKey', '').lower()
                 g_sport = 'OTHER'
                 if 'running' in g_type_str: g_sport = 'RUN'
@@ -341,6 +345,14 @@ def sync():
                 
             if rpe_val is not None: df_master.at[idx, 'RPE'] = str(rpe_val)
             if feel_val is not None: df_master.at[idx, 'Feeling'] = str(feel_val)
+
+    # --- SAFETY NET: Scan DB for ANY claimed IDs we might have missed ---
+    # This prevents Unplanned duplicates if they are already in the DB but weren't touched above
+    for _, row in df_master.iterrows():
+        existing_id = str(row.get('activityId', '')).strip()
+        if existing_id and existing_id.lower() != 'nan':
+            for sub_id in existing_id.split(','):
+                claimed_ids.add(sub_id.strip())
 
     # 3. Handle Unplanned
     unplanned_rows = []
