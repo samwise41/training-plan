@@ -1,41 +1,15 @@
 // js/views/metrics/charts.js
 import { METRIC_DEFINITIONS } from './definitions.js';
 import { calculateTrend, getTrendIcon } from './utils.js';
-import { extractMetricData } from './table.js';
+import { extractMetricData } from './table.js'; // Reuse logic
 
-// --- Formulas ---
+// --- NEW: Formulas for specific metrics ---
 const METRIC_FORMULAS = {
-    'subjective': '(Avg Power / RPE)',         // NEW
-    'endurance': '(Norm Power / Avg HR)',
-    'strength': '(Torque / Output)',
-    'run': '(Avg Power / Avg Speed)',
-    'swim': '(Avg Speed / Stroke Rate)',
-    'mechanical': '(Vert Osc / GCT)'
-};
-
-// --- Helper to calculate Subjective Efficiency on the fly ---
-const calculateSubjectiveEfficiency = (allData) => {
-    return allData
-        .map(d => {
-            // Check for Bike Sport (ID 2) or Type
-            const isBike = d.sportTypeId == '2' || (d.activityType && d.activityType.includes('cycl'));
-            const pwr = parseFloat(d.avgPower);
-            // 'RPE' column in Master DB stores the value 1-10
-            const rpe = parseFloat(d.RPE);
-
-            if (isBike && pwr > 0 && rpe > 0) {
-                return {
-                    date: new Date(d.Date),
-                    dateStr: d.Date,
-                    val: pwr / rpe,
-                    name: d['Actual Workout'] || 'Ride',
-                    breakdown: `${Math.round(pwr)}W / ${rpe} RPE`
-                };
-            }
-            return null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.date - b.date);
+    'endurance': '(Norm Power / Avg HR)',      // Aerobic Efficiency
+    'strength': '(Torque / Output)',           // Torque Efficiency
+    'run': '(Avg Power / Avg Speed)',          // Running Economy
+    'swim': '(Avg Speed / Stroke Rate)',       // Swim Efficiency
+    'mechanical': '(Vert Osc / GCT)'           // Mechanical Stiffness
 };
 
 const buildMetricChart = (displayData, fullData, key) => {
@@ -68,6 +42,7 @@ const buildMetricChart = (displayData, fullData, key) => {
             </div>
         </div>`;
 
+    // --- NEW: Subtitle Logic ---
     const formula = METRIC_FORMULAS[key] || '';
     const titleHtml = `
         <h3 class="text-xs font-bold text-white flex items-center gap-2">
@@ -123,10 +98,10 @@ const buildMetricChart = (displayData, fullData, key) => {
         <text x="${pad.l - 6}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(1)}</text>
     `;
 
-    // X-Axis Date Labels
+    // --- NEW: X-Axis Date Labels ---
     let xAxisLabelsHtml = '';
     if (displayData.length > 1) {
-        const targetCount = 5; 
+        const targetCount = 5; // Start, End, and ~3 intermediates
         const step = (displayData.length - 1) / (targetCount - 1);
         const indices = new Set();
         
@@ -139,10 +114,96 @@ const buildMetricChart = (displayData, fullData, key) => {
                 const d = displayData[index];
                 const xPos = getX(d, index);
                 const dateObj = new Date(d.date);
+                // Format: Jan 1
                 const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 
                 let anchor = 'middle';
                 if (index === 0) anchor = 'start';
+                if (index === displayData.length - 1) anchor = 'end';
+                
+                xAxisLabelsHtml += `<text x="${xPos}" y="${height - 5}" text-anchor="${anchor}" font-size="9" fill="#64748b">${label}</text>`;
+            }
+        });
+    }
+
+    const chartTrend = calculateTrend(displayData);
+    let trendHtml = chartTrend ? `<line x1="${getX(null, 0)}" y1="${getY(chartTrend.startVal)}" x2="${getX(null, displayData.length - 1)}" y2="${getY(chartTrend.endVal)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5" />` : '';
+    
+    let pathD = `M ${getX(displayData[0], 0)} ${getY(displayData[0].val)}`;
+    let pointsHtml = '';
+    displayData.forEach((d, i) => {
+        const x = getX(d, i), y = getY(d.val);
+        pathD += ` L ${x} ${y}`;
+        pointsHtml += `<circle cx="${x}" cy="${y}" r="3.5" fill="#0f172a" stroke="${color}" stroke-width="2" class="cursor-pointer hover:stroke-white transition-all" onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown || ""}', '${color}')"></circle>`;
+    });
+
+    return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 h-full flex flex-col hover:border-slate-600 transition-colors">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                <div class="flex items-center gap-2">
+                    ${titleHtml}
+                </div>
+                <div class="flex items-center gap-3">
+                    ${indicatorsHtml}
+                    <div class="cursor-pointer text-slate-500 hover:text-white transition-colors p-1" onclick="window.showAnalysisTooltip(event, '${key}')">
+                        <i class="fa-solid fa-circle-info text-sm"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-1 w-full h-[120px]">
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
+                    ${yAxisLine}
+                    ${axisLabelsHtml}
+                    ${xAxisLabelsHtml}
+                    ${refLinesHtml}
+                    ${trendHtml}
+                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9" />
+                    ${pointsHtml}
+                </svg>
+            </div>
+        </div>
+    `;
+};
+
+export const updateCharts = (allData, timeRange) => {
+    if (!allData || allData.length === 0) return;
+    
+    const cutoff = new Date();
+    if (timeRange === '30d') cutoff.setDate(cutoff.getDate() - 30);
+    else if (timeRange === '90d') cutoff.setDate(cutoff.getDate() - 90);
+    else if (timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
+    else if (timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
+    
+    const render = (id, key) => {
+        const el = document.getElementById(id);
+        if (el) {
+            const full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
+            const display = full.filter(d => d.date >= cutoff);
+            el.innerHTML = buildMetricChart(display, full, key);
+        }
+    };
+
+    render('metric-chart-endurance', 'endurance');
+    render('metric-chart-strength', 'strength');
+    render('metric-chart-run', 'run');
+    render('metric-chart-mechanical', 'mechanical');
+    render('metric-chart-gct', 'gct');
+    render('metric-chart-vert', 'vert');
+    render('metric-chart-swim', 'swim');
+    render('metric-chart-vo2max', 'vo2max');
+    render('metric-chart-tss', 'tss');
+    render('metric-chart-anaerobic', 'anaerobic');
+
+    // Update Buttons
+    ['30d', '90d', '6m', '1y'].forEach(range => {
+        const btn = document.getElementById(`btn-metric-${range}`);
+        if(btn) {
+            btn.className = timeRange === range ? 
+                "bg-emerald-500 text-white font-bold px-3 py-1 rounded text-[10px] transition-all shadow-lg" : 
+                "bg-slate-800 text-slate-400 hover:text-white px-3 py-1 rounded text-[10px] transition-all hover:bg-slate-700";
+        }
+    });
+};                if (index === 0) anchor = 'start';
                 if (index === displayData.length - 1) anchor = 'end';
                 
                 xAxisLabelsHtml += `<text x="${xPos}" y="${height - 5}" text-anchor="${anchor}" font-size="9" fill="#64748b">${label}</text>`;
