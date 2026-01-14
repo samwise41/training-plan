@@ -48,6 +48,25 @@ def clean_corrupt_data(df):
         df['activityType'] = df['activityType'].apply(fix_type)
     return df
 
+# --- RESTORED HELPER FUNCTIONS ---
+def extract_ftp(text):
+    if not text: return None
+    pattern = r"Cycling FTP[:\*]*\s*(\d+)"
+    match = re.search(pattern, text, re.IGNORECASE)
+    if match: return int(match.group(1))
+    return None
+
+def get_current_ftp():
+    if not os.path.exists(config.PLAN_FILE): return None
+    try:
+        with open(config.PLAN_FILE, 'r', encoding='utf-8') as f: 
+            content = f.read()
+        return extract_ftp(content)
+    except Exception as e:
+        print(f"⚠️ Could not read FTP from plan: {e}")
+        return None
+# ---------------------------------
+
 def extract_weekly_table():
     if not os.path.exists(config.PLAN_FILE): return pd.DataFrame()
     with open(config.PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
@@ -213,9 +232,7 @@ def sync():
             p_date_norm = p_row['Date_Norm']
             p_workout = str(p_row.get('Planned Workout', '')).strip()
             
-            # --- FIX: Filter BOTH ends of the timeline ---
-            # 1. Skip if older than sync window (don't re-add old stuff)
-            # 2. Skip if in the future (don't pre-populate future days)
+            # Filter: Ignore plan items older than window OR in future
             if pd.isna(p_date_norm) or p_date_norm < cutoff_str or p_date_norm > today_str: 
                 continue
             
