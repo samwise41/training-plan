@@ -35,7 +35,7 @@ jobs:
         GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
       run: |
         # Run the specific hydration script with the input ID
-        python python/hydrate_activity.py "${{ github.event.inputs.activity_id }}"
+        python python/modules/hydrate_activity.py "${{ github.event.inputs.activity_id }}"
 
     - name: Commit and Push Changes
       run: |
