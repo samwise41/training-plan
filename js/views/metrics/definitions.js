@@ -7,6 +7,12 @@ export const SPORT_IDS = {
 };
 
 export const METRIC_DEFINITIONS = {
+    subjective: {
+        title: "Subjective Efficiency", sport: "Bike", icon: "fa-brain", colorVar: "var(--color-bike)",
+        refMin: 25, refMax: 50, invertRanges: false, rangeInfo: "25 – 50 W/RPE",
+        description: "Watts produced per unit of RPE. A rising trend means high power feels easier (mental fitness).<br><br><span class='text-emerald-400 font-bold'>Filter Logic:</span> Includes Cycling activities with both Power and RPE data.",
+        improvement: "• Mental Resilience<br>• Pacing Strategy"
+    },
     endurance: {
         title: "Aerobic Efficiency", sport: "Bike", icon: "fa-heart-pulse", colorVar: "var(--color-bike)",
         refMin: 1.30, refMax: 1.70, invertRanges: false, rangeInfo: "1.30 – 1.70 EF",
