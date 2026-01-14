@@ -392,6 +392,16 @@ def sync():
             new_row['Status'] = 'COMPLETED'
             new_row['Match Status'] = 'Unplanned'
             new_row['Date'] = g_date
+            
+            # --- NEW: POPULATE DAY OF WEEK ---
+            try:
+                # Calculate Day (e.g., 'Monday') from the date string
+                d_obj = datetime.strptime(g_date, '%Y-%m-%d')
+                new_row['Day'] = d_obj.strftime('%A')
+            except:
+                pass
+            # ---------------------------------
+
             new_row['activityId'] = g_id
             new_row['Actual Workout'] = g.get('activityName', 'Unplanned')
             new_row['activityType'] = g.get('activityType', {}).get('typeKey', '')
