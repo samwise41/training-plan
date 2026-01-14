@@ -33,7 +33,10 @@ export function renderMetrics(allData) {
 
     const chartsGrid = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div id="metric-chart-subjective"></div> <div id="metric-chart-endurance"></div>
+            <div id="metric-chart-endurance"></div>
+            <div id="metric-chart-subjective_bike"></div>
+            <div id="metric-chart-subjective_run"></div>
+            <div id="metric-chart-subjective_swim"></div>
             <div id="metric-chart-strength"></div>
             <div id="metric-chart-run"></div>
             <div id="metric-chart-swim"></div> 
