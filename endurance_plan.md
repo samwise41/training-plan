@@ -20,7 +20,7 @@ The primary "A" races and secondary objectives for the 2026 season.
 
 ### Biometrics & Fitness
 
-* **Weight:** 179 lbs.
+* **Weight:** 178 lbs.
 * **Cycling FTP:** 241 Watts (Validated Dec 23, 2025 via 60-min Alpe du Zwift).
 * **Running Fitness:**
   * **Lactate Threshold HR (LTHR):** 171 bpm (Validated Dec 26, 2025).
@@ -249,12 +249,12 @@ To ensure the automated dashboard correctly tracks "Performance Signatures," all
 
 # Appendix E: AI Prompt
 
-I have a training plan location in this github location. Can you review this file thoroughly, **specifically cross-referencing `COACH_BRIEFING.md` and `MASTER_TRAINING_DATABASE.md`,** and help me generate my training for the next week? 
+I have a training plan location in this github location. Can you review this file thoroughly, **specifically cross-referencing `COACH_BRIEFING.md`, garmin_health.md and `MASTER_TRAINING_DATABASE.md`**. Please generate my training for the next week? 
 
 Please generate a raw markdown text of next week's schedule. Please provide evidence that you followed the Weekly Generator Checklist SOP. If I forget to attach the GitHub repo, please remind me before spinning your wheels. 
 
 **ADAPTIVE LOGIC INSTRUCTIONS:**
-1. **Analyze (Trends):** Read `COACH_BRIEFING.md` first. Identify any metrics flagged with "⚠️ Low" or "⚠️ High", or those showing "Improving" or "Declining" trends that may require attention.
+1. **Analyze (Trends):** Read `COACH_BRIEFING.md` first. Identify any metrics flagged with "⚠️ Low" or "⚠️ High", or those showing "Improving" or "Declining" trends that may require attention. Read `garmin_health.md` first. Identify any trends in the wrong direction that may require attention.
 2. **Analyze (History):** Review the "Actual Workout" column in `MASTER_TRAINING_DATABASE.md`. Check when the last workout labeled "Zwift Race" occurred. 
 3. **Diagnose & Prescribe:** You are the coach. Alter the standard microcycle based on the following rules:
    - **The "Fun Factor" Rule:** If I have not done a "Zwift Race" in the past 2 weeks, you MUST substitute one of the high-intensity bike sessions (Threshold or Sweet Spot) with a `[BIKE] Zwift Race`.
