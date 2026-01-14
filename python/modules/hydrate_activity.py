@@ -3,10 +3,16 @@ import os
 import json
 import pandas as pd
 from garminconnect import Garmin
-from modules import config
+
+# --- IMPORT FIX ---
+# Add current directory to path so we can import 'config' from the same folder
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
+import config
 
 # --- CONFIGURATION ---
-# Reuse the shared config for paths
 JSON_FILE = config.GARMIN_JSON
 MASTER_DB = config.MASTER_DB
 
@@ -80,13 +86,11 @@ def update_database_row(activity_id, garmin_data):
     with open(MASTER_DB, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
-    # Parse Header
     if len(lines) < 2: return
     header = [h.strip() for h in lines[0].strip('|').split('|')]
     col_map = {name: i for i, name in enumerate(header)}
     
-    # Columns to sync (Garmin JSON key -> DB Column)
-    # Note: DB columns matched to config.MASTER_COLUMNS
+    # Columns to sync
     cols_to_sync = [
         'duration', 'distance', 'averageHR', 'maxHR', 
         'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -105,11 +109,8 @@ def update_database_row(activity_id, garmin_data):
             updated_lines.append(line)
             continue
             
-        # Parse Row
         cols = [c.strip() for c in line.strip('|').split('|')]
         
-        # Check ID match
-        # We handle cases where the row might be shorter than the header
         current_id = ""
         if 'activityId' in col_map and col_map['activityId'] < len(cols):
             current_id = cols[col_map['activityId']]
@@ -118,7 +119,6 @@ def update_database_row(activity_id, garmin_data):
             row_found = True
             print("   ✅ Found matching row in DB. Updating...")
             
-            # Expand row if it's too short
             while len(cols) < len(header):
                 cols.append("")
 
@@ -127,7 +127,6 @@ def update_database_row(activity_id, garmin_data):
             prefix = "[RUN]" if 'run' in g_type else "[BIKE]" if 'cycl' in g_type or 'virt' in g_type else "[SWIM]" if 'swim' in g_type else ""
             raw_name = garmin_data.get('activityName', 'Activity')
             
-            # Format Name
             if prefix and prefix not in raw_name: new_name = f"{prefix} {raw_name}"
             else: new_name = raw_name
             
@@ -135,7 +134,7 @@ def update_database_row(activity_id, garmin_data):
             if 'activityType' in col_map: cols[col_map['activityType']] = g_type
             if 'sportTypeId' in col_map: cols[col_map['sportTypeId']] = str(garmin_data.get('sportTypeId', ''))
 
-            # 2. Update Duration (Minutes)
+            # 2. Update Duration
             if 'Actual Duration' in col_map:
                 try:
                     dur_sec = float(garmin_data.get('duration', 0))
@@ -158,7 +157,6 @@ def update_database_row(activity_id, garmin_data):
                 feel = garmin_data.get('feeling')
                 if feel: cols[col_map['Feeling']] = str(feel)
 
-            # Rebuild Line
             new_line = "| " + " | ".join(cols) + " |\n"
             updated_lines.append(new_line)
         else:
@@ -170,10 +168,8 @@ def update_database_row(activity_id, garmin_data):
         print("   ✅ Database updated successfully.")
     else:
         print(f"   ❌ Could not find row with activityId {activity_id} in Master DB.")
-        print("      (Did you paste the ID into the Markdown table first?)")
 
 def main():
-    # Support command line arg or interactive input
     if len(sys.argv) > 1:
         act_id = sys.argv[1]
     else:
@@ -187,7 +183,6 @@ def main():
         print("❌ Error: Activity ID is required.")
         return
 
-    # Execute
     data = fetch_specific_activity(act_id)
     if data:
         update_database_row(act_id, data)
