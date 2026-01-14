@@ -6,8 +6,6 @@ import { updateCharts } from './charts.js';
 let metricsState = { timeRange: '6m' };
 let cachedData = [];
 
-// --- GLOBAL HANDLER ---
-// Attached to window so HTML buttons can access it
 window.toggleMetricsTime = (range) => {
     metricsState.timeRange = range;
     updateCharts(cachedData, metricsState.timeRange);
@@ -16,14 +14,12 @@ window.toggleMetricsTime = (range) => {
 export function renderMetrics(allData) {
     cachedData = allData || [];
     
-    // Defer chart updates until after the DOM elements exist
     setTimeout(() => {
         updateCharts(cachedData, metricsState.timeRange);
     }, 0);
 
     const buildToggle = (range, label) => `<button id="btn-metric-${range}" onclick="window.toggleMetricsTime('${range}')" class="bg-slate-800 text-slate-400 px-3 py-1 rounded text-[10px] transition-all">${label}</button>`;
     
-    // Header (Sticky)
     const headerHtml = `
         <div class="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-slate-800 backdrop-blur-sm sticky top-0 z-10 mb-6">
             <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -32,14 +28,12 @@ export function renderMetrics(allData) {
             <div class="flex gap-1.5">${buildToggle('30d', '30d')}${buildToggle('90d', '90d')}${buildToggle('6m', '6m')}${buildToggle('1y', '1y')}</div>
         </div>`;
 
-    // 1. Build Table HTML
     const tableHtml = renderSummaryTable(cachedData);
     const tableSection = buildCollapsibleSection('metrics-table-section', 'Physiological Trends', tableHtml, true);
 
-    // 2. Build Charts Grid (Containers only - populated by updateCharts)
     const chartsGrid = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div id="metric-chart-endurance"></div>
+            <div id="metric-chart-subjective"></div> <div id="metric-chart-endurance"></div>
             <div id="metric-chart-strength"></div>
             <div id="metric-chart-run"></div>
             <div id="metric-chart-swim"></div> 
