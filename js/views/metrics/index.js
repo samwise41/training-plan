@@ -6,6 +6,7 @@ import { updateCharts } from './charts.js';
 let metricsState = { timeRange: '6m' };
 let cachedData = [];
 
+// --- GLOBAL HANDLER ---
 window.toggleMetricsTime = (range) => {
     metricsState.timeRange = range;
     updateCharts(cachedData, metricsState.timeRange);
@@ -14,7 +15,6 @@ window.toggleMetricsTime = (range) => {
 export function renderMetrics(allData) {
     cachedData = allData || [];
     
-    // Ensure charts render after the DOM update
     setTimeout(() => {
         updateCharts(cachedData, metricsState.timeRange);
     }, 0);
@@ -29,42 +29,28 @@ export function renderMetrics(allData) {
             <div class="flex gap-1.5">${buildToggle('30d', '30d')}${buildToggle('90d', '90d')}${buildToggle('6m', '6m')}${buildToggle('1y', '1y')}</div>
         </div>`;
 
+    // 1. Build Table HTML
     const tableHtml = renderSummaryTable(cachedData);
     const tableSection = buildCollapsibleSection('metrics-table-section', 'Physiological Trends', tableHtml, true);
 
-    // --- CHART SECTION HEADERS ---
-    const buildSectionHeader = (title, icon, colorClass) => `
-        <div class="col-span-full mt-6 mb-2 flex items-center gap-2 border-b border-slate-700/50 pb-2">
-            <i class="fa-solid ${icon} ${colorClass}"></i>
-            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">${title}</h3>
-        </div>`;
-
+    // 2. Build Charts Grid (Updated with ALL containers)
     const chartsGrid = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            ${buildSectionHeader('Health & Readiness', 'fa-battery-full', 'text-emerald-400')}
-            <div id="metric-chart-health_rhr"></div>
-            <div id="metric-chart-health_hrv"></div>
-            <div id="metric-chart-health_sleep"></div>
-            <div class="hidden md:block"></div> ${buildSectionHeader('General Fitness', 'fa-heart-pulse', 'icon-all')}
             <div id="metric-chart-vo2max"></div>
-            <div id="metric-chart-tss"></div>
             <div id="metric-chart-anaerobic"></div>
 
-            ${buildSectionHeader('Cycling Metrics', 'fa-person-biking', 'icon-bike')}
             <div id="metric-chart-subjective_bike"></div>
+            <div id="metric-chart-subjective_run"></div>
+            <div id="metric-chart-subjective_swim"></div>
+
             <div id="metric-chart-endurance"></div>
             <div id="metric-chart-strength"></div>
 
-            ${buildSectionHeader('Running Metrics', 'fa-person-running', 'icon-run')}
-            <div id="metric-chart-subjective_run"></div>
             <div id="metric-chart-run"></div>
             <div id="metric-chart-mechanical"></div>
             <div id="metric-chart-gct"></div>
             <div id="metric-chart-vert"></div>
 
-            ${buildSectionHeader('Swimming Metrics', 'fa-person-swimming', 'icon-swim')}
-            <div id="metric-chart-subjective_swim"></div>
             <div id="metric-chart-swim"></div> 
         </div>`;
     
