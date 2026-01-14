@@ -89,7 +89,6 @@ def detect_sport(text):
     return 'OTHER'
 
 def get_garmin_sport(act):
-    # Helper to normalize Garmin sport types for grouping
     t = act.get('activityType', {}).get('typeKey', '').lower()
     if 'running' in t: return 'RUN'
     if 'cycling' in t or 'biking' in t or 'virtual_ride' in t: return 'BIKE'
@@ -147,7 +146,6 @@ def bundle_activities(activities):
     
     # 4. Metadata
     combined['activityName'] = f"{main_act.get('activityName')} (+{len(activities)-1})"
-    # IMPORTANT: Store CSV of IDs to track claimed status
     combined['activityId'] = ",".join(str(a.get('activityId')) for a in activities)
 
     # 5. RPE/Feeling (Take from main activity)
@@ -171,7 +169,6 @@ def cluster_activities_by_time(candidates, target_sport=None):
     relevant = []
     for c in candidates:
         g_sport = get_garmin_sport(c)
-        # If target_sport is specified, match it. Otherwise include all valid sports.
         if target_sport:
             if g_sport == target_sport: relevant.append(c)
         else:
@@ -179,7 +176,7 @@ def cluster_activities_by_time(candidates, target_sport=None):
 
     if not relevant: return []
 
-    # Sort by Start Time to ensure chaining (Warmup -> Ride -> Cool)
+    # Sort by Start Time to ensure chaining works (Warmup -> Ride -> Cool)
     relevant.sort(key=lambda x: x.get('startTimeLocal', ''))
 
     clusters = []
@@ -201,7 +198,8 @@ def cluster_activities_by_time(candidates, target_sport=None):
 
         prev_start = pd.to_datetime(prev_act.get('startTimeLocal'))
         
-        # Use elapsedDuration if available for accurate "wall clock" end time
+        # KEY FIX: Use elapsedDuration (wall-clock time) to calculate true end time
+        # This handles coffee stops or pauses correctly
         prev_dur = prev_act.get('elapsedDuration', prev_act.get('duration', 0))
         prev_end = prev_start + timedelta(seconds=prev_dur)
         
@@ -210,8 +208,8 @@ def cluster_activities_by_time(candidates, target_sport=None):
         # Gap Calculation
         gap_minutes = (curr_start - prev_end).total_seconds() / 60.0
         
-        # Threshold: 60 minutes
-        # Note: If gap is negative (overlap), it's also <= 60, so it bundles.
+        # If the gap is less than 60 mins, bundle it.
+        # This creates a chain: A -> (gap < 60) -> B -> (gap < 60) -> C
         if gap_minutes <= 60:
             current_cluster.append(act)
         else:
@@ -220,7 +218,6 @@ def cluster_activities_by_time(candidates, target_sport=None):
             
     if current_cluster: clusters.append(current_cluster)
 
-    # Aggregate each cluster into a single dict
     results = [bundle_activities(c) for c in clusters]
     return results
 
@@ -251,6 +248,11 @@ def sync():
         d = g.get('startTimeLocal', '')[:10]
         if d not in garmin_by_date: garmin_by_date[d] = []
         garmin_by_date[d].append(g)
+
+    # SAFETY CHECK: Only process recent data
+    # This prevents the script from rewriting history older than 7 days
+    CUTOFF_DATE = datetime.now() - timedelta(days=7)
+    print(f"   (Restricted to updates after {CUTOFF_DATE.strftime('%Y-%m-%d')})")
 
     # 1. Sync Plan to Master
     if not df_plan.empty:
@@ -285,7 +287,7 @@ def sync():
         if 'Date_Norm' in df_master.columns: df_master.drop(columns=['Date_Norm'], inplace=True)
         if count_added > 0: print(f"   + Added {count_added} new planned workouts.")
 
-    # 2. Match Planned Workouts (with Bundling)
+    # 2. Match Planned Workouts
     claimed_ids = set()
     cols_to_map = [
         'duration', 'distance', 'averageHR', 'maxHR', 
@@ -300,7 +302,17 @@ def sync():
 
     for idx, row in df_master.iterrows():
         date_str = str(row.get('Date', '')).strip()
-        try: date_key = pd.to_datetime(date_str).strftime('%Y-%m-%d')
+        try: 
+            date_obj = pd.to_datetime(date_str)
+            date_key = date_obj.strftime('%Y-%m-%d')
+            
+            # CRITICAL: Skip rows older than 7 days
+            if date_obj < CUTOFF_DATE:
+                 # Even if we skip processing, we must ensure we don't accidentally
+                 # pick up these IDs in the "Unplanned" phase later.
+                 # However, since Unplanned phase filters by date too, we are safe.
+                 continue
+
         except: continue
         
         candidates = garmin_by_date.get(date_key, [])
@@ -313,30 +325,24 @@ def sync():
         # Don't overwrite if manually linked (unless empty)
         current_id = str(row.get('activityId', '')).strip()
         if current_id and current_id != 'nan' and ',' in current_id: 
-            # If already a bundle in DB, mark its parts as claimed so we don't duplicate in Unplanned
+            # If already a bundle in DB, mark as claimed
             for sub_id in current_id.split(','):
                 claimed_ids.add(sub_id.strip())
             continue 
 
         # --- LOGIC: Find Best Bundle ---
-        # 1. Generate all valid bundles for this sport on this day
         daily_bundles = cluster_activities_by_time(candidates, planned_sport)
         
         best_match = None
-        
-        # 2. Pick the best one (Largest bundle that hasn't been claimed)
         for bundle in daily_bundles:
             b_ids = str(bundle['activityId']).split(',')
-            # If any ID in this bundle is already used, skip it
             if any(bid in claimed_ids for bid in b_ids): continue
             
-            # Simple heuristic: Pick the first valid bundle we find
-            # (Since they are sorted by time, this usually maps AM plan to AM ride)
+            # Match found
             best_match = bundle
             break
         
         if best_match:
-            # Claim IDs
             for bid in str(best_match['activityId']).split(','): claimed_ids.add(bid)
 
             # Update DB
@@ -344,7 +350,6 @@ def sync():
             df_master.at[idx, 'Match Status'] = 'Linked'
             df_master.at[idx, 'activityId'] = best_match['activityId']
             
-            # Format Name
             g_type = best_match.get('activityType', {}).get('typeKey', '').lower()
             prefix = f"[{planned_sport}]" 
             raw_name = best_match.get('activityName', 'Activity')
@@ -372,18 +377,23 @@ def sync():
                 if raw: feel_val = int((raw / 25) + 1)
             if feel_val: df_master.at[idx, 'Feeling'] = str(feel_val)
 
-    # 3. Handle Unplanned (Also Bundled)
+    # 3. Handle Unplanned (Bundled leftovers)
     unplanned_rows = []
     
     for date_key, day_activities in garmin_by_date.items():
-        # Get all bundles for this day (Any Sport)
+        # CRITICAL: Skip old dates for unplanned too
+        try:
+             dt_key = pd.to_datetime(date_key)
+             if dt_key < CUTOFF_DATE: continue
+        except: continue
+
+        # Cluster everything remaining for this day
         all_day_bundles = cluster_activities_by_time(day_activities, target_sport=None)
         
         for bundle in all_day_bundles:
             b_ids = str(bundle['activityId']).split(',')
             
-            # CRITICAL CHECK:
-            # If ANY part of this bundle is claimed, ignore the whole thing.
+            # If ANY part of this bundle is claimed, ignore the whole thing
             if any(bid in claimed_ids for bid in b_ids): continue
             
             # Create Unplanned Entry
@@ -398,7 +408,6 @@ def sync():
             for col in cols_to_map:
                 if col in bundle: new_row[col] = bundle[col]
             
-            # RPE/Feeling for Unplanned
             rpe_val = bundle.get('perceivedEffort')
             if rpe_val is None and 'summaryDTO' in bundle:
                  raw_rpe = bundle['summaryDTO'].get('directWorkoutRpe')
@@ -410,7 +419,6 @@ def sync():
             
             unplanned_rows.append(new_row)
             
-            # Mark these as claimed so we don't duplicate them in a different pass
             for bid in b_ids: claimed_ids.add(bid)
 
     if unplanned_rows:
