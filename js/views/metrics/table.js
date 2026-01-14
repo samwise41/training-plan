@@ -2,7 +2,6 @@
 import { METRIC_DEFINITIONS } from './definitions.js';
 import { checkSport, calculateTrend, getTrendIcon, aggregateWeeklyTSS } from './utils.js';
 
-// --- Formulas ---
 const METRIC_FORMULAS = {
     'subjective_bike': '(Avg Power / RPE)',
     'subjective_run': '(Avg Speed / RPE)',
@@ -14,7 +13,6 @@ const METRIC_FORMULAS = {
     'mechanical': '(Vert Osc / GCT)'
 };
 
-// --- DATA EXTRACTION HELPER ---
 export const extractMetricData = (data, key) => {
     const isInt = (item, labels) => {
         const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
@@ -22,20 +20,16 @@ export const extractMetricData = (data, key) => {
     };
 
     switch(key) {
-        // BIKE
         case 'endurance': return data.filter(x => checkSport(x, 'BIKE') && x.avgPower > 0 && x.avgHR > 0 && isInt(x, ['AEROBIC_BASE', 'RECOVERY'])).map(x => ({ val: x.avgPower / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / HR:${Math.round(x.avgHR)}` }));
         case 'strength': return data.filter(x => checkSport(x, 'BIKE') && x.avgPower > 0 && x.avgCadence > 0 && (isInt(x, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']) || (isInt(x, ['AEROBIC_BASE']) && x.normPower > 185))).map(x => ({ val: x.avgPower / x.avgCadence, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / RPM:${Math.round(x.avgCadence)}` }));
         
-        // RUN
         case 'run': return data.filter(x => checkSport(x, 'RUN') && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pace:${Math.round(x.avgSpeed*60)}m/m / HR:${Math.round(x.avgHR)}` }));
         case 'mechanical': return data.filter(x => checkSport(x, 'RUN') && x.avgSpeed > 0 && x.avgPower > 0).map(x => ({ val: (x.avgSpeed * 100) / x.avgPower, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${x.avgSpeed.toFixed(1)} / Pwr:${Math.round(x.avgPower)}` }));
         case 'gct': return data.filter(x => checkSport(x, 'RUN') && x.avgGroundContactTime > 0).map(x => ({ val: x.avgGroundContactTime, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${Math.round(x.avgGroundContactTime)} ms` }));
         case 'vert': return data.filter(x => checkSport(x, 'RUN') && x.avgVerticalOscillation > 0).map(x => ({ val: x.avgVerticalOscillation, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${x.avgVerticalOscillation.toFixed(1)} cm` }));
         
-        // SWIM
         case 'swim': return data.filter(x => checkSport(x, 'SWIM') && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${(x.avgSpeed*60).toFixed(1)}m/m / HR:${Math.round(x.avgHR)}` }));
         
-        // ALL
         case 'vo2max': return data.filter(x => x.vO2MaxValue > 0).map(x => ({ val: x.vO2MaxValue, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: "VO2 Est", breakdown: `Score: ${x.vO2MaxValue}` }));
         case 'anaerobic': return data.filter(x => x.anaerobicTrainingEffect > 0.5).map(x => ({ val: x.anaerobicTrainingEffect, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Anaerobic: ${x.anaerobicTrainingEffect}` }));
         case 'tss': return aggregateWeeklyTSS(data);
@@ -43,9 +37,6 @@ export const extractMetricData = (data, key) => {
     }
 };
 
-// --- HELPER FOR SUBJECTIVE METRICS ---
-// We need this because they aren't in the standard switch above due to sport-specific logic in charts.js
-// Ideally, we'd unify them, but for now we mimic the chart logic here for the table.
 const extractSubjectiveTableData = (data, key) => {
     let sportMode = null;
     if (key === 'subjective_bike') sportMode = 'bike';
@@ -77,12 +68,10 @@ const extractSubjectiveTableData = (data, key) => {
     }).filter(Boolean).sort((a,b) => a.date - b.date);
 };
 
-// --- TABLE RENDERER ---
 export const renderSummaryTable = (allData) => {
     let rows = '';
     const now = new Date();
 
-    // Group Definitions
     const groups = [
         { name: 'General Fitness', keys: ['vo2max', 'tss', 'anaerobic'] },
         { name: 'Cycling Metrics', keys: ['subjective_bike', 'endurance', 'strength'] },
@@ -91,7 +80,6 @@ export const renderSummaryTable = (allData) => {
     ];
 
     groups.forEach(group => {
-        // Group Header
         rows += `
             <tr class="bg-slate-900/80">
                 <td colspan="5" class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700">
