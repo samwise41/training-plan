@@ -11,14 +11,12 @@ const METRIC_FORMULAS = {
     'strength': '(Torque / Output)',
     'run': '(Avg Power / Avg Speed)',
     'swim': '(Avg Speed / Stroke Rate)',
-    'mechanical': '(Vert Osc / GCT)',
-    'vo2max': '(Garmin Estimate)'
+    'mechanical': '(Vert Osc / GCT)'
 };
 
 // --- Helper to calculate Subjective Efficiency per Sport ---
 const calculateSubjectiveEfficiency = (allData, sportMode) => {
     return allData
-        .filter(d => !d.isHealth) 
         .map(d => {
             const rpe = parseFloat(d.RPE);
             if (!rpe || rpe <= 0) return null;
@@ -27,6 +25,7 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
             let breakdown = "";
             let match = false;
 
+            // BIKE (Power / RPE)
             if (sportMode === 'bike') {
                 const isBike = d.sportTypeId == '2' || (d.activityType && d.activityType.includes('cycl')) || (d.actualType === 'Bike');
                 const pwr = parseFloat(d.avgPower);
@@ -36,6 +35,7 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
                     match = true;
                 }
             }
+            // RUN (Speed / RPE)
             else if (sportMode === 'run') {
                 const isRun = d.sportTypeId == '1' || (d.activityType && d.activityType.includes('run')) || (d.actualType === 'Run');
                 const spd = parseFloat(d.avgSpeed); 
@@ -45,6 +45,7 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
                     match = true;
                 }
             }
+            // SWIM (Speed / RPE)
             else if (sportMode === 'swim') {
                 const isSwim = d.sportTypeId == '5' || (d.activityType && d.activityType.includes('swim')) || (d.actualType === 'Swim');
                 const spd = parseFloat(d.avgSpeed);
@@ -58,7 +59,7 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
             if (match && val > 0) {
                 return {
                     date: d.date,
-                    dateStr: d.dateStr || d.date.toISOString().split('T')[0],
+                    dateStr: d.date.toISOString().split('T')[0],
                     val: val,
                     name: d.actualName || d.activityName || 'Activity',
                     breakdown: breakdown
@@ -72,7 +73,7 @@ const calculateSubjectiveEfficiency = (allData, sportMode) => {
 
 const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
-    if (!def) return `<div class="p-4 text-xs text-red-400 border border-red-900 rounded bg-red-900/10">Definition missing for: ${key}</div>`;
+    if (!def) return `<div class="p-4 text-red-500 text-xs">Error: Definition missing for ${key}</div>`;
 
     const unitLabel = def.rangeInfo.split(' ').pop(); 
     const color = def.colorVar;
@@ -157,6 +158,7 @@ const buildMetricChart = (displayData, fullData, key) => {
         <text x="${pad.l - 6}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(2)}</text>
     `;
 
+    // X-Axis Date Labels
     let xAxisLabelsHtml = '';
     if (displayData.length > 1) {
         const targetCount = 5; 
@@ -235,32 +237,32 @@ export const updateCharts = (allData, timeRange) => {
         const el = document.getElementById(id);
         if (el) {
             let full;
-            
-            // 1. SUBJECTIVE EFFICIENCY
-            if (key.startsWith('subjective_')) {
-                full = calculateSubjectiveEfficiency(allData, key.split('_')[1]);
-            }
-            // 2. STANDARD
-            else {
-                full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
-            }
+            if (key === 'subjective_bike') full = calculateSubjectiveEfficiency(allData, 'bike');
+            else if (key === 'subjective_run') full = calculateSubjectiveEfficiency(allData, 'run');
+            else if (key === 'subjective_swim') full = calculateSubjectiveEfficiency(allData, 'swim');
+            else full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
             
             const display = full.filter(d => d.date >= cutoff);
             el.innerHTML = buildMetricChart(display, full, key);
         }
     };
 
+    // Render grouped charts
     render('metric-chart-vo2max', 'vo2max');
+    render('metric-chart-tss', 'tss');
     render('metric-chart-anaerobic', 'anaerobic');
+
     render('metric-chart-subjective_bike', 'subjective_bike');
-    render('metric-chart-subjective_run', 'subjective_run');
-    render('metric-chart-subjective_swim', 'subjective_swim');
     render('metric-chart-endurance', 'endurance');
     render('metric-chart-strength', 'strength');
+
+    render('metric-chart-subjective_run', 'subjective_run');
     render('metric-chart-run', 'run');
     render('metric-chart-mechanical', 'mechanical');
     render('metric-chart-gct', 'gct');
     render('metric-chart-vert', 'vert');
+
+    render('metric-chart-subjective_swim', 'subjective_swim');
     render('metric-chart-swim', 'swim');
 
     ['30d', '90d', '6m', '1y'].forEach(range => {
