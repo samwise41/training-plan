@@ -41,6 +41,11 @@ export function renderMetrics(allData) {
 
     const chartsGrid = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${buildSectionHeader('Health & Readiness', 'fa-battery-full', 'text-emerald-400')}
+            <div id="metric-chart-health_rhr"></div>
+            <div id="metric-chart-health_hrv"></div>
+            <div id="metric-chart-health_sleep"></div>
+            <div class="hidden md:block"></div> // ...
             
             ${buildSectionHeader('General Fitness', 'fa-heart-pulse', 'icon-all')}
             <div id="metric-chart-vo2max"></div>
