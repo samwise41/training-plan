@@ -8,8 +8,6 @@ from datetime import datetime, timedelta
 from . import config
 
 # --- CONFIGURATION ---
-# Only sync/update workouts from this many days ago to today.
-# Set to 365 or larger if you ever want to force a full history rewrite.
 SYNC_WINDOW_DAYS = 7  
 
 def load_master_db():
@@ -22,16 +20,47 @@ def load_master_db():
     if len(lines) < 3: 
         return pd.DataFrame(columns=config.MASTER_COLUMNS)
     
-    header = [h.strip() for h in lines[0].strip('|').split('|')]
+    # Robust Header Parsing
+    header_line = lines[0].strip()
+    if not header_line.startswith('|'): return pd.DataFrame(columns=config.MASTER_COLUMNS)
+    
+    header = [h.strip() for h in header_line.strip('|').split('|')]
     data = []
+    
     for line in lines[2:]:
         if '|' not in line: continue
         row = [c.strip() for c in line.strip('|').split('|')]
+        # Pad row if short
         if len(row) < len(header): 
             row += [''] * (len(header) - len(row))
         data.append(dict(zip(header, row)))
     
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    
+    # --- FIX 1: AUTO-DEDUPLICATE ON LOAD ---
+    # If multiple rows have the same non-empty activityId, keep the first one.
+    if 'activityId' in df.columns:
+        # Create a mask for rows that HAVE an activity ID
+        has_id = df['activityId'].str.strip().astype(bool)
+        
+        # Split into two groups: those with IDs and those without
+        df_ids = df[has_id].copy()
+        df_noids = df[~has_id].copy()
+        
+        # Deduplicate the ID group
+        # We explode comma-separated IDs to check for uniqueness, but simple dedupe by the full string is safer for now
+        # to avoid breaking bundled rows.
+        before_len = len(df_ids)
+        df_ids = df_ids.drop_duplicates(subset=['activityId'], keep='first')
+        after_len = len(df_ids)
+        
+        if before_len > after_len:
+            print(f"🧹 Cleaned up {before_len - after_len} duplicate rows from Database.")
+            
+        # Recombine
+        df = pd.concat([df_ids, df_noids], ignore_index=True)
+        
+    return df
 
 def clean_corrupt_data(df):
     if 'activityType' in df.columns:
@@ -48,7 +77,6 @@ def clean_corrupt_data(df):
         df['activityType'] = df['activityType'].apply(fix_type)
     return df
 
-# --- RESTORED HELPER FUNCTIONS ---
 def extract_ftp(text):
     if not text: return None
     pattern = r"Cycling FTP[:\*]*\s*(\d+)"
@@ -65,7 +93,6 @@ def get_current_ftp():
     except Exception as e:
         print(f"⚠️ Could not read FTP from plan: {e}")
         return None
-# ---------------------------------
 
 def extract_weekly_table():
     if not os.path.exists(config.PLAN_FILE): return pd.DataFrame()
@@ -121,22 +148,16 @@ def is_value_different(db_val, json_val):
         return str_db != str(json_val).strip()
 
 def bundle_activities(activities):
-    """Combines multiple activities into a single weighted record."""
     if not activities: return None
-    
-    # Sort to find main activity (longest duration wins)
     activities.sort(key=lambda x: x.get('duration', 0), reverse=True)
     main_act = activities[0]
-    
     combined = main_act.copy()
     
-    # Summation
     combined['duration'] = sum(a.get('duration', 0) for a in activities)
     combined['distance'] = sum(a.get('distance', 0) for a in activities)
     combined['calories'] = sum(a.get('calories', 0) for a in activities)
     combined['elevationGain'] = sum(a.get('elevationGain', 0) for a in activities)
     
-    # Weighted Averages
     def weighted_avg(key):
         numerator = 0
         denominator = 0
@@ -155,12 +176,10 @@ def bundle_activities(activities):
     avg_cadence_bike = weighted_avg('averageBikingCadenceInRevPerMinute')
     avg_cadence_run = weighted_avg('averageRunningCadenceInStepsPerMinute')
     
-    # Max Fields
     combined['maxHR'] = max((a.get('maxHR', 0) for a in activities), default=0)
     combined['maxPower'] = max((a.get('maxPower', 0) for a in activities), default=0)
     combined['maxSpeed'] = max((a.get('maxSpeed', 0) for a in activities), default=0)
 
-    # Subjective Scan (Find first non-null value)
     rpe = None
     feeling = None
     for a in activities:
@@ -172,7 +191,6 @@ def bundle_activities(activities):
             feeling = a.get('feeling')
             break
 
-    # Apply Updates
     if avg_power: combined['avgPower'] = avg_power
     if norm_power: combined['normPower'] = norm_power
     if avg_hr: combined['averageHR'] = avg_hr
@@ -195,6 +213,7 @@ def sync():
     df_master = load_master_db()
     df_master = clean_corrupt_data(df_master)
     
+    # Ensure all columns exist
     for col in config.MASTER_COLUMNS:
         if col not in df_master.columns:
             df_master[col] = ""
@@ -214,13 +233,12 @@ def sync():
         if d not in garmin_by_date: garmin_by_date[d] = []
         garmin_by_date[d].append(g)
 
-    # Define the cutoff date
     today = datetime.now()
     cutoff_date = today - timedelta(days=SYNC_WINDOW_DAYS)
     cutoff_str = cutoff_date.strftime('%Y-%m-%d')
     today_str = today.strftime('%Y-%m-%d')
 
-    # 1. Sync Plan to Master (Skip old AND future plan items)
+    # 1. Sync Plan to Master
     if not df_plan.empty:
         count_added = 0
         df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
@@ -232,7 +250,6 @@ def sync():
             p_date_norm = p_row['Date_Norm']
             p_workout = str(p_row.get('Planned Workout', '')).strip()
             
-            # Filter: Ignore plan items older than window OR in future
             if pd.isna(p_date_norm) or p_date_norm < cutoff_str or p_date_norm > today_str: 
                 continue
             
@@ -257,16 +274,17 @@ def sync():
             df_master.drop(columns=['Date_Norm'], inplace=True)
         print(f"   + Added {count_added} new planned workouts.")
 
-    # 2. Link Garmin Data
+    # 2. PRE-SCAN CLAIMED IDs
+    # This prevents duplicates by acknowledging what is ALREADY in the DB
     claimed_ids = set()
-    
-    # PRE-SCAN ALL IDs (prevent Unplanned duplicates)
     for _, row in df_master.iterrows():
         eid = str(row.get('activityId', '')).strip()
         if eid and eid.lower() != 'nan':
+            # Split comma-separated IDs for bundled workouts
             for sub_id in eid.split(','):
                 claimed_ids.add(sub_id.strip())
 
+    # 3. Link Garmin Data
     cols_to_map = [
         'duration', 'distance', 'averageHR', 'maxHR', 
         'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
@@ -281,13 +299,10 @@ def sync():
     for idx, row in df_master.iterrows():
         date_str = str(row.get('Date', '')).strip()
         try: 
-            date_obj = pd.to_datetime(date_str)
-            date_key = date_obj.strftime('%Y-%m-%d')
+            date_key = pd.to_datetime(date_str).strftime('%Y-%m-%d')
         except: continue
         
-        # FILTER: Do not update rows older than window
-        if date_key < cutoff_str:
-            continue
+        if date_key < cutoff_str: continue
 
         candidates = garmin_by_date.get(date_key, [])
         if not candidates: continue
@@ -295,20 +310,25 @@ def sync():
         planned_txt = str(row.get('Planned Workout', '')).upper()
         planned_type = detect_sport(planned_txt)
         
-        matches = []
         current_id_str = str(row.get('activityId', '')).strip()
         current_ids = []
         if current_id_str and current_id_str.lower() != 'nan':
              current_ids = [cid.strip() for cid in current_id_str.split(',') if cid.strip()]
         
+        matches = []
         for cand in candidates:
             cand_id = str(cand.get('activityId'))
-            if cand_id in claimed_ids and cand_id not in current_ids: continue 
+            
+            # Logic: If this ID is claimed by ANOTHER row, skip it.
+            # But if it's claimed by THIS row (current_ids), keep it.
+            if cand_id in claimed_ids and cand_id not in current_ids: 
+                continue 
             
             is_match = False
             if cand_id in current_ids:
                 is_match = True
             elif not current_ids:
+                # Fallback: Match by Type
                 g_type_str = cand.get('activityType', {}).get('typeKey', '').lower()
                 g_sport = 'OTHER'
                 if 'running' in g_type_str: g_sport = 'RUN'
@@ -324,6 +344,7 @@ def sync():
         if matches:
             composite_match = bundle_activities(matches)
             
+            # Update claimed IDs immediately
             for m in matches:
                 claimed_ids.add(str(m.get('activityId')))
 
@@ -357,18 +378,16 @@ def sync():
             
             rpe_val = composite_match.get('perceivedEffort')
             feel_val = composite_match.get('feeling')
-            
             if rpe_val is None and 'summaryDTO' in composite_match:
                 raw = composite_match['summaryDTO'].get('directWorkoutRpe')
                 if raw: rpe_val = int(raw / 10)
             if feel_val is None and 'summaryDTO' in composite_match:
                 raw = composite_match['summaryDTO'].get('directWorkoutFeel')
                 if raw: feel_val = int((raw / 25) + 1)
-                
             if rpe_val is not None: df_master.at[idx, 'RPE'] = str(rpe_val)
             if feel_val is not None: df_master.at[idx, 'Feeling'] = str(feel_val)
 
-    # 3. Handle Unplanned
+    # 4. Handle Unplanned
     unplanned_rows = []
     all_garmin = [item for sublist in garmin_by_date.values() for item in sublist]
     
@@ -376,7 +395,6 @@ def sync():
         g_id = str(g.get('activityId'))
         g_date = g.get('startTimeLocal', '')[:10]
         
-        # FILTER: Old AND Future
         if g_date < cutoff_str or g_date > today_str: continue
 
         c_type = g.get('activityType', {}).get('typeId')
@@ -387,19 +405,19 @@ def sync():
         
         if not is_valid_type: continue
 
+        # --- FIX 2: PREVENT DUPLICATES ---
         if g_id not in claimed_ids:
+            # Claim it immediately so next loop doesn't add it again
+            claimed_ids.add(g_id)
+
             new_row = {c: "" for c in config.MASTER_COLUMNS}
             new_row['Status'] = 'COMPLETED'
             new_row['Match Status'] = 'Unplanned'
             new_row['Date'] = g_date
-            
-            # --- NEW: POPULATE DAY OF WEEK (Robust Pandas Method) ---
             try:
                 if g_date:
                     new_row['Day'] = pd.to_datetime(g_date).day_name()
-            except:
-                pass
-            # ---------------------------------
+            except: pass
 
             new_row['activityId'] = g_id
             new_row['Actual Workout'] = g.get('activityName', 'Unplanned')
@@ -408,18 +426,6 @@ def sync():
             for col in cols_to_map:
                 if col in g: new_row[col] = g[col]
             
-            rpe_val = g.get('perceivedEffort')
-            if rpe_val is None and 'summaryDTO' in g:
-                 raw_rpe = g['summaryDTO'].get('directWorkoutRpe')
-                 if raw_rpe: rpe_val = int(raw_rpe / 10)
-            if rpe_val: new_row['RPE'] = str(rpe_val)
-
-            feel_val = g.get('feeling')
-            if feel_val is None and 'summaryDTO' in g:
-                 raw_feel = g['summaryDTO'].get('directWorkoutFeel')
-                 if raw_feel: feel_val = int((raw_feel / 25) + 1)
-            if feel_val: new_row['Feeling'] = str(feel_val)
-
             try: new_row['Actual Duration'] = f"{float(g.get('duration', 0))/60:.1f}"
             except: pass
             
@@ -429,12 +435,11 @@ def sync():
         print(f"   + Added {len(unplanned_rows)} unplanned activities.")
         df_master = pd.concat([df_master, pd.DataFrame(unplanned_rows)], ignore_index=True)
 
-    # 4. Hydrate TSS/IF
+    # 5. Hydrate TSS/IF
     current_ftp = get_current_ftp() or 241.0
     for idx, row in df_master.iterrows():
         r_date = str(row.get('Date', ''))
         if r_date < cutoff_str: continue
-
         act_type = str(row.get('activityType', '')).lower()
         if not ('run' in act_type or 'cycl' in act_type or 'bik' in act_type or 'virtual' in act_type): continue
         try:
@@ -447,16 +452,26 @@ def sync():
             existing_if = str(row.get('intensityFactor', '')).strip()
             if not existing_if or existing_if == 'nan' or float(existing_if) == 0:
                  df_master.at[idx, 'intensityFactor'] = f"{intensity:.2f}"
-            
             existing_tss = str(row.get('trainingStressScore', '')).strip()
             if not existing_tss or existing_tss == 'nan' or float(existing_tss) == 0:
                 tss = (duration * np_val * intensity) / (current_ftp * 3600) * 100
                 df_master.at[idx, 'trainingStressScore'] = f"{tss:.1f}"
 
-    # 5. Save
+    # 6. Save (with final cleanup)
     df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
     df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
     
+    # --- FINAL DEDUPE SAFETY CHECK ---
+    # In case unplanned rows somehow duplicated existing ones, remove them.
+    if 'activityId' in df_master.columns:
+         has_id = df_master['activityId'].str.strip().astype(bool)
+         df_ids = df_master[has_id].drop_duplicates(subset=['activityId'], keep='first')
+         df_noids = df_master[~has_id]
+         df_master = pd.concat([df_ids, df_noids], ignore_index=True)
+         df_master['Date_Sort'] = pd.to_datetime(df_master['Date'], errors='coerce')
+         df_master = df_master.sort_values(by='Date_Sort', ascending=False).drop(columns=['Date_Sort'])
+    # --------------------------------
+
     print(f"💾 Saving {len(df_master)} rows to Master DB...")
     with open(config.MASTER_DB, 'w', encoding='utf-8') as f:
         f.write("| " + " | ".join(config.MASTER_COLUMNS) + " |\n")
