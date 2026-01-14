@@ -2,8 +2,9 @@
 import { METRIC_DEFINITIONS } from './definitions.js';
 import { checkSport, calculateTrend, getTrendIcon, aggregateWeeklyTSS } from './utils.js';
 
-// --- NEW: Formulas for specific metrics (Matches charts.js) ---
+// --- Formulas ---
 const METRIC_FORMULAS = {
+    'subjective': '(Avg Power / RPE)',         // NEW
     'endurance': '(Norm Power / Avg HR)',
     'strength': '(Torque / Output)',
     'run': '(Avg Power / Avg Speed)',
@@ -11,7 +12,7 @@ const METRIC_FORMULAS = {
     'mechanical': '(Vert Osc / GCT)'
 };
 
-// --- DATA EXTRACTION HELPER (Exported for use in Charts) ---
+// --- DATA EXTRACTION HELPER ---
 export const extractMetricData = (data, key) => {
     const isInt = (item, labels) => {
         const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
@@ -19,6 +20,18 @@ export const extractMetricData = (data, key) => {
     };
 
     switch(key) {
+        // --- NEW: Subjective Calculation ---
+        case 'subjective': return data.filter(x => {
+            const isBike = (x.sportTypeId == '2' || (x.activityType && x.activityType.includes('cycl')));
+            return isBike && x.avgPower > 0 && x.RPE > 0;
+        }).map(x => ({ 
+            val: x.avgPower / parseFloat(x.RPE), 
+            date: x.date, 
+            dateStr: x.date.toISOString().split('T')[0], 
+            name: x.actualName, 
+            breakdown: `Pwr:${Math.round(x.avgPower)} / RPE:${x.RPE}` 
+        }));
+
         // BIKE
         case 'endurance': return data.filter(x => checkSport(x, 'BIKE') && x.avgPower > 0 && x.avgHR > 0 && isInt(x, ['AEROBIC_BASE', 'RECOVERY'])).map(x => ({ val: x.avgPower / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / HR:${Math.round(x.avgHR)}` }));
         case 'strength': return data.filter(x => checkSport(x, 'BIKE') && x.avgPower > 0 && x.avgCadence > 0 && (isInt(x, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']) || (isInt(x, ['AEROBIC_BASE']) && x.normPower > 185))).map(x => ({ val: x.avgPower / x.avgCadence, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / RPM:${Math.round(x.avgCadence)}` }));
@@ -82,7 +95,6 @@ export const renderSummaryTable = (allData) => {
                 <i class="fa-solid ${def.icon} text-xs group-hover:text-white transition-colors" style="color: ${def.colorVar}"></i>
             </div>`;
 
-        // --- NEW: Formula display logic ---
         const formula = METRIC_FORMULAS[key] || '';
         const titleHtml = `
             <div class="font-bold text-slate-200">
