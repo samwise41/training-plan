@@ -4,7 +4,7 @@ import { calculateTrend, getTrendIcon } from './utils.js';
 import { extractMetricData } from './table.js';
 
 const METRIC_FORMULAS = {
-    'subjective': '(Avg Power / RPE)',         // NEW
+    'subjective': '(Avg Power / RPE)',
     'endurance': '(Norm Power / Avg HR)',
     'strength': '(Torque / Output)',
     'run': '(Avg Power / Avg Speed)',
@@ -16,10 +16,12 @@ const METRIC_FORMULAS = {
 const calculateSubjectiveEfficiency = (allData) => {
     return allData
         .map(d => {
-            // Check for Bike Sport (ID 2) or Type
-            const isBike = d.sportTypeId == '2' || (d.activityType && d.activityType.includes('cycl'));
+            // Check for Bike (Sport ID 2) or 'cycl' in type or actualType
+            const isBike = d.sportTypeId == '2' || 
+                           (d.activityType && d.activityType.includes('cycl')) ||
+                           (d.actualType === 'Bike');
             
-            // Look for RPE column (ensure it exists)
+            // Safety check: ensure columns exist and are not empty
             if (!d.RPE || !d.avgPower) return null;
 
             const pwr = parseFloat(d.avgPower);
@@ -27,10 +29,11 @@ const calculateSubjectiveEfficiency = (allData) => {
 
             if (isBike && pwr > 0 && rpe > 0) {
                 return {
-                    date: new Date(d.Date),
-                    dateStr: d.Date,
+                    // Use d.date directly (Parser provides a Date object)
+                    date: d.date, 
+                    dateStr: d.date.toISOString().split('T')[0],
                     val: pwr / rpe,
-                    name: d['Actual Workout'] || 'Ride',
+                    name: d.actualName || 'Ride',
                     breakdown: `${Math.round(pwr)}W / ${rpe} RPE`
                 };
             }
@@ -46,7 +49,7 @@ const buildMetricChart = (displayData, fullData, key) => {
     // SAFETY CHECK: Prevents crash if definition is missing
     if (!def) {
         console.error(`Metric definition missing for: ${key}`);
-        return `<div class="p-4 text-red-500 text-xs">Error: Definition missing for ${key}</div>`;
+        return `<div class="p-4 text-red-500 text-xs border border-red-500 rounded bg-red-900/20">Error: Metric definition missing for '${key}'</div>`;
     }
 
     const unitLabel = def.rangeInfo.split(' ').pop(); 
