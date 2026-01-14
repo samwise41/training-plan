@@ -1,15 +1,41 @@
 // js/views/metrics/charts.js
 import { METRIC_DEFINITIONS } from './definitions.js';
 import { calculateTrend, getTrendIcon } from './utils.js';
-import { extractMetricData } from './table.js'; // Reuse logic
+import { extractMetricData } from './table.js';
 
-// --- NEW: Formulas for specific metrics ---
+// --- Formulas ---
 const METRIC_FORMULAS = {
-    'endurance': '(Norm Power / Avg HR)',      // Aerobic Efficiency
-    'strength': '(Torque / Output)',           // Torque Efficiency
-    'run': '(Avg Power / Avg Speed)',          // Running Economy
-    'swim': '(Avg Speed / Stroke Rate)',       // Swim Efficiency
-    'mechanical': '(Vert Osc / GCT)'           // Mechanical Stiffness
+    'subjective': '(Avg Power / RPE)',         // NEW
+    'endurance': '(Norm Power / Avg HR)',
+    'strength': '(Torque / Output)',
+    'run': '(Avg Power / Avg Speed)',
+    'swim': '(Avg Speed / Stroke Rate)',
+    'mechanical': '(Vert Osc / GCT)'
+};
+
+// --- Helper to calculate Subjective Efficiency on the fly ---
+const calculateSubjectiveEfficiency = (allData) => {
+    return allData
+        .map(d => {
+            // Check for Bike Sport (ID 2) or Type
+            const isBike = d.sportTypeId == '2' || (d.activityType && d.activityType.includes('cycl'));
+            const pwr = parseFloat(d.avgPower);
+            // 'RPE' column in Master DB stores the value 1-10
+            const rpe = parseFloat(d.RPE);
+
+            if (isBike && pwr > 0 && rpe > 0) {
+                return {
+                    date: new Date(d.Date),
+                    dateStr: d.Date,
+                    val: pwr / rpe,
+                    name: d['Actual Workout'] || 'Ride',
+                    breakdown: `${Math.round(pwr)}W / ${rpe} RPE`
+                };
+            }
+            return null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.date - b.date);
 };
 
 const buildMetricChart = (displayData, fullData, key) => {
@@ -42,7 +68,6 @@ const buildMetricChart = (displayData, fullData, key) => {
             </div>
         </div>`;
 
-    // --- NEW: Subtitle Logic ---
     const formula = METRIC_FORMULAS[key] || '';
     const titleHtml = `
         <h3 class="text-xs font-bold text-white flex items-center gap-2">
@@ -98,10 +123,10 @@ const buildMetricChart = (displayData, fullData, key) => {
         <text x="${pad.l - 6}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(1)}</text>
     `;
 
-    // --- NEW: X-Axis Date Labels ---
+    // X-Axis Date Labels
     let xAxisLabelsHtml = '';
     if (displayData.length > 1) {
-        const targetCount = 5; // Start, End, and ~3 intermediates
+        const targetCount = 5; 
         const step = (displayData.length - 1) / (targetCount - 1);
         const indices = new Set();
         
@@ -114,7 +139,6 @@ const buildMetricChart = (displayData, fullData, key) => {
                 const d = displayData[index];
                 const xPos = getX(d, index);
                 const dateObj = new Date(d.date);
-                // Format: Jan 1
                 const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 
                 let anchor = 'middle';
@@ -177,12 +201,20 @@ export const updateCharts = (allData, timeRange) => {
     const render = (id, key) => {
         const el = document.getElementById(id);
         if (el) {
-            const full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
+            let full;
+            // Use custom calculator for subjective, else standard extractor
+            if (key === 'subjective') {
+                full = calculateSubjectiveEfficiency(allData);
+            } else {
+                full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
+            }
+            
             const display = full.filter(d => d.date >= cutoff);
             el.innerHTML = buildMetricChart(display, full, key);
         }
     };
 
+    render('metric-chart-subjective', 'subjective'); // New Chart
     render('metric-chart-endurance', 'endurance');
     render('metric-chart-strength', 'strength');
     render('metric-chart-run', 'run');
@@ -194,7 +226,6 @@ export const updateCharts = (allData, timeRange) => {
     render('metric-chart-tss', 'tss');
     render('metric-chart-anaerobic', 'anaerobic');
 
-    // Update Buttons
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
         if(btn) {
