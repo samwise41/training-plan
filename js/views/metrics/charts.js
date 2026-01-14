@@ -4,8 +4,6 @@ import { calculateTrend, getTrendIcon } from './utils.js';
 import { extractMetricData } from './table.js';
 
 const METRIC_FORMULAS = {
-
-    
     // Subjective Efficiency
     'subjective_bike': '(Avg Power / RPE)',
     'subjective_run': '(Avg Speed / RPE)',
@@ -16,7 +14,11 @@ const METRIC_FORMULAS = {
     'strength': '(Torque / Output)',
     'run': '(Avg Power / Avg Speed)',
     'swim': '(Avg Speed / Stroke Rate)',
-    'mechanical': '(Vert Osc / GCT)'
+    'mechanical': '(Vert Osc / GCT)',
+    
+    // General Fitness (Retained)
+    'vo2max': '(Garmin Estimate)',
+    'tss': '(Training Stress Score)'
 };
 
 // --- Helper to calculate Subjective Efficiency per Sport ---
@@ -85,7 +87,7 @@ const buildMetricChart = (displayData, fullData, key) => {
         return `<div class="bg-slate-800/30 border border-red-900/50 rounded-xl p-4 h-full flex items-center justify-center text-red-500 text-xs">Definition missing: ${key}</div>`;
     }
 
-    const unitLabel = def.rangeInfo.split(' ').pop(); 
+    const unitLabel = def.rangeInfo ? def.rangeInfo.split(' ').pop() : ''; 
     const color = def.colorVar;
 
     const now = new Date();
@@ -248,11 +250,12 @@ export const updateCharts = (allData, timeRange) => {
         if (el) {
             let full;
             
-            // 2. SUBJECTIVE (Extract from Activity Rows)
-            else if (key === 'subjective_bike') full = calculateSubjectiveEfficiency(allData, 'bike');
+            // 1. SUBJECTIVE EFFICIENCY (Your custom logic)
+            if (key === 'subjective_bike') full = calculateSubjectiveEfficiency(allData, 'bike');
             else if (key === 'subjective_run') full = calculateSubjectiveEfficiency(allData, 'run');
             else if (key === 'subjective_swim') full = calculateSubjectiveEfficiency(allData, 'swim');
-            // 3. STANDARD (Extract from Activity Rows)
+            
+            // 2. STANDARD & FITNESS
             else {
                 full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
             }
@@ -262,7 +265,7 @@ export const updateCharts = (allData, timeRange) => {
         }
     };
 
-    // --- RENDER IN ORDER ---
+    // --- RENDER ORDER ---
 
     // 1. GENERAL FITNESS
     render('metric-chart-vo2max', 'vo2max');
