@@ -1,4 +1,4 @@
-name: Weekly Training Data Sync
+name: Training Data Sync
 
 on:
   schedule:
