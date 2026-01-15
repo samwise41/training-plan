@@ -8,7 +8,10 @@ export function renderZones(planMd) {
     const cyclingStatsHtml = renderCyclingStats(bio);
     const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
     const runningStatsHtml = renderRunningStats(bio);
-    const zonesGridHtml = parseZoneTables(planMd);
+    
+    // Now returns an object { cycling, running }
+    const zones = parseZoneTables(planMd);
+    
     const buttonHtml = renderButton();
 
     // Async Chart Init
@@ -18,9 +21,13 @@ export function renderZones(planMd) {
         <div class="zones-layout grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             <div class="flex flex-col gap-6">
+                ${gaugeHtml}
+
                 ${cyclingStatsHtml}
                 
-                ${gaugeHtml}
+                <div class="flex flex-col gap-4">
+                    ${zones.cycling}
+                </div>
             </div>
 
             <div class="flex flex-col gap-6">
@@ -38,7 +45,7 @@ export function renderZones(planMd) {
                 ${runningStatsHtml}
 
                 <div id="zone-grid" class="flex flex-col gap-4">
-                    ${zonesGridHtml}
+                    ${zones.running}
                 </div>
             </div>
 
