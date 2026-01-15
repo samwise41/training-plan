@@ -4,12 +4,26 @@ import json
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-load_dotenv()
+# --- PATH CONFIGURATION (ADAPTED FOR NEW STRUCTURE) ---
+# 1. Where does this script live? (.../strava_data/running)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# --- CONFIG ---
-ACTIVITY_LIST = "activity_ids.txt"
-CACHE_DIR = "running_cache"
-OUTPUT_MD = "my_running_prs.md"
+# 2. Where is the parent folder? (.../strava_data)
+PARENT_DIR = os.path.dirname(BASE_DIR)
+
+# 3. Load .env from the parent folder
+load_dotenv(os.path.join(PARENT_DIR, '.env'))
+
+# 4. Define paths based on your image
+# activity_ids.txt is in the parent folder
+ACTIVITY_LIST = os.path.join(PARENT_DIR, "activity_ids.txt")
+
+# running_cache is a sibling folder (in parent)
+CACHE_DIR = os.path.join(PARENT_DIR, "running_cache")
+
+# The output file stays right here in the running/ folder
+OUTPUT_MD = os.path.join(BASE_DIR, "my_running_prs.md")
+
 BATCH_SIZE = 20 
 
 # Distances to track
@@ -41,11 +55,11 @@ def format_time(seconds):
     return f"{m}:{s:02d}"
 
 def update_cache(token):
-    # ⭐️ NEW CHECK: Stop if the list is missing ⭐️
+    # Check if the master list exists in the parent folder
     if not os.path.exists(ACTIVITY_LIST):
-        print(f"❌ CRITICAL ERROR: '{ACTIVITY_LIST}' is missing!")
-        print("   The fetch script likely crashed before saving.")
-        print("   Please run '1_fetch_list.py' again successfully first.")
+        print(f"❌ CRITICAL ERROR: Could not find master list at:")
+        print(f"   {ACTIVITY_LIST}")
+        print("   The '1_fetch_list.py' script must run successfully first.")
         return
 
     if not os.path.exists(CACHE_DIR): os.makedirs(CACHE_DIR)
@@ -53,9 +67,7 @@ def update_cache(token):
     cached_ids = set([f.split('.')[0] for f in os.listdir(CACHE_DIR) if f.endswith('.json')])
     to_fetch = []
     
-    # Debug counter
     run_count = 0
-    
     with open(ACTIVITY_LIST, "r") as f:
         for line in f:
             parts = line.strip().split(',')
@@ -67,7 +79,7 @@ def update_cache(token):
                 if aid not in cached_ids:
                     to_fetch.append(aid)
     
-    print(f"📋 Found {run_count} runs in master list. Need to fetch {len(to_fetch)}.")
+    print(f"📋 Master List: Found {run_count} runs. Need to fetch {len(to_fetch)}.")
 
     if not to_fetch:
         print("✅ Running Cache is up to date.")
@@ -115,7 +127,7 @@ def update_cache(token):
 def generate_report():
     print("📊 Generating Running Report from Cache...")
     if not os.path.exists(CACHE_DIR):
-        print("⚠️ No cache directory found.")
+        print(f"⚠️ No cache directory found at {CACHE_DIR}")
         return
 
     files = [f for f in os.listdir(CACHE_DIR) if f.endswith('.json')]
@@ -161,11 +173,8 @@ def generate_report():
             sw = six_week.get(dist)
             
             if at or sw:
-                # All Time Column
                 at_str = f"**{format_time(at['time'])}**" if at else "--"
                 at_link = f"[View](https://www.strava.com/activities/{at['id']})" if at else "--"
-
-                # 6 Week Column
                 sw_str = f"{format_time(sw['time'])}" if sw else "--"
                 sw_link = f"[View](https://www.strava.com/activities/{sw['id']})" if sw else "--"
                 
