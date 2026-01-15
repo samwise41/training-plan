@@ -1,9 +1,10 @@
 # Garmin Health & Biometrics
 
-**Last Updated:** 2026-01-14
+**Last Updated:** 2026-01-15
 
 | Date       |   Sleep Hours |   Resting HR |   Min HR |   Max HR |   Stress Avg |   Stress Max |   Distance (m) |   Mod Minutes |   Vig Minutes |   Body Batt Max |   Body Batt Min |   Steps |
 |:-----------|--------------:|-------------:|---------:|---------:|-------------:|-------------:|---------------:|--------------:|--------------:|----------------:|----------------:|--------:|
+| 2026-01-15 |         nan   |          nan |      nan |      nan |          nan |          nan |            nan |           nan |           nan |             nan |             nan |     nan |
 | 2026-01-14 |           5   |           50 |       45 |       77 |           16 |           63 |          29294 |             0 |             0 |              64 |              33 |     nan |
 | 2026-01-13 |           1.4 |           48 |       42 |       93 |           18 |           79 |           1017 |             0 |             0 |             100 |              21 |    1222 |
 | 2026-01-12 |           4.7 |           48 |       44 |      158 |           23 |           99 |          23375 |            21 |            58 |             100 |              37 |    3947 |
@@ -304,4 +305,3 @@
 | 2025-03-23 |         nan   |          nan |      nan |      nan |          nan |          nan |            nan |             0 |             0 |             nan |             nan |     nan |
 | 2025-03-22 |         nan   |          nan |      nan |      nan |          nan |          nan |          40130 |            23 |            60 |             nan |             nan |       0 |
 | 2025-03-21 |         nan   |          nan |      nan |      nan |          nan |          nan |            nan |             0 |             0 |             nan |             nan |     nan |
-| 2025-03-20 |         nan   |          nan |      nan |      nan |          nan |          nan |            nan |           nan |           nan |             nan |             nan |     nan |
