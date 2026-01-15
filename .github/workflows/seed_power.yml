@@ -1,4 +1,4 @@
-name: Update Strava Power
+name: Seed Strava Power
 
 on:
   workflow_dispatch:
