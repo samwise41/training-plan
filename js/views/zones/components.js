@@ -77,7 +77,6 @@ export const initPacingChart = async (canvasId) => {
     
     if (!ctx || !data.length) return;
 
-    // Ordered Distances
     const distMap = { '1 km': 1, '1 Mile': 1.61, '5 km': 5, '10 km': 10, 'Half Marathon': 21.1, 'Marathon': 42.2 };
     
     const processed = data
@@ -85,7 +84,6 @@ export const initPacingChart = async (canvasId) => {
         .map(d => {
             const key = Object.keys(distMap).find(k => d.label.includes(k));
             const parts = d.value.split(':').map(Number);
-            // Handle H:MM:SS vs MM:SS
             let totalSeconds = parts.length === 3 ? parts[0]*3600 + parts[1]*60 + parts[2] : parts[0]*60 + parts[1];
             return {
                 label: key,
