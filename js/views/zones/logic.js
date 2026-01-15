@@ -1,80 +1,80 @@
 // js/views/zones/logic.js
-import { extractFrontMatter } from './config.js'; 
+import { Parser } from '../../parser.js';
+import { CONFIG } from './config.js';
 
-export const getZonesLogic = (planMd, recordsJson) => {
-    // 1. Parse Front Matter for FTP/LTHR
-    const frontMatter = {};
-    const fmRegex = /^---\n([\s\S]*?)\n---/;
-    const match = planMd ? planMd.match(fmRegex) : null;
+export const getBiometricsData = (planMd) => {
+    const bio = Parser.getBiometrics(planMd) || {};
+    const watts = bio.watts || 0;
+    const weight = bio.weight || 0;
+    const lthr = bio.lthr || '--';
+    const runFtp = bio.runFtp || '--';
+    const fiveK = bio.fiveK || '--';
+
+    const weightKg = weight * 0.453592;
+    const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
     
-    if (match) {
-        match[1].split('\n').forEach(line => {
-            const parts = line.split(':');
-            if (parts.length >= 2) {
-                const k = parts[0].trim();
-                const v = parts.slice(1).join(':').trim().replace(/"/g, '');
-                frontMatter[k] = v;
-            }
-        });
-    }
-
-    const ftp = parseInt(frontMatter.ftp || 250);
-    const weight = parseInt(frontMatter.weight || 75);
-    const lthr = parseInt(frontMatter.lthr || 170); 
-    const maxHr = parseInt(frontMatter.max_hr || 190);
-
-    // 2. Parse Records for Pacing Chart
-    let runPacing = [];
-    
-    // --- SAFETY CHECK: Only process if valid object ---
-    if (recordsJson && typeof recordsJson === 'object') {
-        const targetDists = ['1 km', '1 Mile', '5 km', '10 km', 'Half Marathon', 'Marathon'];
-        const idMap = { 1:'1 km', 2:'1 Mile', 3:'5 km', 4:'10 km', 5:'Half Marathon', 6:'Marathon' };
-        
-        const allRecs = [];
-        const findRecs = (obj) => {
-            if (!obj || typeof obj !== 'object') return; // <--- PREVENTS CRASH
-            if (obj.typeId && obj.value) {
-                allRecs.push(obj);
-            } else {
-                Object.values(obj).forEach(findRecs);
-            }
-        };
-        
-        try {
-            findRecs(recordsJson);
-
-            runPacing = targetDists.map(distName => {
-                const rec = allRecs.find(r => {
-                    const name = r.typeKey ? r.typeKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
-                    return name === distName || idMap[r.typeId] === distName;
-                });
-
-                if (!rec || !rec.value) return null;
-
-                let distKm = 1;
-                if (distName === '1 Mile') distKm = 1.609;
-                if (distName === '5 km') distKm = 5;
-                if (distName === '10 km') distKm = 10;
-                if (distName === 'Half Marathon') distKm = 21.0975;
-                if (distName === 'Marathon') distKm = 42.195;
-
-                const totalMins = rec.value / 60;
-                const paceDec = totalMins / distKm; 
-                
-                return { label: distName, pace: paceDec };
-            }).filter(Boolean);
-        } catch (e) {
-            console.warn("Error parsing pacing data", e);
-        }
-    }
+    // Determine Category
+    const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
+    const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
 
     return {
-        ftp,
+        watts,
         weight,
-        wkg: (ftp / weight).toFixed(2),
         lthr,
-        maxHr,
-        runPacing
+        runFtp,
+        fiveK,
+        wkgNum,
+        cat,
+        percent
     };
+};
+
+export const parseZoneTables = (planMd) => {
+    // Exact logic from your original file
+    const section = Parser.getSection(planMd, "Training Parameters") || Parser.getSection(planMd, "Zones");
+    let current = '', html = '', categories = {};
+    
+    if (!section) return `<p class="text-slate-500 text-center col-span-2">No zone data found.</p>`;
+    
+    section.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('###')) {
+            current = trimmed.replace(/###/g, '').split('(')[0].trim();
+            categories[current] = [];
+        } else if (current && trimmed.includes(':')) {
+            const [labelRaw, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
+            const label = labelRaw.trim();
+            
+            // --- ROBUST LOGIC START (Preserved) ---
+            let zClass = 'z-1'; // Default
+            const cleanLabel = label.toLowerCase();
+
+            if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) {
+                zClass = 'z-ss';
+            } else {
+                const zMatch = cleanLabel.match(/zone (\d)/);
+                if (zMatch) {
+                    zClass = `z-${zMatch[1]}`;
+                }
+            }
+            // --- ROBUST LOGIC END ---
+
+            categories[current].push(`
+                <div class="zone-row ${zClass}">
+                    <span class="font-bold">${label}</span>
+                    <span class="font-mono text-slate-400">${range ? range.trim() : '--'}</span>
+                </div>
+            `);
+        }
+    });
+    
+    Object.keys(categories).forEach(k => {
+        html += `
+            <div class="zone-card">
+                <div class="zone-card-title">${k}</div>
+                ${categories[k].join('')}
+            </div>
+        `;
+    });
+    return html;
 };
