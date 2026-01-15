@@ -1,0 +1,60 @@
+name: Update Running PRs
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  update-running:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        working-directory: ./strava_data
+        run: pip install -r requirements.txt
+
+      - name: Fetch Latest Activity List
+        working-directory: ./strava_data
+        env:
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+        run: python 1_fetch_list.py
+
+      - name: Process Running Stats
+        working-directory: ./strava_data
+        env:
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+        run: python process_running.py
+
+      - name: Commit Running Data
+        run: |
+          git config --global user.name "StravaBot"
+          git config --global user.email "bot@github.com"
+          
+          # Force Add Cache Folder and Files
+          git add strava_data/activity_ids.txt
+          git add strava_data/my_running_prs.md
+          git add strava_data/running_cache/
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "🏃 Updated Running PRs"
+            git pull --rebase
+            git push
+          fi
