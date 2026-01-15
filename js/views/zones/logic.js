@@ -12,7 +12,6 @@ export const getBiometricsData = (planMd) => {
     const weightKg = weight * 0.453592;
     const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
     
-    // Determine Category
     const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
     const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
 
@@ -23,10 +22,8 @@ export const parseZoneTables = (planMd) => {
     const section = Parser.getSection(planMd, "Training Parameters") || Parser.getSection(planMd, "Zones");
     let current = '', categories = {};
     
-    // Return empty strings if no section found
     if (!section) return { cycling: `<p class="text-slate-500">No data</p>`, running: '' };
     
-    // 1. Parse into categories
     section.split('\n').forEach(line => {
         const trimmed = line.trim();
         if (trimmed.startsWith('###')) {
@@ -53,7 +50,6 @@ export const parseZoneTables = (planMd) => {
         }
     });
     
-    // 2. Split into Cycling vs Running HTML
     let cyclingHtml = '';
     let runningHtml = '';
 
@@ -66,8 +62,6 @@ export const parseZoneTables = (planMd) => {
         `;
         
         const lowerKey = k.toLowerCase();
-        // Logic: If it says "Cycling" or "Power" (but not "Running Power"), put in Cycling col.
-        // Everything else (Running, Heart Rate, Pace) goes to Running col.
         if (lowerKey.includes('cycling') || (lowerKey.includes('power') && !lowerKey.includes('running'))) {
             cyclingHtml += cardHtml;
         } else {
