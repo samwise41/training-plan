@@ -2,10 +2,8 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Load .env only if it exists (for local testing)
 load_dotenv()
 
-# Config
 AUTH_URL = "https://www.strava.com/oauth/token"
 ACTIVITIES_URL = "https://www.strava.com/api/v3/athlete/activities"
 OUTPUT_FILE = "activity_ids.txt"
@@ -24,38 +22,63 @@ def get_access_token():
         return res.json()['access_token']
     except Exception as e:
         print(f"❌ Auth Error: {e}")
-        print(f"Response: {res.text}")
         exit(1)
 
-def fetch_all_ids():
+def fetch_new_ids():
+    # 1. Load existing IDs to know when to stop
+    existing_activities = []
+    existing_ids = set()
+    
+    if os.path.exists(OUTPUT_FILE):
+        with open(OUTPUT_FILE, "r") as f:
+            for line in f:
+                existing_activities.append(line.strip())
+                parts = line.split(',')
+                if parts: existing_ids.add(parts[0])
+    
+    print(f"📂 Database contains {len(existing_ids)} activities.")
+
     token = get_access_token()
     headers = {'Authorization': f"Bearer {token}"}
     
+    new_activities = []
     page = 1
-    all_activities = []
+    keep_fetching = True
     
-    print("🚀 Fetching Activity List...")
+    print("🚀 Checking for new activities...")
     
-    while True:
-        response = requests.get(ACTIVITIES_URL, headers=headers, params={'per_page': 200, 'page': page})
+    while keep_fetching:
+        response = requests.get(ACTIVITIES_URL, headers=headers, params={'per_page': 50, 'page': page})
         data = response.json()
         
         if not data:
             break
             
-        print(f"   - Page {page}: Found {len(data)} activities")
-        
         for activity in data:
-            summary = f"{activity['id']},{activity['type']},{activity['start_date_local'][:10]}"
-            all_activities.append(summary)
+            act_id = str(activity['id'])
+            
+            # STOP condition: We found an activity we already have
+            if act_id in existing_ids:
+                keep_fetching = False
+                continue
+                
+            # If new, add to our temp list
+            summary = f"{act_id},{activity['type']},{activity['start_date_local'][:10]}"
+            new_activities.append(summary)
             
         page += 1
         
-    with open(OUTPUT_FILE, "w") as f:
-        for line in all_activities:
-            f.write(f"{line}\n")
-            
-    print(f"\n✅ Saved {len(all_activities)} activities to '{OUTPUT_FILE}'")
+    if new_activities:
+        print(f"✨ Found {len(new_activities)} new activities!")
+        # Write NEW data followed by OLD data (Preserves newest-first order)
+        with open(OUTPUT_FILE, "w") as f:
+            for line in new_activities:
+                f.write(f"{line}\n")
+            for line in existing_activities:
+                f.write(f"{line}\n")
+        print(f"✅ Updated '{OUTPUT_FILE}'")
+    else:
+        print("💤 No new activities found.")
 
 if __name__ == "__main__":
-    fetch_all_ids()
+    fetch_new_ids()
