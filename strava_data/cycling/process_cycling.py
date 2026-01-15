@@ -145,7 +145,6 @@ def generate_stats():
         for i, watts in enumerate(curve):
             if i >= MAX_DURATION_SECONDS: break
             
-            # Store Name, Date, ID, Watts
             entry = {'watts': watts, 'date': ride['date'], 'name': ride.get('name', 'Ride'), 'id': ride['id']}
             
             if all_time_best[i] is None or watts > all_time_best[i]['watts']:
@@ -158,7 +157,7 @@ def generate_stats():
     # MARKDOWN
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# ⚡ Power Profile (1s - 6h)\n\n")
-        f.write("| Duration | All Time Best | Activity | 6 Week Best | Activity |\n")
+        f.write("| Duration | All Time Best | Date | 6 Week Best | Date |\n")
         f.write("|---|---|---|---|---|\n")
         
         for label, seconds in KEY_INTERVALS:
@@ -167,15 +166,15 @@ def generate_stats():
                 at = all_time_best[idx]
                 sw = six_week_best[idx]
                 
-                # Helper to format the Activity Column
-                def fmt_act(record):
+                # Helper: Date is the Link
+                def fmt_link(record):
                     if not record: return "--"
-                    return f"[{record['name']}](https://www.strava.com/activities/{record['id']})<br>*{record['date']}*"
+                    return f"[{record['date']}](https://www.strava.com/activities/{record['id']})"
 
                 at_val = f"**{at['watts']}w**" if at else "--"
                 sw_val = f"{sw['watts']}w" if sw else "--"
                 
-                f.write(f"| {label} | {at_val} | {fmt_act(at)} | {sw_val} | {fmt_act(sw)} |\n")
+                f.write(f"| {label} | {at_val} | {fmt_link(at)} | {sw_val} | {fmt_link(sw)} |\n")
 
     # GRAPH JSON
     graph_data = []
