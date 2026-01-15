@@ -4,33 +4,39 @@ import json
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-# --- PATH CONFIGURATION (ADAPTED FOR NEW STRUCTURE) ---
-# 1. Where does this script live? (.../strava_data/running)
+# --- PATH CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# 2. Where is the parent folder? (.../strava_data)
 PARENT_DIR = os.path.dirname(BASE_DIR)
-
-# 3. Load .env from the parent folder
 load_dotenv(os.path.join(PARENT_DIR, '.env'))
 
-# 4. Define paths based on your image
-# activity_ids.txt is in the parent folder
 ACTIVITY_LIST = os.path.join(PARENT_DIR, "activity_ids.txt")
-
-# running_cache is a sibling folder (in parent)
 CACHE_DIR = os.path.join(PARENT_DIR, "running_cache")
-
-# The output file stays right here in the running/ folder
 OUTPUT_MD = os.path.join(BASE_DIR, "my_running_prs.md")
 
 BATCH_SIZE = 20 
 
-# Distances to track
+# The "Canonical" list of distances we want in our table
 DISTANCES = [
     "400m", "1/2 mile", "1k", "1 mile", "2 mile", 
     "5k", "10k", "15k", "10 mile", "20k", "Half-Marathon", "30k", "Marathon"
 ]
+
+# ⭐️ THE FIX: Map variations to our canonical names ⭐️
+STRAVA_NAMES = {
+    "400m": "400m",
+    "1/2 mile": "1/2 mile",
+    "1k": "1k", "1K": "1k",
+    "1 mile": "1 mile", "1 Mile": "1 mile",
+    "2 mile": "2 mile", "2 Mile": "2 mile",
+    "5k": "5k", "5K": "5k",
+    "10k": "10k", "10K": "10k",
+    "15k": "15k", "15K": "15k",
+    "10 mile": "10 mile", "10 Mile": "10 mile",
+    "20k": "20k", "20K": "20k",
+    "Half-Marathon": "Half-Marathon", "Half Marathon": "Half-Marathon",
+    "30k": "30k", "30K": "30k",
+    "Marathon": "Marathon"
+}
 
 def get_access_token():
     payload = {
@@ -55,11 +61,9 @@ def format_time(seconds):
     return f"{m}:{s:02d}"
 
 def update_cache(token):
-    # Check if the master list exists in the parent folder
     if not os.path.exists(ACTIVITY_LIST):
         print(f"❌ CRITICAL ERROR: Could not find master list at:")
         print(f"   {ACTIVITY_LIST}")
-        print("   The '1_fetch_list.py' script must run successfully first.")
         return
 
     if not os.path.exists(CACHE_DIR): os.makedirs(CACHE_DIR)
@@ -73,7 +77,6 @@ def update_cache(token):
             parts = line.strip().split(',')
             if len(parts) < 3: continue
             aid, atype = parts[0], parts[1]
-            
             if atype == "Run":
                 run_count += 1
                 if aid not in cached_ids:
@@ -112,8 +115,10 @@ def update_cache(token):
             
             if 'best_efforts' in data:
                 for effort in data['best_efforts']:
+                    # Normalize the name right here before saving? 
+                    # Actually better to save raw, and normalize during report.
                     cache_data['best_efforts'].append({
-                        "name": effort['name'],
+                        "name": effort['name'], 
                         "elapsed_time": effort['elapsed_time']
                     })
             
@@ -134,7 +139,7 @@ def generate_report():
     print(f"   (Analyzing {len(files)} cached runs)")
 
     if len(files) == 0:
-        print("⚠️ Warning: Cache is empty. Run fetch script to populate activity_ids.txt first.")
+        print("⚠️ Warning: Cache is empty.")
     
     today = datetime.now()
     six_weeks_ago = today - timedelta(weeks=6)
@@ -142,6 +147,8 @@ def generate_report():
     all_time = {}
     six_week = {}
     
+    debug_found_efforts = set()
+
     for fname in files:
         with open(os.path.join(CACHE_DIR, fname), "r") as f:
             try:
@@ -153,15 +160,28 @@ def generate_report():
         is_recent = run_date >= six_weeks_ago
         
         for effort in run.get('best_efforts', []):
-            dist = effort['name']
+            raw_name = effort['name']
             time = effort['elapsed_time']
             
+            # Record what we see for debugging
+            debug_found_efforts.add(raw_name)
+
+            # ⭐️ TRANSLATE: Convert "10K" -> "10k"
+            dist_key = STRAVA_NAMES.get(raw_name)
+            
+            # If the name isn't in our map, we ignore it (e.g. "400m" if we didn't map it)
+            if not dist_key:
+                continue
+
             def update_best(best_dict):
-                if dist not in best_dict or time < best_dict[dist]['time']:
-                    best_dict[dist] = {'time': time, 'date': run['date'], 'id': run['id']}
+                if dist_key not in best_dict or time < best_dict[dist_key]['time']:
+                    best_dict[dist_key] = {'time': time, 'date': run['date'], 'id': run['id']}
 
             update_best(all_time)
             if is_recent: update_best(six_week)
+
+    # Debug Output: Show what the script actually found
+    # print(f"🔎 Found these effort types in cache: {debug_found_efforts}")
 
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# 🏃 My Best Efforts (Running)\n\n")
