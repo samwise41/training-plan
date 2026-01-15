@@ -5,23 +5,28 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 # --- PATH CONFIGURATION ---
+# 1. Where does this script live? (.../strava_data/running)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 2. Where is the parent folder? (.../strava_data)
 PARENT_DIR = os.path.dirname(BASE_DIR)
+
+# 3. Load .env from the parent folder
 load_dotenv(os.path.join(PARENT_DIR, '.env'))
 
+# 4. Define paths relative to parent
 ACTIVITY_LIST = os.path.join(PARENT_DIR, "activity_ids.txt")
 CACHE_DIR = os.path.join(PARENT_DIR, "running_cache")
 OUTPUT_MD = os.path.join(BASE_DIR, "my_running_prs.md")
 
 BATCH_SIZE = 20 
 
-# The "Canonical" list of distances we want in our table
 DISTANCES = [
     "400m", "1/2 mile", "1k", "1 mile", "2 mile", 
     "5k", "10k", "15k", "10 mile", "20k", "Half-Marathon", "30k", "Marathon"
 ]
 
-# ⭐️ THE FIX: Map variations to our canonical names ⭐️
+# Mapping Strava names to our canonical names
 STRAVA_NAMES = {
     "400m": "400m",
     "1/2 mile": "1/2 mile",
@@ -62,8 +67,7 @@ def format_time(seconds):
 
 def update_cache(token):
     if not os.path.exists(ACTIVITY_LIST):
-        print(f"❌ CRITICAL ERROR: Could not find master list at:")
-        print(f"   {ACTIVITY_LIST}")
+        print(f"❌ CRITICAL ERROR: Could not find master list at: {ACTIVITY_LIST}")
         return
 
     if not os.path.exists(CACHE_DIR): os.makedirs(CACHE_DIR)
@@ -71,63 +75,48 @@ def update_cache(token):
     cached_ids = set([f.split('.')[0] for f in os.listdir(CACHE_DIR) if f.endswith('.json')])
     to_fetch = []
     
-    run_count = 0
     with open(ACTIVITY_LIST, "r") as f:
         for line in f:
             parts = line.strip().split(',')
             if len(parts) < 3: continue
             aid, atype = parts[0], parts[1]
-            if atype == "Run":
-                run_count += 1
-                if aid not in cached_ids:
-                    to_fetch.append(aid)
+            if atype == "Run" and aid not in cached_ids:
+                to_fetch.append(aid)
     
-    print(f"📋 Master List: Found {run_count} runs. Need to fetch {len(to_fetch)}.")
-
     if not to_fetch:
         print("✅ Running Cache is up to date.")
-        return
-
-    if not token:
-        print("⚠️ No API Token. Cannot download missing runs.")
-        return
-
-    print(f"🏃 Fetching {len(to_fetch)} new runs...")
-    headers = {'Authorization': f"Bearer {token}"}
-    
-    for i, act_id in enumerate(to_fetch[:BATCH_SIZE]):
-        print(f"   [{i+1}/{BATCH_SIZE}] Caching {act_id}...", end="\r")
-        try:
-            r = requests.get(f"https://www.strava.com/api/v3/activities/{act_id}", headers=headers)
-            if r.status_code == 429:
-                print(f"\n⚠️ Rate Limit Exceeded on {act_id}. Stopping early.")
-                break 
-            if r.status_code != 200: continue
-            
-            data = r.json()
-            
-            cache_data = {
-                "id": data['id'],
-                "name": data.get('name', 'Unknown'),
-                "date": data.get('start_date_local', '')[:10],
-                "best_efforts": []
-            }
-            
-            if 'best_efforts' in data:
-                for effort in data['best_efforts']:
-                    # Normalize the name right here before saving? 
-                    # Actually better to save raw, and normalize during report.
-                    cache_data['best_efforts'].append({
-                        "name": effort['name'], 
-                        "elapsed_time": effort['elapsed_time']
-                    })
-            
-            with open(os.path.join(CACHE_DIR, f"{act_id}.json"), "w") as f:
-                json.dump(cache_data, f)
-        except Exception as e:
-            print(f"Error {act_id}: {e}")
-            
-    print("\n💾 Cache update process finished.")
+    elif token:
+        print(f"🏃 Fetching {len(to_fetch)} new runs...")
+        headers = {'Authorization': f"Bearer {token}"}
+        for i, act_id in enumerate(to_fetch[:BATCH_SIZE]):
+            print(f"   [{i+1}/{BATCH_SIZE}] Caching {act_id}...", end="\r")
+            try:
+                r = requests.get(f"https://www.strava.com/api/v3/activities/{act_id}", headers=headers)
+                if r.status_code == 429: break 
+                if r.status_code != 200: continue
+                data = r.json()
+                
+                cache_data = {
+                    "id": data['id'],
+                    "name": data.get('name', 'Unknown'),
+                    "date": data.get('start_date_local', '')[:10],
+                    "best_efforts": []
+                }
+                
+                if 'best_efforts' in data:
+                    for effort in data['best_efforts']:
+                        cache_data['best_efforts'].append({
+                            "name": effort['name'], 
+                            "elapsed_time": effort['elapsed_time']
+                        })
+                
+                with open(os.path.join(CACHE_DIR, f"{act_id}.json"), "w") as f:
+                    json.dump(cache_data, f)
+            except Exception as e:
+                print(f"Error {act_id}: {e}")
+        print("\n💾 Cache update finished.")
+    else:
+        print("⚠️ No Token. Skipping Cache Update.")
 
 def generate_report():
     print("📊 Generating Running Report from Cache...")
@@ -136,10 +125,7 @@ def generate_report():
         return
 
     files = [f for f in os.listdir(CACHE_DIR) if f.endswith('.json')]
-    print(f"   (Analyzing {len(files)} cached runs)")
-
-    if len(files) == 0:
-        print("⚠️ Warning: Cache is empty.")
+    if len(files) == 0: print("⚠️ Warning: Cache is empty.")
     
     today = datetime.now()
     six_weeks_ago = today - timedelta(weeks=6)
@@ -147,58 +133,46 @@ def generate_report():
     all_time = {}
     six_week = {}
     
-    debug_found_efforts = set()
-
     for fname in files:
         with open(os.path.join(CACHE_DIR, fname), "r") as f:
-            try:
-                run = json.load(f)
-            except json.JSONDecodeError:
-                continue
-            
+            try: run = json.load(f)
+            except: continue
+        
         run_date = datetime.strptime(run['date'], "%Y-%m-%d")
         is_recent = run_date >= six_weeks_ago
         
         for effort in run.get('best_efforts', []):
-            raw_name = effort['name']
-            time = effort['elapsed_time']
+            dist_key = STRAVA_NAMES.get(effort['name'])
+            if not dist_key: continue
             
-            # Record what we see for debugging
-            debug_found_efforts.add(raw_name)
+            entry = {'time': effort['elapsed_time'], 'date': run['date'], 'name': run.get('name', 'Run'), 'id': run['id']}
 
-            # ⭐️ TRANSLATE: Convert "10K" -> "10k"
-            dist_key = STRAVA_NAMES.get(raw_name)
+            if dist_key not in all_time or entry['time'] < all_time[dist_key]['time']:
+                all_time[dist_key] = entry
             
-            # If the name isn't in our map, we ignore it (e.g. "400m" if we didn't map it)
-            if not dist_key:
-                continue
-
-            def update_best(best_dict):
-                if dist_key not in best_dict or time < best_dict[dist_key]['time']:
-                    best_dict[dist_key] = {'time': time, 'date': run['date'], 'id': run['id']}
-
-            update_best(all_time)
-            if is_recent: update_best(six_week)
-
-    # Debug Output: Show what the script actually found
-    # print(f"🔎 Found these effort types in cache: {debug_found_efforts}")
+            if is_recent:
+                if dist_key not in six_week or entry['time'] < six_week[dist_key]['time']:
+                    six_week[dist_key] = entry
 
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# 🏃 My Best Efforts (Running)\n\n")
-        f.write("| Distance | All Time Best | Link | 6 Week Best | Link |\n")
+        f.write("| Distance | All Time Best | Activity | 6 Week Best | Activity |\n")
         f.write("|---|---|---|---|---|\n")
         
         for dist in DISTANCES:
             at = all_time.get(dist)
             sw = six_week.get(dist)
             
+            # Helper to format the Activity Column with Name & Date
+            def fmt_act(record):
+                if not record: return "--"
+                return f"[{record['name']}](https://www.strava.com/activities/{record['id']})<br>*{record['date']}*"
+            
             if at or sw:
-                at_str = f"**{format_time(at['time'])}**" if at else "--"
-                at_link = f"[View](https://www.strava.com/activities/{at['id']})" if at else "--"
-                sw_str = f"{format_time(sw['time'])}" if sw else "--"
-                sw_link = f"[View](https://www.strava.com/activities/{sw['id']})" if sw else "--"
+                at_val = f"**{format_time(at['time'])}**" if at else "--"
+                sw_val = f"{format_time(sw['time'])}" if sw else "--"
                 
-                f.write(f"| {dist} | {at_str} | {at_link} | {sw_str} | {sw_link} |\n")
+                f.write(f"| {dist} | {at_val} | {fmt_act(at)} | {sw_val} | {fmt_act(sw)} |\n")
                 
     print(f"✅ Updated {OUTPUT_MD}")
 
