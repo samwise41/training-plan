@@ -1,60 +1,111 @@
-import { parseMarkdownTable } from '../../utils.js'; // Assuming this exists, otherwise use local parser below
+// js/views/zones/logic.js
+import { Parser } from '../../parser.js';
+import { CONFIG } from './config.js';
 
-// Local parser if generic one isn't suitable or available
-const parseRecords = (text) => {
-    const lines = text.split('\n');
-    let inRunning = false;
-    const records = [];
+export const getBiometricsData = (planMd) => {
+    const bio = Parser.getBiometrics(planMd) || {};
+    const watts = bio.watts || 0;
+    const weight = bio.weight || 0;
+    const lthr = bio.lthr || '--';
+    const runFtp = bio.runFtp || '--';
+    const fiveK = bio.fiveK || '--';
 
-    lines.forEach(line => {
-        if (line.includes('## Running')) {
-            inRunning = true;
-            return;
-        }
-        if (line.startsWith('##') && inRunning) {
-            inRunning = false;
-            return;
-        }
-        
-        // Parse table rows
-        if (inRunning && line.trim().startsWith('|') && !line.includes('---') && !line.includes('Distance')) {
-            const cols = line.split('|').map(c => c.trim()).filter(c => c);
-            // Expected format: | Distance | Time | Pace | ...
-            if (cols.length >= 3) {
-                records.push({
-                    distance: cols[0],
-                    time: cols[1],
-                    pace: cols[2]
-                });
-            }
-        }
-    });
-    return records;
+    const weightKg = weight * 0.453592;
+    const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
+    
+    // Determine Category
+    const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
+    const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
+
+    return {
+        watts,
+        weight,
+        lthr,
+        runFtp,
+        fiveK,
+        wkgNum,
+        cat,
+        percent
+    };
 };
 
-export const getZonesData = async () => {
+export const parseZoneTables = (planMd) => {
+    // Exact logic from your original file
+    const section = Parser.getSection(planMd, "Training Parameters") || Parser.getSection(planMd, "Zones");
+    let current = '', html = '', categories = {};
+    
+    if (!section) return `<p class="text-slate-500 text-center col-span-2">No zone data found.</p>`;
+    
+    section.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('###')) {
+            current = trimmed.replace(/###/g, '').split('(')[0].trim();
+            categories[current] = [];
+        } else if (current && trimmed.includes(':')) {
+            const [labelRaw, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
+            const label = labelRaw.trim();
+            
+            // --- ROBUST LOGIC START (Preserved) ---
+            let zClass = 'z-1'; // Default
+            const cleanLabel = label.toLowerCase();
+
+            if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) {
+                zClass = 'z-ss';
+            } else {
+                const zMatch = cleanLabel.match(/zone (\d)/);
+                if (zMatch) {
+                    zClass = `z-${zMatch[1]}`;
+                }
+            }
+            // --- ROBUST LOGIC END ---
+
+            categories[current].push(`
+                <div class="zone-row ${zClass}">
+                    <span class="font-bold">${label}</span>
+                    <span class="font-mono text-slate-400">${range ? range.trim() : '--'}</span>
+                </div>
+            `);
+        }
+    });
+    
+    Object.keys(categories).forEach(k => {
+        html += `
+            <div class="zone-card">
+                <div class="zone-card-title">${k}</div>
+                ${categories[k].join('')}
+            </div>
+        `;
+    });
+    return html;
+};
+
+// --- NEW FUNCTIONALITY ---
+export const fetchPacingData = async () => {
     try {
-        const [cyclingRes, runningRes, recordsRes] = await Promise.all([
-            fetch('garmind_data/garmin_cycling.md'),
-            fetch('garmind_data/garmin_running.md'),
-            fetch('garmind_data/garmin_records.md')
-        ]);
-
-        const cyclingText = await cyclingRes.text();
-        const runningText = await runningRes.text();
-        const recordsText = await recordsRes.text();
-
-        // Use existing parsers for cycling/running if they exist in the file, 
-        // otherwise assume parseMarkdownTable or similar logic is present.
-        // Preserving existing logic structure:
+        const response = await fetch('garmind_data/garmin_records.md');
+        if (!response.ok) throw new Error('Failed to fetch records');
         
-        return {
-            cycling: parseMarkdownTable ? parseMarkdownTable(cyclingText) : {}, 
-            running: parseMarkdownTable ? parseMarkdownTable(runningText) : {},
-            records: parseRecords(recordsText)
-        };
-    } catch (error) {
-        console.error('Error fetching zones data:', error);
-        return { cycling: [], running: [], records: [] };
+        const text = await response.text();
+        const records = [];
+        
+        // Parse Markdown Table
+        const lines = text.split('\n');
+        lines.forEach(line => {
+            if (line.trim().startsWith('|') && !line.includes('---')) {
+                const cols = line.split('|').map(c => c.trim());
+                // Cols: [empty, Sport, Record, Value, Date, empty]
+                if (cols.length > 3 && cols[1] === 'Running') {
+                    records.push({
+                        label: cols[2], // e.g., "1 km", "5 km"
+                        value: cols[3]  // e.g., "4:30", "24:26"
+                    });
+                }
+            }
+        });
+        
+        return records;
+    } catch (e) {
+        console.error("Error loading pacing data:", e);
+        return [];
     }
 };
