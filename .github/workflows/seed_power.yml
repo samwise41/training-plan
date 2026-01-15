@@ -1,16 +1,15 @@
-name: Update Strava Power
+name: Seed Power Profile
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 8 * * *' # Runs daily at 8am UTC
+  workflow_dispatch: # Manual trigger button
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  seed-power:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,27 +19,31 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install libraries
-        working-directory: ./strava_data
-        run: pip install -r requirements.txt
+      - name: Install dependencies
+        # Force install pandas and requests
+        run: pip install requests python-dotenv pandas
 
-      - name: Fetch Latest Activities
+      - name: Run Seed Script
         working-directory: ./strava_data
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
           STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+        # This runs the script inside the folder, so the file is created inside strava_data/
         run: python 0_seed_power.py
 
+      - name: Debug - List Files
+        # This will show us if the file actually exists
+        run: ls -R strava_data/
 
       - name: Commit and Push
         run: |
           git config --global user.name "StravaBot"
           git config --global user.email "bot@github.com"
-          git add strava_data/activity_ids.txt strava_data/my_prs.md strava_data/processed_log.txt
-          if git diff --staged --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "🏆 Updated Strava PRs"
-            git push
-          fi
+          
+          # Force add the file to ensure git sees it
+          git add -f strava_data/my_power_profile.md
+          
+          # Commit
+          git commit -m "⚡ Seeded Power Profile"
+          git push
