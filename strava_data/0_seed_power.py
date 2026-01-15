@@ -1,12 +1,13 @@
 import requests
 import os
 import pandas as pd
+import json
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # --- CONFIG ---
-# The specific rides containing your PRs
 BASELINE_IDS = [
     16776448314, 17046568553, 15671097940, 14554194008, 15704986795,
     15286860946, 15059068928, 15864321973, 14826696597, 16820057363,
@@ -14,15 +15,18 @@ BASELINE_IDS = [
     14859845151, 15482056744, 15353424386, 14655181864
 ]
 
-# Standard Power Durations to track
-# Label, Seconds
-DURATIONS = [
+# Calculate every second up to 2 hours (7200s)
+MAX_DURATION_SECONDS = 7200 
+
+OUTPUT_GRAPH_FILE = "power_curve_graph.json"
+OUTPUT_MD_FILE = "my_power_profile.md"
+
+# Key intervals for the Markdown Summary Table
+KEY_INTERVALS = [
     ("1s", 1), ("5s", 5), ("15s", 15), ("30s", 30),
     ("1min", 60), ("2min", 120), ("5min", 300),
-    ("10min", 600), ("20min", 1200), ("30min", 1800), ("1hr", 3600)
+    ("10min", 600), ("20min", 1200), ("30min", 1800), ("1hr", 3600), ("2hr", 7200)
 ]
-
-OUTPUT_FILE = "my_power_profile.md"
 
 def get_access_token():
     payload = {
@@ -33,91 +37,113 @@ def get_access_token():
         'f': 'json'
     }
     res = requests.post("https://www.strava.com/oauth/token", data=payload, verify=True)
+    if res.status_code != 200:
+        print("Auth failed.")
+        exit(1)
     return res.json()['access_token']
 
-def fetch_activity_details(act_id, headers):
-    """Get the summary to grab the Name and Date"""
-    url = f"https://www.strava.com/api/v3/activities/{act_id}"
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        return r.json()
-    return None
+def fetch_activity_data(act_id, headers):
+    # 1. Get Details (Date/Name)
+    url_det = f"https://www.strava.com/api/v3/activities/{act_id}"
+    r_det = requests.get(url_det, headers=headers)
+    if r_det.status_code != 200: return None
+    details = r_det.json()
 
-def fetch_streams(act_id, headers):
-    """Get the raw second-by-second power data"""
-    url = f"https://www.strava.com/api/v3/activities/{act_id}/streams"
-    params = {'keys': 'watts', 'key_by_type': 'true'}
-    r = requests.get(url, headers=headers, params=params)
-    if r.status_code == 200:
-        return r.json()
-    return None
+    # 2. Get Streams (Watts)
+    url_str = f"https://www.strava.com/api/v3/activities/{act_id}/streams"
+    r_str = requests.get(url_str, headers=headers, params={'keys': 'watts', 'key_by_type': 'true'})
+    if r_str.status_code != 200: return None
+    streams = r_str.json()
 
-def process_baseline():
+    if 'watts' not in streams: return None
+
+    return {
+        'id': act_id,
+        'name': details['name'],
+        'date': details['start_date_local'][:10], # YYYY-MM-DD
+        'watts': streams['watts']['data']
+    }
+
+def process_power():
     token = get_access_token()
     headers = {'Authorization': f"Bearer {token}"}
     
-    # Structure to hold the ALL-TIME BEST for each duration
-    # { 5: {'watts': 400, 'date': '...', 'id': ...}, ... }
-    all_time_bests = {sec: {'watts': 0} for _, sec in DURATIONS}
+    # Initialize arrays for every second (index 0 = 1s, index 1 = 2s...)
+    # Storing tuples: (watts, activity_id, activity_date)
+    all_time_curve = [0] * MAX_DURATION_SECONDS
+    six_week_curve = [0] * MAX_DURATION_SECONDS
     
-    print(f"🚴 Processing {len(BASELINE_IDS)} baseline rides for Peak Power...")
+    # Calculate 6-week cutoff
+    today = datetime.now()
+    six_weeks_ago = today - timedelta(weeks=6)
+    print(f"📅 6-Week Cutoff Date: {six_weeks_ago.strftime('%Y-%m-%d')}")
+
+    print(f"🚴 Processing {len(BASELINE_IDS)} rides...")
 
     for act_id in BASELINE_IDS:
-        # 1. Get Details (for Name/Date)
-        details = fetch_activity_details(act_id, headers)
-        if not details: 
-            print(f"   ⚠️ Could not fetch details for {act_id}")
-            continue
-            
-        act_name = details['name']
-        act_date = details['start_date_local'][:10]
-        
-        # 2. Get Streams (Power Data)
-        streams = fetch_streams(act_id, headers)
-        if not streams or 'watts' not in streams:
-            print(f"   ⚠️ No power data for {act_id} ({act_name})")
+        data = fetch_activity_data(act_id, headers)
+        if not data: 
+            print(f"   ⚠️ Skipped {act_id} (No data/watts)")
             continue
 
-        # 3. Calculate Curves using Pandas
-        print(f"   ⚡ Calculating curve for: {act_name} ({act_date})...")
-        power_series = pd.Series(streams['watts']['data'])
+        act_date_obj = datetime.strptime(data['date'], "%Y-%m-%d")
+        is_recent = act_date_obj >= six_weeks_ago
         
-        for label, seconds in DURATIONS:
-            # Skip if ride is shorter than the duration
-            if len(power_series) < seconds:
-                continue
-                
-            # Rolling Max Average
+        print(f"   ⚡ Calculating: {data['name']} ({data['date']}) {'[RECENT]' if is_recent else ''}")
+        
+        power_series = pd.Series(data['watts'])
+        max_duration = min(len(power_series), MAX_DURATION_SECONDS)
+
+        # THE HEAVY LIFTING: Loop 1s -> End of ride
+        # Optimized: We pre-calculate rolling maxes for this ride
+        for seconds in range(1, max_duration + 1):
+            # Find best power for this specific duration in this specific ride
             peak = power_series.rolling(window=seconds).mean().max()
             
             if pd.notna(peak):
-                peak_w = int(peak)
-                # Check if this is a new All-Time PR
-                if peak_w > all_time_bests[seconds]['watts']:
-                    all_time_bests[seconds] = {
-                        'watts': peak_w,
-                        'date': act_date,
-                        'name': act_name,
-                        'id': act_id
-                    }
+                peak = int(peak)
+                idx = seconds - 1 # Array index is 0-based
+                
+                # Update All-Time
+                if peak > all_time_curve[idx]:
+                    all_time_curve[idx] = peak
+                
+                # Update 6-Week (if applicable)
+                if is_recent and peak > six_week_curve[idx]:
+                    six_week_curve[idx] = peak
 
-    # 4. Generate Markdown Trophy Case
-    print(f"\n🏆 Generating {OUTPUT_FILE}...")
+    # --- OUTPUT 1: JSON FOR GRAPHING ---
+    # Creates a clean list of objects: [{"seconds": 1, "all_time": 900, "6_week": 850}, ...]
+    graph_data = []
+    for i in range(MAX_DURATION_SECONDS):
+        if all_time_curve[i] > 0:
+            graph_data.append({
+                "duration_sec": i + 1,
+                "all_time_watts": all_time_curve[i],
+                "six_week_watts": six_week_curve[i] if six_week_curve[i] > 0 else None
+            })
     
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        f.write("# ⚡ My Best Power Efforts\n\n")
-        f.write("| Duration | Watts | Date | Activity |\n")
-        f.write("|---|---|---|---|\n")
-        
-        for label, seconds in DURATIONS:
-            data = all_time_bests[seconds]
-            if data['watts'] > 0:
-                link = f"[{data['name']}](https://www.strava.com/activities/{data['id']})"
-                f.write(f"| **{label}** | **{data['watts']}w** | {data['date']} | {link} |\n")
-            else:
-                f.write(f"| {label} | -- | -- | -- |\n")
+    with open(OUTPUT_GRAPH_FILE, "w") as f:
+        json.dump(graph_data, f)
+    print(f"\n📈 Saved full resolution graph data to {OUTPUT_GRAPH_FILE}")
 
-    print("✅ Done! Your Power Profile is ready.")
+    # --- OUTPUT 2: MARKDOWN SUMMARY ---
+    with open(OUTPUT_MD_FILE, "w", encoding="utf-8") as f:
+        f.write("# ⚡ Power Profile (All Time vs 6 Weeks)\n\n")
+        f.write("| Duration | All Time Best | 6 Week Best |\n")
+        f.write("|---|---|---|\n")
+        
+        for label, seconds in KEY_INTERVALS:
+            if seconds <= len(all_time_curve):
+                at_val = all_time_curve[seconds-1]
+                sw_val = six_week_curve[seconds-1]
+                
+                at_str = f"**{at_val}w**" if at_val > 0 else "--"
+                sw_str = f"{sw_val}w" if sw_val > 0 else "--"
+                
+                f.write(f"| {label} | {at_str} | {sw_str} |\n")
+
+    print(f"🏆 Saved summary table to {OUTPUT_MD_FILE}")
 
 if __name__ == "__main__":
-    process_baseline()
+    process_power()
