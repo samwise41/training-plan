@@ -1,22 +1,23 @@
-// js/views/zones/index.js
 import { getBiometricsData, parseZoneTables } from './logic.js';
 import { renderGauge, renderCyclingStats, renderRunningStats, renderButton, initPacingChart } from './components.js';
 
 export function renderZones(planMd) {
     const bio = getBiometricsData(planMd);
     
-    // Components
+    // 1. Cycling Components
     const cyclingStatsHtml = renderCyclingStats(bio);
     const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
+    
+    // 2. Running Components
     const runningStatsHtml = renderRunningStats(bio);
     const zonesGridHtml = parseZoneTables(planMd);
     const buttonHtml = renderButton();
 
-    // Trigger Chart Load (Async)
+    // Async Init
     setTimeout(() => initPacingChart('runningPacingChart'), 0);
 
     return `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 items-center">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             ${cyclingStatsHtml}
             ${gaugeHtml}
         </div>
@@ -26,16 +27,16 @@ export function renderZones(planMd) {
                 <i class="fa-solid fa-chart-line text-sky-500"></i>
                 <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Running Pacing (Over Distance)</span>
             </div>
-            <div class="h-64 w-full">
+            <div class="h-80 w-full relative">
                 <canvas id="runningPacingChart"></canvas>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="flex flex-col gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div class="w-full">
                 ${runningStatsHtml}
             </div>
-            <div id="zone-grid" class="flex flex-col gap-4">
+            <div id="zone-grid" class="flex flex-col gap-4 w-full">
                 ${zonesGridHtml}
             </div>
         </div>
