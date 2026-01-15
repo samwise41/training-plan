@@ -1,55 +1,64 @@
+// ... existing code ...
+
 export const createPacingChart = (canvasId, records) => {
     const ctx = document.getElementById(canvasId);
-    if (!ctx) return;
+    if (!ctx || !records || records.length === 0) return;
 
-    // Filter/Sort records if needed. 
-    // The user listed "1k, 1m, 5k". Let's try to keep the order from the file or a fixed order.
-    // Fixed order is safer:
-    const order = ['1 km', '1 mi', '5 km', '10 km', 'Half Marathon', 'Marathon'];
-    
-    // Map records to this order
-    const chartData = [];
-    const labels = [];
-    
-    order.forEach(dist => {
-        const r = records.find(rec => rec.distance.toLowerCase().includes(dist.toLowerCase().replace('1 km','1k').replace('1 mi','1m'))); 
-        // actually, let's just look for exact or partial matches based on file content.
-        // I'll see what the file says. simpler to just dump the records in order if the file is ordered.
-    });
-    
-    // Let's assume the file has them.
-    // Helper to parse "MM:SS" to seconds
-    const parsePace = (paceStr) => {
+    // Helper: "4:00" -> 240 seconds
+    const parsePaceToSeconds = (paceStr) => {
+        if (!paceStr) return 0;
         const parts = paceStr.split(':');
-        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        if (parts.length === 2) {
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+        return 0;
     };
-    
-    // Helper to format seconds to "MM:SS"
-    const formatPace = (seconds) => {
+
+    // Helper: 240 seconds -> "4:00"
+    const formatSecondsToPace = (seconds) => {
         const m = Math.floor(seconds / 60);
         const s = Math.round(seconds % 60);
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
-    const dataPoints = records.map(r => parsePace(r.pace));
     const labels = records.map(r => r.distance);
+    const data = records.map(r => parsePaceToSeconds(r.pace));
 
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Running Pace (min/km)', // or min/mi depending on user unit
-                data: dataPoints,
-                borderColor: '#36A2EB',
-                tension: 0.1
+                label: 'Pace (min/km)',
+                data: data,
+                borderColor: '#36A2EB', // Blue to differentiate or match theme
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                tension: 0.1,
+                fill: true,
+                pointRadius: 5,
+                pointHoverRadius: 7
             }]
         },
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
             scales: {
                 y: {
+                    title: {
+                        display: true,
+                        text: 'Pace (min)'
+                    },
                     ticks: {
-                        callback: function(value) { return formatPace(value); }
+                        // Use callback to format seconds back to MM:SS
+                        callback: function(value) {
+                            return formatSecondsToPace(value);
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Distance'
                     }
                 }
             },
@@ -57,11 +66,14 @@ export const createPacingChart = (canvasId, records) => {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return formatPace(context.raw);
+                            return `Pace: ${formatSecondsToPace(context.raw)}`;
                         }
                     }
+                },
+                legend: {
+                    display: false
                 }
             }
         }
     });
-}
+};
