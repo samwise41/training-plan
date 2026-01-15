@@ -25,7 +25,7 @@ def get_access_token():
         exit(1)
 
 def fetch_new_ids():
-    # 1. Load existing IDs to know when to stop
+    # 1. Load existing IDs to create a "Stop List"
     existing_activities = []
     existing_ids = set()
     
@@ -36,7 +36,7 @@ def fetch_new_ids():
                 parts = line.split(',')
                 if parts: existing_ids.add(parts[0])
     
-    print(f"📂 Database contains {len(existing_ids)} activities.")
+    print(f"📂 Baseline contains {len(existing_ids)} known activities.")
 
     token = get_access_token()
     headers = {'Authorization': f"Bearer {token}"}
@@ -45,9 +45,10 @@ def fetch_new_ids():
     page = 1
     keep_fetching = True
     
-    print("🚀 Checking for new activities...")
+    print("🚀 Checking for NEW activities since baseline...")
     
     while keep_fetching:
+        # Fetch 50 at a time
         response = requests.get(ACTIVITIES_URL, headers=headers, params={'per_page': 50, 'page': page})
         data = response.json()
         
@@ -57,12 +58,12 @@ def fetch_new_ids():
         for activity in data:
             act_id = str(activity['id'])
             
-            # STOP condition: We found an activity we already have
+            # STOP FETCHING if we hit a known ID
             if act_id in existing_ids:
                 keep_fetching = False
                 continue
                 
-            # If new, add to our temp list
+            # If it's new, add to our list
             summary = f"{act_id},{activity['type']},{activity['start_date_local'][:10]}"
             new_activities.append(summary)
             
@@ -70,7 +71,7 @@ def fetch_new_ids():
         
     if new_activities:
         print(f"✨ Found {len(new_activities)} new activities!")
-        # Write NEW data followed by OLD data (Preserves newest-first order)
+        # Write NEW data at the top, followed by OLD data
         with open(OUTPUT_FILE, "w") as f:
             for line in new_activities:
                 f.write(f"{line}\n")
