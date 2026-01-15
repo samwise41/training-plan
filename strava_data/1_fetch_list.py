@@ -22,6 +22,9 @@ def get_access_token():
         return res.json()['access_token']
     except Exception as e:
         print(f"❌ Auth Error: {e}")
+        # Print response if available to help debug
+        if 'res' in locals():
+            print(f"Response: {res.text}")
         exit(1)
 
 def fetch_new_ids():
@@ -50,10 +53,25 @@ def fetch_new_ids():
     while keep_fetching:
         # Fetch 50 at a time
         response = requests.get(ACTIVITIES_URL, headers=headers, params={'per_page': 50, 'page': page})
+        
+        # 🛡️ SAFETY CHECK: Handle API Errors
+        if response.status_code != 200:
+            print(f"\n❌ API Error {response.status_code} on Page {page}")
+            print(f"Message: {response.text}")
+            break
+            
         data = response.json()
         
-        if not data:
+        # 🛡️ SAFETY CHECK: Ensure we got a list
+        if not isinstance(data, list):
+            print(f"\n❌ Unexpected response format (Expected List, got {type(data)}): {data}")
             break
+        
+        if not data:
+            print(f"   - Page {page}: No more activities found.")
+            break
+            
+        print(f"   - Page {page}: Scanning {len(data)} activities...")
             
         for activity in data:
             act_id = str(activity['id'])
@@ -64,6 +82,8 @@ def fetch_new_ids():
                 continue
                 
             # If it's new, add to our list
+            # We treat 'Ride' and 'VirtualRide' both as 'Ride' for your downstream logic if you want,
+            # but keeping raw type is safer. Downstream scripts filter by 'Ride' anyway.
             summary = f"{act_id},{activity['type']},{activity['start_date_local'][:10]}"
             new_activities.append(summary)
             
