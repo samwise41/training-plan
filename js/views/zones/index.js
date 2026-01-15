@@ -9,7 +9,7 @@ export function renderZones(planMd) {
     const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
     const runningStatsHtml = renderRunningStats(bio);
     
-    // Now returns an object { cycling, running }
+    // Split Zones ({ cycling, running })
     const zones = parseZoneTables(planMd);
     
     const buttonHtml = renderButton();
@@ -44,7 +44,7 @@ export function renderZones(planMd) {
 
                 ${runningStatsHtml}
 
-                <div id="zone-grid" class="flex flex-col gap-4">
+                <div class="flex flex-col gap-4 w-full">
                     ${zones.running}
                 </div>
             </div>
