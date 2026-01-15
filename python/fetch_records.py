@@ -19,25 +19,32 @@ MD_OUTPUT = os.path.join(DATA_DIR, 'garmin_records.md')
 # --- RECORD TYPE MAPPING ---
 # IDs map to human-readable names. 
 RECORD_TYPE_MAP = {
-    # RUNNING
-    1: "1 km", 
-    2: "1 Mile", 
-    3: "5 km", 
-    4: "10 km", 
-    5: "Half Marathon", 
+    1: "1 km",
+    2: "1 Mile",
+    3: "5 km",
+    4: "10 km",
+    5: "Half Marathon",
     6: "Marathon",
-    12: "Longest Run",
-    
-    # CYCLING
-    22: "Longest Ride", 
-    23: "Max Power (20 min)", 
-    24: "40 km",
-    38: "Max Avg Power (20 min)",
-    
-    # SWIMMING
-    27: "100m Swim", 
-    28: "1000m Swim", 
-    29: "Longest Swim"
+    7: "Longest Run",
+    8: "Longest Ride",
+    9: "Total Ascent",
+    10: "Max Average Power 20 min",
+    11: "40 km bike",
+    12: "Most steps in a Day",
+    13: "Most steps in a Week",
+    14: "Most steps in a Month",
+    15: "Longest Goal Streak",
+    16: "Current Goal Streak",
+    17: "Longest Swim",
+    18: "100m",
+    19: "100y",
+    20: "400m",
+    21: "500yd",
+    22: "750m",
+    23: "1000m",
+    24: "1000yd",
+    25: "1500m",
+    26: "1650yd",
 }
 
 # --- CREDENTIALS ---
