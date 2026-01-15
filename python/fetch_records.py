@@ -88,9 +88,10 @@ def guess_sport(record_name, type_id):
     if 'swim' in name_lower: return 'Swimming'
     
     # ID Ranges (Heuristic)
-    if type_id in [1,2,3,4,5,6,12]: return 'Running'
-    if type_id in [22,23,24]: return 'Cycling'
-    if type_id in [27,28,29]: return 'Swimming'
+    if type_id in [1,2,3,4,5,6,7]: return 'Running'
+    if type_id in [8,9,10,11]: return 'Cycling'
+    if type_id in [12,13,14,15,16]: return 'Steps'
+    if type_id in [17,18,19,20,21,22,23,24,25,26]: return 'Swimming'
     
     return 'Other'
 
