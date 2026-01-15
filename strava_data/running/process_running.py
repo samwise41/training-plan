@@ -26,8 +26,13 @@ def get_access_token():
         'grant_type': 'refresh_token',
         'f': 'json'
     }
-    res = requests.post("https://www.strava.com/oauth/token", data=payload, verify=True)
-    return res.json()['access_token']
+    try:
+        res = requests.post("https://www.strava.com/oauth/token", data=payload, verify=True)
+        res.raise_for_status()
+        return res.json()['access_token']
+    except Exception as e:
+        print(f"⚠️ Auth Failed: {e}")
+        return None
 
 def format_time(seconds):
     m, s = divmod(seconds, 60)
@@ -36,6 +41,11 @@ def format_time(seconds):
     return f"{m}:{s:02d}"
 
 def update_cache(token):
+    # If no token, skip update but don't crash
+    if not token:
+        print("⚠️ No API Token. Skipping cache update.")
+        return
+
     if not os.path.exists(CACHE_DIR): os.makedirs(CACHE_DIR)
     
     cached_ids = set([f.split('.')[0] for f in os.listdir(CACHE_DIR) if f.endswith('.json')])
@@ -61,7 +71,11 @@ def update_cache(token):
         print(f"   [{i+1}/{BATCH_SIZE}] Caching {act_id}...", end="\r")
         try:
             r = requests.get(f"https://www.strava.com/api/v3/activities/{act_id}", headers=headers)
+            if r.status_code == 429:
+                print(f"\n⚠️ Rate Limit Exceeded on {act_id}. Stopping early.")
+                break # Stop fetching, but proceed to report generation
             if r.status_code != 200: continue
+            
             data = r.json()
             
             cache_data = {
@@ -83,10 +97,14 @@ def update_cache(token):
         except Exception as e:
             print(f"Error {act_id}: {e}")
             
-    print("\n💾 Cache update complete.")
+    print("\n💾 Cache update process finished.")
 
 def generate_report():
-    print("📊 Generating Running Report...")
+    print("📊 Generating Running Report from Cache...")
+    if not os.path.exists(CACHE_DIR):
+        print("⚠️ No cache directory found. Skipping report.")
+        return
+
     today = datetime.now()
     six_weeks_ago = today - timedelta(weeks=6)
     
@@ -94,10 +112,14 @@ def generate_report():
     six_week = {}
     
     files = [f for f in os.listdir(CACHE_DIR) if f.endswith('.json')]
+    print(f"   (Analyzing {len(files)} cached runs)")
     
     for fname in files:
         with open(os.path.join(CACHE_DIR, fname), "r") as f:
-            run = json.load(f)
+            try:
+                run = json.load(f)
+            except json.JSONDecodeError:
+                continue
             
         run_date = datetime.strptime(run['date'], "%Y-%m-%d")
         is_recent = run_date >= six_weeks_ago
@@ -115,7 +137,6 @@ def generate_report():
 
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# 🏃 My Best Efforts (Running)\n\n")
-        # UPDATED HEADERS: Now includes two separate Link columns
         f.write("| Distance | All Time Best | Link | 6 Week Best | Link |\n")
         f.write("|---|---|---|---|---|\n")
         
@@ -124,11 +145,11 @@ def generate_report():
             sw = six_week.get(dist)
             
             if at or sw:
-                # All Time Data
+                # All Time Column
                 at_str = f"**{format_time(at['time'])}**" if at else "--"
                 at_link = f"[View](https://www.strava.com/activities/{at['id']})" if at else "--"
-                
-                # 6 Week Data
+
+                # 6 Week Column
                 sw_str = f"{format_time(sw['time'])}" if sw else "--"
                 sw_link = f"[View](https://www.strava.com/activities/{sw['id']})" if sw else "--"
                 
@@ -137,6 +158,11 @@ def generate_report():
     print(f"✅ Updated {OUTPUT_MD}")
 
 if __name__ == "__main__":
-    t = get_access_token()
-    update_cache(t)
+    # 1. Try to get Token
+    token = get_access_token()
+    
+    # 2. Try to Update Cache (will skip gracefully if token failed)
+    update_cache(token)
+    
+    # 3. Always Generate Report (using whatever exists in cache)
     generate_report()
