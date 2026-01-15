@@ -34,7 +34,7 @@ jobs:
         run: python 1_fetch_list.py
 
       - name: Process Running Stats
-        working-directory: ./strava_data
+        working-directory: ./strava_data/running
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
@@ -48,7 +48,7 @@ jobs:
           
           # Force Add Cache Folder and Files
           git add strava_data/activity_ids.txt
-          git add strava_data/my_running_prs.md
+          git add strava_data/running/my_running_prs.md
           git add strava_data/running_cache/
           
           if git diff --staged --quiet; then
