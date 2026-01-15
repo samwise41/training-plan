@@ -30,7 +30,6 @@ export const getBiometricsData = (planMd) => {
 };
 
 export const parseZoneTables = (planMd) => {
-    // Exact logic from your original file
     const section = Parser.getSection(planMd, "Training Parameters") || Parser.getSection(planMd, "Zones");
     let current = '', html = '', categories = {};
     
@@ -45,8 +44,7 @@ export const parseZoneTables = (planMd) => {
             const [labelRaw, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
             const label = labelRaw.trim();
             
-            // --- ROBUST LOGIC START (Preserved) ---
-            let zClass = 'z-1'; // Default
+            let zClass = 'z-1';
             const cleanLabel = label.toLowerCase();
 
             if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) {
@@ -57,7 +55,6 @@ export const parseZoneTables = (planMd) => {
                     zClass = `z-${zMatch[1]}`;
                 }
             }
-            // --- ROBUST LOGIC END ---
 
             categories[current].push(`
                 <div class="zone-row ${zClass}">
@@ -79,33 +76,32 @@ export const parseZoneTables = (planMd) => {
     return html;
 };
 
-// --- NEW FUNCTIONALITY ---
+// --- NEW FUNCTION ---
 export const fetchPacingData = async () => {
     try {
         const response = await fetch('garmind_data/garmin_records.md');
-        if (!response.ok) throw new Error('Failed to fetch records');
+        if (!response.ok) return [];
         
         const text = await response.text();
         const records = [];
         
-        // Parse Markdown Table
+        // Parse Markdown Table: | Sport | Record | Value | Date |
         const lines = text.split('\n');
         lines.forEach(line => {
             if (line.trim().startsWith('|') && !line.includes('---')) {
                 const cols = line.split('|').map(c => c.trim());
-                // Cols: [empty, Sport, Record, Value, Date, empty]
+                // Check if row has enough columns and is for Running
                 if (cols.length > 3 && cols[1] === 'Running') {
                     records.push({
-                        label: cols[2], // e.g., "1 km", "5 km"
-                        value: cols[3]  // e.g., "4:30", "24:26"
+                        label: cols[2], // e.g. "1 km"
+                        value: cols[3]  // e.g. "4:30"
                     });
                 }
             }
         });
-        
         return records;
     } catch (e) {
-        console.error("Error loading pacing data:", e);
+        console.error("Error parsing records:", e);
         return [];
     }
 };
