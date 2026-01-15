@@ -29,7 +29,7 @@ def fetch_personal_records(client):
         records = client.get_personal_record()
         
         # Save raw JSON for inspection
-        with open('my_personal_records.json', 'w', encoding='utf-8') as f:
+        with open('garmind_data/my_personal_records.json', 'w', encoding='utf-8') as f:
             json.dump(records, f, indent=4)
             
         print("\n=== 🏃 RUNNING RECORDS ===")
