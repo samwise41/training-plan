@@ -14,7 +14,7 @@ OUTPUT_GRAPH = "power_curve_graph.json"
 OUTPUT_MD = "my_power_profile.md"
 
 MAX_DURATION_SECONDS = 21600 # 6 Hours
-BATCH_SIZE = 20 
+BATCH_SIZE = 10 
 
 # Key intervals for the Summary Table
 KEY_INTERVALS = [
