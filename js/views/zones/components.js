@@ -77,18 +77,33 @@ export const initPacingChart = async (canvasId) => {
     
     if (!ctx || !data.length) return;
 
-    const distMap = { '1 km': 1, '1 Mile': 1.61, '5 km': 5, '10 km': 10, 'Half Marathon': 21.1, 'Marathon': 42.2 };
+    // Distances converted to Miles
+    const distMap = { 
+        '1 km': 0.621371, 
+        '1 Mile': 1.0, 
+        '5 km': 3.10686, 
+        '10 km': 6.21371, 
+        'Half Marathon': 13.1094, 
+        'Marathon': 26.2188 
+    };
     
     const processed = data
         .filter(d => Object.keys(distMap).some(k => d.label.includes(k)))
         .map(d => {
             const key = Object.keys(distMap).find(k => d.label.includes(k));
             const parts = d.value.split(':').map(Number);
+            
+            // Calculate Total Hours (Time / 3600)
             let totalSeconds = parts.length === 3 ? parts[0]*3600 + parts[1]*60 + parts[2] : parts[0]*60 + parts[1];
+            const totalHours = totalSeconds / 3600;
+
+            const miles = distMap[key];
+            const mph = miles / totalHours;
+            
             return {
                 label: key,
-                dist: distMap[key],
-                pace: totalSeconds / distMap[key]
+                dist: miles, // Keep for sorting
+                speed: mph
             };
         })
         .sort((a, b) => a.dist - b.dist);
@@ -99,8 +114,8 @@ export const initPacingChart = async (canvasId) => {
             data: {
                 labels: processed.map(d => d.label),
                 datasets: [{
-                    label: 'Pace (min/km)',
-                    data: processed.map(d => d.pace / 60),
+                    label: 'Speed (mph)',
+                    data: processed.map(d => d.speed),
                     borderColor: '#38bdf8',
                     backgroundColor: 'rgba(56, 189, 248, 0.2)',
                     fill: true,
@@ -116,13 +131,10 @@ export const initPacingChart = async (canvasId) => {
                 scales: {
                     y: {
                         grid: { color: '#334155' },
+                        title: { display: true, text: 'Speed (mph)', color: '#94a3b8' },
                         ticks: {
                             color: '#94a3b8',
-                            callback: val => {
-                                const m = Math.floor(val);
-                                const s = Math.round((val - m) * 60);
-                                return `${m}:${s.toString().padStart(2, '0')}`;
-                            }
+                            callback: val => val.toFixed(1) + ' mph'
                         }
                     },
                     x: {
@@ -130,7 +142,14 @@ export const initPacingChart = async (canvasId) => {
                         ticks: { color: '#94a3b8' }
                     }
                 },
-                plugins: { legend: { display: false } }
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `Speed: ${ctx.raw.toFixed(2)} mph`
+                        }
+                    }
+                }
             }
         });
     }
