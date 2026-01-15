@@ -140,8 +140,8 @@ def generate_stats():
     # MARKDOWN
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# ⚡ Power Profile (1s - 6h)\n\n")
-        f.write("| Duration | All Time Best | 6 Week Best | Activity Link |\n")
-        f.write("|---|---|---|---|\n")
+        f.write("| Duration | All Time Best | Link | 6 Week Best | Link |\n")
+        f.write("|---|---|---|---|---|\n")
         
         for label, seconds in KEY_INTERVALS:
             idx = seconds - 1
@@ -149,11 +149,15 @@ def generate_stats():
                 at = all_time_best[idx]
                 sw = six_week_best[idx]
                 
+                # All Time Column
                 at_str = f"**{at['watts']}w**" if at else "--"
+                at_link = f"[View](https://www.strava.com/activities/{at['id']})" if at else "--"
+
+                # 6 Week Column
                 sw_str = f"{sw['watts']}w" if sw else "--"
-                link = f"[View](https://www.strava.com/activities/{at['id']})" if at else ""
+                sw_link = f"[View](https://www.strava.com/activities/{sw['id']})" if sw else "--"
                 
-                f.write(f"| {label} | {at_str} | {sw_str} | {link} |\n")
+                f.write(f"| {label} | {at_str} | {at_link} | {sw_str} | {sw_link} |\n")
 
     # GRAPH JSON
     graph_data = []
