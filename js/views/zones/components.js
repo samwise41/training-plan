@@ -2,17 +2,17 @@ import { fetchPacingData } from './logic.js';
 
 export const renderGauge = (wkgNum, percent, cat) => {
     return `
-        <div class="gauge-wrapper w-full flex items-center justify-center p-6 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg">
-            <svg viewBox="0 0 300 185" class="gauge-svg w-full max-w-[300px] h-auto">
+        <div class="gauge-wrapper w-full h-full flex items-center justify-center p-4 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg relative overflow-hidden">
+            <svg viewBox="0 0 300 160" class="gauge-svg w-full h-full max-h-[220px]" preserveAspectRatio="xMidYMid meet">
                 <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" />
                 <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" />
                 <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
                 <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" />
                 <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" />
-                <text x="150" y="135" text-anchor="middle" class="text-4xl font-black fill-white">${wkgNum.toFixed(2)}</text>
-                <text x="150" y="160" text-anchor="middle" font-weight="800" fill="${cat.color}">${cat.label.toUpperCase()}</text>
-                <g class="gauge-needle" style="transform: rotate(${-90 + (percent * 180)}deg)">
-                    <path d="M 147 150 L 150 45 L 153 150 Z" fill="white" />
+                <text x="150" y="130" text-anchor="middle" class="text-5xl font-black fill-white">${wkgNum.toFixed(2)}</text>
+                <text x="150" y="155" text-anchor="middle" font-weight="800" fill="${cat.color}" style="font-size: 14px; letter-spacing: 1px;">${cat.label.toUpperCase()}</text>
+                <g class="gauge-needle" style="transform-origin: 150px 150px; transform: rotate(${-90 + (percent * 180)}deg)">
+                    <path d="M 147 150 L 150 40 L 153 150 Z" fill="white" />
                     <circle cx="150" cy="150" r="6" fill="white" />
                 </g>
             </svg>
@@ -22,7 +22,7 @@ export const renderGauge = (wkgNum, percent, cat) => {
 
 export const renderCyclingStats = (bio) => {
     return `
-        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg flex flex-col justify-center min-h-[160px]">
+        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg flex flex-col justify-center h-full">
             <div class="flex items-center justify-center gap-2 mb-2">
                 <i class="fa-solid fa-bicycle icon-bike text-2xl"></i>
                 <span class="text-sm font-bold text-slate-500 uppercase tracking-widest">Cycling FTP</span>
@@ -37,7 +37,7 @@ export const renderCyclingStats = (bio) => {
 
 export const renderRunningStats = (bio) => {
     return `
-        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg">
+        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg h-full flex flex-col justify-center">
             <div class="flex items-center justify-center gap-2 mb-6">
                 <i class="fa-solid fa-person-running icon-run text-xl"></i>
                 <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Running Profile</span>
