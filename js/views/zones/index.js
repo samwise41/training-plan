@@ -6,9 +6,9 @@ export const renderZones = (planMd, recordsJson) => {
     // 1. Process Data
     const data = getZonesLogic(planMd, recordsJson);
 
-    // 2. Schedule Chart Render (must happen after HTML injection)
+    // 2. Schedule Chart Render (async to allow DOM paint)
     setTimeout(() => {
-        if (window.renderRunningPaceChart) {
+        if (typeof window.renderRunningPaceChart === 'function') {
             window.renderRunningPaceChart();
         }
     }, 100);
