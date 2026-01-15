@@ -16,36 +16,28 @@ os.makedirs(DATA_DIR, exist_ok=True)
 JSON_OUTPUT = os.path.join(DATA_DIR, 'garmin_records.json')
 MD_OUTPUT = os.path.join(DATA_DIR, 'garmin_records.md')
 
-# --- CONSTANTS ---
-# Fallback mapping for common Garmin Record IDs if text is missing
+# --- RECORD TYPE MAPPING ---
+# IDs map to human-readable names. 
 RECORD_TYPE_MAP = {
-    1: "1 km",
-    2: "1 Mile",
-    3: "5 km",
-    4: "10 km",
-    5: "Half Marathon",
+    # RUNNING
+    1: "1 km", 
+    2: "1 Mile", 
+    3: "5 km", 
+    4: "10 km", 
+    5: "Half Marathon", 
     6: "Marathon",
-    7: "Longest Run",
-    8: "Longest Ride",
-    9: "Total Ascent",
-    10: "Max Average Power 20 min",
-    11: "40 km bike",
-    12: "Most steps in a Day",
-    13: "Most steps in a Week",
-    14: "Most steps in a Month",
-    15: "Longest Goal Streak",
-    16: "Current Goal Streak",
-    17: "Longest Swim",
-    18: "100m",
-    19: "100y",
-    20: "400m",
-    21: "500yd",
-    22: "750m",
-    23: "1000m",
-    24: "1000yd",
-    25: "1500m",
-    26: "1650yd",
-
+    12: "Longest Run",
+    
+    # CYCLING
+    22: "Longest Ride", 
+    23: "Max Power (20 min)", 
+    24: "40 km",
+    38: "Max Avg Power (20 min)",
+    
+    # SWIMMING
+    27: "100m Swim", 
+    28: "1000m Swim", 
+    29: "Longest Swim"
 }
 
 # --- CREDENTIALS ---
@@ -56,6 +48,7 @@ def init_garmin():
     if not EMAIL or not PASSWORD:
         print("❌ Error: Credentials missing.")
         sys.exit(1)
+    
     try:
         print("🔐 Authenticating with Garmin Connect...")
         client = Garmin(EMAIL, PASSWORD)
@@ -82,26 +75,21 @@ def guess_sport(record_name, type_id):
     """Infers sport from record name or ID"""
     name_lower = record_name.lower()
     
-    # Explicit keyword matches
     if 'run' in name_lower or 'marathon' in name_lower or '5k' in name_lower: return 'Running'
     if 'ride' in name_lower or 'cycl' in name_lower or 'power' in name_lower: return 'Cycling'
     if 'swim' in name_lower: return 'Swimming'
     
-    # ID Ranges (Heuristic)
-    if type_id in [1,2,3,4,5,6,7]: return 'Running'
-    if type_id in [8,9,10,11]: return 'Cycling'
-    if type_id in [12,13,14,15,16]: return 'Steps'
-    if type_id in [17,18,19,20,21,22,23,24,25,26]: return 'Swimming'
+    if type_id in [1,2,3,4,5,6,12]: return 'Running'
+    if type_id in [22,23,24,38]: return 'Cycling'
+    if type_id in [27,28,29]: return 'Swimming'
     
     return 'Other'
 
 def find_records_recursive(data, collected=[]):
-    """Recursively searches for objects that look like records (have typeId and value)."""
+    """Recursively searches for objects that look like records."""
     if isinstance(data, dict):
-        # Check if this dict IS a record
         if 'typeId' in data and 'value' in data:
             collected.append(data)
-        # Otherwise search its keys
         for k, v in data.items():
             find_records_recursive(v, collected)
             
@@ -115,9 +103,8 @@ def process_records(records_raw):
     """Flattens the Garmin data into a clean list for the table."""
     table_data = []
     
-    # 1. Find all record objects regardless of structure (Dict vs List)
+    # 1. Find all record objects
     all_records = find_records_recursive(records_raw)
-    
     print(f"🔎 Found {len(all_records)} potential records.")
 
     for r in all_records:
@@ -125,41 +112,40 @@ def process_records(records_raw):
         type_id = r.get('typeId')
         type_key = r.get('typeKey')
         
-        # Prefer mapped name, then typeKey, then ID
         if type_id in RECORD_TYPE_MAP:
             name = RECORD_TYPE_MAP[type_id]
         elif type_key:
             name = type_key.replace('_', ' ').title()
         else:
-            name = f"Record ID {type_id}"
+            name = f"Unknown Record (ID {type_id})"
+            # print(f"⚠️  Unmapped Record Found: ID {type_id} (Value: {r.get('value')})")
 
         # --- 2. DETERMINE SPORT ---
-        # Some objects have a 'sportId' we could map, but guessing by name is usually safer
         sport = guess_sport(name, type_id)
 
         # --- 3. DETERMINE VALUE ---
         raw_val = r.get('value')
         display_val = "--"
         
-        # Heuristic: If it looks like a distance record, value is meters
+        # Heuristic: Distances vs Times
         if 'longest' in name.lower() or 'far' in name.lower():
             if raw_val:
                 km = float(raw_val) / 1000.0
                 display_val = f"{km:.2f} km"
-        # Heuristic: Elevation
         elif 'elevation' in name.lower() or 'ascent' in name.lower():
              if raw_val:
                 display_val = f"{int(raw_val)} m"
-        # Default: Time (Seconds)
+        elif 'power' in name.lower():
+             if raw_val:
+                display_val = f"{int(raw_val)} W"
         elif raw_val:
             display_val = format_duration(raw_val)
 
         # --- 4. DETERMINE DATE ---
-        # Garmin uses different date keys depending on endpoint
-        rec_date = r.get('activityDate') or r.get('date') or r.get('startTimeLocal') or "Unknown"
+        # Prioritize the specific field you found
+        rec_date = r.get('prStartTimeGmtFormatted') or r.get('activityDate') or r.get('date') or r.get('startTimeLocal') or "Unknown"
         rec_date = rec_date[:10] # YYYY-MM-DD
 
-        # Activity Link
         act_id = r.get('activityId')
         
         table_data.append({
@@ -173,10 +159,10 @@ def process_records(records_raw):
     return table_data
 
 def save_outputs(records, table_data):
-    # 1. Save Raw JSON (For debugging)
+    # 1. Save Raw JSON
+    print(f"💾 Saving JSON to {JSON_OUTPUT}...")
     with open(JSON_OUTPUT, 'w', encoding='utf-8') as f:
         json.dump(records, f, indent=4)
-    print(f"💾 Raw JSON saved: {JSON_OUTPUT}")
 
     # 2. Save Markdown
     if not table_data:
@@ -185,19 +171,21 @@ def save_outputs(records, table_data):
 
     df = pd.DataFrame(table_data)
     
-    # Sort: Sport -> Date Descending
     if not df.empty:
+        # Sort: Sport -> Date Descending
         df = df.sort_values(by=['Sport', 'Date'], ascending=[True, False])
     
-    # Clean up columns for display
-    display_df = df[['Sport', 'Record', 'Value', 'Date']].copy()
+    # Select columns for the MD table
+    display_cols = ['Sport', 'Record', 'Value', 'Date']
+    display_df = df[display_cols].copy()
     
+    print(f"💾 Saving Markdown to {MD_OUTPUT}...")
     with open(MD_OUTPUT, 'w', encoding='utf-8') as f:
         f.write("# Personal Records 🏆\n\n")
         f.write(f"**Last Updated:** {date.today().isoformat()}\n\n")
         f.write(display_df.to_markdown(index=False))
-    
-    print(f"💾 Markdown Table saved: {MD_OUTPUT}")
+        
+    print("✅ Done.")
 
 def main():
     client = init_garmin()
@@ -207,15 +195,14 @@ def main():
         # Fetch raw data
         records = client.get_personal_record()
         
-        # Process using the new "Search Everything" logic
+        # Process
         table_data = process_records(records)
         
         # Save
         save_outputs(records, table_data)
         
     except Exception as e:
-        print(f"❌ Critical Error: {e}")
-        # Dump what we have if possible for debugging
+        print(f"❌ Failed to fetch records: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
