@@ -1,4 +1,3 @@
-// js/views/zones/logic.js
 import { Parser } from '../../parser.js';
 import { CONFIG } from './config.js';
 
@@ -17,16 +16,7 @@ export const getBiometricsData = (planMd) => {
     const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
     const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
 
-    return {
-        watts,
-        weight,
-        lthr,
-        runFtp,
-        fiveK,
-        wkgNum,
-        cat,
-        percent
-    };
+    return { watts, weight, lthr, runFtp, fiveK, wkgNum, cat, percent };
 };
 
 export const parseZoneTables = (planMd) => {
@@ -46,14 +36,10 @@ export const parseZoneTables = (planMd) => {
             
             let zClass = 'z-1';
             const cleanLabel = label.toLowerCase();
-
-            if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) {
-                zClass = 'z-ss';
-            } else {
+            if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) zClass = 'z-ss';
+            else {
                 const zMatch = cleanLabel.match(/zone (\d)/);
-                if (zMatch) {
-                    zClass = `z-${zMatch[1]}`;
-                }
+                if (zMatch) zClass = `z-${zMatch[1]}`;
             }
 
             categories[current].push(`
@@ -66,36 +52,23 @@ export const parseZoneTables = (planMd) => {
     });
     
     Object.keys(categories).forEach(k => {
-        html += `
-            <div class="zone-card">
-                <div class="zone-card-title">${k}</div>
-                ${categories[k].join('')}
-            </div>
-        `;
+        html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`;
     });
     return html;
 };
 
-// --- NEW FUNCTION ---
 export const fetchPacingData = async () => {
     try {
         const response = await fetch('garmind_data/garmin_records.md');
         if (!response.ok) return [];
-        
         const text = await response.text();
         const records = [];
         
-        // Parse Markdown Table: | Sport | Record | Value | Date |
-        const lines = text.split('\n');
-        lines.forEach(line => {
+        text.split('\n').forEach(line => {
             if (line.trim().startsWith('|') && !line.includes('---')) {
                 const cols = line.split('|').map(c => c.trim());
-                // Check if row has enough columns and is for Running
                 if (cols.length > 3 && cols[1] === 'Running') {
-                    records.push({
-                        label: cols[2], // e.g. "1 km"
-                        value: cols[3]  // e.g. "4:30"
-                    });
+                    records.push({ label: cols[2], value: cols[3] });
                 }
             }
         });
