@@ -1,7 +1,7 @@
-name: Update Strava PRs
+name: Update Strava Data
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Manual trigger button
   schedule:
     - cron: '0 8 * * *' # Runs daily at 8am UTC
 
@@ -9,8 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  update-data:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -20,11 +21,14 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install libraries
+      - name: Install dependencies
         working-directory: ./strava_data
         run: pip install -r requirements.txt
 
-      - name: Fetch Latest Activities
+      # ---------------------------------------------------------
+      # STEP 1: Fetch New Activity IDs
+      # ---------------------------------------------------------
+      - name: 1. Fetch Latest Activities
         working-directory: ./strava_data
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
@@ -32,7 +36,10 @@ jobs:
           STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
         run: python 1_fetch_list.py
 
-      - name: Scan for New PRs
+      # ---------------------------------------------------------
+      # STEP 2: Process Running PRs (Best Efforts)
+      # ---------------------------------------------------------
+      - name: 2. Update Running PRs
         working-directory: ./strava_data
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
@@ -40,14 +47,44 @@ jobs:
           STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
         run: python 2_process_prs.py
 
+      # ---------------------------------------------------------
+      # STEP 3: Process Cycling Power Curve
+      # ---------------------------------------------------------
+      - name: 3. Update Power Curve
+        working-directory: ./strava_data
+        env:
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+        run: python 3_update_power.py
+
+      # ---------------------------------------------------------
+      # STEP 4: Save Changes
+      # ---------------------------------------------------------
       - name: Commit and Push
         run: |
           git config --global user.name "StravaBot"
           git config --global user.email "bot@github.com"
-          git add strava_data/activity_ids.txt strava_data/my_prs.md strava_data/processed_log.txt
+          
+          # Add all tracked files
+          git add strava_data/activity_ids.txt 
+          git add strava_data/my_prs.md 
+          git add strava_data/processed_log.txt 
+          
+          # Add Power Files
+          git add strava_data/my_power_profile.md
+          git add strava_data/power_curve_graph.json
+          git add strava_data/power_bests.json
+          git add strava_data/power_processed.txt
+          
+          # Add the Cache Folder (Important!)
+          git add strava_data/power_cache/
+          
+          # Commit only if changes exist
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "🏆 Updated Strava PRs"
+            git commit -m "🏆 Strava Data Update"
+            git pull --rebase
             git push
           fi
