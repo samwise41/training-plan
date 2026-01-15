@@ -1,71 +1,50 @@
-import { getZonesData } from './logic.js';
-import { 
-    createFtpChart, 
-    createWkgChart, 
-    createRunningProfileChart, 
-    createRunningZonesChart,
-    createPacingChart // Import the new component
-} from './components.js';
+// js/views/zones/index.js
+import { getBiometricsData, parseZoneTables } from './logic.js';
+import { renderGauge, renderCyclingStats, renderRunningStats, renderButton, initPacingChart } from './components.js';
 
-export const renderZonesView = async (container) => {
-    const data = await getZonesData();
+export function renderZones(planMd) {
+    // 1. Process Data
+    const bio = getBiometricsData(planMd);
     
-    // Updated Layout:
-    // Row 1: Cycling FTP | Cycling W/kg
-    // Row 2: Running Pacing (Full Width)
-    // Row 3: Running Profile | Running Zones
+    // 2. Generate HTML Components
+    // Row 1: Cycling Stats & Gauge
+    const cyclingStatsHtml = renderCyclingStats(bio);
+    const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
     
-    const html = `
-        <div class="zones-dashboard">
-            <div class="charts-row">
-                <div class="chart-card">
-                    <h3>Cycling FTP History</h3>
-                    <div class="chart-container">
-                        <canvas id="ftpChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <h3>Watts / Kg</h3>
-                    <div class="chart-container">
-                        <canvas id="wkgChart"></canvas>
-                    </div>
-                </div>
-            </div>
+    // Row 3: Running Stats & Zones
+    const runningStatsHtml = renderRunningStats(bio);
+    const zonesGridHtml = parseZoneTables(planMd);
+    const buttonHtml = renderButton();
 
-            <div class="charts-row">
-                <div class="chart-card full-width" style="grid-column: 1 / -1; width: 100%;">
-                    <h3>Running Pacing over Distances</h3>
-                    <div class="chart-container" style="height: 300px;">
-                        <canvas id="runningPacingChart"></canvas>
-                    </div>
-                </div>
-            </div>
+    // 3. Trigger Async Chart Init (After render)
+    setTimeout(() => initPacingChart('runningPacingChart'), 0);
 
-            <div class="charts-row">
-                <div class="chart-card">
-                    <h3>Running Profile</h3>
-                    <div class="chart-container">
-                        <canvas id="runningProfileChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <h3>Running Heart Rate Zones</h3>
-                    <div class="chart-container">
-                        <canvas id="runningZonesChart"></canvas>
-                    </div>
-                </div>
+    // 4. Assemble Final View
+    return `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 items-center">
+            ${cyclingStatsHtml}
+            ${gaugeHtml}
+        </div>
+
+        <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl shadow-lg mb-8">
+            <div class="flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-chart-line text-sky-500"></i>
+                <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Running Pacing (Over Distances)</span>
+            </div>
+            <div class="h-64 w-full">
+                <canvas id="runningPacingChart"></canvas>
             </div>
         </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex flex-col gap-4">
+                ${runningStatsHtml}
+                </div>
+            <div id="zone-grid" class="flex flex-col gap-4">
+                ${zonesGridHtml}
+            </div>
+        </div>
+
+        ${buttonHtml}
     `;
-
-    container.innerHTML = html;
-
-    // Render existing charts
-    createFtpChart('ftpChart', data.cycling);
-    createWkgChart('wkgChart', data.cycling);
-    createRunningProfileChart('runningProfileChart', data.running);
-    createRunningZonesChart('runningZonesChart', data.running);
-    
-    // Render new chart
-    createPacingChart('runningPacingChart', data.records);
-};
+}
