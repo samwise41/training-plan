@@ -4,41 +4,44 @@ import { renderGauge, renderCyclingStats, renderRunningStats, renderButton, init
 export function renderZones(planMd) {
     const bio = getBiometricsData(planMd);
     
-    // 1. Cycling Components
+    // Components
     const cyclingStatsHtml = renderCyclingStats(bio);
     const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
-    
-    // 2. Running Components
     const runningStatsHtml = renderRunningStats(bio);
     const zonesGridHtml = parseZoneTables(planMd);
     const buttonHtml = renderButton();
 
-    // Async Init
+    // Async Chart Init
     setTimeout(() => initPacingChart('runningPacingChart'), 0);
 
     return `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            ${cyclingStatsHtml}
-            ${gaugeHtml}
-        </div>
-
-        <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl shadow-lg mb-8">
-            <div class="flex items-center gap-2 mb-4">
-                <i class="fa-solid fa-chart-line text-sky-500"></i>
-                <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Running Pacing (Over Distance)</span>
+        <div class="zones-layout grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <div class="flex flex-col gap-6">
+                ${cyclingStatsHtml}
+                
+                ${gaugeHtml}
             </div>
-            <div class="h-80 w-full relative">
-                <canvas id="runningPacingChart"></canvas>
-            </div>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div class="w-full">
+            <div class="flex flex-col gap-6">
+                
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl shadow-lg">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fa-solid fa-chart-line text-sky-500"></i>
+                        <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Running Pacing</span>
+                    </div>
+                    <div class="h-64 w-full relative">
+                        <canvas id="runningPacingChart"></canvas>
+                    </div>
+                </div>
+
                 ${runningStatsHtml}
+
+                <div id="zone-grid" class="flex flex-col gap-4">
+                    ${zonesGridHtml}
+                </div>
             </div>
-            <div id="zone-grid" class="flex flex-col gap-4 w-full">
-                ${zonesGridHtml}
-            </div>
+
         </div>
 
         ${buttonHtml}
