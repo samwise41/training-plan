@@ -1,24 +1,18 @@
 // js/views/zones/index.js
-import { getBiometricsData, parseZoneTables } from './logic.js';
-import { renderGauge, renderStatsGrid, renderButton } from './components.js';
+import { getZonesLogic } from './logic.js';
+import { renderZoneComponents } from './components.js';
 
-export function renderZones(planMd) {
+export const renderZones = (planMd, recordsJson) => {
     // 1. Process Data
-    const bio = getBiometricsData(planMd);
-    
-    // 2. Generate HTML Components
-    const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
-    const statsHtml = renderStatsGrid(bio);
-    const zonesGridHtml = parseZoneTables(planMd);
-    const buttonHtml = renderButton();
+    const data = getZonesLogic(planMd, recordsJson);
 
-    // 3. Assemble Final View (Exact order from original)
-    return `
-        ${gaugeHtml}
-        ${statsHtml}
-        <div id="zone-grid">
-            ${zonesGridHtml}
-        </div>
-        ${buttonHtml}
-    `;
-}
+    // 2. Schedule Chart Render (must happen after HTML injection)
+    setTimeout(() => {
+        if (window.renderRunningPaceChart) {
+            window.renderRunningPaceChart();
+        }
+    }, 100);
+
+    // 3. Return HTML
+    return renderZoneComponents(data);
+};
