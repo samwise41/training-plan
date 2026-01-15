@@ -137,7 +137,9 @@
         "manualActivity": false,
         "autoCalcCalories": false,
         "elevationCorrected": false,
-        "atpActivity": false
+        "atpActivity": false,
+        "perceivedEffort": 3,
+        "feeling": 4
     },
     {
         "activityId": 21544384067,
