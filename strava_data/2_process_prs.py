@@ -1,13 +1,14 @@
 import requests
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
 INPUT_FILE = "activity_ids.txt"
-LOG_FILE = "processed_log.txt"
+PROCESSED_LOG = "processed_log.txt"
 OUTPUT_MD = "my_prs.md"
-BATCH_SIZE = 50 
+BATCH_SIZE = 80 
 
 def get_access_token():
     payload = {
@@ -33,81 +34,89 @@ def get_medal(rank):
     return ""
 
 def scan_activities():
-    if not os.path.exists(INPUT_FILE):
-        print(f"❌ Error: {INPUT_FILE} not found.")
-        return
+    if not os.path.exists(INPUT_FILE): return
 
-    # 1. Load Processed History
+    # 1. Load Processed IDs
     processed_ids = set()
-    if os.path.exists(LOG_FILE):
-        with open(LOG_FILE, "r") as f:
+    if os.path.exists(PROCESSED_LOG):
+        with open(PROCESSED_LOG, "r") as f:
             processed_ids = set(line.strip() for line in f)
 
-    # 2. Find Unprocessed items
+    # 2. Load Existing PRs (To prevent duplicates)
+    existing_entries = set()
+    if os.path.exists(OUTPUT_MD):
+        with open(OUTPUT_MD, "r", encoding="utf-8") as f:
+            for line in f:
+                # Store the whole line to check for duplicates
+                existing_entries.add(line.strip())
+
+    # 3. Find New Activities
     to_scan = []
     with open(INPUT_FILE, "r") as f:
         for line in f:
             parts = line.strip().split(',')
-            # Check if ID is valid and NOT in the log
             if len(parts) >= 1 and parts[0] not in processed_ids:
                 to_scan.append(line.strip())
 
     if not to_scan:
-        print("✅ No new activities to scan.")
+        print("✅ No new runs to scan.")
         return
 
-    print(f"🔍 Found {len(to_scan)} new activities. Processing...")
-
+    print(f"🏃 Scanning {len(to_scan)} new activities for PRs...")
     token = get_access_token()
     headers = {'Authorization': f"Bearer {token}"}
     
-    prs_found = []
-    processed_in_this_run = []
+    new_prs = []
+    new_processed = []
     
-    # Process batch
-    batch = to_scan[:BATCH_SIZE]
-
-    for line in batch:
+    for line in to_scan[:BATCH_SIZE]:
         parts = line.split(',')
         act_id, act_type, act_date = parts[0], parts[1], parts[2]
+        new_processed.append(act_id)
         
+        if act_type != "Run": continue
+
         try:
-            processed_in_this_run.append(act_id) # Mark as seen
-
-            # Only scan Runs for "Best Efforts"
-            if act_type != "Run": 
-                continue
-
             detail_url = f"https://www.strava.com/api/v3/activities/{act_id}"
             response = requests.get(detail_url, headers=headers)
             if response.status_code != 200: continue
-                
             data = response.json()
             
-            # --- EXTRACT BEST EFFORTS ---
             if 'best_efforts' in data:
                 for effort in data['best_efforts']:
                     rank = effort.get('pr_rank')
                     if rank in [1, 2, 3]:
                         medal = get_medal(rank)
-                        row = f"| {medal} | {effort['name']} | {format_time(effort['elapsed_time'])} | {act_date} | [Link](https://www.strava.com/activities/{act_id}) |"
-                        prs_found.append(row)
-                        print(f"   {medal} Found {effort['name']}!")
+                        effort_name = effort['name']
+                        time_str = format_time(effort['elapsed_time'])
+                        
+                        # Create row string
+                        row = f"| {medal} | {effort_name} | {time_str} | {act_date} | [View Run](https://www.strava.com/activities/{act_id}) |"
+                        
+                        # CHECK FOR DUPLICATE
+                        if row not in existing_entries:
+                            new_prs.append(row)
+                            existing_entries.add(row) # Add to memory so we don't add it twice in this same run
+                            print(f"   🏆 Found: {effort_name}")
 
         except Exception as e:
-            print(f"Error: {e}")
-            continue
+            print(f"Error on {act_id}: {e}")
 
-    # 3. Append New PRs
-    if prs_found:
-        print(f"\n🏆 Found {len(prs_found)} new Best Efforts!")
+    # 4. Append to File
+    if new_prs:
+        print(f"Writing {len(new_prs)} new PRs...")
+        file_exists = os.path.exists(OUTPUT_MD)
         with open(OUTPUT_MD, "a", encoding="utf-8") as f:
-            for pr in prs_found:
+            if not file_exists:
+                f.write("# 🏃 My Best Efforts\n\n")
+                f.write("| Rank | Distance | Time | Date | Link |\n")
+                f.write("|:---:|---|---|---|---|\n")
+            for pr in new_prs:
                 f.write(f"{pr}\n")
 
-    # 4. Update Log
-    with open(LOG_FILE, "a") as f:
-        for pid in processed_in_this_run:
+    # 5. Update Log
+    with open(PROCESSED_LOG, "a") as f:
+        for pid in new_processed:
             f.write(f"{pid}\n")
 
 if __name__ == "__main__":
