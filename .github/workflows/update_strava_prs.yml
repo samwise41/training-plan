@@ -3,6 +3,10 @@ name: Update Strava PRs
 on:
   workflow_dispatch: # Manual trigger button
 
+# ⭐️ ADD THIS BLOCK ⭐️
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -40,6 +44,11 @@ jobs:
         run: |
           git config --global user.name "StravaBot"
           git config --global user.email "bot@github.com"
+          # Only commit if there are changes
           git add strava_data/activity_ids.txt strava_data/my_prs.md
-          git commit -m "🏆 Updated Strava PRs" || exit 0
-          git push
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "🏆 Updated Strava PRs"
+            git push
+          fi
