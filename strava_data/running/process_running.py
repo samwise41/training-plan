@@ -41,9 +41,11 @@ def format_time(seconds):
     return f"{m}:{s:02d}"
 
 def update_cache(token):
-    # If no token, skip update but don't crash
-    if not token:
-        print("⚠️ No API Token. Skipping cache update.")
+    # ⭐️ NEW CHECK: Stop if the list is missing ⭐️
+    if not os.path.exists(ACTIVITY_LIST):
+        print(f"❌ CRITICAL ERROR: '{ACTIVITY_LIST}' is missing!")
+        print("   The fetch script likely crashed before saving.")
+        print("   Please run '1_fetch_list.py' again successfully first.")
         return
 
     if not os.path.exists(CACHE_DIR): os.makedirs(CACHE_DIR)
@@ -51,17 +53,28 @@ def update_cache(token):
     cached_ids = set([f.split('.')[0] for f in os.listdir(CACHE_DIR) if f.endswith('.json')])
     to_fetch = []
     
-    if os.path.exists(ACTIVITY_LIST):
-        with open(ACTIVITY_LIST, "r") as f:
-            for line in f:
-                parts = line.strip().split(',')
-                if len(parts) < 3: continue
-                aid, atype = parts[0], parts[1]
-                if atype == "Run" and aid not in cached_ids:
+    # Debug counter
+    run_count = 0
+    
+    with open(ACTIVITY_LIST, "r") as f:
+        for line in f:
+            parts = line.strip().split(',')
+            if len(parts) < 3: continue
+            aid, atype = parts[0], parts[1]
+            
+            if atype == "Run":
+                run_count += 1
+                if aid not in cached_ids:
                     to_fetch.append(aid)
     
+    print(f"📋 Found {run_count} runs in master list. Need to fetch {len(to_fetch)}.")
+
     if not to_fetch:
         print("✅ Running Cache is up to date.")
+        return
+
+    if not token:
+        print("⚠️ No API Token. Cannot download missing runs.")
         return
 
     print(f"🏃 Fetching {len(to_fetch)} new runs...")
@@ -73,7 +86,7 @@ def update_cache(token):
             r = requests.get(f"https://www.strava.com/api/v3/activities/{act_id}", headers=headers)
             if r.status_code == 429:
                 print(f"\n⚠️ Rate Limit Exceeded on {act_id}. Stopping early.")
-                break # Stop fetching, but proceed to report generation
+                break 
             if r.status_code != 200: continue
             
             data = r.json()
@@ -102,17 +115,20 @@ def update_cache(token):
 def generate_report():
     print("📊 Generating Running Report from Cache...")
     if not os.path.exists(CACHE_DIR):
-        print("⚠️ No cache directory found. Skipping report.")
+        print("⚠️ No cache directory found.")
         return
 
+    files = [f for f in os.listdir(CACHE_DIR) if f.endswith('.json')]
+    print(f"   (Analyzing {len(files)} cached runs)")
+
+    if len(files) == 0:
+        print("⚠️ Warning: Cache is empty. Run fetch script to populate activity_ids.txt first.")
+    
     today = datetime.now()
     six_weeks_ago = today - timedelta(weeks=6)
     
     all_time = {}
     six_week = {}
-    
-    files = [f for f in os.listdir(CACHE_DIR) if f.endswith('.json')]
-    print(f"   (Analyzing {len(files)} cached runs)")
     
     for fname in files:
         with open(os.path.join(CACHE_DIR, fname), "r") as f:
@@ -158,11 +174,6 @@ def generate_report():
     print(f"✅ Updated {OUTPUT_MD}")
 
 if __name__ == "__main__":
-    # 1. Try to get Token
     token = get_access_token()
-    
-    # 2. Try to Update Cache (will skip gracefully if token failed)
     update_cache(token)
-    
-    # 3. Always Generate Report (using whatever exists in cache)
     generate_report()
