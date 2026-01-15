@@ -2,8 +2,8 @@ import { fetchPacingData } from './logic.js';
 
 export const renderGauge = (wkgNum, percent, cat) => {
     return `
-        <div class="gauge-wrapper w-full h-full flex items-center justify-center p-4">
-            <svg viewBox="0 0 300 185" class="gauge-svg w-full h-auto max-h-[200px]">
+        <div class="gauge-wrapper w-full flex items-center justify-center p-6 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg">
+            <svg viewBox="0 0 300 185" class="gauge-svg w-full max-w-[300px] h-auto">
                 <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" />
                 <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" />
                 <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
@@ -22,7 +22,7 @@ export const renderGauge = (wkgNum, percent, cat) => {
 
 export const renderCyclingStats = (bio) => {
     return `
-        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg flex flex-col justify-center h-full min-h-[200px]">
+        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg flex flex-col justify-center min-h-[160px]">
             <div class="flex items-center justify-center gap-2 mb-2">
                 <i class="fa-solid fa-bicycle icon-bike text-2xl"></i>
                 <span class="text-sm font-bold text-slate-500 uppercase tracking-widest">Cycling FTP</span>
@@ -37,23 +37,23 @@ export const renderCyclingStats = (bio) => {
 
 export const renderRunningStats = (bio) => {
     return `
-        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg h-full">
+        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg">
             <div class="flex items-center justify-center gap-2 mb-6">
                 <i class="fa-solid fa-person-running icon-run text-xl"></i>
                 <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Running Profile</span>
             </div>
-            <div class="grid grid-cols-1 gap-6">
+            <div class="grid grid-cols-3 gap-4">
                 <div class="flex flex-col">
                     <span class="text-[10px] text-slate-500 font-bold uppercase mb-1">Pace (FTP)</span>
-                    <span class="text-2xl font-bold text-white leading-none">${bio.runFtp}</span>
+                    <span class="text-xl font-bold text-white leading-none">${bio.runFtp}</span>
                 </div>
-                <div class="flex flex-col border-t border-slate-700 pt-4">
+                <div class="flex flex-col border-l border-slate-700 pl-4">
                     <span class="text-[10px] text-slate-500 font-bold uppercase mb-1">LTHR</span>
-                    <span class="text-2xl font-bold text-white leading-none">${bio.lthr}</span>
+                    <span class="text-xl font-bold text-white leading-none">${bio.lthr}</span>
                 </div>
-                <div class="flex flex-col border-t border-slate-700 pt-4">
+                <div class="flex flex-col border-l border-slate-700 pl-4">
                     <span class="text-[10px] text-slate-500 font-bold uppercase mb-1">5K Est</span>
-                    <span class="text-2xl font-bold text-white leading-none">${bio.fiveK}</span>
+                    <span class="text-xl font-bold text-white leading-none">${bio.fiveK}</span>
                 </div>
             </div>
         </div>
@@ -77,6 +77,7 @@ export const initPacingChart = async (canvasId) => {
     
     if (!ctx || !data.length) return;
 
+    // Ordered Distances
     const distMap = { '1 km': 1, '1 Mile': 1.61, '5 km': 5, '10 km': 10, 'Half Marathon': 21.1, 'Marathon': 42.2 };
     
     const processed = data
@@ -84,6 +85,7 @@ export const initPacingChart = async (canvasId) => {
         .map(d => {
             const key = Object.keys(distMap).find(k => d.label.includes(k));
             const parts = d.value.split(':').map(Number);
+            // Handle H:MM:SS vs MM:SS
             let totalSeconds = parts.length === 3 ? parts[0]*3600 + parts[1]*60 + parts[2] : parts[0]*60 + parts[1];
             return {
                 label: key,
@@ -107,7 +109,7 @@ export const initPacingChart = async (canvasId) => {
                     tension: 0.3,
                     pointBackgroundColor: '#0f172a',
                     pointBorderColor: '#38bdf8',
-                    pointRadius: 6
+                    pointRadius: 5
                 }]
             },
             options: {
