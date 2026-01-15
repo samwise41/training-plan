@@ -77,7 +77,7 @@ export const initPacingChart = async (canvasId) => {
     
     if (!ctx || !data.length) return;
 
-    // Distances converted to Miles
+    // Standardize to Miles
     const distMap = { 
         '1 km': 0.621371, 
         '1 Mile': 1.0, 
@@ -93,17 +93,16 @@ export const initPacingChart = async (canvasId) => {
             const key = Object.keys(distMap).find(k => d.label.includes(k));
             const parts = d.value.split(':').map(Number);
             
-            // Calculate Total Hours (Time / 3600)
             let totalSeconds = parts.length === 3 ? parts[0]*3600 + parts[1]*60 + parts[2] : parts[0]*60 + parts[1];
-            const totalHours = totalSeconds / 3600;
-
+            
+            // Calculate Seconds per Mile
             const miles = distMap[key];
-            const mph = miles / totalHours;
+            const paceSecondsPerMile = totalSeconds / miles;
             
             return {
                 label: key,
-                dist: miles, // Keep for sorting
-                speed: mph
+                dist: miles, // For Sorting
+                pace: paceSecondsPerMile // For Charting
             };
         })
         .sort((a, b) => a.dist - b.dist);
@@ -114,8 +113,8 @@ export const initPacingChart = async (canvasId) => {
             data: {
                 labels: processed.map(d => d.label),
                 datasets: [{
-                    label: 'Speed (mph)',
-                    data: processed.map(d => d.speed),
+                    label: 'Pace (min/mi)',
+                    data: processed.map(d => d.pace / 60), // Convert to decimal minutes
                     borderColor: '#38bdf8',
                     backgroundColor: 'rgba(56, 189, 248, 0.2)',
                     fill: true,
@@ -131,10 +130,14 @@ export const initPacingChart = async (canvasId) => {
                 scales: {
                     y: {
                         grid: { color: '#334155' },
-                        title: { display: true, text: 'Speed (mph)', color: '#94a3b8' },
+                        title: { display: true, text: 'Pace (min/mi)', color: '#94a3b8' },
                         ticks: {
                             color: '#94a3b8',
-                            callback: val => val.toFixed(1) + ' mph'
+                            callback: val => {
+                                const m = Math.floor(val);
+                                const s = Math.round((val - m) * 60);
+                                return `${m}:${s.toString().padStart(2, '0')}`;
+                            }
                         }
                     },
                     x: {
@@ -146,7 +149,12 @@ export const initPacingChart = async (canvasId) => {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: ctx => `Speed: ${ctx.raw.toFixed(2)} mph`
+                            label: ctx => {
+                                const val = ctx.raw;
+                                const m = Math.floor(val);
+                                const s = Math.round((val - m) * 60);
+                                return `Pace: ${m}:${s.toString().padStart(2, '0')} /mi`;
+                            }
                         }
                     }
                 }
