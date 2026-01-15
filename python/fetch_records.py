@@ -1,15 +1,28 @@
 import os
 import sys
 import json
+import pandas as pd
 from garminconnect import Garmin
+from datetime import date
 
-# --- CREDENTIALS (Reusing your existing setup) ---
+# --- CONFIGURATION ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+DATA_DIR = os.path.join(ROOT_DIR, 'garmind_data')
+
+# Ensure output directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
+JSON_OUTPUT = os.path.join(DATA_DIR, 'garmin_records.json')
+MD_OUTPUT = os.path.join(DATA_DIR, 'garmin_records.md')
+
+# --- CREDENTIALS ---
 EMAIL = os.environ.get('GARMIN_EMAIL')
 PASSWORD = os.environ.get('GARMIN_PASSWORD')
 
 def init_garmin():
     if not EMAIL or not PASSWORD:
-        print("❌ Error: Credentials missing. Set GARMIN_EMAIL and GARMIN_PASSWORD.")
+        print("❌ Error: Credentials missing.")
         sys.exit(1)
     
     try:
@@ -21,71 +34,97 @@ def init_garmin():
         print(f"❌ Login Failed: {e}")
         sys.exit(1)
 
-def fetch_personal_records(client):
-    print("🏆 Fetching Personal Records...")
+def format_duration(seconds):
+    """Converts seconds to HH:MM:SS or MM:SS"""
+    if not seconds: return "--"
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f"{h}:{m:02}:{s:02}"
+    return f"{m}:{s:02}"
+
+def process_records(records):
+    """Flattens the nested Garmin JSON into a clean list for the table."""
+    table_data = []
     
-    try:
-        # This returns a dictionary with keys usually like 'running', 'cycling', etc.
-        records = client.get_personal_record()
+    # Garmin returns keys like 'running', 'cycling', 'swimming'
+    for sport, rec_list in records.items():
+        if not isinstance(rec_list, list): continue
         
-        # Save raw JSON for inspection
-        with open('garmind_data/my_personal_records.json', 'w', encoding='utf-8') as f:
-            json.dump(records, f, indent=4)
+        for r in rec_list:
+            # Skip invalid entries
+            if not r: continue
+
+            # Determine Record Name
+            type_id = r.get('typeId', '')
+            name = r.get('typeKey', type_id).replace('_', ' ').title()
             
-        print("\n=== 🏃 RUNNING RECORDS ===")
-        print_records(records, 'running')
+            # Determine Value (Time or Distance)
+            display_val = ""
+            raw_val = r.get('value')
+            
+            # Distance records usually have 'value' as meters, but check fields
+            # Some records are time-based (e.g. 5k), some are distance-based (e.g. Longest Run)
+            
+            if 'duration' in name.lower() or 'longest' in name.lower():
+                # Distance Record (value is likely meters)
+                if raw_val:
+                    km = raw_val / 1000.0
+                    display_val = f"{km:.2f} km"
+            elif raw_val:
+                # Time Record (value is seconds)
+                display_val = format_duration(raw_val)
+            
+            # Date
+            rec_date = r.get('activityDate', 'Unknown')[:10]
+            
+            # Activity Link (Optional, if available)
+            act_id = r.get('activityId')
+            
+            table_data.append({
+                'Sport': sport.capitalize(),
+                'Record': name,
+                'Value': display_val,
+                'Date': rec_date,
+                'Activity ID': act_id
+            })
+            
+    return table_data
 
-        print("\n=== 🚴 CYCLING RECORDS ===")
-        print_records(records, 'cycling')
+def save_outputs(records, table_data):
+    # 1. Save JSON (Raw Data)
+    print(f"💾 Saving JSON to {JSON_OUTPUT}...")
+    with open(JSON_OUTPUT, 'w', encoding='utf-8') as f:
+        json.dump(records, f, indent=4)
 
-        print("\n=== 🏊 SWIMMING RECORDS ===")
-        print_records(records, 'swimming')
-        
-        print(f"\n💾 Full data saved to 'my_personal_records.json'")
-
-    except Exception as e:
-        print(f"❌ Failed to fetch records: {e}")
-
-def print_records(data, sport_key):
-    if sport_key not in data:
-        print("   (No records found)")
+    # 2. Save Markdown (Table)
+    if not table_data:
+        print("⚠️ No records found to chart.")
         return
 
-    # Garmin usually returns a list of records for the sport
-    sport_records = data[sport_key]
+    df = pd.DataFrame(table_data)
     
-    for r in sport_records:
-        type_name = r.get('typeId', 'Unknown')
-        
-        # Determine the display value (Time vs Distance)
-        value_str = ""
-        if 'value' in r:
-            # If it's a duration record (like 5k), value is usually seconds
-            seconds = r['value']
-            # Format nicely (HH:MM:SS)
-            m, s = divmod(seconds, 60)
-            h, m = divmod(m, 60)
-            if h > 0:
-                value_str = f"{int(h)}h {int(m)}m {int(s)}s"
-            else:
-                value_str = f"{int(m)}m {int(s)}s"
-        elif 'distance' in r:
-            # If it's a distance record (like Longest Run), value is meters
-            dist_km = r['distance'] / 1000
-            value_str = f"{dist_km:.2f} km"
-
-        # Lookup friendly names for common IDs if needed, 
-        # but Garmin often provides a 'typeKey' or similar you can print.
-        label = r.get('typeKey', type_name).replace('_', ' ').title()
-        
-        # Date of the record
-        date_str = r.get('activityDate', 'Unknown Date')[:10]
-
-        print(f"   🏅 {label}: {value_str} ({date_str})")
+    # Sort for better readability
+    df = df.sort_values(by=['Sport', 'Date'], ascending=[True, False])
+    
+    print(f"💾 Saving Markdown to {MD_OUTPUT}...")
+    with open(MD_OUTPUT, 'w', encoding='utf-8') as f:
+        f.write("# Personal Records 🏆\n\n")
+        f.write(f"**Last Updated:** {date.today().isoformat()}\n\n")
+        f.write(df.to_markdown(index=False))
 
 def main():
     client = init_garmin()
-    fetch_personal_records(client)
+    
+    print("🏆 Fetching Personal Records...")
+    try:
+        records = client.get_personal_record()
+        table_data = process_records(records)
+        save_outputs(records, table_data)
+        print("✅ Done.")
+    except Exception as e:
+        print(f"❌ Failed to fetch records: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
