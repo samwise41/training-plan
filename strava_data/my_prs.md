@@ -69,3 +69,14 @@
 | 🥇 | 1K | 05:11 | 2025-09-17 | [Link](https://www.strava.com/activities/15842249917) |
 | 🥇 | 1 mile | 08:35 | 2025-09-17 | [Link](https://www.strava.com/activities/15842249917) |
 | 🥇 | 2 mile | 18:18 | 2025-09-17 | [Link](https://www.strava.com/activities/15842249917) |
+| 🥇 | 400m | 01:58 | 2025-09-10 | [View Run](https://www.strava.com/activities/15763129382) |
+| 🥇 | 1/2 mile | 04:06 | 2025-09-10 | [View Run](https://www.strava.com/activities/15763129382) |
+| 🥇 | 1K | 05:28 | 2025-09-10 | [View Run](https://www.strava.com/activities/15763129382) |
+| 🥇 | 1 mile | 09:18 | 2025-09-10 | [View Run](https://www.strava.com/activities/15763129382) |
+| 🥇 | 2 mile | 19:23 | 2025-09-10 | [View Run](https://www.strava.com/activities/15763129382) |
+| 🥇 | 5K | 30:53 | 2025-09-10 | [View Run](https://www.strava.com/activities/15763129382) |
+| 🥇 | 400m | 02:01 | 2025-09-04 | [View Run](https://www.strava.com/activities/15694007470) |
+| 🥇 | 1/2 mile | 04:36 | 2025-09-04 | [View Run](https://www.strava.com/activities/15694007470) |
+| 🥇 | 1K | 05:43 | 2025-09-04 | [View Run](https://www.strava.com/activities/15694007470) |
+| 🥇 | 1 mile | 10:01 | 2025-09-04 | [View Run](https://www.strava.com/activities/15694007470) |
+| 🥇 | 2 mile | 20:35 | 2025-09-04 | [View Run](https://www.strava.com/activities/15694007470) |
