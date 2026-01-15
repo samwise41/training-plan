@@ -3,7 +3,6 @@ import { ZONES_CONFIG } from './config.js';
 
 export const renderZoneComponents = (data) => {
     
-    // --- HELPERS ---
     const buildRow = (z, range, desc, color) => `
         <tr class="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
             <td class="px-4 py-3 font-bold" style="color:${color}">${z}</td>
@@ -12,7 +11,6 @@ export const renderZoneComponents = (data) => {
         </tr>
     `;
 
-    // --- CYCLING (Power) ---
     const bikeRows = ZONES_CONFIG.bike.map((z, i) => {
         const min = Math.round(data.ftp * z.minPct);
         const max = Math.round(data.ftp * z.maxPct);
@@ -20,7 +18,6 @@ export const renderZoneComponents = (data) => {
         return buildRow(z.name, range, z.desc, z.color);
     }).join('');
 
-    // --- RUNNING (Heart Rate) ---
     const runRows = ZONES_CONFIG.run.map((z, i) => {
         const min = Math.round(data.lthr * z.minPct);
         const max = Math.round(data.lthr * z.maxPct);
@@ -28,26 +25,23 @@ export const renderZoneComponents = (data) => {
         return buildRow(z.name, range, z.desc, z.color);
     }).join('');
 
-    // --- RENDER PACING CHART FUNCTION ---
-    // We attach this to window so index.js can call it after DOM load
+    // --- CHART FUNCTION ---
     window.renderRunningPaceChart = () => {
         const ctx = document.getElementById('runPaceChart');
-        if (!ctx || !data.runPacing || data.runPacing.length === 0) return;
+        // Safety: If no data, render nothing but don't crash
+        if (!ctx || !data.runPacing || data.runPacing.length < 2) return;
+        if (typeof Chart === 'undefined') return; // Safety check
 
-        // Destroy old if exists
         if (window.myRunChart) window.myRunChart.destroy();
-
-        const labels = data.runPacing.map(d => d.label);
-        const dataPoints = data.runPacing.map(d => d.pace); // decimal pace
 
         window.myRunChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: data.runPacing.map(d => d.label),
                 datasets: [{
                     label: 'Race Pace (min/km)',
-                    data: dataPoints,
-                    borderColor: '#10b981', // Emerald 500
+                    data: data.runPacing.map(d => d.pace),
+                    borderColor: '#10b981', 
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     borderWidth: 3,
                     pointBackgroundColor: '#fff',
@@ -62,7 +56,7 @@ export const renderZoneComponents = (data) => {
                 maintainAspectRatio: false,
                 scales: {
                     y: {
-                        reverse: true, // Lower pace is better (faster)
+                        reverse: true, // Lower is faster
                         title: { display: true, text: 'Pace (min/km)', color: '#94a3b8' },
                         grid: { color: '#334155' },
                         ticks: { 
@@ -96,7 +90,6 @@ export const renderZoneComponents = (data) => {
         });
     };
 
-    // --- FINAL HTML LAYOUT ---
     return `
         <div class="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12">
             
@@ -115,11 +108,11 @@ export const renderZoneComponents = (data) => {
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700 text-center">
-                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Functional Threshold Power</div>
+                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">FTP</div>
                             <div class="text-3xl font-bold text-blue-400">${data.ftp}<span class="text-sm text-slate-500 ml-1">w</span></div>
                         </div>
                         <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700 text-center">
-                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Power to Weight</div>
+                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">W/KG</div>
                             <div class="text-3xl font-bold text-emerald-400">${data.wkg}<span class="text-sm text-slate-500 ml-1">w/kg</span></div>
                         </div>
                     </div>
@@ -151,18 +144,18 @@ export const renderZoneComponents = (data) => {
                         <h3 class="font-bold text-white flex items-center gap-2 mb-4">
                             <i class="fa-solid fa-stopwatch text-emerald-400"></i> Running Pacing Profile
                         </h3>
-                        <div class="w-full h-[200px]">
+                        <div class="w-full h-[200px] flex items-center justify-center">
                             <canvas id="runPaceChart"></canvas>
                         </div>
                     </div>
 
                     <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700 flex justify-between items-center">
                         <div>
-                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Lactate Threshold HR</div>
+                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Threshold HR</div>
                             <div class="text-3xl font-bold text-rose-400">${data.lthr}<span class="text-sm text-slate-500 ml-1">bpm</span></div>
                         </div>
                          <div>
-                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Max Heart Rate</div>
+                            <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">Max HR</div>
                             <div class="text-3xl font-bold text-slate-200">${data.maxHr}<span class="text-sm text-slate-500 ml-1">bpm</span></div>
                         </div>
                     </div>
