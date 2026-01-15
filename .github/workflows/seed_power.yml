@@ -20,30 +20,29 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        # Force install pandas and requests
         run: pip install requests python-dotenv pandas
 
-      - name: Run Seed Script
+      - name: Run Seed Cache Script
         working-directory: ./strava_data
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
           STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
-        # This runs the script inside the folder, so the file is created inside strava_data/
-        run: python 0_seed_power.py
-
-      - name: Debug - List Files
-        # This will show us if the file actually exists
-        run: ls -R strava_data/
+        run: python 0_seed_power_cache.py
 
       - name: Commit and Push
         run: |
           git config --global user.name "StravaBot"
           git config --global user.email "bot@github.com"
           
-          # Force add the file to ensure git sees it
-          git add -f strava_data/my_power_profile.md
+          # ⭐️ FIX: Add the Cache Folder explicitly ⭐️
+          git add -f strava_data/power_cache/
           
-          # Commit
-          git commit -m "⚡ Seeded Power Profile"
-          git push
+          # Check if there are changes before committing to avoid errors
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "⚡ Seeded Power Cache Files"
+            git pull --rebase
+            git push
+          fi
