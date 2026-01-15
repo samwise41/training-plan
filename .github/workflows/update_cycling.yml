@@ -34,7 +34,7 @@ jobs:
         run: python 1_fetch_list.py
 
       - name: Process Cycling Power
-        working-directory: ./strava_data
+        working-directory: ./strava_data/cycling
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
@@ -48,8 +48,8 @@ jobs:
           
           # Force Add Cache Folder and Files
           git add strava_data/activity_ids.txt
-          git add strava_data/my_power_profile.md
-          git add strava_data/power_curve_graph.json
+          git add strava_data/cycling/my_power_profile.md
+          git add strava_data/cycling/power_curve_graph.json
           git add strava_data/power_cache/
           
           if git diff --staged --quiet; then
