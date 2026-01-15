@@ -1,10 +1,10 @@
 # 🤖 AI Coach Context Briefing
-**Last Updated:** 2026-01-15 13:46
+**Last Updated:** 2026-01-15 14:33
 
 ## 1. Physiological Trends
 | Metric | Target | 30d Trend | 90d Trend | 6m Trend | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Aerobic Efficiency** | 1.3-1.7 EF | ↘️ Declining (Avg: 1.14) | ↘️ Declining (Avg: 1.17) | -- | ⚠️ Low |
+| **Aerobic Efficiency** | 1.3-1.7 EF | ➡️ Stable (Avg: 1.15) | ↘️ Declining (Avg: 1.17) | -- | ⚠️ Low |
 | **Subjective Efficiency** | 25-50 W/RPE | ↘️ Declining (Avg: 28.05) | ↘️ Declining (Avg: 29.34) | -- | ✅ |
 | **Torque Efficiency** | 2.5-3.5 W/RPM | ↗️ Improving (Avg: 1.97) | ↗️ Improving (Avg: 1.96) | -- | ⚠️ Low |
 | **Run Economy** | 1.0-1.6 m/beat | ↗️ Improving (Avg: 1.17) | ↗️ Improving (Avg: 1.16) | -- | ✅ |
@@ -17,7 +17,7 @@
 | **Weekly Tss** | 300-600 TSS | Not enough data | ↘️ Declining (Avg: 49) | -- | ⚪ No Data |
 
 ## 2. Actionable Alerts
-- **aerobic_efficiency** is 1.14 (Target: >1.3).
+- **aerobic_efficiency** is 1.15 (Target: >1.3).
 - **torque_efficiency** is 1.97 (Target: >2.5).
 - **ground_contact** is 277.92 (Target: <260).
 - **vertical_osc** is 9.36 (Target: <9.0).
