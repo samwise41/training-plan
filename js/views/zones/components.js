@@ -21,7 +21,7 @@ export const renderGauge = (wkgNum, percent, cat) => {
     `;
 };
 
-// Split Stats: Cycling
+// --- NEW COMPONENT: Split Cycling Stats ---
 export const renderCyclingStats = (bio) => {
     return `
         <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg flex flex-col justify-center h-full">
@@ -37,7 +37,7 @@ export const renderCyclingStats = (bio) => {
     `;
 };
 
-// Split Stats: Running
+// --- NEW COMPONENT: Split Running Stats ---
 export const renderRunningStats = (bio) => {
     return `
         <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg h-full">
@@ -74,42 +74,39 @@ export const renderButton = () => {
     `;
 };
 
-// --- NEW CHART LOGIC ---
+// --- NEW FUNCTION: Chart Logic ---
 export const initPacingChart = async (canvasId) => {
     const data = await fetchPacingData();
     const ctx = document.getElementById(canvasId);
     
     if (!ctx || !data.length) return;
 
-    // Filter and Process Data
-    const relevant = ['1 km', '1 Mile', '5 km', '10 km', 'Half Marathon', 'Marathon'];
-    
-    // Sort logic to ensure x-axis is ordered by distance
+    // Define Distance Order and Values (km)
     const distMap = { 
         '1 km': 1, '1 Mile': 1.61, '5 km': 5, '10 km': 10, 
         'Half Marathon': 21.1, 'Marathon': 42.2 
     };
-
+    
+    // Process Data
     const processed = data
-        .filter(d => relevant.some(r => d.label.includes(r)))
+        .filter(d => Object.keys(distMap).some(k => d.label.includes(k)))
         .map(d => {
-            // Find matching standard key for sorting
-            const key = relevant.find(r => d.label.includes(r));
-            
-            // Parse Time (e.g., "24:26" or "4:30") to seconds
-            const p = d.value.split(':').map(Number);
+            const key = Object.keys(distMap).find(k => d.label.includes(k));
+            const parts = d.value.split(':').map(Number);
             let totalSeconds = 0;
-            if (p.length === 3) totalSeconds = p[0]*3600 + p[1]*60 + p[2];
-            else if (p.length === 2) totalSeconds = p[0]*60 + p[1];
+            
+            // Handle H:MM:SS or MM:SS
+            if (parts.length === 3) totalSeconds = parts[0]*3600 + parts[1]*60 + parts[2];
+            else if (parts.length === 2) totalSeconds = parts[0]*60 + parts[1];
             
             // Calculate Pace (sec/km)
-            const distanceKm = distMap[key];
-            const paceSeconds = totalSeconds / distanceKm;
+            const dist = distMap[key];
+            const paceSec = totalSeconds / dist;
             
             return {
                 label: key,
-                dist: distanceKm,
-                pace: paceSeconds
+                dist: dist,
+                pace: paceSec
             };
         })
         .sort((a, b) => a.dist - b.dist);
@@ -118,18 +115,17 @@ export const initPacingChart = async (canvasId) => {
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: processed.map(p => p.label),
+                labels: processed.map(d => d.label),
                 datasets: [{
                     label: 'Pace (min/km)',
-                    data: processed.map(p => p.pace / 60), // Convert to decimal minutes for plotting
-                    borderColor: '#0ea5e9', // Sky blue
-                    backgroundColor: 'rgba(14, 165, 233, 0.2)',
-                    tension: 0.3,
+                    data: processed.map(d => d.pace / 60), // decimal minutes
+                    borderColor: '#38bdf8', // Light Blue
+                    backgroundColor: 'rgba(56, 189, 248, 0.2)',
                     fill: true,
-                    pointRadius: 6,
+                    tension: 0.3,
                     pointBackgroundColor: '#0f172a',
-                    pointBorderColor: '#0ea5e9',
-                    pointBorderWidth: 2
+                    pointBorderColor: '#38bdf8',
+                    pointRadius: 6
                 }]
             },
             options: {
@@ -141,9 +137,9 @@ export const initPacingChart = async (canvasId) => {
                         ticks: {
                             color: '#94a3b8',
                             callback: val => {
-                                const min = Math.floor(val);
-                                const sec = Math.round((val - min) * 60);
-                                return `${min}:${sec.toString().padStart(2, '0')}/km`;
+                                const m = Math.floor(val);
+                                const s = Math.round((val - m) * 60);
+                                return `${m}:${s.toString().padStart(2, '0')}`;
                             }
                         }
                     },
@@ -158,9 +154,9 @@ export const initPacingChart = async (canvasId) => {
                         callbacks: {
                             label: ctx => {
                                 const val = ctx.raw;
-                                const min = Math.floor(val);
-                                const sec = Math.round((val - min) * 60);
-                                return `Pace: ${min}:${sec.toString().padStart(2, '0')}/km`;
+                                const m = Math.floor(val);
+                                const s = Math.round((val - m) * 60);
+                                return `Pace: ${m}:${s.toString().padStart(2, '0')} /km`;
                             }
                         }
                     }
