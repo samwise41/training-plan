@@ -5,16 +5,10 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 # --- PATH CONFIGURATION ---
-# 1. Where does this script live? (.../strava_data/running)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# 2. Where is the parent folder? (.../strava_data)
 PARENT_DIR = os.path.dirname(BASE_DIR)
-
-# 3. Load .env from the parent folder
 load_dotenv(os.path.join(PARENT_DIR, '.env'))
 
-# 4. Define paths relative to parent
 ACTIVITY_LIST = os.path.join(PARENT_DIR, "activity_ids.txt")
 CACHE_DIR = os.path.join(PARENT_DIR, "running_cache")
 OUTPUT_MD = os.path.join(BASE_DIR, "my_running_prs.md")
@@ -26,7 +20,6 @@ DISTANCES = [
     "5k", "10k", "15k", "10 mile", "20k", "Half-Marathon", "30k", "Marathon"
 ]
 
-# Mapping Strava names to our canonical names
 STRAVA_NAMES = {
     "400m": "400m",
     "1/2 mile": "1/2 mile",
@@ -156,23 +149,23 @@ def generate_report():
 
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# 🏃 My Best Efforts (Running)\n\n")
-        f.write("| Distance | All Time Best | Activity | 6 Week Best | Activity |\n")
+        f.write("| Distance | All Time Best | Date | 6 Week Best | Date |\n")
         f.write("|---|---|---|---|---|\n")
         
         for dist in DISTANCES:
             at = all_time.get(dist)
             sw = six_week.get(dist)
             
-            # Helper to format the Activity Column with Name & Date
-            def fmt_act(record):
+            # Helper: Date is the Link
+            def fmt_link(record):
                 if not record: return "--"
-                return f"[{record['name']}](https://www.strava.com/activities/{record['id']})<br>*{record['date']}*"
+                return f"[{record['date']}](https://www.strava.com/activities/{record['id']})"
             
             if at or sw:
                 at_val = f"**{format_time(at['time'])}**" if at else "--"
                 sw_val = f"{format_time(sw['time'])}" if sw else "--"
                 
-                f.write(f"| {dist} | {at_val} | {fmt_act(at)} | {sw_val} | {fmt_act(sw)} |\n")
+                f.write(f"| {dist} | {at_val} | {fmt_link(at)} | {sw_val} | {fmt_link(sw)} |\n")
                 
     print(f"✅ Updated {OUTPUT_MD}")
 
