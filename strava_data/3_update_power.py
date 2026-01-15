@@ -9,8 +9,7 @@ load_dotenv()
 
 # --- CONFIG ---
 ACTIVITY_LIST = "activity_ids.txt"
-PROCESSED_LOG = "power_processed.txt"
-BESTS_DB = "power_bests.json"
+CACHE_DIR = "power_cache"
 OUTPUT_GRAPH = "power_curve_graph.json"
 OUTPUT_MD = "my_power_profile.md"
 
@@ -25,11 +24,13 @@ def get_access_token():
         'grant_type': 'refresh_token',
         'f': 'json'
     }
-    res = requests.post("https://www.strava.com/oauth/token", data=payload, verify=True)
-    if res.status_code != 200:
-        print(f"Auth Error: {res.text}")
+    try:
+        res = requests.post("https://www.strava.com/oauth/token", data=payload, verify=True)
+        res.raise_for_status()
+        return res.json()['access_token']
+    except Exception as e:
+        print(f"Auth Error: {e}")
         exit(1)
-    return res.json()['access_token']
 
 def format_duration(seconds):
     h, r = divmod(seconds, 3600)
@@ -40,180 +41,143 @@ def format_duration(seconds):
     if s > 0 or not parts: parts.append(f"{s}s")
     return " ".join(parts)
 
-def load_db():
-    if os.path.exists(BESTS_DB):
-        with open(BESTS_DB, "r") as f:
-            data = json.load(f)
-        return data
-    return {}
+def update_cache(token):
+    """Fetches new rides and saves them to power_cache/"""
+    if not os.path.exists(CACHE_DIR): os.makedirs(CACHE_DIR)
+    
+    # Get list of already cached IDs
+    cached_ids = set([f.split('.')[0] for f in os.listdir(CACHE_DIR) if f.endswith('.json')])
+    
+    to_process = []
+    if os.path.exists(ACTIVITY_LIST):
+        with open(ACTIVITY_LIST, "r") as f:
+            for line in f:
+                parts = line.strip().split(',')
+                if len(parts) < 3: continue
+                aid, atype = parts[0], parts[1]
+                # Only cache Rides that aren't cached yet
+                if atype == "Ride" and aid not in cached_ids:
+                    to_process.append(aid)
 
-def main():
-    if not os.path.exists(ACTIVITY_LIST):
-        print(f"❌ {ACTIVITY_LIST} not found.")
+    if not to_process:
+        print("✅ Cache is up to date.")
         return
 
-    # 1. Load Data
-    bests_db = load_db()
-    processed_ids = set()
-    if os.path.exists(PROCESSED_LOG):
-        with open(PROCESSED_LOG, "r") as f:
-            processed_ids = set(line.strip() for line in f)
-
-    # 2. Identify New Rides
-    to_scan = []
-    with open(ACTIVITY_LIST, "r") as f:
-        for line in f:
-            parts = line.strip().split(',')
-            if len(parts) < 3: continue
-            
-            act_id, act_type, act_date = parts[0], parts[1], parts[2]
-            
-            if act_type == "Ride" and act_id not in processed_ids:
-                to_scan.append({
-                    'id': act_id,
-                    'date': act_date,
-                    'type': act_type
-                })
-
-    if not to_scan:
-        print("✅ Power Curve is up to date.")
-        return 
-
-    print(f"⚡ Found {len(to_scan)} new rides. Processing batch of {BATCH_SIZE}...")
-    
-    token = get_access_token()
+    print(f"⚡ Downloading {len(to_process)} new rides to cache...")
     headers = {'Authorization': f"Bearer {token}"}
     
-    # 6-Week Cutoff
+    for i, act_id in enumerate(to_process[:BATCH_SIZE]):
+        print(f"   [{i+1}/{BATCH_SIZE}] Fetching {act_id}...", end="\r")
+        
+        # 1. Get Streams
+        url = f"https://www.strava.com/api/v3/activities/{act_id}/streams"
+        r = requests.get(url, headers=headers, params={'keys': 'watts', 'key_by_type': 'true'})
+        if r.status_code != 200: continue
+        streams = r.json()
+        
+        # 2. Handle missing power
+        if 'watts' not in streams:
+            # Save empty placeholder so we don't fetch again
+            with open(os.path.join(CACHE_DIR, f"{act_id}.json"), "w") as f:
+                json.dump({'id': act_id, 'no_power': True}, f)
+            continue
+
+        # 3. Get Details (Name/Date)
+        r2 = requests.get(f"https://www.strava.com/api/v3/activities/{act_id}", headers=headers)
+        details = r2.json()
+
+        # 4. Calculate Curve
+        power_series = pd.Series(streams['watts']['data'])
+        limit = min(len(power_series), MAX_DURATION_SECONDS)
+        curve = []
+        for seconds in range(1, limit + 1):
+            peak = int(power_series.rolling(window=seconds).mean().max())
+            curve.append(peak)
+
+        # 5. Save to Cache
+        data = {
+            'id': act_id,
+            'name': details['name'],
+            'date': details['start_date_local'][:10],
+            'power_curve': curve
+        }
+        with open(os.path.join(CACHE_DIR, f"{act_id}.json"), "w") as f:
+            json.dump(data, f)
+            
+    print("\n💾 Cache update complete.")
+
+def generate_stats():
+    """Reads ALL cache files and regenerates the MD/JSON output"""
+    print("📊 Regenerating Power Profile from Cache...")
+    
+    files = [f for f in os.listdir(CACHE_DIR) if f.endswith('.json')]
+    if not files: return
+
+    # Arrays for 1s to 21600s
+    all_time_best = [None] * MAX_DURATION_SECONDS
+    six_week_best = [None] * MAX_DURATION_SECONDS
+    
     today = datetime.now()
     six_weeks_ago = today - timedelta(weeks=6)
     
-    updated = False
-    new_processed = []
-    count = 0
-
-    # 3. Process Batch
-    for activity in to_scan[:BATCH_SIZE]:
-        count += 1
-        act_id = activity['id']
-        act_date_str = activity['date']
-        new_processed.append(act_id)
+    # Process every file in cache
+    for fname in files:
+        with open(os.path.join(CACHE_DIR, fname), "r") as f:
+            ride = json.load(f)
+            
+        if 'power_curve' not in ride: continue
         
-        print(f"   [{count}/{BATCH_SIZE}] Fetching {act_id} ({act_date_str})...", end="\r")
+        ride_date = datetime.strptime(ride['date'], "%Y-%m-%d")
+        is_recent = ride_date >= six_weeks_ago
+        curve = ride['power_curve']
         
-        # Fetch Name
-        try:
-            detail = requests.get(f"https://www.strava.com/api/v3/activities/{act_id}", headers=headers).json()
-            act_name = detail.get('name', 'Unknown')
+        # Merge into global bests
+        for i, watts in enumerate(curve):
+            if i >= MAX_DURATION_SECONDS: break
             
-            # Fetch Streams
-            url = f"https://www.strava.com/api/v3/activities/{act_id}/streams"
-            res = requests.get(url, headers=headers, params={'keys': 'watts', 'key_by_type': 'true'})
+            # Update All Time
+            if all_time_best[i] is None or watts > all_time_best[i]['watts']:
+                all_time_best[i] = {'watts': watts, 'date': ride['date'], 'name': ride['name'], 'id': ride['id']}
             
-            if res.status_code != 200: continue
-            data = res.json()
-            if 'watts' not in data: continue
+            # Update 6 Week
+            if is_recent:
+                if six_week_best[i] is None or watts > six_week_best[i]['watts']:
+                    six_week_best[i] = {'watts': watts, 'date': ride['date'], 'name': ride['name'], 'id': ride['id']}
 
-            # Calculate Curve (1s to 6h)
-            power_series = pd.Series(data['watts']['data'])
-            limit = min(len(power_series), MAX_DURATION_SECONDS)
-            
-            act_date_obj = datetime.strptime(act_date_str, "%Y-%m-%d")
-            is_recent_ride = act_date_obj >= six_weeks_ago
-
-            for seconds in range(1, limit + 1):
-                peak = int(power_series.rolling(window=seconds).mean().max())
-                key = str(seconds)
-                
-                if key not in bests_db: bests_db[key] = {'all_time': None, 'six_week': None}
-                record = bests_db[key]
-                
-                # Template
-                new_entry = {
-                    'watts': peak,
-                    'date': act_date_str,
-                    'name': act_name,
-                    'id': act_id
-                }
-
-                # A. Check All-Time
-                if record['all_time'] is None or peak > record['all_time']['watts']:
-                    record['all_time'] = new_entry
-                    updated = True
-
-                # B. Check 6-Week Logic
-                current_6wk = record['six_week']
-                should_update_6wk = False
-                
-                if current_6wk is None:
-                    should_update_6wk = True
-                else:
-                    record_date = datetime.strptime(current_6wk['date'], "%Y-%m-%d")
-                    if record_date < six_weeks_ago:
-                        should_update_6wk = True # Expired
-                    elif peak > current_6wk['watts']:
-                        should_update_6wk = True # Better
-
-                if should_update_6wk and is_recent_ride:
-                    record['six_week'] = new_entry
-                    updated = True
-        except Exception as e:
-            print(f"Error processing {act_id}: {e}")
-            continue
-
-    # 4. Save Changes
-    print("\n💾 Saving updates...")
-    
-    with open(PROCESSED_LOG, "a") as f:
-        for pid in new_processed:
-            f.write(f"{pid}\n")
-
-    if updated:
-        # A. Save DB
-        with open(BESTS_DB, "w") as f:
-            json.dump(bests_db, f)
-            
-        # B. Save Graph Data
-        graph_data = []
+    # WRITE MARKDOWN
+    with open(OUTPUT_MD, "w", encoding="utf-8") as f:
+        f.write("# ⚡ Power Profile (1s - 6h)\n\n")
+        f.write("| Duration | All Time Best | 6 Week Best | Activity Link |\n")
+        f.write("|---|---|---|---|\n")
+        
         for i in range(MAX_DURATION_SECONDS):
-            key = str(i + 1)
-            if key in bests_db:
-                rec = bests_db[key]
-                graph_data.append({
-                    "seconds": i + 1,
-                    "all_time_watts": rec['all_time']['watts'] if rec['all_time'] else 0,
-                    "six_week_watts": rec['six_week']['watts'] if rec['six_week'] else 0
-                })
-        with open(OUTPUT_GRAPH, "w") as f:
-            json.dump(graph_data, f)
+            at = all_time_best[i]
+            sw = six_week_best[i]
+            if at:
+                label = format_duration(i + 1)
+                at_str = f"**{at['watts']}w**"
+                sw_str = f"{sw['watts']}w" if sw else "--"
+                link = f"[View](https://www.strava.com/activities/{at['id']})"
+                f.write(f"| {label} | {at_str} | {sw_str} | {link} |\n")
 
-        # C. Save Massive Markdown Table
-        with open(OUTPUT_MD, "w", encoding="utf-8") as f:
-            f.write("# ⚡ Power Profile (1s - 6h)\n\n")
-            f.write("| Duration | All Time Best | 6 Week Best | Activity Link |\n")
-            f.write("|---|---|---|---|\n")
+    # WRITE GRAPH JSON
+    graph_data = []
+    for i in range(MAX_DURATION_SECONDS):
+        at = all_time_best[i]
+        sw = six_week_best[i]
+        if at:
+            graph_data.append({
+                "seconds": i + 1,
+                "all_time_watts": at['watts'],
+                "six_week_watts": sw['watts'] if sw else 0
+            })
             
-            for i in range(MAX_DURATION_SECONDS):
-                key = str(i + 1)
-                if key in bests_db:
-                    rec = bests_db[key]
-                    at = rec['all_time']
-                    sw = rec['six_week']
-                    
-                    if at:
-                        label = format_duration(i + 1)
-                        at_str = f"**{at['watts']}w**"
-                        
-                        sw_val = "--"
-                        if sw:
-                            sw_date = datetime.strptime(sw['date'], "%Y-%m-%d")
-                            if sw_date >= six_weeks_ago:
-                                sw_val = f"{sw['watts']}w"
-                        
-                        link = f"[View](https://www.strava.com/activities/{at['id']})"
-                        f.write(f"| {label} | {at_str} | {sw_val} | {link} |\n")
-
-        print(f"✅ Updated {OUTPUT_MD} and {OUTPUT_GRAPH}")
+    with open(OUTPUT_GRAPH, "w") as f:
+        json.dump(graph_data, f)
+    
+    print(f"✅ Updated {OUTPUT_MD} and {OUTPUT_GRAPH}")
 
 if __name__ == "__main__":
-    main()
+    t = get_access_token()
+    update_cache(t)
+    generate_stats()
