@@ -1,10 +1,9 @@
-// js/views/zones/components.js
 import { fetchPacingData } from './logic.js';
 
 export const renderGauge = (wkgNum, percent, cat) => {
     return `
-        <div class="gauge-wrapper" style="margin: 0 auto;">
-            <svg viewBox="0 0 300 185" class="gauge-svg">
+        <div class="gauge-wrapper w-full h-full flex items-center justify-center p-4">
+            <svg viewBox="0 0 300 185" class="gauge-svg w-full h-auto max-h-[200px]">
                 <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" />
                 <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" />
                 <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
@@ -21,42 +20,40 @@ export const renderGauge = (wkgNum, percent, cat) => {
     `;
 };
 
-// --- NEW COMPONENT: Split Cycling Stats ---
 export const renderCyclingStats = (bio) => {
     return `
-        <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg flex flex-col justify-center h-full">
+        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg flex flex-col justify-center h-full min-h-[200px]">
             <div class="flex items-center justify-center gap-2 mb-2">
-                <i class="fa-solid fa-bicycle icon-bike"></i>
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cycling FTP</span>
+                <i class="fa-solid fa-bicycle icon-bike text-2xl"></i>
+                <span class="text-sm font-bold text-slate-500 uppercase tracking-widest">Cycling FTP</span>
             </div>
-            <div class="flex flex-col">
-                <span class="text-3xl font-black text-white">${bio.watts > 0 ? bio.watts + ' W' : '--'}</span>
-                <span class="text-xs text-slate-400 font-mono mt-1">${bio.wkgNum.toFixed(2)} W/kg</span>
+            <div class="flex flex-col mt-2">
+                <span class="text-5xl font-black text-white">${bio.watts > 0 ? bio.watts + ' W' : '--'}</span>
+                <span class="text-sm text-slate-400 font-mono mt-2">${bio.wkgNum.toFixed(2)} W/kg</span>
             </div>
         </div>
     `;
 };
 
-// --- NEW COMPONENT: Split Running Stats ---
 export const renderRunningStats = (bio) => {
     return `
-        <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg h-full">
-            <div class="flex items-center justify-center gap-2 mb-3">
-                <i class="fa-solid fa-person-running icon-run"></i>
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Profile</span>
+        <div class="bg-slate-800/50 border border-slate-700 p-6 rounded-xl text-center shadow-lg h-full">
+            <div class="flex items-center justify-center gap-2 mb-6">
+                <i class="fa-solid fa-person-running icon-run text-xl"></i>
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Running Profile</span>
             </div>
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-1 gap-6">
                 <div class="flex flex-col">
-                    <span class="text-[9px] text-slate-500 font-bold uppercase mb-0.5">Pace (FTP)</span>
-                    <span class="text-lg font-bold text-white leading-none">${bio.runFtp}</span>
+                    <span class="text-[10px] text-slate-500 font-bold uppercase mb-1">Pace (FTP)</span>
+                    <span class="text-2xl font-bold text-white leading-none">${bio.runFtp}</span>
                 </div>
-                <div class="flex flex-col border-l border-slate-700">
-                    <span class="text-[9px] text-slate-500 font-bold uppercase mb-0.5">LTHR</span>
-                    <span class="text-lg font-bold text-white leading-none">${bio.lthr}</span>
+                <div class="flex flex-col border-t border-slate-700 pt-4">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase mb-1">LTHR</span>
+                    <span class="text-2xl font-bold text-white leading-none">${bio.lthr}</span>
                 </div>
-                <div class="flex flex-col border-l border-slate-700">
-                    <span class="text-[9px] text-slate-500 font-bold uppercase mb-0.5">5K Est</span>
-                    <span class="text-lg font-bold text-white leading-none">${bio.fiveK}</span>
+                <div class="flex flex-col border-t border-slate-700 pt-4">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase mb-1">5K Est</span>
+                    <span class="text-2xl font-bold text-white leading-none">${bio.fiveK}</span>
                 </div>
             </div>
         </div>
@@ -74,39 +71,24 @@ export const renderButton = () => {
     `;
 };
 
-// --- NEW FUNCTION: Chart Logic ---
 export const initPacingChart = async (canvasId) => {
     const data = await fetchPacingData();
     const ctx = document.getElementById(canvasId);
     
     if (!ctx || !data.length) return;
 
-    // Define Distance Order and Values (km)
-    const distMap = { 
-        '1 km': 1, '1 Mile': 1.61, '5 km': 5, '10 km': 10, 
-        'Half Marathon': 21.1, 'Marathon': 42.2 
-    };
+    const distMap = { '1 km': 1, '1 Mile': 1.61, '5 km': 5, '10 km': 10, 'Half Marathon': 21.1, 'Marathon': 42.2 };
     
-    // Process Data
     const processed = data
         .filter(d => Object.keys(distMap).some(k => d.label.includes(k)))
         .map(d => {
             const key = Object.keys(distMap).find(k => d.label.includes(k));
             const parts = d.value.split(':').map(Number);
-            let totalSeconds = 0;
-            
-            // Handle H:MM:SS or MM:SS
-            if (parts.length === 3) totalSeconds = parts[0]*3600 + parts[1]*60 + parts[2];
-            else if (parts.length === 2) totalSeconds = parts[0]*60 + parts[1];
-            
-            // Calculate Pace (sec/km)
-            const dist = distMap[key];
-            const paceSec = totalSeconds / dist;
-            
+            let totalSeconds = parts.length === 3 ? parts[0]*3600 + parts[1]*60 + parts[2] : parts[0]*60 + parts[1];
             return {
                 label: key,
-                dist: dist,
-                pace: paceSec
+                dist: distMap[key],
+                pace: totalSeconds / distMap[key]
             };
         })
         .sort((a, b) => a.dist - b.dist);
@@ -118,8 +100,8 @@ export const initPacingChart = async (canvasId) => {
                 labels: processed.map(d => d.label),
                 datasets: [{
                     label: 'Pace (min/km)',
-                    data: processed.map(d => d.pace / 60), // decimal minutes
-                    borderColor: '#38bdf8', // Light Blue
+                    data: processed.map(d => d.pace / 60),
+                    borderColor: '#38bdf8',
                     backgroundColor: 'rgba(56, 189, 248, 0.2)',
                     fill: true,
                     tension: 0.3,
@@ -148,19 +130,7 @@ export const initPacingChart = async (canvasId) => {
                         ticks: { color: '#94a3b8' }
                     }
                 },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => {
-                                const val = ctx.raw;
-                                const m = Math.floor(val);
-                                const s = Math.round((val - m) * 60);
-                                return `Pace: ${m}:${s.toString().padStart(2, '0')} /km`;
-                            }
-                        }
-                    }
-                }
+                plugins: { legend: { display: false } }
             }
         });
     }
