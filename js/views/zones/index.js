@@ -1,39 +1,62 @@
-import { renderGauge, renderPowerCurve, renderPaceGraph, renderZonesTable } from './components.js';
-import { calculateZones } from './logic.js';
+import { getBiometricsData, parseZoneTables } from './logic.js';
+import { renderGauge, renderCyclingStats, renderRunningStats, renderButton, initPacingChart } from './components.js';
 
-export const renderZonesView = async (container) => {
-    container.innerHTML = `
-        <div class="zones-dashboard space-y-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div id="cycling-ftp-gauge" class="dashboard-card"></div>
-                <div id="running-ftp-gauge" class="dashboard-card"></div>
+export function renderZones(planMd) {
+    const bio = getBiometricsData(planMd);
+    
+    // Components
+    const cyclingStatsHtml = renderCyclingStats(bio);
+    const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
+    const runningStatsHtml = renderRunningStats(bio);
+    
+    // Split Zones
+    const zones = parseZoneTables(planMd);
+    const buttonHtml = renderButton();
+
+    // Async Chart Init
+    setTimeout(() => initPacingChart('runningPacingChart'), 0);
+
+    return `
+        <div class="zones-layout grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <div class="flex flex-col gap-6">
+                
+                <div class="h-72">
+                    ${gaugeHtml}
+                </div>
+
+                <div class="h-48">
+                    ${cyclingStatsHtml}
+                </div>
+                
+                <div class="flex flex-col gap-4">
+                    ${zones.cycling}
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div id="cycling-power-curve" class="dashboard-card"></div>
-                <div id="running-pace-graph" class="dashboard-card"></div>
+            <div class="flex flex-col gap-6">
+                
+                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl shadow-lg h-72 flex flex-col">
+                    <div class="flex items-center gap-2 mb-2 shrink-0">
+                        <i class="fa-solid fa-chart-line text-sky-500"></i>
+                        <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Running Pacing</span>
+                    </div>
+                    <div class="flex-1 w-full relative min-h-0">
+                        <canvas id="runningPacingChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="h-48">
+                    ${runningStatsHtml}
+                </div>
+
+                <div class="flex flex-col gap-4 w-full">
+                    ${zones.running}
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div id="cycling-zones-table" class="dashboard-card"></div>
-                <div id="running-hr-zones-table" class="dashboard-card"></div>
-            </div>
         </div>
+
+        ${buttonHtml}
     `;
-
-    // Fetch and Render Data
-    const cyclingData = await fetch('strava_data/cycling/power_curve_graph.json').then(res => res.json());
-    const runningData = await fetch('strava_data/running/my_running_prs.md').then(res => res.text());
-
-    // Row 1: Top Gauges
-    renderGauge('cycling-ftp-gauge', 'Cycling FTP', 'Watts');
-    renderGauge('running-ftp-gauge', 'Running FTP', 'Pace');
-
-    // Row 2: Performance Visuals
-    renderPowerCurve('cycling-power-curve', cyclingData); // Uses the new JSON
-    renderPaceGraph('running-pace-graph', runningData);
-
-    // Row 3: Training Reference
-    renderZonesTable('cycling-zones-table', 'Power Zones');
-    renderZonesTable('running-hr-zones-table', 'Heart Rate Zones');
-};
+}
