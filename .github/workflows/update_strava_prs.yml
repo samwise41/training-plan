@@ -1,16 +1,16 @@
 name: Update Strava PRs
 
 on:
-  workflow_dispatch: # Manual trigger button
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * *' # Runs daily at 8am UTC
 
-# ⭐️ ADD THIS BLOCK ⭐️
 permissions:
   contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -24,7 +24,7 @@ jobs:
         working-directory: ./strava_data
         run: pip install -r requirements.txt
 
-      - name: Fetch Activity List
+      - name: Fetch Latest Activities
         working-directory: ./strava_data
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
@@ -32,7 +32,7 @@ jobs:
           STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
         run: python 1_fetch_list.py
 
-      - name: Process PRs
+      - name: Scan for New PRs
         working-directory: ./strava_data
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
@@ -44,8 +44,7 @@ jobs:
         run: |
           git config --global user.name "StravaBot"
           git config --global user.email "bot@github.com"
-          # Only commit if there are changes
-          git add strava_data/activity_ids.txt strava_data/my_prs.md
+          git add strava_data/activity_ids.txt strava_data/my_prs.md strava_data/processed_log.txt
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
