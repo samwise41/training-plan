@@ -115,20 +115,24 @@ def generate_report():
 
     with open(OUTPUT_MD, "w", encoding="utf-8") as f:
         f.write("# 🏃 My Best Efforts (Running)\n\n")
-        f.write("| Distance | All Time Best | 6 Week Best | Link |\n")
-        f.write("|---|---|---|---|\n")
+        # UPDATED HEADERS: Now includes two separate Link columns
+        f.write("| Distance | All Time Best | Link | 6 Week Best | Link |\n")
+        f.write("|---|---|---|---|---|\n")
         
         for dist in DISTANCES:
             at = all_time.get(dist)
             sw = six_week.get(dist)
             
             if at or sw:
+                # All Time Data
                 at_str = f"**{format_time(at['time'])}**" if at else "--"
-                sw_str = f"{format_time(sw['time'])}" if sw else "--"
-                link_id = at['id'] if at else (sw['id'] if sw else "")
-                link = f"[View](https://www.strava.com/activities/{link_id})" if link_id else ""
+                at_link = f"[View](https://www.strava.com/activities/{at['id']})" if at else "--"
                 
-                f.write(f"| {dist} | {at_str} | {sw_str} | {link} |\n")
+                # 6 Week Data
+                sw_str = f"{format_time(sw['time'])}" if sw else "--"
+                sw_link = f"[View](https://www.strava.com/activities/{sw['id']})" if sw else "--"
+                
+                f.write(f"| {dist} | {at_str} | {at_link} | {sw_str} | {sw_link} |\n")
                 
     print(f"✅ Updated {OUTPUT_MD}")
 
