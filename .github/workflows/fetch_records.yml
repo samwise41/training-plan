@@ -24,8 +24,8 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install garminconnect
-        pip install pandas
+        # Added pandas and tabulate (required for to_markdown)
+        pip install garminconnect pandas tabulate
 
     - name: Run Records Fetcher
       env:
@@ -39,8 +39,8 @@ jobs:
         git config --global user.name "GitHub Action"
         git config --global user.email "action@github.com"
         
-        # Stage the new JSON file
-        git add my_personal_records.json
+        # Add the specific files (JSON and Markdown)
+        git add garmind_data/garmin_records.json garmind_data/garmin_records.md
         
         # Commit only if changes exist
         git commit -m "🏆 Update Personal Records" || echo "No changes to records"
