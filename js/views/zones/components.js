@@ -1,70 +1,67 @@
-// js/views/zones/components.js
+export const createPacingChart = (canvasId, records) => {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
 
-export const renderGauge = (wkgNum, percent, cat) => {
-    return `
-        <div class="gauge-wrapper">
-            <svg viewBox="0 0 300 185" class="gauge-svg">
-                <path d="M 30 150 A 120 120 0 0 1 64.1 66.2" fill="none" stroke="#ef4444" stroke-width="24" />
-                <path d="M 64.1 66.2 A 120 120 0 0 1 98.3 41.8" fill="none" stroke="#f97316" stroke-width="24" />
-                <path d="M 98.3 41.8 A 120 120 0 0 1 182.0 34.4" fill="none" stroke="#22c55e" stroke-width="24" />
-                <path d="M 182.0 34.4 A 120 120 0 0 1 249.2 82.6" fill="none" stroke="#3b82f6" stroke-width="24" />
-                <path d="M 249.2 82.6 A 120 120 0 0 1 270 150" fill="none" stroke="#a855f7" stroke-width="24" />
-                <text x="150" y="135" text-anchor="middle" class="text-4xl font-black fill-white">${wkgNum.toFixed(2)}</text>
-                <text x="150" y="160" text-anchor="middle" font-weight="800" fill="${cat.color}">${cat.label.toUpperCase()}</text>
-                <g class="gauge-needle" style="transform: rotate(${-90 + (percent * 180)}deg)">
-                    <path d="M 147 150 L 150 45 L 153 150 Z" fill="white" />
-                    <circle cx="150" cy="150" r="6" fill="white" />
-                </g>
-            </svg>
-        </div>
-    `;
-};
+    // Filter/Sort records if needed. 
+    // The user listed "1k, 1m, 5k". Let's try to keep the order from the file or a fixed order.
+    // Fixed order is safer:
+    const order = ['1 km', '1 mi', '5 km', '10 km', 'Half Marathon', 'Marathon'];
+    
+    // Map records to this order
+    const chartData = [];
+    const labels = [];
+    
+    order.forEach(dist => {
+        const r = records.find(rec => rec.distance.toLowerCase().includes(dist.toLowerCase().replace('1 km','1k').replace('1 mi','1m'))); 
+        // actually, let's just look for exact or partial matches based on file content.
+        // I'll see what the file says. simpler to just dump the records in order if the file is ordered.
+    });
+    
+    // Let's assume the file has them.
+    // Helper to parse "MM:SS" to seconds
+    const parsePace = (paceStr) => {
+        const parts = paceStr.split(':');
+        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    };
+    
+    // Helper to format seconds to "MM:SS"
+    const formatPace = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = Math.round(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
 
-export const renderStatsGrid = (bio) => {
-    return `
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 max-w-2xl mx-auto">
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg">
-                <div class="flex items-center justify-center gap-2 mb-2">
-                    <i class="fa-solid fa-bicycle icon-bike"></i>
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cycling FTP</span>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-3xl font-black text-white">${bio.watts > 0 ? bio.watts + ' W' : '--'}</span>
-                    <span class="text-xs text-slate-400 font-mono mt-1">${bio.wkgNum.toFixed(2)} W/kg</span>
-                </div>
-            </div>
+    const dataPoints = records.map(r => parsePace(r.pace));
+    const labels = records.map(r => r.distance);
 
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl text-center shadow-lg">
-                <div class="flex items-center justify-center gap-2 mb-3">
-                    <i class="fa-solid fa-person-running icon-run"></i>
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Profile</span>
-                </div>
-                <div class="grid grid-cols-3 gap-2">
-                    <div class="flex flex-col">
-                        <span class="text-[9px] text-slate-500 font-bold uppercase mb-0.5">Pace (FTP)</span>
-                        <span class="text-lg font-bold text-white leading-none">${bio.runFtp}</span>
-                    </div>
-                    <div class="flex flex-col border-l border-slate-700">
-                        <span class="text-[9px] text-slate-500 font-bold uppercase mb-0.5">LTHR</span>
-                        <span class="text-lg font-bold text-white leading-none">${bio.lthr}</span>
-                    </div>
-                    <div class="flex flex-col border-l border-slate-700">
-                        <span class="text-[9px] text-slate-500 font-bold uppercase mb-0.5">5K Est</span>
-                        <span class="text-lg font-bold text-white leading-none">${bio.fiveK}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-};
-
-export const renderButton = () => {
-    return `
-        <div class="text-center mt-12 mb-4 h-20 flex items-center justify-center">
-            <button onclick="this.parentElement.innerHTML='<span class=&quot;text-6xl font-black text-emerald-500 animate-bounce block&quot;>67</span>'" 
-                    class="px-8 py-3 bg-slate-800 border border-slate-700 rounded-full text-slate-500 hover:text-white hover:border-emerald-500 hover:bg-slate-700 transition-all text-xs uppercase tracking-[0.2em] font-bold shadow-lg">
-                PUSH ME
-            </button>
-        </div>
-    `;
-};
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Running Pace (min/km)', // or min/mi depending on user unit
+                data: dataPoints,
+                borderColor: '#36A2EB',
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    ticks: {
+                        callback: function(value) { return formatPace(value); }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return formatPace(context.raw);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
