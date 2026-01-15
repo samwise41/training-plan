@@ -21,10 +21,12 @@ export const getBiometricsData = (planMd) => {
 
 export const parseZoneTables = (planMd) => {
     const section = Parser.getSection(planMd, "Training Parameters") || Parser.getSection(planMd, "Zones");
-    let current = '', html = '', categories = {};
+    let current = '', categories = {};
     
-    if (!section) return `<p class="text-slate-500 text-center col-span-2">No zone data found.</p>`;
+    // Return empty strings if no section found
+    if (!section) return { cycling: `<p class="text-slate-500">No data</p>`, running: '' };
     
+    // 1. Parse into categories
     section.split('\n').forEach(line => {
         const trimmed = line.trim();
         if (trimmed.startsWith('###')) {
@@ -51,10 +53,29 @@ export const parseZoneTables = (planMd) => {
         }
     });
     
+    // 2. Split into Cycling vs Running HTML
+    let cyclingHtml = '';
+    let runningHtml = '';
+
     Object.keys(categories).forEach(k => {
-        html += `<div class="zone-card"><div class="zone-card-title">${k}</div>${categories[k].join('')}</div>`;
+        const cardHtml = `
+            <div class="zone-card">
+                <div class="zone-card-title">${k}</div>
+                ${categories[k].join('')}
+            </div>
+        `;
+        
+        const lowerKey = k.toLowerCase();
+        // Logic: If it says "Cycling" or "Power" (but not "Running Power"), put in Cycling col.
+        // Everything else (Running, Heart Rate, Pace) goes to Running col.
+        if (lowerKey.includes('cycling') || (lowerKey.includes('power') && !lowerKey.includes('running'))) {
+            cyclingHtml += cardHtml;
+        } else {
+            runningHtml += cardHtml;
+        }
     });
-    return html;
+
+    return { cycling: cyclingHtml, running: runningHtml };
 };
 
 export const fetchPacingData = async () => {
