@@ -32,16 +32,23 @@ const getBiometricsData = (planMd) => {
 
 const fetchPacingData = async () => {
     try {
-        const response = await fetch('garmind_data/garmin_records.md');
+        // ✅ CHANGED: Now fetching from the new Strava PR file
+        const response = await fetch('strava_data/running/my_running_prs.md');
         if (!response.ok) return [];
         const text = await response.text();
         const records = [];
         
+        // Parse the Strava Markdown Table
+        // Format: | Distance | All Time Best | Date | ...
         text.split('\n').forEach(line => {
-            if (line.trim().startsWith('|') && !line.includes('---')) {
-                const cols = line.split('|').map(c => c.trim());
-                if (cols.length > 3 && cols[1] === 'Running') {
-                    records.push({ label: cols[2], value: cols[3] });
+            const cols = line.split('|').map(c => c.trim());
+            // Check for valid data row (not header, not separator)
+            if (cols.length >= 3 && !line.includes('---') && cols[1] !== 'Distance' && cols[1] !== '') {
+                const label = cols[1]; 
+                const value = cols[2].replace(/\*\*/g, ''); // Remove Markdown bolding
+                
+                if (value && value !== '--') {
+                    records.push({ label, value });
                 }
             }
         });
@@ -119,26 +126,37 @@ const initPacingChart = async (canvasId) => {
     
     if (!ctx || !data.length) return;
 
+    // Map distances to "Miles" for plotting
     const distMap = { 
-        '1 km': 0.621371, 
-        '1 Mile': 1.0, 
-        '5 km': 3.10686, 
-        '10 km': 6.21371, 
-        'Half Marathon': 13.1094, 
-        'Marathon': 26.2188 
+        '400m': 0.248, 
+        '1/2 mile': 0.5, 
+        '1k': 0.621, 
+        '1 mile': 1.0, 
+        '2 mile': 2.0, 
+        '5k': 3.106, 
+        '10k': 6.213, 
+        '15k': 9.32,
+        '10 mile': 10.0,
+        '20k': 12.42,
+        'Half-Marathon': 13.109, 
+        '30k': 18.64,
+        'Marathon': 26.218,
+        '50k': 31.06
     };
     
     const processed = data
-        .filter(d => Object.keys(distMap).some(k => d.label.includes(k)))
+        .filter(d => Object.keys(distMap).some(k => d.label.toLowerCase() === k.toLowerCase()))
         .map(d => {
-            const key = Object.keys(distMap).find(k => d.label.includes(k));
+            // Find key case-insensitively
+            const key = Object.keys(distMap).find(k => d.label.toLowerCase() === k.toLowerCase());
             const parts = d.value.split(':').map(Number);
             let totalSeconds = parts.length === 3 ? parts[0]*3600 + parts[1]*60 + parts[2] : parts[0]*60 + parts[1];
             const miles = distMap[key];
+            
             return {
-                label: key,
+                label: d.label,
                 dist: miles,
-                pace: totalSeconds / miles
+                pace: totalSeconds / miles // Seconds per mile
             };
         })
         .sort((a, b) => a.dist - b.dist);
@@ -213,7 +231,6 @@ export function renderFTP(planMd) {
 
     return `
         <div class="zones-layout grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
             <div class="flex flex-col gap-6">
                 <div class="h-72">
                     ${gaugeHtml}
@@ -237,7 +254,6 @@ export function renderFTP(planMd) {
                     ${runningStatsHtml}
                 </div>
             </div>
-
         </div>
     `;
 }
