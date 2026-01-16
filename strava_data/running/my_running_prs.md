@@ -7,7 +7,7 @@
 | 1 mile | **7:22** | [2025-12-26](https://www.strava.com/activities/16844864645) | 7:22 | [2025-12-26](https://www.strava.com/activities/16844864645) |
 | 2 mile | **15:43** | [2025-12-26](https://www.strava.com/activities/16844864645) | 15:43 | [2025-12-26](https://www.strava.com/activities/16844864645) |
 | 5k | **24:59** | [2025-12-26](https://www.strava.com/activities/16844864645) | 24:59 | [2025-12-26](https://www.strava.com/activities/16844864645) |
-| 10k | **56:42** | [2025-12-26](https://www.strava.com/activities/16844864645) | 56:42 | [2025-12-26](https://www.strava.com/activities/16844864645) |
+| 10k | **56:05** | [2025-12-06](https://www.strava.com/activities/16668436596) | 56:05 | [2025-12-06](https://www.strava.com/activities/16668436596) |
 | 15k | -- | -- | -- | -- |
 | 10 mile | -- | -- | -- | -- |
 | 20k | -- | -- | -- | -- |
