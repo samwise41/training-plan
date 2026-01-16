@@ -33,7 +33,7 @@ jobs:
         GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
         GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
       run: |
-        python python/02_fetch_health.py
+        python python/_02_fetch_health.py
 
     - name: Commit and Push Changes
       run: |
