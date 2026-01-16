@@ -7,7 +7,7 @@ sys.path.append(SCRIPT_DIR)
 
 # Import our new modular components
 import _01_fetch_garmin
-import analyze_trends
+import _01_analyze_trends
 from modules import config, sync_database, update_visuals, git_ops
 
 def main():
