@@ -16,8 +16,12 @@ OUTPUT_GRAPH = os.path.join(BASE_DIR, "power_curve_graph.json")
 OUTPUT_MD = os.path.join(BASE_DIR, "my_power_profile.md")
 
 MAX_DURATION_SECONDS = 21600 
-MAX_NEW_TO_PROCESS = 20  # Stop after processing this many NEW files
-CONSECUTIVE_EXISTING_LIMIT = 50 # Stop if we see this many old files in a row
+
+# --- BACKFILL SETTINGS ---
+# Increased to 80 to maximize work within the 15-min API window (Limit is ~100)
+MAX_NEW_TO_PROCESS = 80  
+# Increased to 2000 so it doesn't stop just because it found the 137 recent rides
+CONSECUTIVE_EXISTING_LIMIT = 2000 
 
 KEY_INTERVALS = [
     ("1s", 1), ("5s", 5), ("15s", 15), ("30s", 30),
@@ -100,7 +104,7 @@ def update_cache(token):
             if aid in cached_ids:
                 consecutive_existing += 1
                 if consecutive_existing >= CONSECUTIVE_EXISTING_LIMIT:
-                    print("✅ Found 50 existing rides in a row. Sync complete.")
+                    print(f"✅ Found {CONSECUTIVE_EXISTING_LIMIT} existing rides in a row. Sync complete.")
                     return
                 continue
             
@@ -134,8 +138,7 @@ def update_cache(token):
                 power_series = pd.Series(streams['watts']['data'])
                 limit = min(len(power_series), MAX_DURATION_SECONDS)
                 curve = []
-                # Simple optimization: only calculate necessary durations if strict, 
-                # but your existing logic does every second, which is fine for accuracy.
+                # Calculate every second for accuracy
                 for seconds in range(1, limit + 1):
                     peak = int(power_series.rolling(window=seconds).mean().max())
                     curve.append(peak)
