@@ -1,4 +1,4 @@
-name: Daily Health Sync
+name: 2.1 Daily Health Sync
 
 on:
   schedule:
