@@ -4,31 +4,90 @@ import { Parser } from '../../parser.js';
 const CONFIG = {
     WKG_SCALE: { min: 1.0, max: 6.0 },
     CATEGORIES: [
-        { threshold: 5.05, label: "Exceptional", color: "#a855f7" }, // Purple
-        { threshold: 3.93, label: "Very Good",   color: "#3b82f6" }, // Blue
-        { threshold: 2.79, label: "Good",        color: "#22c55e" }, // Green
-        { threshold: 2.23, label: "Fair",        color: "#f97316" }, // Orange
-        { threshold: 0.00, label: "Untrained",   color: "#ef4444" }  // Red
+        { threshold: 5.05, label: "Exceptional", color: "#a855f7" },
+        { threshold: 3.93, label: "Very Good",   color: "#3b82f6" },
+        { threshold: 2.79, label: "Good",        color: "#22c55e" },
+        { threshold: 2.23, label: "Fair",        color: "#f97316" },
+        { threshold: 0.00, label: "Untrained",   color: "#ef4444" }
     ]
 };
 
 // --- DATA FETCHING ---
-const fetchCurveData = async (type) => {
-    const file = type === 'cycling' 
-        ? 'strava_data/cycling/power_curve_graph.json' 
-        : 'strava_data/running/running_pace_curve.json';
-        
+const fetchCyclingData = async () => {
     try {
-        const res = await fetch(file);
+        const res = await fetch('strava_data/cycling/power_curve_graph.json');
         if (!res.ok) return [];
         return await res.json();
     } catch (e) {
-        console.error(`Error loading ${type} curve:`, e);
         return [];
     }
 };
 
-// --- LOGIC ---
+const fetchRunningData = async () => {
+    try {
+        // We fetch the MARKDOWN file to get Distance-based PRs
+        const res = await fetch('strava_data/running/my_running_prs.md');
+        if (!res.ok) return [];
+        const text = await res.text();
+        return parseRunningMarkdown(text);
+    } catch (e) {
+        return [];
+    }
+};
+
+const parseRunningMarkdown = (md) => {
+    const rows = [];
+    const distMap = { 
+        '400m': 0.248, '1/2 mile': 0.5, '1 mile': 1.0, '2 mile': 2.0, 
+        '5k': 3.106, '10k': 6.213, '15k': 9.32, '10 mile': 10.0, 
+        '20k': 12.42, 'Half-Marathon': 13.109, '30k': 18.64, 'Marathon': 26.218, '50k': 31.06
+    };
+
+    md.split('\n').forEach(line => {
+        const cols = line.split('|').map(c => c.trim());
+        if (cols.length >= 6 && !line.includes('---') && cols[1] !== 'Distance') {
+            const label = cols[1];
+            const dist = distMap[label] || distMap[Object.keys(distMap).find(k => label.toLowerCase().includes(k.toLowerCase()))];
+            
+            if (dist) {
+                const parseTime = (str) => {
+                    if (!str || str === '--') return null;
+                    const clean = str.replace(/\*\*/g, ''); // Remove bold
+                    const parts = clean.split(':').map(Number);
+                    if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+                    if (parts.length === 2) return parts[0]*60 + parts[1];
+                    return null;
+                };
+
+                const timeAllTime = parseTime(cols[2]);
+                const time6Week = parseTime(cols[4]);
+
+                // Calculate Pace (min/mile)
+                const paceAllTime = timeAllTime ? (timeAllTime / 60) / dist : null;
+                const pace6Week = time6Week ? (time6Week / 60) / dist : null;
+
+                if (paceAllTime) {
+                    rows.push({ label, dist, paceAllTime, pace6Week });
+                }
+            }
+        }
+    });
+    return rows.sort((a,b) => a.dist - b.dist);
+};
+
+// --- HELPERS ---
+const formatDuration = (seconds) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds/60)}m`;
+    return `${Math.floor(seconds/3600)}h`;
+};
+
+const formatPace = (val) => {
+    const m = Math.floor(val);
+    const s = Math.round((val - m) * 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
 const getBiometricsData = (planMd) => {
     const bio = Parser.getBiometrics(planMd) || {};
     const watts = bio.watts || 0;
@@ -46,31 +105,16 @@ const getBiometricsData = (planMd) => {
     return { watts, weight, lthr, runFtp, fiveK, wkgNum, cat, percent };
 };
 
-// --- HELPERS ---
-const formatDuration = (seconds) => {
-    if (seconds < 60) return `${seconds}s`;
-    if (seconds < 3600) return `${Math.floor(seconds/60)}m`;
-    return `${Math.floor(seconds/3600)}h`;
-};
-
-const mpsToMinMile = (mps) => {
-    if (!mps || mps <= 0) return null;
-    return 26.8224 / mps; // Convert m/s to min/mile
-};
-
-const formatPace = (val) => {
-    const m = Math.floor(val);
-    const s = Math.round((val - m) * 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-};
-
-// --- CHART GENERATION ---
+// --- CHARTS ---
 const initCharts = async () => {
     if (!window.Chart) return;
 
-    // 1. CYCLING POWER CURVE
-    const cyclingData = await fetchCurveData('cycling');
+    // 1. CYCLING CHART (Clean Log Grid)
+    const cyclingData = await fetchCyclingData();
     if (cyclingData.length > 0) {
+        // Define exact ticks we want to show
+        const tickValues = [1, 5, 15, 30, 60, 120, 300, 600, 1200, 1800, 3600, 7200, 10800, 14400, 18000, 21600];
+        
         const ctx = document.getElementById('cyclingPowerChart');
         if (ctx) {
             new Chart(ctx, {
@@ -79,23 +123,17 @@ const initCharts = async () => {
                     labels: cyclingData.map(d => d.seconds),
                     datasets: [
                         {
-                            label: 'All Time Best',
+                            label: 'All Time',
                             data: cyclingData.map(d => ({ x: d.seconds, y: d.all_time_watts })),
-                            borderColor: '#a855f7', // Purple
+                            borderColor: '#a855f7',
                             backgroundColor: 'rgba(168, 85, 247, 0.1)',
-                            pointRadius: 0,
-                            borderWidth: 2,
-                            tension: 0.3,
-                            fill: true
+                            borderWidth: 2, pointRadius: 0, tension: 0.1, fill: true
                         },
                         {
-                            label: 'Last 6 Weeks',
+                            label: '6 Week',
                             data: cyclingData.map(d => ({ x: d.seconds, y: d.six_week_watts || null })),
-                            borderColor: '#22c55e', // Green
-                            pointRadius: 0,
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            tension: 0.3
+                            borderColor: '#22c55e',
+                            borderWidth: 2, pointRadius: 0, borderDash: [5, 5], tension: 0.1
                         }
                     ]
                 },
@@ -106,60 +144,55 @@ const initCharts = async () => {
                     scales: {
                         x: {
                             type: 'logarithmic',
-                            grid: { color: '#334155' },
+                            min: 1, max: 21600,
+                            grid: { color: '#334155', drawTicks: true },
                             ticks: {
                                 color: '#94a3b8',
-                                callback: (val) => [1, 5, 15, 30, 60, 300, 1200, 3600, 7200, 14400].includes(val) ? formatDuration(val) : ''
+                                maxRotation: 0,
+                                autoSkip: false,
+                                callback: function(val) {
+                                    return tickValues.includes(val) ? formatDuration(val) : '';
+                                }
+                            },
+                            afterBuildTicks: (axis) => {
+                                axis.ticks = tickValues.map(v => ({ value: v }));
                             }
                         },
                         y: {
                             grid: { color: '#334155' },
-                            title: { display: true, text: 'Power (Watts)', color: '#94a3b8' },
+                            title: { display: true, text: 'Watts', color: '#94a3b8' },
                             ticks: { color: '#94a3b8' }
                         }
                     },
-                    plugins: {
-                        legend: { labels: { color: '#cbd5e1' } },
-                        tooltip: {
-                            callbacks: {
-                                title: (items) => formatDuration(items[0].parsed.x),
-                                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}w`
-                            }
-                        }
-                    }
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } }
                 }
             });
         }
     }
 
-    // 2. RUNNING PACE CURVE
-    const runningData = await fetchCurveData('running');
+    // 2. RUNNING CHART (Distance Axis)
+    const runningData = await fetchRunningData();
     if (runningData.length > 0) {
         const ctx = document.getElementById('runningPacingChart');
         if (ctx) {
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: runningData.map(d => d.seconds),
+                    // Use Distance (Miles) for X, but map labels to standard names
+                    labels: runningData.map(d => d.label), 
                     datasets: [
                         {
-                            label: 'All Time Best',
-                            data: runningData.map(d => ({ x: d.seconds, y: mpsToMinMile(d.all_time_mps) })),
-                            borderColor: '#38bdf8', // Blue
+                            label: 'All Time',
+                            data: runningData.map(d => ({ x: d.dist, y: d.paceAllTime })),
+                            borderColor: '#38bdf8',
                             backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                            pointRadius: 0,
-                            borderWidth: 2,
-                            tension: 0.3,
-                            fill: true
+                            borderWidth: 2, pointRadius: 4, tension: 0.3, fill: true
                         },
                         {
-                            label: 'Last 6 Weeks',
-                            data: runningData.map(d => ({ x: d.seconds, y: mpsToMinMile(d.six_week_mps) })),
-                            borderColor: '#f97316', // Orange
-                            pointRadius: 0,
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            tension: 0.3
+                            label: '6 Week',
+                            data: runningData.map(d => ({ x: d.dist, y: d.pace6Week })),
+                            borderColor: '#f97316',
+                            borderWidth: 2, pointRadius: 4, borderDash: [5, 5], tension: 0.3
                         }
                     ]
                 },
@@ -171,13 +204,19 @@ const initCharts = async () => {
                         x: {
                             type: 'logarithmic',
                             grid: { color: '#334155' },
+                            title: { display: true, text: 'Distance', color: '#94a3b8' },
                             ticks: {
                                 color: '#94a3b8',
-                                callback: (val) => [1, 5, 15, 30, 60, 300, 1200, 3600, 7200].includes(val) ? formatDuration(val) : ''
+                                autoSkip: false,
+                                callback: function(val) {
+                                    // Match tick value to data distance to show label
+                                    const match = runningData.find(d => Math.abs(d.dist - val) < 0.1);
+                                    return match ? match.label : '';
+                                }
                             }
                         },
                         y: {
-                            reverse: true, // Lower pace (faster) at top
+                            // Removed reverse: true. Now Slower (higher number) is at Top.
                             grid: { color: '#334155' },
                             title: { display: true, text: 'Pace (min/mi)', color: '#94a3b8' },
                             ticks: {
@@ -190,7 +229,10 @@ const initCharts = async () => {
                         legend: { labels: { color: '#cbd5e1' } },
                         tooltip: {
                             callbacks: {
-                                title: (items) => formatDuration(items[0].parsed.x),
+                                title: (items) => {
+                                    const idx = items[0].dataIndex;
+                                    return runningData[idx].label;
+                                },
                                 label: (ctx) => `${ctx.dataset.label}: ${formatPace(ctx.parsed.y)} /mi`
                             }
                         }
@@ -201,7 +243,7 @@ const initCharts = async () => {
     }
 };
 
-// --- COMPONENTS ---
+// --- RENDER ---
 const renderGauge = (wkgNum, percent, cat) => {
     return `
         <div class="gauge-wrapper w-full h-full flex items-center justify-center p-4 bg-slate-800/50 border border-slate-700 rounded-xl shadow-lg relative overflow-hidden">
@@ -262,30 +304,24 @@ const renderRunningStats = (bio) => {
     `;
 };
 
-// --- MAIN EXPORT ---
 export function renderFTP(planMd) {
     const bio = getBiometricsData(planMd);
     
-    // HTML Generation
+    // Generate HTML
     const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
     const cyclingStatsHtml = renderCyclingStats(bio);
     const runningStatsHtml = renderRunningStats(bio);
     
-    // Trigger Chart Init
-    setTimeout(initCharts, 100);
+    // Initialize charts after render
+    setTimeout(initCharts, 200);
 
     return `
         <div class="zones-layout grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="flex flex-col gap-6">
                 <div class="grid grid-cols-2 gap-4 h-64">
-                    <div class="col-span-1 h-full">
-                        ${gaugeHtml}
-                    </div>
-                    <div class="col-span-1 h-full">
-                        ${cyclingStatsHtml}
-                    </div>
+                    <div class="col-span-1 h-full">${gaugeHtml}</div>
+                    <div class="col-span-1 h-full">${cyclingStatsHtml}</div>
                 </div>
-                
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl shadow-lg h-80 flex flex-col">
                     <div class="flex items-center gap-2 mb-2 shrink-0">
                         <i class="fa-solid fa-bolt text-yellow-500"></i>
@@ -298,14 +334,13 @@ export function renderFTP(planMd) {
             </div>
 
             <div class="flex flex-col gap-6">
-                 <div class="h-64">
+                <div class="h-64">
                     ${runningStatsHtml}
                 </div>
-
                 <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl shadow-lg h-80 flex flex-col">
                     <div class="flex items-center gap-2 mb-2 shrink-0">
                         <i class="fa-solid fa-stopwatch text-sky-500"></i>
-                        <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Running Pace Curve</span>
+                        <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Running Pace vs Distance</span>
                     </div>
                     <div class="flex-1 w-full relative min-h-0">
                         <canvas id="runningPacingChart"></canvas>
