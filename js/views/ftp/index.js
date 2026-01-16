@@ -32,7 +32,6 @@ const fetchRunningData = async () => {
 
 const parseRunningMarkdown = (md) => {
     const rows = [];
-    // Distances in Miles for calculation
     const distMap = { 
         '400m': 0.248, '1/2 mile': 0.5, '1 mile': 1.0, '2 mile': 2.0, 
         '5k': 3.106, '10k': 6.213, '15k': 9.32, '10 mile': 10.0, 
@@ -43,7 +42,6 @@ const parseRunningMarkdown = (md) => {
         const cols = line.split('|').map(c => c.trim());
         if (cols.length >= 6 && !line.includes('---') && cols[1] !== 'Distance') {
             const label = cols[1];
-            // Find closest distance key
             const distKey = Object.keys(distMap).find(k => label.toLowerCase().includes(k.toLowerCase())) || label;
             const dist = distMap[distKey];
             
@@ -60,7 +58,6 @@ const parseRunningMarkdown = (md) => {
                 const timeAllTime = parseTime(cols[2]);
                 const time6Week = parseTime(cols[4]);
 
-                // Pace = Minutes per Mile
                 const paceAllTime = timeAllTime ? (timeAllTime / 60) / dist : null;
                 const pace6Week = time6Week ? (time6Week / 60) / dist : null;
 
@@ -73,19 +70,33 @@ const parseRunningMarkdown = (md) => {
     return rows.sort((a,b) => a.dist - b.dist);
 };
 
-// --- LOG CHART GENERATOR (SVG) ---
-const renderLogChart = (data, options) => {
+// --- CHART MATH & RENDERING ---
+
+// Helper: Logarithmic Scale Position
+const getLogX = (val, min, max, width, pad) => {
+    const logMin = Math.log(min);
+    const logMax = Math.log(max);
+    const logVal = Math.log(val);
+    const pct = (logVal - logMin) / (logMax - logMin);
+    return pad.l + pct * (width - pad.l - pad.r);
+};
+
+// Helper: Linear Scale Position
+const getLinY = (val, min, max, height, pad) => {
+    const pct = (val - min) / (max - min);
+    return height - pad.b - (pct * (height - pad.t - pad.b));
+};
+
+const renderLogChart = (containerId, data, options) => {
     const { 
         width = 800, height = 300, 
-        yLabel = '', 
         colorAll = '#a855f7', color6w = '#22c55e',
-        xType = 'time', // 'time' or 'distance'
-        showPoints = true // New Option: Toggle dots
+        xType = 'time', showPoints = true 
     } = options;
 
     const pad = { t: 30, b: 30, l: 50, r: 20 };
     
-    // 1. Calculate Scales
+    // 1. Calculate Limits
     const xValues = data.map(d => d.x);
     const yValues = data.flatMap(d => [d.yAll, d.y6w]).filter(v => v !== null);
 
@@ -94,28 +105,14 @@ const renderLogChart = (data, options) => {
     
     let minY = Math.min(...yValues);
     let maxY = Math.max(...yValues);
-    // Add buffer to Y
     const buf = (maxY - minY) * 0.1;
     minY = Math.max(0, minY - buf);
     maxY = maxY + buf;
 
-    // Logarithmic X Scale Helper
-    const getX = (val) => {
-        const logMin = Math.log(minX);
-        const logMax = Math.log(maxX);
-        const logVal = Math.log(val);
-        const pct = (logVal - logMin) / (logMax - logMin);
-        return pad.l + pct * (width - pad.l - pad.r);
-    };
-
-    // Linear Y Scale Helper
-    const getY = (val) => {
-        const pct = (val - minY) / (maxY - minY);
-        return height - pad.b - (pct * (height - pad.t - pad.b));
-    };
-
-    // 2. Generate Grid Lines (Ticks)
+    // 2. Generate Grid
+    let gridHtml = '';
     let xTicks = [];
+
     if (xType === 'time') {
         const timeMarkers = [
             {v: 1, l: '1s'}, {v: 60, l: '1m'}, {v: 300, l: '5m'}, 
@@ -130,23 +127,19 @@ const renderLogChart = (data, options) => {
         xTicks = distMarkers.filter(m => m.v >= minX * 0.9 && m.v <= maxX * 1.1);
     }
 
-    let gridHtml = '';
-    
-    // X-Axis Grid
     xTicks.forEach(tick => {
-        const x = getX(tick.v);
+        const x = getLogX(tick.v, minX, maxX, width, pad);
         gridHtml += `
             <line x1="${x}" y1="${pad.t}" x2="${x}" y2="${height - pad.b}" stroke="#334155" stroke-width="1" stroke-dasharray="4,4" opacity="0.5" />
             <text x="${x}" y="${height - 10}" text-anchor="middle" font-size="10" fill="#94a3b8">${tick.l}</text>
         `;
     });
 
-    // Y-Axis Grid (Generate ~6 lines)
     const ySteps = 5;
     for (let i = 0; i <= ySteps; i++) {
         const pct = i / ySteps;
         const val = minY + (pct * (maxY - minY));
-        const y = getY(val);
+        const y = getLinY(val, minY, maxY, height, pad);
         gridHtml += `
             <line x1="${pad.l}" y1="${y}" x2="${width - pad.r}" y2="${y}" stroke="#334155" stroke-width="1" opacity="0.3" />
             <text x="${pad.l - 8}" y="${y + 3}" text-anchor="end" font-size="10" fill="#94a3b8">
@@ -155,67 +148,157 @@ const renderLogChart = (data, options) => {
         `;
     }
 
-    // 3. Generate Paths
-    const genPath = (dataset, key) => {
+    // 3. Generate Paths & Points
+    const genPath = (key) => {
         let d = '';
-        dataset.forEach((pt, i) => {
+        data.forEach((pt, i) => {
             if (pt[key] === null) return;
-            const x = getX(pt.x);
-            const y = getY(pt[key]);
+            const x = getLogX(pt.x, minX, maxX, width, pad);
+            const y = getLinY(pt[key], minY, maxY, height, pad);
             d += (i === 0 || d === '') ? `M ${x} ${y}` : ` L ${x} ${y}`;
         });
         return d;
     };
 
-    const pathAll = genPath(data, 'yAll');
-    const path6w = genPath(data, 'y6w');
+    const pathAll = genPath('yAll');
+    const path6w = genPath('y6w');
 
-    // 4. Generate Points (ONLY if showPoints is true)
     let pointsHtml = '';
     if (showPoints) {
         data.forEach(pt => {
-            const x = getX(pt.x);
-            
-            if (pt.yAll !== null) {
-                pointsHtml += `
-                    <circle cx="${x}" cy="${getY(pt.yAll)}" r="3" fill="#0f172a" stroke="${colorAll}" stroke-width="2">
-                        <title>${pt.label || pt.x} - All Time: ${xType==='distance' ? formatPace(pt.yAll) : Math.round(pt.yAll)}</title>
-                    </circle>`;
-            }
-            if (pt.y6w !== null) {
-                 pointsHtml += `
-                    <circle cx="${x}" cy="${getY(pt.y6w)}" r="3" fill="#0f172a" stroke="${color6w}" stroke-width="2">
-                        <title>${pt.label || pt.x} - 6 Week: ${xType==='distance' ? formatPace(pt.y6w) : Math.round(pt.y6w)}</title>
-                    </circle>`;
-            }
+            const x = getLogX(pt.x, minX, maxX, width, pad);
+            if (pt.yAll !== null) pointsHtml += `<circle cx="${x}" cy="${getLinY(pt.yAll, minY, maxY, height, pad)}" r="3" fill="#0f172a" stroke="${colorAll}" stroke-width="2" />`;
+            if (pt.y6w !== null) pointsHtml += `<circle cx="${x}" cy="${getLinY(pt.y6w, minY, maxY, height, pad)}" r="3" fill="#0f172a" stroke="${color6w}" stroke-width="2" />`;
         });
     }
 
+    // 4. Return SVG HTML
     return `
-        <div class="w-full h-full overflow-hidden">
-            <svg viewBox="0 0 ${width} ${height}" class="w-full h-full" preserveAspectRatio="none">
+        <div class="relative w-full h-full group">
+            <svg id="${containerId}-svg" viewBox="0 0 ${width} ${height}" class="w-full h-full" preserveAspectRatio="none">
                 ${gridHtml}
                 <line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" stroke="#475569" stroke-width="1" />
                 
                 <path d="${pathAll}" fill="none" stroke="${colorAll}" stroke-width="2" />
                 <path d="${path6w}" fill="none" stroke="${color6w}" stroke-width="2" stroke-dasharray="5,5" />
-                
                 ${pointsHtml}
                 
-                <g transform="translate(${width - 120}, ${pad.t})">
-                    <circle cx="0" cy="0" r="3" fill="${colorAll}" />
-                    <text x="10" y="3" font-size="10" fill="#cbd5e1">All Time</text>
-                    
-                    <circle cx="0" cy="15" r="3" fill="none" stroke="${color6w}" stroke-width="2" />
-                    <text x="10" y="18" font-size="10" fill="#cbd5e1">6 Weeks</text>
-                </g>
+                <line id="${containerId}-guide" x1="0" y1="${pad.t}" x2="0" y2="${height - pad.b}" 
+                      stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0" style="pointer-events: none;" />
+
+                <rect x="${pad.l}" y="${pad.t}" width="${width - pad.l - pad.r}" height="${height - pad.t - pad.b}" fill="transparent" />
             </svg>
+            
+            <div id="${containerId}-tooltip" class="absolute hidden pointer-events-none bg-slate-900/95 border border-slate-700 rounded shadow-xl p-2 z-10 min-w-[120px]">
+                </div>
+
+            <div class="absolute top-2 right-4 flex gap-3 pointer-events-none">
+                <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[${colorAll}]"></div><span class="text-[10px] text-slate-300">All Time</span></div>
+                <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full border border-[${color6w}]"></div><span class="text-[10px] text-slate-300">6 Weeks</span></div>
+            </div>
         </div>
     `;
 };
 
+// --- INTERACTION HANDLER ---
+const setupChartInteractions = (containerId, data, options) => {
+    const svg = document.getElementById(`${containerId}-svg`);
+    const guide = document.getElementById(`${containerId}-guide`);
+    const tooltip = document.getElementById(`${containerId}-tooltip`);
+    
+    if (!svg || !guide || !tooltip) return;
+
+    const { width = 800, height = 300, colorAll, color6w, xType } = options;
+    const pad = { t: 30, b: 30, l: 50, r: 20 };
+
+    // Pre-calculate scales for fast lookup
+    const xValues = data.map(d => d.x);
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
+    
+    // Map data to pixel coordinates
+    const lookup = data.map(d => ({
+        ...d,
+        px: getLogX(d.x, minX, maxX, width, pad)
+    }));
+
+    svg.addEventListener('mousemove', (e) => {
+        const rect = svg.getBoundingClientRect();
+        // Scale mouse position to SVG coordinates
+        const scaleX = width / rect.width;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+
+        // Find closest data point by pixel distance
+        let closest = null;
+        let minDist = Infinity;
+
+        for (const pt of lookup) {
+            const dist = Math.abs(pt.px - mouseX);
+            if (dist < minDist) {
+                minDist = dist;
+                closest = pt;
+            }
+        }
+
+        if (closest && minDist < 50) { // Only snap if reasonably close
+            // 1. Show/Move Line
+            guide.setAttribute('x1', closest.px);
+            guide.setAttribute('x2', closest.px);
+            guide.style.opacity = '1';
+
+            // 2. Update Tooltip Content
+            const label = closest.label || (xType === 'time' ? formatDuration(closest.x) : `${closest.x} mi`);
+            const valAll = xType === 'distance' ? formatPace(closest.yAll) : `${closest.yAll}w`;
+            const val6w = closest.y6w ? (xType === 'distance' ? formatPace(closest.y6w) : `${closest.y6w}w`) : '--';
+
+            tooltip.innerHTML = `
+                <div class="text-[10px] font-bold text-slate-400 mb-1 border-b border-slate-700 pb-1 uppercase tracking-wider">${label}</div>
+                <div class="flex justify-between items-center gap-4 text-xs mb-0.5">
+                    <span style="color: ${colorAll}">All Time</span>
+                    <span class="font-mono text-white">${valAll}</span>
+                </div>
+                <div class="flex justify-between items-center gap-4 text-xs">
+                    <span style="color: ${color6w}">6 Week</span>
+                    <span class="font-mono text-white">${val6w}</span>
+                </div>
+            `;
+
+            // 3. Position Tooltip
+            tooltip.classList.remove('hidden');
+            
+            // Smart positioning (flip if too close to right edge)
+            const tooltipX = (closest.px / width) * 100;
+            if (tooltipX > 60) {
+                tooltip.style.left = 'auto';
+                tooltip.style.right = `${100 - tooltipX + 2}%`;
+            } else {
+                tooltip.style.right = 'auto';
+                tooltip.style.left = `${tooltipX + 2}%`;
+            }
+            // Vertical center
+            tooltip.style.top = '20%';
+
+        } else {
+            guide.style.opacity = '0';
+            tooltip.classList.add('hidden');
+        }
+    });
+
+    svg.addEventListener('mouseleave', () => {
+        guide.style.opacity = '0';
+        tooltip.classList.add('hidden');
+    });
+};
+
 // --- HELPERS ---
+const formatDuration = (seconds) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds/60)}m`;
+    return `${Math.floor(seconds/3600)}h`;
+};
+
 const formatPace = (val) => {
+    if(!val) return '--';
     const m = Math.floor(val);
     const s = Math.round((val - m) * 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
@@ -252,7 +335,7 @@ export function renderFTP(planMd) {
 
     // Load Charts Async
     (async () => {
-        // 1. CYCLING (High Density -> showPoints: false)
+        // 1. CYCLING
         const cyclingData = await fetchCyclingData();
         const cEl = document.getElementById(cyclingChartId);
         if (cEl && cyclingData.length) {
@@ -262,16 +345,19 @@ export function renderFTP(planMd) {
                 y6w: d.six_week_watts || null
             })).filter(d => d.x >= 1);
             
-            cEl.innerHTML = renderLogChart(chartData, { 
+            const opts = { 
+                width: 800, height: 300,
                 xType: 'time', 
-                colorAll: '#a855f7', 
-                color6w: '#22c55e',
-                yLabel: 'Watts',
-                showPoints: false // <--- CLEAN LINE ONLY
-            });
+                colorAll: '#a855f7', color6w: '#22c55e',
+                showPoints: false 
+            };
+            
+            cEl.innerHTML = renderLogChart(cyclingChartId, chartData, opts);
+            // Activate Hover
+            setupChartInteractions(cyclingChartId, chartData, opts);
         }
 
-        // 2. RUNNING (Discrete PRs -> showPoints: true)
+        // 2. RUNNING
         const runningData = await fetchRunningData();
         const rEl = document.getElementById(runningChartId);
         if (rEl && runningData.length) {
@@ -282,13 +368,16 @@ export function renderFTP(planMd) {
                 label: d.label
             }));
             
-            rEl.innerHTML = renderLogChart(chartData, { 
+            const opts = { 
+                width: 800, height: 300,
                 xType: 'distance', 
-                colorAll: '#38bdf8', 
-                color6w: '#f97316',
-                yLabel: 'Pace',
-                showPoints: true // <--- KEEP DOTS
-            });
+                colorAll: '#38bdf8', color6w: '#f97316',
+                showPoints: true 
+            };
+            
+            rEl.innerHTML = renderLogChart(runningChartId, chartData, opts);
+            // Activate Hover
+            setupChartInteractions(runningChartId, chartData, opts);
         }
     })();
 
