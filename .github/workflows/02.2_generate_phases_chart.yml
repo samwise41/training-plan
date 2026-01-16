@@ -3,7 +3,7 @@ name: 02.2 Generate Training Projection Chart
 on:
   push:
     paths:
-      - 'python/generate_projection.py' # Runs if you update the script
+      - 'python/02_generate_projection.py' # Runs if you update the script
       - 'endurance_plan.md'      # Runs if you update the plan text
   workflow_dispatch:             # Allows you to click a button to run it manually
 
@@ -29,7 +29,7 @@ jobs:
         pip install matplotlib pandas numpy
 
     - name: Run Projection Script
-      run: python  python/generate_projection.py
+      run: python  python/02_generate_projection.py
 
     - name: Commit and Push Chart
       run: |
