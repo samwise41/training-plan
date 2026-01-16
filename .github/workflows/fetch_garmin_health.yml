@@ -41,7 +41,7 @@ jobs:
         git config --global user.email "action@github.com"
         
         # Stage the specific files we expect to change
-        git add garmind_data/garmin_health.md COACH_BRIEFING.md
+        git add garmind_data/garmin_health.md
         
         # Commit only if there are changes
         git commit -m "🏥 Daily Health & Readiness Update" || echo "No health changes to commit"
