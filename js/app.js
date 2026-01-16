@@ -42,7 +42,7 @@
 
     const CONFIG = {
         PLAN_FILE: "endurance_plan.md",
-        GEAR_FILE: "Gear.md",
+        GEAR_FILE: "js/views/gear/Gear.md",
         HISTORY_FILE: "MASTER_TRAINING_DATABASE.md",
         AUTH_FILE: "auth_config.json",
         WEATHER_MAP: {
