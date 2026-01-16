@@ -22,11 +22,11 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        working-directory: ./strava_data/
+        working-directory: ./strava_data
         run: pip install -r requirements.txt
 
       - name: Fetch Latest Activity List
-        working-directory: ./strava_data/
+        working-directory: ./strava_data
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
@@ -34,7 +34,7 @@ jobs:
         run: python 1_fetch_list.py
 
       - name: Process Cycling Power
-        working-directory: ./strava_data/cycling/
+        working-directory: ./strava_data/cycling
         env:
           STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
           STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
