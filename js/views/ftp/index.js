@@ -32,20 +32,16 @@ const getBiometricsData = (planMd) => {
 
 const fetchPacingData = async () => {
     try {
-        // ✅ CHANGED: Now fetching from the new Strava PR file
         const response = await fetch('strava_data/running/my_running_prs.md');
         if (!response.ok) return [];
         const text = await response.text();
         const records = [];
         
-        // Parse the Strava Markdown Table
-        // Format: | Distance | All Time Best | Date | ...
         text.split('\n').forEach(line => {
             const cols = line.split('|').map(c => c.trim());
-            // Check for valid data row (not header, not separator)
             if (cols.length >= 3 && !line.includes('---') && cols[1] !== 'Distance' && cols[1] !== '') {
                 const label = cols[1]; 
-                const value = cols[2].replace(/\*\*/g, ''); // Remove Markdown bolding
+                const value = cols[2].replace(/\*\*/g, ''); 
                 
                 if (value && value !== '--') {
                     records.push({ label, value });
@@ -126,28 +122,17 @@ const initPacingChart = async (canvasId) => {
     
     if (!ctx || !data.length) return;
 
-    // Map distances to "Miles" for plotting
     const distMap = { 
-        '400m': 0.248, 
-        '1/2 mile': 0.5, 
-        '1k': 0.621, 
-        '1 mile': 1.0, 
-        '2 mile': 2.0, 
-        '5k': 3.106, 
-        '10k': 6.213, 
-        '15k': 9.32,
-        '10 mile': 10.0,
-        '20k': 12.42,
-        'Half-Marathon': 13.109, 
-        '30k': 18.64,
-        'Marathon': 26.218,
-        '50k': 31.06
+        '400m': 0.248, '1/2 mile': 0.5, '1k': 0.621, 
+        '1 mile': 1.0, '2 mile': 2.0, '5k': 3.106, 
+        '10k': 6.213, '15k': 9.32, '10 mile': 10.0,
+        '20k': 12.42, 'Half-Marathon': 13.109, 
+        '30k': 18.64, 'Marathon': 26.218, '50k': 31.06
     };
     
     const processed = data
         .filter(d => Object.keys(distMap).some(k => d.label.toLowerCase() === k.toLowerCase()))
         .map(d => {
-            // Find key case-insensitively
             const key = Object.keys(distMap).find(k => d.label.toLowerCase() === k.toLowerCase());
             const parts = d.value.split(':').map(Number);
             let totalSeconds = parts.length === 3 ? parts[0]*3600 + parts[1]*60 + parts[2] : parts[0]*60 + parts[1];
@@ -155,20 +140,20 @@ const initPacingChart = async (canvasId) => {
             
             return {
                 label: d.label,
-                dist: miles,
-                pace: totalSeconds / miles // Seconds per mile
+                x: miles, // X Axis = Distance in Miles
+                y: totalSeconds / miles // Y Axis = Pace (sec/mile)
             };
         })
-        .sort((a, b) => a.dist - b.dist);
+        .sort((a, b) => a.x - b.x);
 
     if (window.Chart) {
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: processed.map(d => d.label),
+                // IMPORTANT: For log scales, we pass the object {x, y} directly
                 datasets: [{
                     label: 'Pace (min/mi)',
-                    data: processed.map(d => d.pace / 60),
+                    data: processed,
                     borderColor: '#38bdf8',
                     backgroundColor: 'rgba(56, 189, 248, 0.2)',
                     fill: true,
@@ -188,25 +173,46 @@ const initPacingChart = async (canvasId) => {
                         ticks: {
                             color: '#94a3b8',
                             callback: val => {
-                                const m = Math.floor(val);
-                                const s = Math.round((val - m) * 60);
+                                const m = Math.floor(val / 60);
+                                const s = Math.round(val % 60);
                                 return `${m}:${s.toString().padStart(2, '0')}`;
                             }
                         }
                     },
                     x: {
+                        type: 'logarithmic', // <--- LOGARITHMIC SCALE
                         grid: { color: '#334155' },
-                        ticks: { color: '#94a3b8' }
+                        title: { display: true, text: 'Distance', color: '#94a3b8' },
+                        ticks: {
+                            color: '#94a3b8',
+                            maxRotation: 45,
+                            minRotation: 45,
+                            // Custom tick formatter to show readable labels instead of 1, 10, 100
+                            callback: function(value) {
+                                // Map common mile markers back to text labels
+                                if (value >= 0.2 && value <= 0.3) return '400m';
+                                if (value === 1) return '1 mi';
+                                if (value >= 3 && value <= 3.2) return '5k';
+                                if (value >= 6 && value <= 6.3) return '10k';
+                                if (value >= 13 && value <= 13.2) return 'Half';
+                                if (value >= 26 && value <= 26.3) return 'Marathon';
+                                return '';
+                            }
+                        }
                     }
                 },
                 plugins: { 
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
+                            title: (items) => {
+                                const item = items[0];
+                                return processed[item.dataIndex].label; // Show "5k", "Marathon" in tooltip title
+                            },
                             label: ctx => {
-                                const val = ctx.raw;
-                                const m = Math.floor(val);
-                                const s = Math.round((val - m) * 60);
+                                const val = ctx.raw.y;
+                                const m = Math.floor(val / 60);
+                                const s = Math.round(val % 60);
                                 return `Pace: ${m}:${s.toString().padStart(2, '0')} /mi`;
                             }
                         }
