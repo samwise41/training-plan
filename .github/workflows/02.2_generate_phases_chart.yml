@@ -1,4 +1,4 @@
-name: Generate Training Projection Chart
+name: 02.2 Generate Training Projection Chart
 
 on:
   push:
