@@ -1,4 +1,4 @@
-name: Update Cycling Power
+name: 02 Update Cycling Power
 
 on:
   workflow_dispatch:
