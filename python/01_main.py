@@ -6,7 +6,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(SCRIPT_DIR)
 
 # Import our new modular components
-import 01_fetch_garmin
+import _01_fetch_garmin
 import analyze_trends
 from modules import config, sync_database, update_visuals, git_ops
 
@@ -17,7 +17,7 @@ def main():
     # STEP 1: Fetch from Garmin
     # (Captures RPE, Feeling, and raw stats to JSON)
     try:
-        01_fetch_garmin.main()
+        _01_fetch_garmin.main()
     except Exception as e:
         print(f"⚠️ Garmin Fetch Warning: {e}")
         # We continue even if fetch fails, so we can re-process existing data
