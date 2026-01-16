@@ -1,4 +1,4 @@
-name: Manual Activity Hydration
+name: 99 Manual Activity Hydration
 
 on:
   workflow_dispatch:
