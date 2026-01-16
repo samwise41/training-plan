@@ -1,4 +1,4 @@
-name: 01 Training Data Sync
+name: 01.1 Training Data Sync
 
 on:
   schedule:
