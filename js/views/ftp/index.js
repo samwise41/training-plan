@@ -79,7 +79,8 @@ const renderLogChart = (data, options) => {
         width = 800, height = 300, 
         yLabel = '', 
         colorAll = '#a855f7', color6w = '#22c55e',
-        xType = 'time' // 'time' or 'distance'
+        xType = 'time', // 'time' or 'distance'
+        showPoints = true // New Option: Toggle dots
     } = options;
 
     const pad = { t: 30, b: 30, l: 50, r: 20 };
@@ -116,19 +117,16 @@ const renderLogChart = (data, options) => {
     // 2. Generate Grid Lines (Ticks)
     let xTicks = [];
     if (xType === 'time') {
-        // Specific time markers (1s, 1m, 5m, 20m, 1h...)
         const timeMarkers = [
             {v: 1, l: '1s'}, {v: 60, l: '1m'}, {v: 300, l: '5m'}, 
             {v: 1200, l: '20m'}, {v: 3600, l: '1h'}, {v: 14400, l: '4h'}
         ];
         xTicks = timeMarkers.filter(m => m.v >= minX && m.v <= maxX);
     } else {
-        // Specific distance markers
         const distMarkers = [
             {v: 0.248, l: '400m'}, {v: 1.0, l: '1mi'}, {v: 3.106, l: '5k'}, 
             {v: 6.213, l: '10k'}, {v: 13.109, l: 'Half'}, {v: 26.218, l: 'Full'}
         ];
-        // Looser filter for distances to catch slight variances
         xTicks = distMarkers.filter(m => m.v >= minX * 0.9 && m.v <= maxX * 1.1);
     }
 
@@ -143,8 +141,11 @@ const renderLogChart = (data, options) => {
         `;
     });
 
-    // Y-Axis Grid (3 lines)
-    [minY, (minY+maxY)/2, maxY].forEach(val => {
+    // Y-Axis Grid (Generate ~6 lines)
+    const ySteps = 5;
+    for (let i = 0; i <= ySteps; i++) {
+        const pct = i / ySteps;
+        const val = minY + (pct * (maxY - minY));
         const y = getY(val);
         gridHtml += `
             <line x1="${pad.l}" y1="${y}" x2="${width - pad.r}" y2="${y}" stroke="#334155" stroke-width="1" opacity="0.3" />
@@ -152,7 +153,7 @@ const renderLogChart = (data, options) => {
                 ${xType === 'distance' ? formatPace(val) : Math.round(val)}
             </text>
         `;
-    });
+    }
 
     // 3. Generate Paths
     const genPath = (dataset, key) => {
@@ -169,27 +170,26 @@ const renderLogChart = (data, options) => {
     const pathAll = genPath(data, 'yAll');
     const path6w = genPath(data, 'y6w');
 
-    // 4. Generate Points
+    // 4. Generate Points (ONLY if showPoints is true)
     let pointsHtml = '';
-    data.forEach(pt => {
-        const x = getX(pt.x);
-        
-        // All Time Point
-        if (pt.yAll !== null) {
-            pointsHtml += `
-                <circle cx="${x}" cy="${getY(pt.yAll)}" r="3" fill="#0f172a" stroke="${colorAll}" stroke-width="2">
-                    <title>${pt.label || pt.x} - All Time: ${xType==='distance' ? formatPace(pt.yAll) : Math.round(pt.yAll)}</title>
-                </circle>`;
-        }
-        
-        // 6 Week Point
-        if (pt.y6w !== null) {
-             pointsHtml += `
-                <circle cx="${x}" cy="${getY(pt.y6w)}" r="3" fill="#0f172a" stroke="${color6w}" stroke-width="2">
-                    <title>${pt.label || pt.x} - 6 Week: ${xType==='distance' ? formatPace(pt.y6w) : Math.round(pt.y6w)}</title>
-                </circle>`;
-        }
-    });
+    if (showPoints) {
+        data.forEach(pt => {
+            const x = getX(pt.x);
+            
+            if (pt.yAll !== null) {
+                pointsHtml += `
+                    <circle cx="${x}" cy="${getY(pt.yAll)}" r="3" fill="#0f172a" stroke="${colorAll}" stroke-width="2">
+                        <title>${pt.label || pt.x} - All Time: ${xType==='distance' ? formatPace(pt.yAll) : Math.round(pt.yAll)}</title>
+                    </circle>`;
+            }
+            if (pt.y6w !== null) {
+                 pointsHtml += `
+                    <circle cx="${x}" cy="${getY(pt.y6w)}" r="3" fill="#0f172a" stroke="${color6w}" stroke-width="2">
+                        <title>${pt.label || pt.x} - 6 Week: ${xType==='distance' ? formatPace(pt.y6w) : Math.round(pt.y6w)}</title>
+                    </circle>`;
+            }
+        });
+    }
 
     return `
         <div class="w-full h-full overflow-hidden">
@@ -247,32 +247,31 @@ export function renderFTP(planMd) {
     const cyclingStatsHtml = renderCyclingStats(bio);
     const runningStatsHtml = renderRunningStats(bio);
     
-    // Placeholders for async content
     const cyclingChartId = `cycle-chart-${Date.now()}`;
     const runningChartId = `run-chart-${Date.now()}`;
 
     // Load Charts Async
     (async () => {
-        // 1. CYCLING
+        // 1. CYCLING (High Density -> showPoints: false)
         const cyclingData = await fetchCyclingData();
         const cEl = document.getElementById(cyclingChartId);
         if (cEl && cyclingData.length) {
-            // Process data for chart
             const chartData = cyclingData.map(d => ({
                 x: d.seconds,
                 yAll: d.all_time_watts,
                 y6w: d.six_week_watts || null
-            })).filter(d => d.x >= 1); // Remove 0s
+            })).filter(d => d.x >= 1);
             
             cEl.innerHTML = renderLogChart(chartData, { 
                 xType: 'time', 
                 colorAll: '#a855f7', 
                 color6w: '#22c55e',
-                yLabel: 'Watts'
+                yLabel: 'Watts',
+                showPoints: false // <--- CLEAN LINE ONLY
             });
         }
 
-        // 2. RUNNING
+        // 2. RUNNING (Discrete PRs -> showPoints: true)
         const runningData = await fetchRunningData();
         const rEl = document.getElementById(runningChartId);
         if (rEl && runningData.length) {
@@ -287,7 +286,8 @@ export function renderFTP(planMd) {
                 xType: 'distance', 
                 colorAll: '#38bdf8', 
                 color6w: '#f97316',
-                yLabel: 'Pace'
+                yLabel: 'Pace',
+                showPoints: true // <--- KEEP DOTS
             });
         }
     })();
