@@ -25,7 +25,6 @@ const fetchCyclingData = async () => {
 
 const fetchRunningData = async () => {
     try {
-        // We fetch the MARKDOWN file to get Distance-based PRs
         const res = await fetch('strava_data/running/my_running_prs.md');
         if (!res.ok) return [];
         const text = await res.text();
@@ -52,7 +51,7 @@ const parseRunningMarkdown = (md) => {
             if (dist) {
                 const parseTime = (str) => {
                     if (!str || str === '--') return null;
-                    const clean = str.replace(/\*\*/g, ''); // Remove bold
+                    const clean = str.replace(/\*\*/g, '');
                     const parts = clean.split(':').map(Number);
                     if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
                     if (parts.length === 2) return parts[0]*60 + parts[1];
@@ -62,7 +61,6 @@ const parseRunningMarkdown = (md) => {
                 const timeAllTime = parseTime(cols[2]);
                 const time6Week = parseTime(cols[4]);
 
-                // Calculate Pace (min/mile)
                 const paceAllTime = timeAllTime ? (timeAllTime / 60) / dist : null;
                 const pace6Week = time6Week ? (time6Week / 60) / dist : null;
 
@@ -109,10 +107,9 @@ const getBiometricsData = (planMd) => {
 const initCharts = async () => {
     if (!window.Chart) return;
 
-    // 1. CYCLING CHART (Clean Log Grid)
+    // 1. CYCLING CHART
     const cyclingData = await fetchCyclingData();
     if (cyclingData.length > 0) {
-        // Define exact ticks we want to show
         const tickValues = [1, 5, 15, 30, 60, 120, 300, 600, 1200, 1800, 3600, 7200, 10800, 14400, 18000, 21600];
         
         const ctx = document.getElementById('cyclingPowerChart');
@@ -126,14 +123,13 @@ const initCharts = async () => {
                             label: 'All Time',
                             data: cyclingData.map(d => ({ x: d.seconds, y: d.all_time_watts })),
                             borderColor: '#a855f7',
-                            backgroundColor: 'rgba(168, 85, 247, 0.1)',
-                            borderWidth: 2, pointRadius: 0, tension: 0.1, fill: true
+                            borderWidth: 2, pointRadius: 0, tension: 0.1, fill: false
                         },
                         {
                             label: '6 Week',
                             data: cyclingData.map(d => ({ x: d.seconds, y: d.six_week_watts || null })),
                             borderColor: '#22c55e',
-                            borderWidth: 2, pointRadius: 0, borderDash: [5, 5], tension: 0.1
+                            borderWidth: 2, pointRadius: 0, borderDash: [5, 5], tension: 0.1, fill: false
                         }
                     ]
                 },
@@ -170,29 +166,30 @@ const initCharts = async () => {
         }
     }
 
-    // 2. RUNNING CHART (Distance Axis)
+    // 2. RUNNING CHART
     const runningData = await fetchRunningData();
     if (runningData.length > 0) {
         const ctx = document.getElementById('runningPacingChart');
+        // Extract the exact distances we want to show
+        const runningTicks = runningData.map(d => d.dist);
+
         if (ctx) {
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    // Use Distance (Miles) for X, but map labels to standard names
                     labels: runningData.map(d => d.label), 
                     datasets: [
                         {
                             label: 'All Time',
                             data: runningData.map(d => ({ x: d.dist, y: d.paceAllTime })),
                             borderColor: '#38bdf8',
-                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                            borderWidth: 2, pointRadius: 4, tension: 0.3, fill: true
+                            borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false
                         },
                         {
                             label: '6 Week',
                             data: runningData.map(d => ({ x: d.dist, y: d.pace6Week })),
                             borderColor: '#f97316',
-                            borderWidth: 2, pointRadius: 4, borderDash: [5, 5], tension: 0.3
+                            borderWidth: 2, pointRadius: 4, borderDash: [5, 5], tension: 0.3, fill: false
                         }
                     ]
                 },
@@ -208,15 +205,20 @@ const initCharts = async () => {
                             ticks: {
                                 color: '#94a3b8',
                                 autoSkip: false,
+                                maxRotation: 45,
+                                minRotation: 45,
                                 callback: function(val) {
-                                    // Match tick value to data distance to show label
-                                    const match = runningData.find(d => Math.abs(d.dist - val) < 0.1);
+                                    // Only show label if val is extremely close to a data point
+                                    const match = runningData.find(d => Math.abs(d.dist - val) < 0.001);
                                     return match ? match.label : '';
                                 }
+                            },
+                            // Strict tick generation prevents duplicates
+                            afterBuildTicks: (axis) => {
+                                axis.ticks = runningTicks.map(v => ({ value: v }));
                             }
                         },
                         y: {
-                            // Removed reverse: true. Now Slower (higher number) is at Top.
                             grid: { color: '#334155' },
                             title: { display: true, text: 'Pace (min/mi)', color: '#94a3b8' },
                             ticks: {
