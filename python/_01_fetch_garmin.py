@@ -4,6 +4,8 @@ from garminconnect import Garmin
 
 # --- CONFIGURATION ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(SCRIPT_DIR)
 JSON_FILE = os.path.join(PARENT_DIR, 'garmin_data', 'my_garmin_data_ALL.json')
 FETCH_LIMIT = 400
 
