@@ -2,6 +2,7 @@ import requests
 import os
 import pandas as pd
 import json
+import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
@@ -10,13 +11,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(BASE_DIR)
 load_dotenv(os.path.join(PARENT_DIR, '.env'))
 
-ACTIVITY_LIST = os.path.join(PARENT_DIR, "activity_ids.txt")
 CACHE_DIR = os.path.join(PARENT_DIR, "power_cache")
 OUTPUT_GRAPH = os.path.join(BASE_DIR, "power_curve_graph.json")
 OUTPUT_MD = os.path.join(BASE_DIR, "my_power_profile.md")
 
 MAX_DURATION_SECONDS = 21600 
-BATCH_SIZE = 20 
+MAX_NEW_TO_PROCESS = 20  # Stop after processing this many NEW files
+CONSECUTIVE_EXISTING_LIMIT = 50 # Stop if we see this many old files in a row
 
 KEY_INTERVALS = [
     ("1s", 1), ("5s", 5), ("15s", 15), ("30s", 30),
@@ -52,69 +53,115 @@ def format_duration(seconds):
     return " ".join(parts)
 
 def update_cache(token):
-    if not os.path.exists(ACTIVITY_LIST):
-        print(f"❌ CRITICAL ERROR: Could not find master list at: {ACTIVITY_LIST}")
-        return
-
     if not os.path.exists(CACHE_DIR): os.makedirs(CACHE_DIR)
     
-    cached_ids = set([f.split('.')[0] for f in os.listdir(CACHE_DIR) if f.endswith('.json')])
-    to_process = []
-    
-    with open(ACTIVITY_LIST, "r") as f:
-        for line in f:
-            parts = line.strip().split(',')
-            if len(parts) < 3: continue
-            aid, atype = parts[0], parts[1]
-            if atype == "Ride" and aid not in cached_ids:
-                to_process.append(aid)
+    # 1. Check what we already have
+    cached_ids = set([int(f.split('.')[0]) for f in os.listdir(CACHE_DIR) if f.endswith('.json')])
+    print(f"📂 Local Cache: Found {len(cached_ids)} existing rides.")
 
-    if not to_process:
-        print("✅ Power Cache is up to date.")
-    elif token:
-        print(f"⚡ Caching {len(to_process)} new rides...")
-        headers = {'Authorization': f"Bearer {token}"}
-        for i, act_id in enumerate(to_process[:BATCH_SIZE]):
-            print(f"   [{i+1}/{BATCH_SIZE}] Processing {act_id}...", end="\r")
+    if not token:
+        print("⚠️ No Token. Skipping Cache Update.")
+        return
+
+    headers = {'Authorization': f"Bearer {token}"}
+    
+    page = 1
+    processed_count = 0
+    consecutive_existing = 0
+
+    print("📡 Syncing recent rides from Strava...")
+    
+    while processed_count < MAX_NEW_TO_PROCESS:
+        # Fetch a batch of 50
+        try:
+            r = requests.get(
+                "https://www.strava.com/api/v3/athlete/activities", 
+                headers=headers, 
+                params={'page': page, 'per_page': 50}
+            )
+            r.raise_for_status()
+            activities = r.json()
+        except Exception as e:
+            print(f"❌ API Error on page {page}: {e}")
+            break
+            
+        if not activities:
+            print("✅ No more activities found.")
+            break
+
+        for act in activities:
+            # FILTER: Only Cycling
+            if act['type'] not in ['Ride', 'VirtualRide']:
+                continue
+            
+            aid = act['id']
+
+            # CHECK: Do we have it?
+            if aid in cached_ids:
+                consecutive_existing += 1
+                if consecutive_existing >= CONSECUTIVE_EXISTING_LIMIT:
+                    print("✅ Found 50 existing rides in a row. Sync complete.")
+                    return
+                continue
+            
+            # If we get here, it's a NEW ride
+            consecutive_existing = 0 
+            print(f"   🚴 Processing NEW ride: {act['name']} ({act['start_date_local'][:10]})")
+
             try:
                 # 1. Streams
-                url = f"https://www.strava.com/api/v3/activities/{act_id}/streams"
-                r = requests.get(url, headers=headers, params={'keys': 'watts', 'key_by_type': 'true'})
-                if r.status_code == 429: break 
-                if r.status_code != 200: continue
-                streams = r.json()
+                url = f"https://www.strava.com/api/v3/activities/{aid}/streams"
+                r_stream = requests.get(url, headers=headers, params={'keys': 'watts', 'key_by_type': 'true'})
+                
+                if r_stream.status_code == 429: 
+                    print("⚠️ Rate Limit Hit. Stopping.")
+                    return
+                
+                streams = r_stream.json() if r_stream.status_code == 200 else {}
                 
                 if 'watts' not in streams:
-                    with open(os.path.join(CACHE_DIR, f"{act_id}.json"), "w") as f:
-                        json.dump({'id': act_id, 'no_power': True}, f)
+                    # Save "no power" placeholder to prevent re-fetching
+                    with open(os.path.join(CACHE_DIR, f"{aid}.json"), "w") as f:
+                        json.dump({'id': aid, 'no_power': True, 'name': act['name'], 'date': act['start_date_local'][:10]}, f)
+                    processed_count += 1
                     continue
 
-                # 2. Details
-                r2 = requests.get(f"https://www.strava.com/api/v3/activities/{act_id}", headers=headers)
-                details = r2.json()
+                # 2. Details (Re-fetch for consistent full data)
+                r_det = requests.get(f"https://www.strava.com/api/v3/activities/{aid}", headers=headers)
+                details = r_det.json()
 
-                # 3. Curve
+                # 3. Curve Calculation
                 power_series = pd.Series(streams['watts']['data'])
                 limit = min(len(power_series), MAX_DURATION_SECONDS)
                 curve = []
+                # Simple optimization: only calculate necessary durations if strict, 
+                # but your existing logic does every second, which is fine for accuracy.
                 for seconds in range(1, limit + 1):
                     peak = int(power_series.rolling(window=seconds).mean().max())
                     curve.append(peak)
 
                 # 4. Save
                 data = {
-                    'id': act_id,
+                    'id': aid,
                     'name': details['name'],
                     'date': details['start_date_local'][:10],
                     'power_curve': curve
                 }
-                with open(os.path.join(CACHE_DIR, f"{act_id}.json"), "w") as f:
+                with open(os.path.join(CACHE_DIR, f"{aid}.json"), "w") as f:
                     json.dump(data, f)
+                
+                processed_count += 1
+                if processed_count >= MAX_NEW_TO_PROCESS:
+                    print(f"🛑 Reached limit of {MAX_NEW_TO_PROCESS} new files. Stopping.")
+                    return
+
             except Exception as e:
-                print(f"Error {act_id}: {e}")
-        print("\n💾 Cache update finished.")
-    else:
-        print("⚠️ No Token. Skipping Cache Update.")
+                print(f"❌ Error processing {aid}: {e}")
+
+        page += 1
+        time.sleep(1) # Be nice to API
+
+    print(f"💾 Sync finished. Processed {processed_count} new rides.")
 
 def generate_stats():
     print("📊 Generating Power Profile from Cache...")
@@ -138,7 +185,10 @@ def generate_stats():
         
         if 'power_curve' not in ride: continue
         
-        ride_date = datetime.strptime(ride['date'], "%Y-%m-%d")
+        try:
+            ride_date = datetime.strptime(ride['date'], "%Y-%m-%d")
+        except: continue
+
         is_recent = ride_date >= six_weeks_ago
         curve = ride['power_curve']
         
@@ -166,7 +216,6 @@ def generate_stats():
                 at = all_time_best[idx]
                 sw = six_week_best[idx]
                 
-                # Helper: Date is the Link
                 def fmt_link(record):
                     if not record: return "--"
                     return f"[{record['date']}](https://www.strava.com/activities/{record['id']})"
