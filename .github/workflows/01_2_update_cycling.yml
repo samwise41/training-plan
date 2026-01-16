@@ -3,11 +3,12 @@ name: 01.2 Update Cycling Power
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 8 * * *'
+  #  - cron: '30 8 * * *'
+  - cron: '*/30 * * * *'  
 
 permissions:
   contents: write
-
+  
 jobs:
   update-cycling:
     runs-on: ubuntu-latest
