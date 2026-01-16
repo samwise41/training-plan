@@ -1,0 +1,48 @@
+name: Seed Power Profile
+
+on:
+  workflow_dispatch: # Manual trigger button
+
+permissions:
+  contents: write
+
+jobs:
+  seed-power:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv pandas
+
+      - name: Run Seed Cache Script
+        working-directory: ./strava_data
+        env:
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+        run: python 0_seed_power.py
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "StravaBot"
+          git config --global user.email "bot@github.com"
+          
+          # ⭐️ FIX: Add the Cache Folder explicitly ⭐️
+          git add -f strava_data/power_cache/
+          
+          # Check if there are changes before committing to avoid errors
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "⚡ Seeded Power Cache Files"
+            git pull --rebase
+            git push
+          fi

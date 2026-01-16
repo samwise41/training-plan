@@ -1,4 +1,3 @@
-// js/views/zones/logic.js
 import { Parser } from '../../parser.js';
 import { CONFIG } from './config.js';
 
@@ -13,28 +12,17 @@ export const getBiometricsData = (planMd) => {
     const weightKg = weight * 0.453592;
     const wkgNum = weightKg > 0 ? (watts / weightKg) : 0;
     
-    // Determine Category
     const cat = CONFIG.CATEGORIES.find(c => wkgNum >= c.threshold) || CONFIG.CATEGORIES[CONFIG.CATEGORIES.length - 1];
     const percent = Math.min(Math.max((wkgNum - CONFIG.WKG_SCALE.min) / (CONFIG.WKG_SCALE.max - CONFIG.WKG_SCALE.min), 0), 1);
 
-    return {
-        watts,
-        weight,
-        lthr,
-        runFtp,
-        fiveK,
-        wkgNum,
-        cat,
-        percent
-    };
+    return { watts, weight, lthr, runFtp, fiveK, wkgNum, cat, percent };
 };
 
 export const parseZoneTables = (planMd) => {
-    // Exact logic from your original file
     const section = Parser.getSection(planMd, "Training Parameters") || Parser.getSection(planMd, "Zones");
-    let current = '', html = '', categories = {};
+    let current = '', categories = {};
     
-    if (!section) return `<p class="text-slate-500 text-center col-span-2">No zone data found.</p>`;
+    if (!section) return { cycling: `<p class="text-slate-500">No data</p>`, running: '' };
     
     section.split('\n').forEach(line => {
         const trimmed = line.trim();
@@ -45,19 +33,13 @@ export const parseZoneTables = (planMd) => {
             const [labelRaw, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
             const label = labelRaw.trim();
             
-            // --- ROBUST LOGIC START (Preserved) ---
-            let zClass = 'z-1'; // Default
+            let zClass = 'z-1';
             const cleanLabel = label.toLowerCase();
-
-            if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) {
-                zClass = 'z-ss';
-            } else {
+            if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) zClass = 'z-ss';
+            else {
                 const zMatch = cleanLabel.match(/zone (\d)/);
-                if (zMatch) {
-                    zClass = `z-${zMatch[1]}`;
-                }
+                if (zMatch) zClass = `z-${zMatch[1]}`;
             }
-            // --- ROBUST LOGIC END ---
 
             categories[current].push(`
                 <div class="zone-row ${zClass}">
@@ -68,13 +50,46 @@ export const parseZoneTables = (planMd) => {
         }
     });
     
+    let cyclingHtml = '';
+    let runningHtml = '';
+
     Object.keys(categories).forEach(k => {
-        html += `
+        const cardHtml = `
             <div class="zone-card">
                 <div class="zone-card-title">${k}</div>
                 ${categories[k].join('')}
             </div>
         `;
+        
+        const lowerKey = k.toLowerCase();
+        if (lowerKey.includes('cycling') || (lowerKey.includes('power') && !lowerKey.includes('running'))) {
+            cyclingHtml += cardHtml;
+        } else {
+            runningHtml += cardHtml;
+        }
     });
-    return html;
+
+    return { cycling: cyclingHtml, running: runningHtml };
+};
+
+export const fetchPacingData = async () => {
+    try {
+        const response = await fetch('garmind_data/garmin_records.md');
+        if (!response.ok) return [];
+        const text = await response.text();
+        const records = [];
+        
+        text.split('\n').forEach(line => {
+            if (line.trim().startsWith('|') && !line.includes('---')) {
+                const cols = line.split('|').map(c => c.trim());
+                if (cols.length > 3 && cols[1] === 'Running') {
+                    records.push({ label: cols[2], value: cols[3] });
+                }
+            }
+        });
+        return records;
+    } catch (e) {
+        console.error("Error parsing records:", e);
+        return [];
+    }
 };
