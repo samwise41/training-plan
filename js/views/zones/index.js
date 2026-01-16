@@ -1,62 +1,70 @@
-import { getBiometricsData, parseZoneTables } from './logic.js';
-import { renderGauge, renderCyclingStats, renderRunningStats, renderButton, initPacingChart } from './components.js';
+import { Parser } from '../../parser.js';
+
+const parseZoneTables = (planMd) => {
+    const section = Parser.getSection(planMd, "Training Parameters") || Parser.getSection(planMd, "Zones");
+    let current = '', categories = {};
+    
+    if (!section) return { cycling: `<p class="text-slate-500">No data</p>`, running: '' };
+    
+    section.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('###')) {
+            current = trimmed.replace(/###/g, '').split('(')[0].trim();
+            categories[current] = [];
+        } else if (current && trimmed.includes(':')) {
+            const [labelRaw, range] = trimmed.replace(/[\*\-\+]/g, '').split(':');
+            const label = labelRaw.trim();
+            
+            let zClass = 'z-1';
+            const cleanLabel = label.toLowerCase();
+            if (cleanLabel.includes('sweet spot') || cleanLabel.includes('sweetspot')) zClass = 'z-ss';
+            else {
+                const zMatch = cleanLabel.match(/zone (\d)/);
+                if (zMatch) zClass = `z-${zMatch[1]}`;
+            }
+
+            categories[current].push(`
+                <div class="zone-row ${zClass}">
+                    <span class="font-bold">${label}</span>
+                    <span class="font-mono text-slate-400">${range ? range.trim() : '--'}</span>
+                </div>
+            `);
+        }
+    });
+    
+    let cyclingHtml = '';
+    let runningHtml = '';
+
+    Object.keys(categories).forEach(k => {
+        const cardHtml = `
+            <div class="zone-card">
+                <div class="zone-card-title">${k}</div>
+                ${categories[k].join('')}
+            </div>
+        `;
+        
+        const lowerKey = k.toLowerCase();
+        if (lowerKey.includes('cycling') || (lowerKey.includes('power') && !lowerKey.includes('running'))) {
+            cyclingHtml += cardHtml;
+        } else {
+            runningHtml += cardHtml;
+        }
+    });
+
+    return { cycling: cyclingHtml, running: runningHtml };
+};
 
 export function renderZones(planMd) {
-    const bio = getBiometricsData(planMd);
-    
-    // Components
-    const cyclingStatsHtml = renderCyclingStats(bio);
-    const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
-    const runningStatsHtml = renderRunningStats(bio);
-    
-    // Split Zones
     const zones = parseZoneTables(planMd);
-    const buttonHtml = renderButton();
-
-    // Async Chart Init
-    setTimeout(() => initPacingChart('runningPacingChart'), 0);
 
     return `
         <div class="zones-layout grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <div class="flex flex-col gap-6">
-                
-                <div class="h-72">
-                    ${gaugeHtml}
-                </div>
-
-                <div class="h-48">
-                    ${cyclingStatsHtml}
-                </div>
-                
-                <div class="flex flex-col gap-4">
-                    ${zones.cycling}
-                </div>
+            <div class="flex flex-col gap-4">
+                ${zones.cycling}
             </div>
-
-            <div class="flex flex-col gap-6">
-                
-                <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-xl shadow-lg h-72 flex flex-col">
-                    <div class="flex items-center gap-2 mb-2 shrink-0">
-                        <i class="fa-solid fa-chart-line text-sky-500"></i>
-                        <span class="text-sm font-bold text-slate-400 uppercase tracking-widest">Running Pacing</span>
-                    </div>
-                    <div class="flex-1 w-full relative min-h-0">
-                        <canvas id="runningPacingChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="h-48">
-                    ${runningStatsHtml}
-                </div>
-
-                <div class="flex flex-col gap-4 w-full">
-                    ${zones.running}
-                </div>
+            <div class="flex flex-col gap-4">
+                ${zones.running}
             </div>
-
         </div>
-
-        ${buttonHtml}
     `;
 }

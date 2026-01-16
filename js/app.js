@@ -20,6 +20,7 @@
     const trendsMod = await safeImport('./views/trends/index.js', 'Trends');
     const gearMod = await safeImport('./views/gear/index.js', 'Gear');
     const zonesMod = await safeImport('./views/zones/index.js', 'Zones');
+    const ftpMod = await safeImport('./views/ftp/index.js', 'FTP'); // <--- NEW MODULE
     const roadmapMod = await safeImport('./views/roadmap/index.js', 'Roadmap');
     const dashMod = await safeImport('./views/dashboard/index.js', 'Dashboard');
     const readinessMod = await safeImport('./views/readiness/index.js', 'Readiness');
@@ -28,24 +29,22 @@
     // --- 2. DESTRUCTURE FUNCTIONS ---
     const Parser = parserMod?.Parser || { parseTrainingLog: () => [], getSection: () => "" };
     const { renderTrends, updateDurationAnalysis } = trendsMod || { renderTrends: () => ({html: ''}) };
-    const { renderGear, updateGearResult } = gearMod || { 
-        renderGear: () => ({ html: '<div class="p-4 text-red-500">Gear module failed to load. Check console for details.</div>', gearData: null }),
-        updateGearResult: () => {} // <--- ADD THIS LINE
-    };
+    const { renderGear, updateGearResult } = gearMod || { renderGear: () => ({ html: '', gearData: null }), updateGearResult: () => {} };
     const { renderZones } = zonesMod || { renderZones: () => '' };
+    const { renderFTP } = ftpMod || { renderFTP: () => '<div class="p-4 text-red-500">FTP Module Failed</div>' }; // <--- NEW FUNCTION
     const { renderRoadmap } = roadmapMod || { renderRoadmap: () => '' };
     const { renderDashboard } = dashMod || { renderDashboard: () => '' };
     const { renderReadiness } = readinessMod || { renderReadiness: () => '' };
     const renderReadinessChart = readinessMod?.renderReadinessChart || (() => {});
-    const { renderMetrics } = metricsMod || { renderMetrics: () => '<div class="p-4 text-red-500">Metrics Module Failed to Load</div>' };
+    const { renderMetrics } = metricsMod || { renderMetrics: () => '' };
 
     console.log(`📦 Modules loaded with ID: ${cacheBuster}`);
 
     const CONFIG = {
         PLAN_FILE: "endurance_plan.md",
-        GEAR_FILE: "Gear.md",
+        GEAR_FILE: "js/views/gear/Gear.md",
         HISTORY_FILE: "MASTER_TRAINING_DATABASE.md",
-        AUTH_FILE: "auth_config.json", // New config file
+        AUTH_FILE: "auth_config.json",
         WEATHER_MAP: {
             0: ["Clear", "☀️"], 1: ["Partly Cloudy", "🌤️"], 2: ["Partly Cloudy", "🌤️"], 3: ["Cloudy", "☁️"],
             45: ["Foggy", "🌫️"], 48: ["Foggy", "🌫️"], 51: ["Drizzle", "🌦️"], 61: ["Rain", "🌧️"], 63: ["Rain", "🌧️"],
@@ -70,20 +69,17 @@
         currentTemp: null,
         hourlyWeather: null,
 
-        // --- UPDATED SECURITY CHECK ---
         async checkSecurity() {
             const curtain = document.getElementById('security-curtain');
             const input = document.getElementById('access-code');
             const btn = document.getElementById('btn-unlock');
             const errorMsg = document.getElementById('access-error');
 
-            // 1. Check Cookie First (Fast Path)
             if (document.cookie.split(';').some((item) => item.trim().startsWith('dashboard_access=true'))) {
                 if (curtain) curtain.classList.add('hidden');
                 return;
             }
 
-            // 2. Show Curtain if no cookie
             if (curtain) curtain.classList.remove('hidden');
 
             if (btn && input) {
@@ -92,23 +88,17 @@
                     if (!enteredPass) return;
 
                     try {
-                        // Fetch the allowed hashes (with cache busting)
                         const response = await fetch(`./${CONFIG.AUTH_FILE}?t=${new Date().getTime()}`);
-                        
-                        if (!response.ok) {
-                            throw new Error("Auth config missing");
-                        }
+                        if (!response.ok) throw new Error("Auth config missing");
 
                         const allowedHashes = await response.json();
                         const userHash = await hashString(enteredPass);
 
                         if (allowedHashes.includes(userHash)) {
-                            // Success
                             document.cookie = "dashboard_access=true; path=/; max-age=315360000; SameSite=Strict";
                             curtain.style.opacity = '0';
                             setTimeout(() => curtain.classList.add('hidden'), 500);
                         } else {
-                            // Fail
                             throw new Error("Invalid Password");
                         }
                     } catch (e) {
@@ -122,7 +112,6 @@
                         input.classList.remove('border-slate-700');
                     }
                 };
-
                 btn.onclick = unlock; 
                 input.onkeypress = (e) => { if (e.key === 'Enter') unlock(); };
                 input.oninput = () => { 
@@ -155,11 +144,9 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="text-right pl-4 border-l border-slate-700/50" id="stat-readiness-box" style="display:none;">
                             <div class="text-3xl font-black text-slate-200 leading-none tracking-tighter" id="stat-readiness-val">--%</div>
                             <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Readiness</div>
-                            
                             <div class="flex flex-col items-end gap-1 mt-1">
                                 <div id="stat-readiness-badge" class="px-1.5 py-0.5 rounded bg-slate-900 border text-[8px] font-bold uppercase tracking-wider inline-block">--</div>
                                 <div id="stat-weakest-link" class="text-[9px] text-slate-500 font-mono hidden">
@@ -173,11 +160,10 @@
         },
 
         async init() {
-            // Await security check because fetching auth file is async
             await this.checkSecurity();
-            
             const initialHash = window.location.hash.substring(1);
-            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness', 'metrics'];
+            // ADDED 'ftp' to valid views
+            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'ftp', 'readiness', 'metrics'];
             const startView = validViews.includes(initialHash) ? initialHash : 'dashboard';
     
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
@@ -196,7 +182,6 @@
                 this.gearMd = await gearRes.text();
                 this.archiveMd = archiveRes.ok ? await archiveRes.text() : "";
 
-                // --- DATA UNIFICATION STRATEGY ---
                 const masterLog = Parser.parseTrainingLog(this.archiveMd); 
                 const planLog = Parser.parseTrainingLog(this.planMd);      
 
@@ -234,6 +219,7 @@
             const navMap = {
                 'nav-dashboard': 'dashboard', 'nav-trends': 'trends', 'nav-logbook': 'logbook',
                 'nav-roadmap': 'roadmap', 'nav-gear': 'gear', 'nav-zones': 'zones', 
+                'nav-ftp': 'ftp', // <--- ADDED MAPPING
                 'nav-readiness': 'readiness', 'nav-metrics': 'metrics'
             };
             Object.keys(navMap).forEach(id => {
@@ -373,7 +359,8 @@
 
         handleHashChange() {
             const hash = window.location.hash.substring(1); 
-            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'readiness', 'metrics'];
+            // ADDED 'ftp' to valid views
+            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'ftp', 'readiness', 'metrics'];
             const view = validViews.includes(hash) ? hash : 'dashboard';
             this.renderView(view);
         },
@@ -383,7 +370,7 @@
         renderView(view) {
             const titles = { 
                 dashboard: 'Weekly Schedule', trends: 'Trends & KPIs', logbook: 'Logbook', roadmap: 'Season Roadmap', 
-                gear: 'Gear Choice', zones: 'Training Zones', readiness: 'Race Readiness', metrics: 'Performance Metrics'
+                gear: 'Gear Choice', zones: 'Training Zones', ftp: 'Performance Profile', readiness: 'Race Readiness', metrics: 'Performance Metrics'
             };
             const titleEl = document.getElementById('header-title-dynamic');
             if (titleEl) titleEl.innerText = titles[view] || 'Dashboard';
@@ -404,6 +391,7 @@
                         this.updateGearResult(); 
                     } 
                     else if (view === 'zones') content.innerHTML = renderZones(this.planMd);
+                    else if (view === 'ftp') content.innerHTML = renderFTP(this.planMd); // <--- RENDER NEW VIEW
                     else if (view === 'trends') {
                         const result = renderTrends(this.allData); 
                         content.innerHTML = result.html;
