@@ -4,7 +4,7 @@ from garminconnect import Garmin
 
 # --- CONFIGURATION ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_FILE = os.path.join(SCRIPT_DIR, 'my_garmin_data_ALL.json')
+JSON_FILE = os.path.join(PARENT_DIR, 'garmind_data', 'my_garmin_data_ALL.json')
 FETCH_LIMIT = 400
 
 # --- CREDENTIALS ---
@@ -33,7 +33,7 @@ def main():
 
     try:
         print("🔐 Authenticating...")
-        client = Garmin(EMAIL, PASSWORD)
+        client = (EMAIL, PASSWORD)
         client.login()
     except Exception as e:
         print(f"❌ Login Failed: {e}")
@@ -70,7 +70,7 @@ def main():
                 
                 # --- LOCATION 1: summaryDTO (Your Finding) ---
                 if 'summaryDTO' in full:
-                    # Garmin uses 0-100 scale. We convert to 1-10 and 1-5.
+                    #  uses 0-100 scale. We convert to 1-10 and 1-5.
                     raw_rpe = full['summaryDTO'].get('directWorkoutRpe')
                     raw_feel = full['summaryDTO'].get('directWorkoutFeel')
                     
