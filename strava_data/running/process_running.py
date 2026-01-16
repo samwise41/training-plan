@@ -13,13 +13,12 @@ load_dotenv(os.path.join(PARENT_DIR, '.env'))
 ACTIVITY_LIST = os.path.join(PARENT_DIR, "activity_ids.txt")
 CACHE_DIR = os.path.join(PARENT_DIR, "running_cache")
 OUTPUT_GRAPH = os.path.join(BASE_DIR, "running_pace_curve.json")
-OUTPUT_MD = os.path.join(BASE_DIR, "my_running_profile.md")
+OUTPUT_MD = os.path.join(BASE_DIR, "my_running_prs.md")
 
 MAX_DURATION_SECONDS = 14400 # 4 Hours
 BATCH_SIZE = 20 
 
-# 1. TABLE CONFIGURATION (Distance Based)
-# The exact list you requested
+# 1. TABLE CONFIGURATION (Distance Based - From Strava)
 DISTANCES = [
     "400m", "1/2 mile", "1 mile", "2 mile", 
     "5k", "10k", "15k", "10 mile", "20k", 
@@ -124,6 +123,7 @@ def update_cache(token):
                 if 'velocity_smooth' in streams:
                     velocity_series = pd.Series(streams['velocity_smooth']['data'])
                     limit = min(len(velocity_series), MAX_DURATION_SECONDS)
+                    # We only calculate every 1s, which is fast enough
                     for seconds in range(1, limit + 1):
                         peak_mps = velocity_series.rolling(window=seconds).mean().max()
                         curve.append(peak_mps)
@@ -142,8 +142,8 @@ def update_cache(token):
                     'id': act_id,
                     'name': details['name'],
                     'date': details['start_date_local'][:10],
-                    'velocity_curve': curve, # For JSON Graph
-                    'best_efforts': efforts  # For MD Table
+                    'velocity_curve': curve, # For JSON Graph (Time)
+                    'best_efforts': efforts  # For MD Table (Distance)
                 }
                 with open(os.path.join(CACHE_DIR, f"{act_id}.json"), "w") as f:
                     json.dump(data, f)
@@ -183,7 +183,7 @@ def generate_stats():
         is_recent = run_date >= six_weeks_ago
         
         # A. Process Curve (Time based) for JSON
-        if 'velocity_curve' in run:
+        if 'velocity_curve' in run and run['velocity_curve']:
             for i, mps in enumerate(run['velocity_curve']):
                 if i >= MAX_DURATION_SECONDS: break
                 if mps is None: continue
