@@ -287,13 +287,18 @@ Please generate a raw markdown text of next week's schedule. Please provide evid
 1. **Analyze (Trends):** Read `COACH_BRIEFING.md` first. Identify any metrics flagged with "⚠️ Low" or "⚠️ High", or those showing "Improving" or "Declining" trends that may require attention. Read `garmin_health.md` first. Identify any trends in the wrong direction that may require attention.
 2. **Analyze (History):** Review the "Actual Workout" column in `MASTER_TRAINING_DATABASE.md`. Check when the last workout labeled "Zwift Race" occurred. 
 3.  **Progression & Scaling Rules:** Review the progression scaling rules and make sure that all rules are incorporated. If a rule is violated, please explain why you chose to violate that rule.
-4. **Diagnose & Prescribe:** You are the coach. Alter the standard microcycle based on the following rules:
+4.  **Inventory Check (Zwift Library):**
+   - **Trigger:** Before prescribing a custom/manual bike workout description.
+   - **Action:** specificially review the `.zwo` files in the `zwift_library/` folder.
+   - **Matching Logic:** Parse the XML to find a workout that matches the specific duration and physiological focus (e.g., "Low Cadence" or "Sweet Spot").
+   - **Priority:** If a suitable file exists, prescribe it by name (e.g., "Do [BIKE] 'Hill Grinder.zwo'"). If not, write a new custom description.
+5. **Diagnose & Prescribe:** You are the coach. Alter the standard microcycle based on the following rules:
    - **The "Fun Factor" Rule:** If I have not done a "Zwift Race" in the past 2 weeks, you MUST substitute one of the high-intensity bike sessions (Threshold or Sweet Spot) with a `[BIKE] Zwift Race`.
    - **Weakness Targeting:** For every flagged metric in the Briefing, alter the drills to fix it. Do not just copy the standard template though.
       - *Example:* If **Torque Efficiency** is low, design the "Strength" ride to specifically focus on force production (choose appropriate drills like low-cadence intervals, hill repeats, or stomps based on the current training phase).
       - *Example:* If **Ground Contact Time** is high, insert specific neuromuscular drills (e.g., high cadence spins or striders) into the aerobic runs.
       - *Requirement:* Use drills that are scientifically known to address the specific weak metric.
-5. **Report:** In your response, explicitly list the weaknesses/history you identified and explain *why* you chose the specific drills (or Zwift Race) to fix them.
+6. **Report:** In your response, explicitly list the weaknesses/history you identified and explain *why* you chose the specific drills (or Zwift Race) to fix them.
 
 **CRITICAL FORMATTING RULES:**
 6. Return the schedule **ONLY** as a raw text Markdown table.
