@@ -10,7 +10,9 @@ ROOT_DIR = os.path.dirname(PYTHON_DIR)    # Project Root
 PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
 BRIEF_FILE = os.path.join(ROOT_DIR, 'COACH_BRIEFING.md') 
-GARMIN_JSON = os.path.join(PYTHON_DIR, 'my_garmin_data_ALL.json')
+
+# --- FIX: Point to the 'garmin_data' folder, NOT 'python' folder ---
+GARMIN_JSON = os.path.join(ROOT_DIR, 'garmin_data', 'my_garmin_data_ALL.json')
 
 # --- SCHEMA ---
 # The Single Source of Truth for your Database Columns
