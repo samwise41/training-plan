@@ -30,7 +30,8 @@ def main():
     # STEP 3: Analyze Trends
     # (Generates Coach Briefing from the fresh DB)
     try:
-        analyze_trends.main()
+        # --- FIX: Use the correct module name ---
+        _01_analyze_trends.main()
     except Exception as e:
         print(f"⚠️ Analysis Warning: {e}")
 
@@ -40,7 +41,10 @@ def main():
         update_visuals.update_weekly_plan(df_master)
 
     # STEP 5: Save to GitHub
-    git_ops.push_changes()
+    try:
+        git_ops.push_changes()
+    except Exception as e:
+        print(f"⚠️ Git Warning: {e}")
 
     print("\n==================================================")
     print("✅ DAILY SYNC COMPLETE")
