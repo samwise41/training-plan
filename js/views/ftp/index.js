@@ -30,6 +30,7 @@ const fetchRunningData = async () => {
     } catch (e) { return []; }
 };
 
+// Parser to extract Date and ID from Markdown Links
 const parseRunningMarkdown = (md) => {
     const rows = [];
     const distMap = { 
@@ -55,14 +56,30 @@ const parseRunningMarkdown = (md) => {
                     return null;
                 };
 
+                // Helper to extract [Date](Link)
+                const extractLink = (str) => {
+                    const match = str.match(/\[(.*?)\]\((.*?)\)/);
+                    return match ? { date: match[1], url: match[2] } : { date: '--', url: '#' };
+                };
+
                 const timeAllTime = parseTime(cols[2]);
+                const metaAllTime = extractLink(cols[3]);
+                
                 const time6Week = parseTime(cols[4]);
+                const meta6Week = extractLink(cols[5]);
 
                 const paceAllTime = timeAllTime ? (timeAllTime / 60) / dist : null;
                 const pace6Week = time6Week ? (time6Week / 60) / dist : null;
 
                 if (paceAllTime) {
-                    rows.push({ label: distKey, dist, paceAllTime, pace6Week });
+                    rows.push({ 
+                        label: distKey, 
+                        dist, 
+                        paceAllTime, 
+                        pace6Week,
+                        atMeta: metaAllTime,
+                        swMeta: meta6Week
+                    });
                 }
             }
         }
@@ -70,9 +87,8 @@ const parseRunningMarkdown = (md) => {
     return rows.sort((a,b) => a.dist - b.dist);
 };
 
-// --- CHART MATH & RENDERING ---
+// --- CHART RENDERING ---
 
-// Helper: Logarithmic Scale Position
 const getLogX = (val, min, max, width, pad) => {
     const logMin = Math.log(min);
     const logMax = Math.log(max);
@@ -81,7 +97,6 @@ const getLogX = (val, min, max, width, pad) => {
     return pad.l + pct * (width - pad.l - pad.r);
 };
 
-// Helper: Linear Scale Position
 const getLinY = (val, min, max, height, pad) => {
     const pct = (val - min) / (max - min);
     return height - pad.b - (pct * (height - pad.t - pad.b));
@@ -96,23 +111,20 @@ const renderLogChart = (containerId, data, options) => {
 
     const pad = { t: 30, b: 30, l: 50, r: 20 };
     
-    // 1. Calculate Limits
+    // Limits
     const xValues = data.map(d => d.x);
     const yValues = data.flatMap(d => [d.yAll, d.y6w]).filter(v => v !== null);
-
     const minX = Math.min(...xValues);
     const maxX = Math.max(...xValues);
-    
     let minY = Math.min(...yValues);
     let maxY = Math.max(...yValues);
     const buf = (maxY - minY) * 0.1;
     minY = Math.max(0, minY - buf);
     maxY = maxY + buf;
 
-    // 2. Generate Grid
+    // Grid Generation
     let gridHtml = '';
     let xTicks = [];
-
     if (xType === 'time') {
         const timeMarkers = [
             {v: 1, l: '1s'}, {v: 60, l: '1m'}, {v: 300, l: '5m'}, 
@@ -148,7 +160,7 @@ const renderLogChart = (containerId, data, options) => {
         `;
     }
 
-    // 3. Generate Paths & Points
+    // Paths
     const genPath = (key) => {
         let d = '';
         data.forEach((pt, i) => {
@@ -160,37 +172,42 @@ const renderLogChart = (containerId, data, options) => {
         return d;
     };
 
-    const pathAll = genPath('yAll');
+    // DRAW ORDER: 6 Week First (Bottom), All Time Second (Top)
     const path6w = genPath('y6w');
+    const pathAll = genPath('yAll');
 
     let pointsHtml = '';
     if (showPoints) {
         data.forEach(pt => {
             const x = getLogX(pt.x, minX, maxX, width, pad);
-            if (pt.yAll !== null) pointsHtml += `<circle cx="${x}" cy="${getLinY(pt.yAll, minY, maxY, height, pad)}" r="3" fill="#0f172a" stroke="${colorAll}" stroke-width="2" />`;
+            // Draw 6W points first
             if (pt.y6w !== null) pointsHtml += `<circle cx="${x}" cy="${getLinY(pt.y6w, minY, maxY, height, pad)}" r="3" fill="#0f172a" stroke="${color6w}" stroke-width="2" />`;
+            // Draw All Time points second (on top)
+            if (pt.yAll !== null) pointsHtml += `<circle cx="${x}" cy="${getLinY(pt.yAll, minY, maxY, height, pad)}" r="3" fill="#0f172a" stroke="${colorAll}" stroke-width="2" />`;
         });
     }
 
-    // 4. Return SVG HTML
     return `
-        <div class="relative w-full h-full group">
-            <svg id="${containerId}-svg" viewBox="0 0 ${width} ${height}" class="w-full h-full" preserveAspectRatio="none">
+        <div class="relative w-full h-full group select-none">
+            <svg id="${containerId}-svg" viewBox="0 0 ${width} ${height}" class="w-full h-full cursor-crosshair" preserveAspectRatio="none">
                 ${gridHtml}
                 <line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" stroke="#475569" stroke-width="1" />
                 
-                <path d="${pathAll}" fill="none" stroke="${colorAll}" stroke-width="2" />
                 <path d="${path6w}" fill="none" stroke="${color6w}" stroke-width="2" stroke-dasharray="5,5" />
+                
+                <path d="${pathAll}" fill="none" stroke="${colorAll}" stroke-width="2" />
+                
                 ${pointsHtml}
                 
                 <line id="${containerId}-guide" x1="0" y1="${pad.t}" x2="0" y2="${height - pad.b}" 
                       stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0" style="pointer-events: none;" />
+                
+                <circle id="${containerId}-lock-dot" cx="0" cy="${pad.t}" r="3" fill="#ef4444" opacity="0" />
 
                 <rect x="${pad.l}" y="${pad.t}" width="${width - pad.l - pad.r}" height="${height - pad.t - pad.b}" fill="transparent" />
             </svg>
             
-            <div id="${containerId}-tooltip" class="absolute hidden pointer-events-none bg-slate-900/95 border border-slate-700 rounded shadow-xl p-2 z-10 min-w-[120px]">
-                </div>
+            <div id="${containerId}-tooltip" class="absolute hidden bg-slate-900/95 border border-slate-700 rounded shadow-xl p-3 z-50 min-w-[140px]"></div>
 
             <div class="absolute top-2 right-4 flex gap-3 pointer-events-none">
                 <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[${colorAll}]"></div><span class="text-[10px] text-slate-300">All Time</span></div>
@@ -200,10 +217,11 @@ const renderLogChart = (containerId, data, options) => {
     `;
 };
 
-// --- INTERACTION HANDLER ---
+// --- INTERACTION LOGIC ---
 const setupChartInteractions = (containerId, data, options) => {
     const svg = document.getElementById(`${containerId}-svg`);
     const guide = document.getElementById(`${containerId}-guide`);
+    const lockDot = document.getElementById(`${containerId}-lock-dot`);
     const tooltip = document.getElementById(`${containerId}-tooltip`);
     
     if (!svg || !guide || !tooltip) return;
@@ -211,24 +229,92 @@ const setupChartInteractions = (containerId, data, options) => {
     const { width = 800, height = 300, colorAll, color6w, xType } = options;
     const pad = { t: 30, b: 30, l: 50, r: 20 };
 
-    // Pre-calculate scales for fast lookup
     const xValues = data.map(d => d.x);
     const minX = Math.min(...xValues);
     const maxX = Math.max(...xValues);
     
-    // Map data to pixel coordinates
     const lookup = data.map(d => ({
         ...d,
         px: getLogX(d.x, minX, maxX, width, pad)
     }));
 
+    let isLocked = false;
+
+    const updateUI = (closest) => {
+        guide.setAttribute('x1', closest.px);
+        guide.setAttribute('x2', closest.px);
+        guide.style.opacity = '1';
+
+        const label = closest.label || (xType === 'time' ? formatDuration(closest.x) : `${closest.x} mi`);
+        const valAll = xType === 'distance' ? formatPace(closest.yAll) : `${closest.yAll}w`;
+        const val6w = closest.y6w ? (xType === 'distance' ? formatPace(closest.y6w) : `${closest.y6w}w`) : '--';
+
+        // Link Helpers
+        const linkAll = closest.atMeta ? closest.atMeta.url : `https://www.strava.com/activities/${closest.at_id || ''}`;
+        const dateAll = closest.atMeta ? closest.atMeta.date : (closest.at_date || '--');
+        const link6w = closest.swMeta ? closest.swMeta.url : `https://www.strava.com/activities/${closest.sw_id || ''}`;
+        const date6w = closest.swMeta ? closest.swMeta.date : (closest.sw_date || '--');
+
+        // Tooltip with Links
+        tooltip.innerHTML = `
+            <div class="flex justify-between items-center border-b border-slate-700 pb-1 mb-2">
+                <span class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">${label}</span>
+                ${isLocked ? '<i class="fa-solid fa-lock text-[10px] text-red-400"></i>' : ''}
+            </div>
+            
+            <div class="flex flex-col gap-2">
+                <div>
+                    <div class="flex justify-between items-center text-xs mb-0.5">
+                        <span style="color: ${colorAll}">All Time</span>
+                        <span class="font-mono text-white font-bold">${valAll}</span>
+                    </div>
+                    <a href="${linkAll}" target="_blank" class="text-[9px] text-slate-500 hover:text-sky-400 transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-calendar-days"></i> ${dateAll} <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
+                    </a>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center text-xs mb-0.5">
+                        <span style="color: ${color6w}">6 Week</span>
+                        <span class="font-mono text-white font-bold">${val6w}</span>
+                    </div>
+                    ${closest.y6w ? `
+                    <a href="${link6w}" target="_blank" class="text-[9px] text-slate-500 hover:text-sky-400 transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-calendar-days"></i> ${date6w} <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
+                    </a>` : '<span class="text-[9px] text-slate-600">No recent record</span>'}
+                </div>
+            </div>
+        `;
+
+        tooltip.classList.remove('hidden');
+        
+        // Smart Positioning
+        const tooltipX = (closest.px / width) * 100;
+        if (tooltipX > 60) {
+            tooltip.style.left = 'auto';
+            tooltip.style.right = `${100 - tooltipX + 3}%`;
+        } else {
+            tooltip.style.right = 'auto';
+            tooltip.style.left = `${tooltipX + 3}%`;
+        }
+        tooltip.style.top = '10%';
+        
+        // Update Lock Indicator
+        if (isLocked) {
+            lockDot.setAttribute('cx', closest.px);
+            lockDot.style.opacity = '1';
+        } else {
+            lockDot.style.opacity = '0';
+        }
+    };
+
     svg.addEventListener('mousemove', (e) => {
+        if (isLocked) return; // Stop updating if locked
+
         const rect = svg.getBoundingClientRect();
-        // Scale mouse position to SVG coordinates
         const scaleX = width / rect.width;
         const mouseX = (e.clientX - rect.left) * scaleX;
 
-        // Find closest data point by pixel distance
         let closest = null;
         let minDist = Infinity;
 
@@ -240,53 +326,56 @@ const setupChartInteractions = (containerId, data, options) => {
             }
         }
 
-        if (closest && minDist < 50) { // Only snap if reasonably close
-            // 1. Show/Move Line
-            guide.setAttribute('x1', closest.px);
-            guide.setAttribute('x2', closest.px);
-            guide.style.opacity = '1';
-
-            // 2. Update Tooltip Content
-            const label = closest.label || (xType === 'time' ? formatDuration(closest.x) : `${closest.x} mi`);
-            const valAll = xType === 'distance' ? formatPace(closest.yAll) : `${closest.yAll}w`;
-            const val6w = closest.y6w ? (xType === 'distance' ? formatPace(closest.y6w) : `${closest.y6w}w`) : '--';
-
-            tooltip.innerHTML = `
-                <div class="text-[10px] font-bold text-slate-400 mb-1 border-b border-slate-700 pb-1 uppercase tracking-wider">${label}</div>
-                <div class="flex justify-between items-center gap-4 text-xs mb-0.5">
-                    <span style="color: ${colorAll}">All Time</span>
-                    <span class="font-mono text-white">${valAll}</span>
-                </div>
-                <div class="flex justify-between items-center gap-4 text-xs">
-                    <span style="color: ${color6w}">6 Week</span>
-                    <span class="font-mono text-white">${val6w}</span>
-                </div>
-            `;
-
-            // 3. Position Tooltip
-            tooltip.classList.remove('hidden');
-            
-            // Smart positioning (flip if too close to right edge)
-            const tooltipX = (closest.px / width) * 100;
-            if (tooltipX > 60) {
-                tooltip.style.left = 'auto';
-                tooltip.style.right = `${100 - tooltipX + 2}%`;
-            } else {
-                tooltip.style.right = 'auto';
-                tooltip.style.left = `${tooltipX + 2}%`;
-            }
-            // Vertical center
-            tooltip.style.top = '20%';
-
+        if (closest && minDist < 50) {
+            updateUI(closest);
         } else {
             guide.style.opacity = '0';
             tooltip.classList.add('hidden');
         }
     });
 
+    svg.addEventListener('click', (e) => {
+        const rect = svg.getBoundingClientRect();
+        const scaleX = width / rect.width;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+
+        // If clicking while locked, check if we clicked a new spot or just toggling
+        let closest = null;
+        let minDist = Infinity;
+        for (const pt of lookup) {
+            const dist = Math.abs(pt.px - mouseX);
+            if (dist < minDist) {
+                minDist = dist;
+                closest = pt;
+            }
+        }
+
+        if (closest && minDist < 50) {
+            if (isLocked) {
+                // If already locked, unlock ONLY if clicking far away or re-clicking same?
+                // Better UX: Click always updates position and sets Lock=True.
+                // To Unlock, maybe click off-chart? Or toggle.
+                // Let's go with: Click toggles lock.
+                isLocked = !isLocked;
+                updateUI(closest);
+            } else {
+                isLocked = true;
+                updateUI(closest);
+            }
+        } else {
+            // Clicked empty space -> unlock
+            isLocked = false;
+            guide.style.opacity = '0';
+            lockDot.style.opacity = '0';
+            tooltip.classList.add('hidden');
+        }
+    });
+
     svg.addEventListener('mouseleave', () => {
-        guide.style.opacity = '0';
-        tooltip.classList.add('hidden');
+        if (!isLocked) {
+            guide.style.opacity = '0';
+            tooltip.classList.add('hidden');
+        }
     });
 };
 
@@ -342,7 +431,9 @@ export function renderFTP(planMd) {
             const chartData = cyclingData.map(d => ({
                 x: d.seconds,
                 yAll: d.all_time_watts,
-                y6w: d.six_week_watts || null
+                at_id: d.at_id, at_date: d.at_date, // New Metadata
+                y6w: d.six_week_watts || null,
+                sw_id: d.sw_id, sw_date: d.sw_date
             })).filter(d => d.x >= 1);
             
             const opts = { 
@@ -353,7 +444,6 @@ export function renderFTP(planMd) {
             };
             
             cEl.innerHTML = renderLogChart(cyclingChartId, chartData, opts);
-            // Activate Hover
             setupChartInteractions(cyclingChartId, chartData, opts);
         }
 
@@ -364,7 +454,9 @@ export function renderFTP(planMd) {
             const chartData = runningData.map(d => ({
                 x: d.dist,
                 yAll: d.paceAllTime,
+                atMeta: d.atMeta, // New Metadata
                 y6w: d.pace6Week || null,
+                swMeta: d.swMeta,
                 label: d.label
             }));
             
@@ -376,7 +468,6 @@ export function renderFTP(planMd) {
             };
             
             rEl.innerHTML = renderLogChart(runningChartId, chartData, opts);
-            // Activate Hover
             setupChartInteractions(runningChartId, chartData, opts);
         }
     })();
