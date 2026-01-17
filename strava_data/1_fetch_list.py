@@ -52,7 +52,7 @@ def fetch_new_ids():
     
     while keep_fetching:
         # Fetch 50 at a time
-        response = requests.get(ACTIVITIES_URL, headers=headers, params={'per_page': 50, 'page': page})
+        response = requests.get(ACTIVITIES_URL, headers=headers, params={'per_page': 10, 'page': page})
         
         # 🛡️ SAFETY CHECK: Handle API Errors
         if response.status_code != 200:
