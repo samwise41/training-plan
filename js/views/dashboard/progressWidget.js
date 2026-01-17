@@ -1,14 +1,14 @@
 // js/views/dashboard/progressWidget.js
 import { getSportColorVar } from './utils.js';
 
-// --- GLOBAL STATE MANAGEMENT ---
+// --- GLOBAL STATE ---
 window.DashboardProgressState = {
     workouts: [],
     logs: [],
     offset: 0,      // 0 = Current Week
     minOffset: 0,
     maxOffset: 0,
-    streaks: { daily: 0, volume: 0 } // Cache streaks so they don't re-calc on nav
+    streaks: { daily: 0, volume: 0 }
 };
 
 // --- GLOBAL HANDLER ---
@@ -28,7 +28,7 @@ window.moveProgressWeek = (direction) => {
     }
 };
 
-// --- HELPER: STREAK CALCULATORS (Preserved) ---
+// --- HELPERS: STREAK CALCULATORS ---
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
 
@@ -122,7 +122,7 @@ export function renderProgressWidget(workouts, fullLogData) {
     s.logs = fullLogData || [];
     s.offset = 0; // Reset to current week on reload
 
-    // Pre-calculate streaks (Global metrics, not week-dependent)
+    // Pre-calculate streaks (Global metrics)
     s.streaks.daily = calculateDailyStreak(s.logs);
     s.streaks.volume = calculateVolumeStreak(s.logs);
 
@@ -134,11 +134,10 @@ export function renderProgressWidget(workouts, fullLogData) {
         const maxDate = new Date(Math.max(...startDates));
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
         
-        // How many weeks back/forward can we go?
         s.minOffset = Math.floor((minDate - today) / oneWeek);
         s.maxOffset = Math.ceil((maxDate - today) / oneWeek);
     } else {
-        s.minOffset = -52; s.maxOffset = 52; // Default fallback
+        s.minOffset = -52; s.maxOffset = 52;
     }
 
     return `
@@ -153,10 +152,10 @@ export function renderProgressWidget(workouts, fullLogData) {
 function generateWidgetContent() {
     const s = window.DashboardProgressState;
     
-    // 1. Determine Week Window
+    // 1. Determine Week Window (Manual Calc to avoid 'getMonday' dependency)
     const today = new Date();
     today.setHours(0,0,0,0);
-    // Shift by offset
+    // Shift target date by offset weeks
     const viewDate = new Date(today.getTime() + (s.offset * 7 * 24 * 60 * 60 * 1000));
     
     const dayOfWeek = viewDate.getDay();
@@ -190,6 +189,8 @@ function generateWidgetContent() {
         return 'Other';
     };
 
+    const now = new Date();
+
     // Planned
     s.workouts.forEach(w => {
         const d = new Date(w.date);
@@ -199,8 +200,8 @@ function generateWidgetContent() {
             
             totalPlanned += planDur;
             
-            // Pacing Logic: If week is in past, we expect 100%. If future, 0%. If current, check date.
-            if (d < new Date()) expectedSoFar += planDur;
+            // Pacing Logic: If week is fully in past, expect 100%. If future, 0%.
+            if (d < now) expectedSoFar += planDur;
 
             if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
             totalDailyMarkers[dateKey] += planDur;
@@ -249,10 +250,7 @@ function generateWidgetContent() {
             } 
         }
         
-        // Header Row for the Main Goal is handled separately now
-        if (isMain) return ''; 
-
-        // Skip empty rows
+        if (isMain) return ''; // Main bar handled in header
         if (planned === 0 && actual === 0) return '';
 
         const colorStyle = `style="color: ${getSportColorVar(sportType)}"`;
@@ -281,7 +279,7 @@ function generateWidgetContent() {
         </div>`;
     };
 
-    // 4. Construct Header & Pacing
+    // 4. Header & Navigation UI
     const dateOpts = { month: 'short', day: 'numeric' };
     const dateRangeLabel = `${monday.toLocaleDateString('en-US', dateOpts)} - ${sunday.toLocaleDateString('en-US', dateOpts)}`;
     
@@ -298,14 +296,17 @@ function generateWidgetContent() {
 
     const mainPct = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
     
-    // Pacing
+    // Pacing Logic
     const pacingDiff = totalActual - expectedSoFar; 
     let pacingLabel = "On Track"; 
     let pacingColor = "text-slate-400"; 
     let pacingIcon = "fa-check";
     
-    if (pacingDiff >= 15) { pacingLabel = `${Math.round(pacingDiff)}m Ahead`; pacingColor = "text-emerald-400"; pacingIcon = "fa-arrow-trend-up"; } 
-    else if (pacingDiff <= -15) { pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`; pacingColor = "text-orange-400"; pacingIcon = "fa-triangle-exclamation"; }
+    if (pacingDiff >= 15) { 
+        pacingLabel = `${Math.round(pacingDiff)}m Ahead`; pacingColor = "text-emerald-400"; pacingIcon = "fa-arrow-trend-up"; 
+    } else if (pacingDiff <= -15) { 
+        pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`; pacingColor = "text-orange-400"; pacingIcon = "fa-triangle-exclamation"; 
+    }
     
     const pacingHtml = `
         <div>
@@ -323,7 +324,7 @@ function generateWidgetContent() {
 
     const getStreakColor = (val) => val >= 8 ? "text-red-500" : (val >= 3 ? "text-orange-400" : "text-slate-500");
 
-    // 5. Return Full HTML
+    // 5. Construct Final HTML
     return `
         <div class="flex-1 w-full">
             <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-700/50">
@@ -347,7 +348,7 @@ function generateWidgetContent() {
 
             <div class="relative w-full h-3 bg-slate-700 rounded-full overflow-hidden mb-4">
                 <div class="absolute top-0 left-0 h-full bg-slate-200 transition-all duration-1000" style="width: ${Math.min(mainPct,100)}%"></div>
-                </div>
+            </div>
 
             ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers, false, 'Bike')}
             ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers, false, 'Run')}
