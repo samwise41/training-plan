@@ -1,49 +1,96 @@
 import { getMonday } from './utils.js';
 
-// --- MODULE STATE ---
-let _plannedWorkouts = [];
-let _actualLogs = [];
-let _currentOffset = 0;
+// --- WIDGET STATE ---
+const State = {
+    plans: [],
+    logs: [],
+    offset: 0,      // 0 = Current Week
+    minOffset: 0,   // Earliest week in plan
+    maxOffset: 0    // Latest week in plan
+};
 
-// --- GLOBAL HANDLER ---
-window.changeDashboardWeek = (delta) => {
-    _currentOffset += delta;
-    const content = generateWidgetContent(_currentOffset);
-    const container = document.getElementById('progress-widget-inner');
+// --- GLOBAL CLICK HANDLER ---
+// This needs to be on 'window' so the HTML onclick="" attributes can find it
+window.moveDashboardWeek = (direction) => {
+    const newOffset = State.offset + direction;
+    
+    // Prevent moving out of bounds
+    if (newOffset < State.minOffset || newOffset > State.maxOffset) return;
+
+    State.offset = newOffset;
+    
+    // Re-render just the inner content
+    const container = document.getElementById('progress-widget-content');
     if (container) {
-        container.innerHTML = content;
+        container.innerHTML = generateWidgetHTML();
     }
 };
 
 export function renderProgressWidget(plannedWorkouts, actualLogs) {
-    // Cache data for navigation
-    _plannedWorkouts = plannedWorkouts || [];
-    _actualLogs = actualLogs || [];
-    _currentOffset = 0; // Reset to current week on load
+    // 1. Initialize State
+    State.plans = plannedWorkouts || [];
+    State.logs = actualLogs || [];
+    State.offset = 0; // Reset to "Today" on full reload
 
+    // 2. Calculate Bounds (Min/Max Weeks)
+    if (State.plans.length > 0) {
+        const today = new Date();
+        const startDates = State.plans.map(p => p.date);
+        const minDate = new Date(Math.min(...startDates));
+        const maxDate = new Date(Math.max(...startDates));
+        
+        // Calculate diff in weeks
+        const oneWeek = 7 * 24 * 60 * 60 * 1000;
+        State.minOffset = Math.floor((minDate - today) / oneWeek);
+        State.maxOffset = Math.ceil((maxDate - today) / oneWeek);
+    }
+
+    // 3. Return Container with Initial Content
     return `
         <div class="bg-slate-800/50 border border-slate-700 p-5 rounded-xl shadow-lg h-full flex flex-col justify-between">
-            <div id="progress-widget-inner" class="h-full flex flex-col justify-between">
-                ${generateWidgetContent(0)}
+            <div id="progress-widget-content" class="h-full flex flex-col justify-between">
+                ${generateWidgetHTML()}
             </div>
         </div>
     `;
 }
 
-function generateWidgetContent(offset) {
-    // 1. Determine Date Range
+function generateWidgetHTML() {
+    // 1. Determine Current Week Date Range
     const today = new Date();
-    const startOfWeek = getMonday(new Date(today.setDate(today.getDate() + (offset * 7))));
+    // Shift 'today' by the offset weeks
+    const viewDate = new Date(today.getTime() + (State.offset * 7 * 24 * 60 * 60 * 1000));
+    
+    const startOfWeek = getMonday(viewDate);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
-    // Date Label
+    // 2. Labels
     const dateOpts = { month: 'short', day: 'numeric' };
     const dateLabel = `${startOfWeek.toLocaleDateString('en-US', dateOpts)} - ${endOfWeek.toLocaleDateString('en-US', dateOpts)}`;
-    const weekLabel = offset === 0 ? "THIS WEEK" : (offset === -1 ? "LAST WEEK" : (offset === 1 ? "NEXT WEEK" : `${Math.abs(offset)} WEEKS ${offset > 0 ? 'AHEAD' : 'AGO'}`));
+    
+    let weekLabel = "THIS WEEK";
+    if (State.offset === -1) weekLabel = "LAST WEEK";
+    else if (State.offset === 1) weekLabel = "NEXT WEEK";
+    else if (State.offset !== 0) weekLabel = `${Math.abs(State.offset)} WEEKS ${State.offset > 0 ? 'AHEAD' : 'AGO'}`;
 
-    // 2. Tally ACTUALS
+    // 3. Calculate Arrow Styles
+    const canGoLeft = State.offset > State.minOffset;
+    const canGoRight = State.offset < State.maxOffset;
+
+    const leftClass = canGoLeft 
+        ? "text-slate-400 hover:text-white cursor-pointer transition-colors" 
+        : "text-slate-600 opacity-30 cursor-not-allowed";
+    
+    const rightClass = canGoRight 
+        ? "text-slate-400 hover:text-white cursor-pointer transition-colors" 
+        : "text-slate-600 opacity-30 cursor-not-allowed";
+
+    const leftAction = canGoLeft ? "window.moveDashboardWeek(-1)" : "";
+    const rightAction = canGoRight ? "window.moveDashboardWeek(1)" : "";
+
+    // 4. Aggregate Data for this Week
     const weeklyTotals = {
         Run: { time: 0 },
         Bike: { time: 0 },
@@ -51,7 +98,8 @@ function generateWidgetContent(offset) {
         Total: { time: 0 }
     };
 
-    _actualLogs.forEach(d => {
+    // Actuals
+    State.logs.forEach(d => {
         const dDate = new Date(d.date);
         if (dDate >= startOfWeek && dDate <= endOfWeek) {
             let type = 'Other';
@@ -61,7 +109,7 @@ function generateWidgetContent(offset) {
             else if (tLower.includes('bike') || tLower.includes('cycl')) type = 'Bike';
             else if (tLower.includes('run')) type = 'Run';
 
-            // Parse Duration
+            // Durations
             let dur = 0;
             if (typeof d.actualDuration === 'number') dur = d.actualDuration;
             else if (typeof d.duration === 'number') dur = d.duration;
@@ -73,12 +121,10 @@ function generateWidgetContent(offset) {
         }
     });
 
-    // 3. Tally PLANNED
+    // Planned
     const plannedTotals = { Run: 0, Bike: 0, Swim: 0, Total: 0 };
-
-    _plannedWorkouts.forEach(w => {
-        const wDate = w.date; // Parser returns Date object
-        if (wDate >= startOfWeek && wDate <= endOfWeek) {
+    State.plans.forEach(w => {
+        if (w.date >= startOfWeek && w.date <= endOfWeek) {
             const typeLower = (w.workout || '').toLowerCase();
             let dur = parseTime(w.duration || w.plannedDuration);
 
@@ -90,14 +136,13 @@ function generateWidgetContent(offset) {
         }
     });
 
-    // 4. Build UI
+    // 5. Build Bars HTML
     const buildBar = (label, sportKey, icon, colorClass) => {
         const actual = weeklyTotals[sportKey].time;
         const planned = plannedTotals[sportKey];
         const pct = planned > 0 ? Math.min((actual / planned) * 100, 100) : 0;
         
-        // Dynamic Color based on compliance
-        let barColor = 'bg-slate-700';
+        let barColor = 'bg-slate-700'; // Default gray if no plan
         if (planned > 0) {
             if (pct >= 100) barColor = 'bg-emerald-500';
             else if (pct >= 80) barColor = 'bg-blue-500';
@@ -131,17 +176,22 @@ function generateWidgetContent(offset) {
     return `
         <div class="flex justify-between items-start mb-4">
             <div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.changeDashboardWeek(-1)" class="text-slate-400 hover:text-white transition-colors">
+                <div class="flex items-center gap-3">
+                    <button onclick="${leftAction}" class="${leftClass} p-1">
                         <i class="fa-solid fa-chevron-left text-xs"></i>
                     </button>
-                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest select-none w-24 text-center">${weekLabel}</h3>
-                    <button onclick="window.changeDashboardWeek(1)" class="text-slate-400 hover:text-white transition-colors">
+                    
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest select-none min-w-[80px] text-center">
+                        ${weekLabel}
+                    </h3>
+                    
+                    <button onclick="${rightAction}" class="${rightClass} p-1">
                         <i class="fa-solid fa-chevron-right text-xs"></i>
                     </button>
                 </div>
-                <p class="text-xs text-slate-500 mt-1 text-center">${dateLabel}</p>
+                <p class="text-[11px] text-slate-500 mt-1 text-center font-mono">${dateLabel}</p>
             </div>
+            
             <div class="text-right">
                 <span class="text-3xl font-black text-white">${totalPct}%</span>
                 <p class="text-[10px] text-slate-400 uppercase font-bold">Compliance</p>
@@ -156,7 +206,7 @@ function generateWidgetContent(offset) {
     `;
 }
 
-// Helpers
+// --- HELPERS ---
 function parseTime(str) {
     if (!str) return 0;
     if (typeof str === 'number') return str;
