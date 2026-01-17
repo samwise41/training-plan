@@ -1,4 +1,3 @@
-// js/views/dashboard/index.js
 import { Parser } from '../../parser.js';
 import { renderPlannedWorkouts } from './plannedWorkouts.js';
 import { renderProgressWidget } from './progressWidget.js';
@@ -25,6 +24,7 @@ window.triggerGitHubSync = async () => {
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Syncing...</span>';
 
     try {
+        // Adjust the REPO OWNER/NAME if strictly necessary, but usually this is fine
         const response = await fetch(`https://api.github.com/repos/samwise41/training-plan/actions/workflows/01_1_Training_Data_Sync.yml/dispatches`, {
             method: 'POST',
             headers: {
@@ -55,7 +55,7 @@ window.triggerGitHubSync = async () => {
     }
 };
 
-// --- TOOLTIP HANDLER ---
+// --- GLOBAL TOOLTIP HANDLER ---
 window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType, details) => {
     let tooltip = document.getElementById('dashboard-tooltip-popup');
     
@@ -77,19 +77,30 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType, de
             <div class="text-white font-bold text-sm mb-0.5 whitespace-nowrap">
                 Plan: ${Math.round(plan)}m | Act: ${Math.round(act)}m
             </div>
-            <div class="text-[10px] text-slate-400 font-normal mb-1">${date}</div>
-            <div class="text-[10px] text-slate-200 font-mono font-bold border-b border-slate-700 pb-1 mb-1">${sportType}</div>
-            <div class="text-[11px] font-bold mt-1 uppercase tracking-wide" style="color: ${color}">${label}</div>
+            
+            <div class="text-[10px] text-slate-400 font-normal mb-1">
+                ${date}
+            </div>
+
+            <div class="text-[10px] text-slate-200 font-mono font-bold border-b border-slate-700 pb-1 mb-1">
+                ${sportType}
+            </div>
+
+            <div class="text-[11px] font-bold mt-1 uppercase tracking-wide" style="color: ${color}">
+                ${label}
+            </div>
             ${detailsHtml}
         </div>
     `;
 
+    // Smart Positioning
     const x = evt.clientX;
     const y = evt.clientY;
     const viewportWidth = window.innerWidth;
     
     tooltip.style.top = `${y - 75}px`; 
-    tooltip.style.left = ''; tooltip.style.right = '';
+    tooltip.style.left = '';
+    tooltip.style.right = '';
 
     if (x > viewportWidth * 0.60) {
         tooltip.style.right = `${viewportWidth - x + 10}px`;
@@ -99,27 +110,36 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType, de
         tooltip.style.right = 'auto';
     }
     
+    // Edge guard
     if (parseInt(tooltip.style.left) < 10) tooltip.style.left = '10px';
 
     tooltip.classList.remove('opacity-0');
+    
     if (window.dashTooltipTimer) clearTimeout(window.dashTooltipTimer);
-    window.dashTooltipTimer = setTimeout(() => tooltip.classList.add('opacity-0'), 3000);
+    window.dashTooltipTimer = setTimeout(() => {
+        tooltip.classList.add('opacity-0');
+    }, 3000);
 };
 
+// --- MAIN RENDER FUNCTION ---
 export function renderDashboard(planMd, mergedLogData) {
+    // 1. Prepare Data
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
     if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
 
+    // Extract planned workouts for widgets
     const workouts = Parser._parseTableBlock(scheduleSection);
     workouts.sort((a, b) => a.date - b.date);
 
     const fullLogData = mergedLogData || [];
 
+    // 2. Render Widgets
+    // Note: renderProgressWidget now supports the prev/next arrow logic internally
     const progressHtml = renderProgressWidget(workouts, fullLogData);
     const plannedWorkoutsHtml = renderPlannedWorkouts(planMd);
     const heatmapsHtml = renderHeatmaps(fullLogData, planMd);
 
-    // --- SYNC BUTTON HTML ---
+    // 3. Render Sync Button
     const syncButtonHtml = `
         <div class="flex justify-end mb-4">
             <button id="btn-force-sync" onclick="window.triggerGitHubSync()" 
@@ -130,6 +150,7 @@ export function renderDashboard(planMd, mergedLogData) {
         </div>
     `;
 
+    // 4. Combine
     return `
         ${syncButtonHtml}
         ${progressHtml}
