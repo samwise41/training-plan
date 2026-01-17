@@ -87,7 +87,7 @@ const parseRunningMarkdown = (md) => {
     return rows.sort((a,b) => a.dist - b.dist);
 };
 
-// --- CHART RENDERING ---
+// --- CHART MATH & RENDERING ---
 
 const getLogX = (val, min, max, width, pad) => {
     const logMin = Math.log(min);
@@ -210,8 +210,8 @@ const renderLogChart = (containerId, data, options) => {
             <div id="${containerId}-tooltip" class="absolute hidden bg-slate-900/95 border border-slate-700 rounded shadow-xl p-3 z-50 min-w-[140px]"></div>
 
             <div class="absolute top-2 right-4 flex gap-3 pointer-events-none">
-                <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-[${colorAll}]"></div><span class="text-[10px] text-slate-300">All Time</span></div>
-                <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full border border-[${color6w}]"></div><span class="text-[10px] text-slate-300">6 Weeks</span></div>
+                <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full" style="background-color: ${colorAll}"></div><span class="text-[10px] text-slate-300">All Time</span></div>
+                <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full border" style="border-color: ${color6w}"></div><span class="text-[10px] text-slate-300">6 Weeks</span></div>
             </div>
         </div>
     `;
@@ -249,13 +249,11 @@ const setupChartInteractions = (containerId, data, options) => {
         const valAll = xType === 'distance' ? formatPace(closest.yAll) : `${closest.yAll}w`;
         const val6w = closest.y6w ? (xType === 'distance' ? formatPace(closest.y6w) : `${closest.y6w}w`) : '--';
 
-        // Link Helpers
         const linkAll = closest.atMeta ? closest.atMeta.url : `https://www.strava.com/activities/${closest.at_id || ''}`;
         const dateAll = closest.atMeta ? closest.atMeta.date : (closest.at_date || '--');
         const link6w = closest.swMeta ? closest.swMeta.url : `https://www.strava.com/activities/${closest.sw_id || ''}`;
         const date6w = closest.swMeta ? closest.swMeta.date : (closest.sw_date || '--');
 
-        // Tooltip with Links
         tooltip.innerHTML = `
             <div class="flex justify-between items-center border-b border-slate-700 pb-1 mb-2">
                 <span class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">${label}</span>
@@ -288,7 +286,6 @@ const setupChartInteractions = (containerId, data, options) => {
 
         tooltip.classList.remove('hidden');
         
-        // Smart Positioning
         const tooltipX = (closest.px / width) * 100;
         if (tooltipX > 60) {
             tooltip.style.left = 'auto';
@@ -299,7 +296,6 @@ const setupChartInteractions = (containerId, data, options) => {
         }
         tooltip.style.top = '10%';
         
-        // Update Lock Indicator
         if (isLocked) {
             lockDot.setAttribute('cx', closest.px);
             lockDot.style.opacity = '1';
@@ -309,7 +305,7 @@ const setupChartInteractions = (containerId, data, options) => {
     };
 
     svg.addEventListener('mousemove', (e) => {
-        if (isLocked) return; // Stop updating if locked
+        if (isLocked) return;
 
         const rect = svg.getBoundingClientRect();
         const scaleX = width / rect.width;
@@ -339,7 +335,6 @@ const setupChartInteractions = (containerId, data, options) => {
         const scaleX = width / rect.width;
         const mouseX = (e.clientX - rect.left) * scaleX;
 
-        // If clicking while locked, check if we clicked a new spot or just toggling
         let closest = null;
         let minDist = Infinity;
         for (const pt of lookup) {
@@ -351,19 +346,9 @@ const setupChartInteractions = (containerId, data, options) => {
         }
 
         if (closest && minDist < 50) {
-            if (isLocked) {
-                // If already locked, unlock ONLY if clicking far away or re-clicking same?
-                // Better UX: Click always updates position and sets Lock=True.
-                // To Unlock, maybe click off-chart? Or toggle.
-                // Let's go with: Click toggles lock.
-                isLocked = !isLocked;
-                updateUI(closest);
-            } else {
-                isLocked = true;
-                updateUI(closest);
-            }
+            isLocked = !isLocked;
+            updateUI(closest);
         } else {
-            // Clicked empty space -> unlock
             isLocked = false;
             guide.style.opacity = '0';
             lockDot.style.opacity = '0';
@@ -414,6 +399,11 @@ const getBiometricsData = (planMd) => {
 export function renderFTP(planMd) {
     const bio = getBiometricsData(planMd);
     
+    // FETCH THEME COLORS DYNAMICALLY
+    const style = getComputedStyle(document.documentElement);
+    const bikeColor = style.getPropertyValue('--color-bike').trim() || '#8b5cf6'; // Default Purple
+    const runColor = style.getPropertyValue('--color-run').trim() || '#ec4899';   // Default Pink
+    
     // Stats HTML
     const gaugeHtml = renderGauge(bio.wkgNum, bio.percent, bio.cat);
     const cyclingStatsHtml = renderCyclingStats(bio);
@@ -431,7 +421,7 @@ export function renderFTP(planMd) {
             const chartData = cyclingData.map(d => ({
                 x: d.seconds,
                 yAll: d.all_time_watts,
-                at_id: d.at_id, at_date: d.at_date, // New Metadata
+                at_id: d.at_id, at_date: d.at_date,
                 y6w: d.six_week_watts || null,
                 sw_id: d.sw_id, sw_date: d.sw_date
             })).filter(d => d.x >= 1);
@@ -439,7 +429,8 @@ export function renderFTP(planMd) {
             const opts = { 
                 width: 800, height: 300,
                 xType: 'time', 
-                colorAll: '#a855f7', color6w: '#22c55e',
+                colorAll: bikeColor, // <--- DYNAMIC CSS COLOR
+                color6w: '#22c55e',
                 showPoints: false 
             };
             
@@ -454,7 +445,7 @@ export function renderFTP(planMd) {
             const chartData = runningData.map(d => ({
                 x: d.dist,
                 yAll: d.paceAllTime,
-                atMeta: d.atMeta, // New Metadata
+                atMeta: d.atMeta, 
                 y6w: d.pace6Week || null,
                 swMeta: d.swMeta,
                 label: d.label
@@ -463,7 +454,8 @@ export function renderFTP(planMd) {
             const opts = { 
                 width: 800, height: 300,
                 xType: 'distance', 
-                colorAll: '#38bdf8', color6w: '#f97316',
+                colorAll: runColor, // <--- DYNAMIC CSS COLOR
+                color6w: '#f97316',
                 showPoints: true 
             };
             
