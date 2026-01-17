@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. Source: Where are the files on your computer?
 # Example (Windows): r"C:\Users\Sam\Documents\Zwift\Workouts\123456"
 # Example (Mac): "/Users/Sam/Documents/Zwift/Workouts/123456"
-SOURCE_DIR = r"PATH_TO_YOUR_ZWIFT_WORKOUTS_FOLDER"
+SOURCE_DIR = r"C:\Users\samwi\Documents\training-plan\zwift_library"
 
 # 2. Destination: Where in this repo should they go?
 # This creates a 'zwift_library' folder in the same directory as this script
