@@ -1,11 +1,10 @@
-// js/app.js - Auto-Busting Cache Version
+// js/app.js
 
 (async function initApp() {
     console.log("🚀 Booting App (Unified Data Mode)...");
 
     const cacheBuster = Date.now();
     
-    // Helper to safely import modules
     const safeImport = async (path, name) => {
         try {
             return await import(`${path}?t=${cacheBuster}`);
@@ -52,7 +51,6 @@
         }
     };
 
-    // --- SECURITY HELPER: HASHING ---
     async function hashString(message) {
         const msgBuffer = new TextEncoder().encode(message);
         const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -252,7 +250,11 @@
 
         updateStats() {
             if (!this.planMd) return;
-            const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(Phase[^-]*)\s*-\s*(Week.*)/i);
+            
+            // --- FIX: UPDATED REGEX FOR NEW STATUS FORMAT ---
+            // Captures: Phase X (Group 1) - Block Y Week Z (Group 2)
+            const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(.*?)\s+-\s+(.*)/i);
+            
             const currentPhaseRaw = statusMatch ? statusMatch[1].trim() : "Plan Active";
             const currentWeek = statusMatch ? statusMatch[2].trim() : "";
             
@@ -405,10 +407,7 @@
                         content.innerHTML = renderMetrics(this.allData);
                     }
                     else if (view === 'logbook') {
-                        // SIMPLIFIED: Source ONLY from Master Database
                         const archive = Parser.getSection(this.archiveMd, "Training History");
-                        // Use section if found, otherwise assume full file is the log. 
-                        // Fallback message if file is empty/missing.
                         const mdContent = archive || (this.archiveMd && this.archiveMd.trim().length > 0 ? this.archiveMd : "No logs found in Master Database.");
                         
                         const safeMarked = window.marked ? window.marked.parse : (t) => t;
