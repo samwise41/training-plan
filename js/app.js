@@ -20,7 +20,7 @@
     const trendsMod = await safeImport('./views/trends/index.js', 'Trends');
     const gearMod = await safeImport('./views/gear/index.js', 'Gear');
     const zonesMod = await safeImport('./views/zones/index.js', 'Zones');
-    const ftpMod = await safeImport('./views/ftp/index.js', 'FTP'); // <--- NEW MODULE
+    const ftpMod = await safeImport('./views/ftp/index.js', 'FTP'); 
     const roadmapMod = await safeImport('./views/roadmap/index.js', 'Roadmap');
     const dashMod = await safeImport('./views/dashboard/index.js', 'Dashboard');
     const readinessMod = await safeImport('./views/readiness/index.js', 'Readiness');
@@ -31,7 +31,7 @@
     const { renderTrends, updateDurationAnalysis } = trendsMod || { renderTrends: () => ({html: ''}) };
     const { renderGear, updateGearResult } = gearMod || { renderGear: () => ({ html: '', gearData: null }), updateGearResult: () => {} };
     const { renderZones } = zonesMod || { renderZones: () => '' };
-    const { renderFTP } = ftpMod || { renderFTP: () => '<div class="p-4 text-red-500">FTP Module Failed</div>' }; // <--- NEW FUNCTION
+    const { renderFTP } = ftpMod || { renderFTP: () => '<div class="p-4 text-red-500">FTP Module Failed</div>' }; 
     const { renderRoadmap } = roadmapMod || { renderRoadmap: () => '' };
     const { renderDashboard } = dashMod || { renderDashboard: () => '' };
     const { renderReadiness } = readinessMod || { renderReadiness: () => '' };
@@ -162,7 +162,6 @@
         async init() {
             await this.checkSecurity();
             const initialHash = window.location.hash.substring(1);
-            // ADDED 'ftp' to valid views
             const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'ftp', 'readiness', 'metrics'];
             const startView = validViews.includes(initialHash) ? initialHash : 'dashboard';
     
@@ -219,7 +218,7 @@
             const navMap = {
                 'nav-dashboard': 'dashboard', 'nav-trends': 'trends', 'nav-logbook': 'logbook',
                 'nav-roadmap': 'roadmap', 'nav-gear': 'gear', 'nav-zones': 'zones', 
-                'nav-ftp': 'ftp', // <--- ADDED MAPPING
+                'nav-ftp': 'ftp',
                 'nav-readiness': 'readiness', 'nav-metrics': 'metrics'
             };
             Object.keys(navMap).forEach(id => {
@@ -359,7 +358,6 @@
 
         handleHashChange() {
             const hash = window.location.hash.substring(1); 
-            // ADDED 'ftp' to valid views
             const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'ftp', 'readiness', 'metrics'];
             const view = validViews.includes(hash) ? hash : 'dashboard';
             this.renderView(view);
@@ -391,7 +389,7 @@
                         this.updateGearResult(); 
                     } 
                     else if (view === 'zones') content.innerHTML = renderZones(this.planMd);
-                    else if (view === 'ftp') content.innerHTML = renderFTP(this.planMd); // <--- RENDER NEW VIEW
+                    else if (view === 'ftp') content.innerHTML = renderFTP(this.planMd); 
                     else if (view === 'trends') {
                         const result = renderTrends(this.allData); 
                         content.innerHTML = result.html;
@@ -407,10 +405,12 @@
                         content.innerHTML = renderMetrics(this.allData);
                     }
                     else if (view === 'logbook') {
-                        const recent = Parser.getSection(this.planMd, "Appendix C: Training History Log") || Parser.getSection(this.planMd, "Training History");
+                        // SIMPLIFIED: Source ONLY from Master Database
                         const archive = Parser.getSection(this.archiveMd, "Training History");
-                        const finalArchive = archive || (this.archiveMd.includes('|') ? this.archiveMd : "");
-                        const mdContent = (recent || "") + "\n\n" + (finalArchive || "");
+                        // Use section if found, otherwise assume full file is the log. 
+                        // Fallback message if file is empty/missing.
+                        const mdContent = archive || (this.archiveMd && this.archiveMd.trim().length > 0 ? this.archiveMd : "No logs found in Master Database.");
+                        
                         const safeMarked = window.marked ? window.marked.parse : (t) => t;
                         content.innerHTML = `<div class="markdown-body">${safeMarked(mdContent)}</div>`;
                     }
