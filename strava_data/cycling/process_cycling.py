@@ -18,9 +18,7 @@ OUTPUT_MD = os.path.join(BASE_DIR, "my_power_profile.md")
 MAX_DURATION_SECONDS = 21600 
 
 # --- BACKFILL SETTINGS ---
-# Increased to 80 to maximize work within the 15-min API window (Limit is ~100)
 MAX_NEW_TO_PROCESS = 80  
-# Increased to 2000 so it doesn't stop just because it found the 137 recent rides
 CONSECUTIVE_EXISTING_LIMIT = 2000 
 
 KEY_INTERVALS = [
@@ -76,7 +74,6 @@ def update_cache(token):
     print("📡 Syncing recent rides from Strava...")
     
     while processed_count < MAX_NEW_TO_PROCESS:
-        # Fetch a batch of 50
         try:
             r = requests.get(
                 "https://www.strava.com/api/v3/athlete/activities", 
@@ -94,13 +91,11 @@ def update_cache(token):
             break
 
         for act in activities:
-            # FILTER: Only Cycling
             if act['type'] not in ['Ride', 'VirtualRide']:
                 continue
             
             aid = act['id']
 
-            # CHECK: Do we have it?
             if aid in cached_ids:
                 consecutive_existing += 1
                 if consecutive_existing >= CONSECUTIVE_EXISTING_LIMIT:
@@ -108,12 +103,10 @@ def update_cache(token):
                     return
                 continue
             
-            # If we get here, it's a NEW ride
             consecutive_existing = 0 
             print(f"   🚴 Processing NEW ride: {act['name']} ({act['start_date_local'][:10]})")
 
             try:
-                # 1. Streams
                 url = f"https://www.strava.com/api/v3/activities/{aid}/streams"
                 r_stream = requests.get(url, headers=headers, params={'keys': 'watts', 'key_by_type': 'true'})
                 
@@ -124,26 +117,21 @@ def update_cache(token):
                 streams = r_stream.json() if r_stream.status_code == 200 else {}
                 
                 if 'watts' not in streams:
-                    # Save "no power" placeholder to prevent re-fetching
                     with open(os.path.join(CACHE_DIR, f"{aid}.json"), "w") as f:
                         json.dump({'id': aid, 'no_power': True, 'name': act['name'], 'date': act['start_date_local'][:10]}, f)
                     processed_count += 1
                     continue
 
-                # 2. Details (Re-fetch for consistent full data)
                 r_det = requests.get(f"https://www.strava.com/api/v3/activities/{aid}", headers=headers)
                 details = r_det.json()
 
-                # 3. Curve Calculation
                 power_series = pd.Series(streams['watts']['data'])
                 limit = min(len(power_series), MAX_DURATION_SECONDS)
                 curve = []
-                # Calculate every second for accuracy
                 for seconds in range(1, limit + 1):
                     peak = int(power_series.rolling(window=seconds).mean().max())
                     curve.append(peak)
 
-                # 4. Save
                 data = {
                     'id': aid,
                     'name': details['name'],
@@ -162,7 +150,7 @@ def update_cache(token):
                 print(f"❌ Error processing {aid}: {e}")
 
         page += 1
-        time.sleep(1) # Be nice to API
+        time.sleep(1)
 
     print(f"💾 Sync finished. Processed {processed_count} new rides.")
 
@@ -188,8 +176,7 @@ def generate_stats():
         
         if 'power_curve' not in ride: continue
         
-        try:
-            ride_date = datetime.strptime(ride['date'], "%Y-%m-%d")
+        try: ride_date = datetime.strptime(ride['date'], "%Y-%m-%d")
         except: continue
 
         is_recent = ride_date >= six_weeks_ago
@@ -225,20 +212,27 @@ def generate_stats():
 
                 at_val = f"**{at['watts']}w**" if at else "--"
                 sw_val = f"{sw['watts']}w" if sw else "--"
-                
                 f.write(f"| {label} | {at_val} | {fmt_link(at)} | {sw_val} | {fmt_link(sw)} |\n")
 
-    # GRAPH JSON
+    # GRAPH JSON - UPDATED TO INCLUDE METADATA
     graph_data = []
     for i in range(MAX_DURATION_SECONDS):
         at = all_time_best[i]
         sw = six_week_best[i]
         if at:
-            graph_data.append({
+            item = {
                 "seconds": i + 1,
                 "all_time_watts": at['watts'],
-                "six_week_watts": sw['watts'] if sw else 0
-            })
+                "at_date": at['date'],
+                "at_id": at['id'],
+                "six_week_watts": 0
+            }
+            if sw:
+                item["six_week_watts"] = sw['watts']
+                item["sw_date"] = sw['date']
+                item["sw_id"] = sw['id']
+            
+            graph_data.append(item)
             
     with open(OUTPUT_GRAPH, "w") as f:
         json.dump(graph_data, f)
