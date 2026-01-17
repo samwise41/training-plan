@@ -8,9 +8,7 @@ from datetime import datetime, timedelta
 from . import config
 
 # --- CONFIGURATION ---
-# Only sync/update workouts from this many days ago to today.
-# Set to 365 or larger if you ever want to force a full history rewrite.
-SYNC_WINDOW_DAYS = 7  
+SYNC_WINDOW_DAYS = 60  
 
 def load_master_db():
     if not os.path.exists(config.MASTER_DB): 
@@ -48,24 +46,23 @@ def clean_corrupt_data(df):
         df['activityType'] = df['activityType'].apply(fix_type)
     return df
 
-# --- RESTORED HELPER FUNCTIONS ---
-def extract_ftp(text):
-    if not text: return None
-    pattern = r"Cycling FTP[:\*]*\s*(\d+)"
-    match = re.search(pattern, text, re.IGNORECASE)
-    if match: return int(match.group(1))
-    return None
-
-def get_current_ftp():
-    if not os.path.exists(config.PLAN_FILE): return None
-    try:
-        with open(config.PLAN_FILE, 'r', encoding='utf-8') as f: 
-            content = f.read()
-        return extract_ftp(content)
-    except Exception as e:
-        print(f"⚠️ Could not read FTP from plan: {e}")
-        return None
-# ---------------------------------
+# --- HELPER: FORMAT ACTIVITY NAME WITH PREFIX ---
+def format_activity_name(raw_name, type_key):
+    """
+    Ensures the activity name has the correct [TAG].
+    """
+    raw_name = raw_name or "Activity"
+    t = str(type_key).lower()
+    
+    prefix = ""
+    if 'run' in t: prefix = "[RUN]"
+    elif 'cycl' in t or 'bik' in t or 'virt' in t: prefix = "[BIKE]"
+    elif 'swim' in t: prefix = "[SWIM]"
+    
+    # Only add prefix if not already present
+    if prefix and prefix not in raw_name:
+        return f"{prefix} {raw_name}"
+    return raw_name
 
 def extract_weekly_table():
     if not os.path.exists(config.PLAN_FILE): return pd.DataFrame()
@@ -121,22 +118,16 @@ def is_value_different(db_val, json_val):
         return str_db != str(json_val).strip()
 
 def bundle_activities(activities):
-    """Combines multiple activities into a single weighted record."""
     if not activities: return None
-    
-    # Sort to find main activity (longest duration wins)
     activities.sort(key=lambda x: x.get('duration', 0), reverse=True)
     main_act = activities[0]
-    
     combined = main_act.copy()
     
-    # Summation
     combined['duration'] = sum(a.get('duration', 0) for a in activities)
     combined['distance'] = sum(a.get('distance', 0) for a in activities)
     combined['calories'] = sum(a.get('calories', 0) for a in activities)
     combined['elevationGain'] = sum(a.get('elevationGain', 0) for a in activities)
     
-    # Weighted Averages
     def weighted_avg(key):
         numerator = 0
         denominator = 0
@@ -155,12 +146,10 @@ def bundle_activities(activities):
     avg_cadence_bike = weighted_avg('averageBikingCadenceInRevPerMinute')
     avg_cadence_run = weighted_avg('averageRunningCadenceInStepsPerMinute')
     
-    # Max Fields
     combined['maxHR'] = max((a.get('maxHR', 0) for a in activities), default=0)
     combined['maxPower'] = max((a.get('maxPower', 0) for a in activities), default=0)
     combined['maxSpeed'] = max((a.get('maxSpeed', 0) for a in activities), default=0)
 
-    # Subjective Scan (Find first non-null value)
     rpe = None
     feeling = None
     for a in activities:
@@ -172,7 +161,6 @@ def bundle_activities(activities):
             feeling = a.get('feeling')
             break
 
-    # Apply Updates
     if avg_power: combined['avgPower'] = avg_power
     if norm_power: combined['normPower'] = norm_power
     if avg_hr: combined['averageHR'] = avg_hr
@@ -188,6 +176,21 @@ def bundle_activities(activities):
         combined['activityId'] = ",".join(str(a.get('activityId')) for a in activities)
 
     return combined
+
+def extract_ftp(text):
+    if not text: return None
+    pattern = r"Cycling FTP[:\*]*\s*(\d+)"
+    match = re.search(pattern, text, re.IGNORECASE)
+    if match: return int(match.group(1))
+    return None
+
+def get_current_ftp():
+    if not os.path.exists(config.PLAN_FILE): return None
+    try:
+        with open(config.PLAN_FILE, 'r', encoding='utf-8') as f: 
+            content = f.read()
+        return extract_ftp(content)
+    except: return None
 
 def sync():
     print(f"🔄 SYNC: Merging Plan and Garmin Data (Last {SYNC_WINDOW_DAYS} Days Only)...")
@@ -214,13 +217,12 @@ def sync():
         if d not in garmin_by_date: garmin_by_date[d] = []
         garmin_by_date[d].append(g)
 
-    # Define the cutoff date
     today = datetime.now()
     cutoff_date = today - timedelta(days=SYNC_WINDOW_DAYS)
     cutoff_str = cutoff_date.strftime('%Y-%m-%d')
     today_str = today.strftime('%Y-%m-%d')
 
-    # 1. Sync Plan to Master (Skip old AND future plan items)
+    # 1. Sync Plan to Master
     if not df_plan.empty:
         count_added = 0
         df_master['Date_Norm'] = pd.to_datetime(df_master['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
@@ -232,8 +234,7 @@ def sync():
             p_date_norm = p_row['Date_Norm']
             p_workout = str(p_row.get('Planned Workout', '')).strip()
             
-            # Filter: Ignore plan items older than window OR in future
-            if pd.isna(p_date_norm) or p_date_norm < cutoff_str or p_date_norm > today_str: 
+            if pd.isna(p_date_norm) or p_date_norm < cutoff_str: 
                 continue
             
             p_clean = re.sub(r'[^a-zA-Z0-9\s]', '', p_workout.lower())
@@ -260,7 +261,6 @@ def sync():
     # 2. Link Garmin Data
     claimed_ids = set()
     
-    # PRE-SCAN ALL IDs (prevent Unplanned duplicates)
     for _, row in df_master.iterrows():
         eid = str(row.get('activityId', '')).strip()
         if eid and eid.lower() != 'nan':
@@ -285,7 +285,6 @@ def sync():
             date_key = date_obj.strftime('%Y-%m-%d')
         except: continue
         
-        # FILTER: Do not update rows older than window
         if date_key < cutoff_str:
             continue
 
@@ -323,7 +322,6 @@ def sync():
 
         if matches:
             composite_match = bundle_activities(matches)
-            
             for m in matches:
                 claimed_ids.add(str(m.get('activityId')))
 
@@ -333,13 +331,14 @@ def sync():
             
             df_master.at[idx, 'activityId'] = str(composite_match.get('activityId'))
             
-            g_type = composite_match.get('activityType', {}).get('typeKey', '').lower()
-            prefix = "[RUN]" if 'run' in g_type else "[BIKE]" if 'cycl' in g_type or 'virt' in g_type else "[SWIM]" if 'swim' in g_type else ""
+            # --- FIX: Apply Prefix Logic ---
+            g_type_key = composite_match.get('activityType', {}).get('typeKey', '')
             raw_name = composite_match.get('activityName', 'Activity')
-            if prefix and prefix not in raw_name: new_name = f"{prefix} {raw_name}"
-            else: new_name = raw_name
+            new_name = format_activity_name(raw_name, g_type_key)
+            # -------------------------------
+
             df_master.at[idx, 'Actual Workout'] = new_name
-            df_master.at[idx, 'activityType'] = g_type
+            df_master.at[idx, 'activityType'] = g_type_key
             
             try:
                 dur_sec = float(composite_match.get('duration', 0))
@@ -357,14 +356,12 @@ def sync():
             
             rpe_val = composite_match.get('perceivedEffort')
             feel_val = composite_match.get('feeling')
-            
             if rpe_val is None and 'summaryDTO' in composite_match:
                 raw = composite_match['summaryDTO'].get('directWorkoutRpe')
                 if raw: rpe_val = int(raw / 10)
             if feel_val is None and 'summaryDTO' in composite_match:
                 raw = composite_match['summaryDTO'].get('directWorkoutFeel')
                 if raw: feel_val = int((raw / 25) + 1)
-                
             if rpe_val is not None: df_master.at[idx, 'RPE'] = str(rpe_val)
             if feel_val is not None: df_master.at[idx, 'Feeling'] = str(feel_val)
 
@@ -376,7 +373,6 @@ def sync():
         g_id = str(g.get('activityId'))
         g_date = g.get('startTimeLocal', '')[:10]
         
-        # FILTER: Old AND Future
         if g_date < cutoff_str or g_date > today_str: continue
 
         c_type = g.get('activityType', {}).get('typeId')
@@ -393,17 +389,19 @@ def sync():
             new_row['Match Status'] = 'Unplanned'
             new_row['Date'] = g_date
             
-            # --- NEW: POPULATE DAY OF WEEK (Robust Pandas Method) ---
             try:
                 if g_date:
                     new_row['Day'] = pd.to_datetime(g_date).day_name()
-            except:
-                pass
-            # ---------------------------------
+            except: pass
 
             new_row['activityId'] = g_id
-            new_row['Actual Workout'] = g.get('activityName', 'Unplanned')
-            new_row['activityType'] = g.get('activityType', {}).get('typeKey', '')
+            
+            # --- FIX: Apply Prefix Logic to Unplanned ---
+            g_type_key = g.get('activityType', {}).get('typeKey', '')
+            raw_name = g.get('activityName', 'Unplanned')
+            new_row['Actual Workout'] = format_activity_name(raw_name, g_type_key)
+            new_row['activityType'] = g_type_key
+            # --------------------------------------------
             
             for col in cols_to_map:
                 if col in g: new_row[col] = g[col]
