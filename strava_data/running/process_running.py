@@ -16,7 +16,7 @@ OUTPUT_GRAPH = os.path.join(BASE_DIR, "running_pace_curve.json")
 OUTPUT_MD = os.path.join(BASE_DIR, "my_running_prs.md")
 
 MAX_DURATION_SECONDS = 14400 # 4 Hours
-MAX_NEW_TO_PROCESS = 20
+MAX_NEW_TO_PROCESS = 5
 CONSECUTIVE_EXISTING_LIMIT = 50
 
 # 1. TABLE CONFIGURATION (Distance Based - From Strava)
