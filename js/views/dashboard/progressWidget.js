@@ -1,4 +1,3 @@
-// js/views/dashboard/progressWidget.js
 import { getSportColorVar } from './utils.js';
 
 // --- GLOBAL STATE ---
@@ -7,7 +6,7 @@ window.DashboardProgressState = {
     logs: [],
     offset: 0,      // 0 = Current Week
     minOffset: 0,
-    maxOffset: 0,
+    maxOffset: 0,   // Locked to 0 (Current Week)
     streaks: { daily: 0, volume: 0 }
 };
 
@@ -126,19 +125,20 @@ export function renderProgressWidget(workouts, fullLogData) {
     s.streaks.daily = calculateDailyStreak(s.logs);
     s.streaks.volume = calculateVolumeStreak(s.logs);
 
-    // Calculate Min/Max Bounds based on Plan Dates
+    // Calculate Bounds
+    // Min: Earliest planned date
+    // Max: 0 (Current Week) - strict limit
     if (s.workouts.length > 0) {
         const today = new Date();
         const startDates = s.workouts.map(p => new Date(p.date));
         const minDate = new Date(Math.min(...startDates));
-        const maxDate = new Date(Math.max(...startDates));
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
         
         s.minOffset = Math.floor((minDate - today) / oneWeek);
-        s.maxOffset = Math.ceil((maxDate - today) / oneWeek);
     } else {
-        s.minOffset = -52; s.maxOffset = 52;
+        s.minOffset = -52; 
     }
+    s.maxOffset = 0; // Prevent going into future weeks
 
     return `
     <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 shadow-sm">
@@ -152,17 +152,22 @@ export function renderProgressWidget(workouts, fullLogData) {
 function generateWidgetContent() {
     const s = window.DashboardProgressState;
     
-    // 1. Determine Week Window (Manual Calc to avoid 'getMonday' dependency)
+    // 1. Calculate Date Range for Offset
     const today = new Date();
     today.setHours(0,0,0,0);
-    // Shift target date by offset weeks
-    const viewDate = new Date(today.getTime() + (s.offset * 7 * 24 * 60 * 60 * 1000));
     
+    // Calculate the "View Date" based on offset
+    const viewDate = new Date(today);
+    viewDate.setDate(today.getDate() + (s.offset * 7));
+    
+    // Find Monday of that View Date
     const dayOfWeek = viewDate.getDay();
+    const distToMon = (dayOfWeek + 6) % 7; // Distance to previous Monday
     const monday = new Date(viewDate);
-    monday.setDate(viewDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    monday.setDate(viewDate.getDate() - distToMon);
     monday.setHours(0,0,0,0);
     
+    // Find Sunday
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23,59,59,999);
@@ -191,16 +196,17 @@ function generateWidgetContent() {
 
     const now = new Date();
 
-    // Planned
+    // Process Planned Workouts
     s.workouts.forEach(w => {
-        const d = new Date(w.date);
+        // Ensure date is a valid object
+        const d = new Date(w.date); 
         if (d >= monday && d <= sunday) {
             const planDur = w.plannedDuration || 0;
             const dateKey = w.date.toISOString().split('T')[0];
             
             totalPlanned += planDur;
             
-            // Pacing Logic: If week is fully in past, expect 100%. If future, 0%.
+            // Pacing: If date is in past, count it
             if (d < now) expectedSoFar += planDur;
 
             if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
@@ -215,10 +221,12 @@ function generateWidgetContent() {
         }
     });
 
-    // Actuals
+    // Process Actual Logs
     s.logs.forEach(item => {
         if (!item.date) return;
         const d = new Date(item.date);
+        
+        // Fix: Ensure we are comparing same timezones/dates correctly
         if (d >= monday && d <= sunday) {
             const actDur = parseFloat(item.actualDuration) || 0;
             if (actDur > 0) {
@@ -250,7 +258,7 @@ function generateWidgetContent() {
             } 
         }
         
-        if (isMain) return ''; // Main bar handled in header
+        if (isMain) return ''; 
         if (planned === 0 && actual === 0) return '';
 
         const colorStyle = `style="color: ${getSportColorVar(sportType)}"`;
@@ -285,14 +293,14 @@ function generateWidgetContent() {
     
     let weekLabel = "THIS WEEK";
     if (s.offset === -1) weekLabel = "LAST WEEK";
-    else if (s.offset === 1) weekLabel = "NEXT WEEK";
+    else if (s.offset === 1) weekLabel = "NEXT WEEK"; // Only visible if maxOffset allows
     else if (s.offset !== 0) weekLabel = `${Math.abs(s.offset)} WEEKS ${s.offset > 0 ? 'AHEAD' : 'AGO'}`;
 
     // Nav State
     const canLeft = s.offset > s.minOffset;
     const canRight = s.offset < s.maxOffset;
-    const btnClass = "text-slate-400 hover:text-white transition-colors p-1";
-    const btnDisabled = "text-slate-700 opacity-30 cursor-not-allowed p-1";
+    const btnClass = "text-slate-400 hover:text-white transition-colors p-1 cursor-pointer";
+    const btnDisabled = "text-slate-700 opacity-30 cursor-not-allowed p-1 pointer-events-none";
 
     const mainPct = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
     
@@ -329,14 +337,14 @@ function generateWidgetContent() {
         <div class="flex-1 w-full">
             <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-700/50">
                 <div class="flex items-center gap-2">
-                    <button onclick="${canLeft ? 'window.moveProgressWeek(-1)' : ''}" class="${canLeft ? btnClass : btnDisabled}">
+                    <button onclick="window.moveProgressWeek(-1)" class="${canLeft ? btnClass : btnDisabled}">
                         <i class="fa-solid fa-chevron-left text-xs"></i>
                     </button>
                     <div class="text-center w-24">
                         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">${weekLabel}</div>
                         <div class="text-[9px] text-slate-500 font-mono leading-none mt-1">${dateRangeLabel}</div>
                     </div>
-                    <button onclick="${canRight ? 'window.moveProgressWeek(1)' : ''}" class="${canRight ? btnClass : btnDisabled}">
+                    <button onclick="window.moveProgressWeek(1)" class="${canRight ? btnClass : btnDisabled}">
                         <i class="fa-solid fa-chevron-right text-xs"></i>
                     </button>
                 </div>
@@ -347,7 +355,9 @@ function generateWidgetContent() {
             </div>
 
             <div class="relative w-full h-3 bg-slate-700 rounded-full overflow-hidden mb-4">
-                <div class="absolute top-0 left-0 h-full bg-slate-200 transition-all duration-1000" style="width: ${Math.min(mainPct,100)}%"></div>
+                <div class="absolute top-0 left-0 h-full transition-all duration-1000" 
+                     style="width: ${Math.min(mainPct,100)}%; background-color: var(--color-all)">
+                </div>
             </div>
 
             ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers, false, 'Bike')}
