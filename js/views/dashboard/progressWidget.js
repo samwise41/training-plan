@@ -1,16 +1,39 @@
 // js/views/dashboard/progressWidget.js
 import { getSportColorVar } from './utils.js';
 
-// --- Internal Helper: Streak Calculators ---
-function calculateDailyStreak(fullLogData) {
-    if (!fullLogData || fullLogData.length === 0) {
-        console.log("Streak Calc: No data available.");
-        return 0;
+// --- GLOBAL STATE MANAGEMENT ---
+window.DashboardProgressState = {
+    workouts: [],
+    logs: [],
+    offset: 0,      // 0 = Current Week
+    minOffset: 0,
+    maxOffset: 0,
+    streaks: { daily: 0, volume: 0 } // Cache streaks so they don't re-calc on nav
+};
+
+// --- GLOBAL HANDLER ---
+window.moveProgressWeek = (direction) => {
+    const s = window.DashboardProgressState;
+    const newOffset = s.offset + direction;
+
+    // Boundary Check
+    if (newOffset < s.minOffset || newOffset > s.maxOffset) return;
+
+    s.offset = newOffset;
+    
+    // Re-render only the inner content
+    const container = document.getElementById('progress-widget-inner');
+    if (container) {
+        container.innerHTML = generateWidgetContent();
     }
+};
+
+// --- HELPER: STREAK CALCULATORS (Preserved) ---
+function calculateDailyStreak(fullLogData) {
+    if (!fullLogData || fullLogData.length === 0) return 0;
 
     const today = new Date(); today.setHours(0,0,0,0);
     const dayOfWeek = today.getDay(); 
-    // Align to Monday start for consistency
     const currentWeekStart = new Date(today); 
     currentWeekStart.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
     
@@ -47,9 +70,6 @@ function calculateDailyStreak(fullLogData) {
         streak++; 
         checkDate.setDate(checkDate.getDate() - 7);
     }
-    
-    // DEBUG LOG
-    console.log(`🔥 Daily Streak Calculated: ${streak} weeks`);
     return streak;
 }
 
@@ -92,37 +112,63 @@ function calculateVolumeStreak(fullLogData) {
         }
         checkDate.setDate(checkDate.getDate() - 7);
     }
-
-    // DEBUG LOG
-    console.log(`🔥 Volume Streak Calculated: ${streak} weeks`);
     return streak;
 }
 
-// --- Main Component ---
+// --- MAIN EXPORT ---
 export function renderProgressWidget(workouts, fullLogData) {
-    console.group("🚀 Progress Widget Debug Start");
-    console.log("Input Workouts:", workouts?.length || 0);
-    console.log("Input Log Data:", fullLogData?.length || 0);
+    const s = window.DashboardProgressState;
+    s.workouts = workouts || [];
+    s.logs = fullLogData || [];
+    s.offset = 0; // Reset to current week on reload
 
-    // 1. Strictly Define Current Week (Monday - Sunday)
+    // Pre-calculate streaks (Global metrics, not week-dependent)
+    s.streaks.daily = calculateDailyStreak(s.logs);
+    s.streaks.volume = calculateVolumeStreak(s.logs);
+
+    // Calculate Min/Max Bounds based on Plan Dates
+    if (s.workouts.length > 0) {
+        const today = new Date();
+        const startDates = s.workouts.map(p => new Date(p.date));
+        const minDate = new Date(Math.min(...startDates));
+        const maxDate = new Date(Math.max(...startDates));
+        const oneWeek = 7 * 24 * 60 * 60 * 1000;
+        
+        // How many weeks back/forward can we go?
+        s.minOffset = Math.floor((minDate - today) / oneWeek);
+        s.maxOffset = Math.ceil((maxDate - today) / oneWeek);
+    } else {
+        s.minOffset = -52; s.maxOffset = 52; // Default fallback
+    }
+
+    return `
+    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 shadow-sm">
+        <div id="progress-widget-inner" class="flex flex-col md:flex-row items-start gap-6">
+            ${generateWidgetContent()}
+        </div>
+    </div>`;
+}
+
+// --- INTERNAL CONTENT GENERATOR ---
+function generateWidgetContent() {
+    const s = window.DashboardProgressState;
+    
+    // 1. Determine Week Window
     const today = new Date();
     today.setHours(0,0,0,0);
-    const currentDay = today.getDay(); 
+    // Shift by offset
+    const viewDate = new Date(today.getTime() + (s.offset * 7 * 24 * 60 * 60 * 1000));
     
-    // Calculate Monday
-    const distToMon = currentDay === 0 ? 6 : currentDay - 1;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - distToMon);
+    const dayOfWeek = viewDate.getDay();
+    const monday = new Date(viewDate);
+    monday.setDate(viewDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
     monday.setHours(0,0,0,0);
-
-    // Calculate Sunday
+    
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23,59,59,999);
 
-    console.log(`📅 Current Week Window: ${monday.toDateString()} to ${sunday.toDateString()}`);
-
-    // 2. Initialize Stats
+    // 2. Filter Data for Window
     const sportStats = { 
         Bike: { planned: 0, actual: 0, dailyMarkers: {} }, 
         Run: { planned: 0, actual: 0, dailyMarkers: {} }, 
@@ -135,95 +181,55 @@ export function renderProgressWidget(workouts, fullLogData) {
     let expectedSoFar = 0; 
     const totalDailyMarkers = {};
 
-    // --- STRICT DETECTION (CASE INSENSITIVE) ---
     const detectSport = (txt) => {
         if (!txt) return 'Other';
         const t = txt.toUpperCase();
-
         if (t.includes('[RUN]')) return 'Run';
         if (t.includes('[BIKE]')) return 'Bike';
         if (t.includes('[SWIM]')) return 'Swim';
-        
         return 'Other';
     };
 
-    const now = new Date(); 
-
-    // 3. Process PLANNED Data
-    let plannedCount = 0;
-    if (workouts) {
-        workouts.forEach(w => {
-            const d = new Date(w.date);
-            if (d >= monday && d <= sunday) {
-                plannedCount++;
-                const planDur = w.plannedDuration || 0;
-                const dateKey = w.date.toISOString().split('T')[0];
-                
-                totalPlanned += planDur;
-                if (w.date < now) expectedSoFar += planDur;
-
-                if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
-                totalDailyMarkers[dateKey] += planDur;
-
-                // Check Plan Name for Tags (or use type if tags missing in plan)
-                const planSport = detectSport(w.planName);
-                if (sportStats[planSport]) {
-                    sportStats[planSport].planned += planDur;
-                    if (!sportStats[planSport].dailyMarkers[dateKey]) sportStats[planSport].dailyMarkers[dateKey] = 0;
-                    sportStats[planSport].dailyMarkers[dateKey] += planDur;
-                }
-            }
-        });
-    }
-    console.log(`📝 Planned Workouts found in window: ${plannedCount}. Total Minutes: ${totalPlanned}`);
-
-    // 4. Process ACTUAL Data
-    const debugActuals = [];
-    const debugSkipped = [];
-
-    if (fullLogData) {
-        fullLogData.forEach(item => {
-            if (!item.date) return;
-            const d = new Date(item.date);
+    // Planned
+    s.workouts.forEach(w => {
+        const d = new Date(w.date);
+        if (d >= monday && d <= sunday) {
+            const planDur = w.plannedDuration || 0;
+            const dateKey = w.date.toISOString().split('T')[0];
             
-            // Strict Filter: Current Week Only
-            if (d >= monday && d <= sunday) {
-                const actDur = parseFloat(item.actualDuration) || 0;
-                
-                if (actDur > 0) {
-                    totalActual += actDur;
-                    
-                    const nameToCheck = item.actualName || "";
-                    const actSport = detectSport(nameToCheck);
-                    
-                    debugActuals.push({ date: item.date, name: nameToCheck, dur: actDur, detected: actSport });
+            totalPlanned += planDur;
+            
+            // Pacing Logic: If week is in past, we expect 100%. If future, 0%. If current, check date.
+            if (d < new Date()) expectedSoFar += planDur;
 
-                    if (sportStats[actSport]) {
-                        sportStats[actSport].actual += actDur;
-                    } else {
-                        sportStats.Other.actual += actDur;
-                    }
-                }
-            } else {
-                // Keep track of a few skipped items just to check logic
-                if (debugSkipped.length < 5) {
-                    debugSkipped.push({ date: item.date, reason: "Outside Date Range" });
-                }
+            if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
+            totalDailyMarkers[dateKey] += planDur;
+
+            const planSport = detectSport(w.planName);
+            if (sportStats[planSport]) {
+                sportStats[planSport].planned += planDur;
+                if (!sportStats[planSport].dailyMarkers[dateKey]) sportStats[planSport].dailyMarkers[dateKey] = 0;
+                sportStats[planSport].dailyMarkers[dateKey] += planDur;
             }
-        });
-    }
-
-    console.log("✅ Captured Actuals:", debugActuals);
-    if (debugActuals.length === 0) {
-        console.warn("⚠️ No actuals captured! Sample skipped items:", debugSkipped);
-        if (fullLogData && fullLogData.length > 0) {
-            console.log("Sample First Log Date:", fullLogData[0].date);
         }
-    }
+    });
 
-    console.groupEnd(); // End Debug Group
+    // Actuals
+    s.logs.forEach(item => {
+        if (!item.date) return;
+        const d = new Date(item.date);
+        if (d >= monday && d <= sunday) {
+            const actDur = parseFloat(item.actualDuration) || 0;
+            if (actDur > 0) {
+                totalActual += actDur;
+                const actSport = detectSport(item.actualName || "");
+                if (sportStats[actSport]) sportStats[actSport].actual += actDur;
+                else sportStats.Other.actual += actDur;
+            }
+        }
+    });
 
-    // 5. HTML Generation
+    // 3. UI Helpers
     const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false, sportType = 'All') => {
         const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0; 
         const displayPct = rawPct; 
@@ -243,102 +249,127 @@ export function renderProgressWidget(workouts, fullLogData) {
             } 
         }
         
-        const labelHtml = isMain ? `<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">${label}</span>` : ''; 
+        // Header Row for the Main Goal is handled separately now
+        if (isMain) return ''; 
+
+        // Skip empty rows
+        if (planned === 0 && actual === 0) return '';
+
         const colorStyle = `style="color: ${getSportColorVar(sportType)}"`;
         const iconHtml = iconClass ? `<i class="fa-solid ${iconClass} mr-2 w-4 text-center" ${colorStyle}></i>` : ''; 
-        const heightClass = isMain ? 'h-3' : 'h-2.5'; 
-        const mbClass = isMain ? 'mb-4' : 'mb-3'; 
         const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
         const barBgStyle = `style="width: ${barWidth}%; background-color: ${getSportColorVar(sportType)}"`;
 
-        // If no plan and no actual, hide the row (except main)
-        if (!isMain && planned === 0 && actual === 0) return '';
-
         return `
-        <div class="flex-1 w-full ${mbClass}">
+        <div class="flex-1 w-full mb-3">
             <div class="flex justify-between items-end mb-1">
                 <div class="flex flex-col">
-                    ${labelHtml}
                     <div class="flex items-center">
                         ${iconHtml}
-                        <span class="text-sm font-bold text-white flex items-baseline gap-1">
-                            ${Math.round(actual)} / ${Math.round(planned)} mins
-                            <span class="text-xs text-slate-400 font-normal ml-1">(${actualHrs} / ${plannedHrs} hrs)</span>
+                        <span class="text-xs font-bold text-white uppercase">${label}</span>
+                        <span class="text-[10px] text-slate-400 font-normal ml-2 font-mono">
+                            ${Math.round(actual)}/${Math.round(planned)}m
                         </span>
                     </div>
                 </div>
                 <span class="text-xs font-bold ${pctColor}">${displayPct}%</span>
             </div>
-            <div class="relative w-full ${heightClass} bg-slate-700 rounded-full overflow-hidden">
+            <div class="relative w-full h-2 bg-slate-700 rounded-full overflow-hidden">
                 ${markersHtml}
                 <div class="absolute top-0 left-0 h-full transition-all duration-1000 ease-out" ${barBgStyle}></div>
             </div>
         </div>`;
     };
+
+    // 4. Construct Header & Pacing
+    const dateOpts = { month: 'short', day: 'numeric' };
+    const dateRangeLabel = `${monday.toLocaleDateString('en-US', dateOpts)} - ${sunday.toLocaleDateString('en-US', dateOpts)}`;
     
-    // Pacing Logic
+    let weekLabel = "THIS WEEK";
+    if (s.offset === -1) weekLabel = "LAST WEEK";
+    else if (s.offset === 1) weekLabel = "NEXT WEEK";
+    else if (s.offset !== 0) weekLabel = `${Math.abs(s.offset)} WEEKS ${s.offset > 0 ? 'AHEAD' : 'AGO'}`;
+
+    // Nav State
+    const canLeft = s.offset > s.minOffset;
+    const canRight = s.offset < s.maxOffset;
+    const btnClass = "text-slate-400 hover:text-white transition-colors p-1";
+    const btnDisabled = "text-slate-700 opacity-30 cursor-not-allowed p-1";
+
+    const mainPct = totalPlanned > 0 ? Math.round((totalActual / totalPlanned) * 100) : 0;
+    
+    // Pacing
     const pacingDiff = totalActual - expectedSoFar; 
     let pacingLabel = "On Track"; 
     let pacingColor = "text-slate-400"; 
     let pacingIcon = "fa-check";
     
-    if (pacingDiff >= 15) { 
-        pacingLabel = `${Math.round(pacingDiff)}m Ahead`; 
-        pacingColor = "text-emerald-400"; 
-        pacingIcon = "fa-arrow-trend-up"; 
-    } else if (pacingDiff <= -15) { 
-        pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`; 
-        pacingColor = "text-orange-400"; 
-        pacingIcon = "fa-triangle-exclamation"; 
-    }
+    if (pacingDiff >= 15) { pacingLabel = `${Math.round(pacingDiff)}m Ahead`; pacingColor = "text-emerald-400"; pacingIcon = "fa-arrow-trend-up"; } 
+    else if (pacingDiff <= -15) { pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`; pacingColor = "text-orange-400"; pacingIcon = "fa-triangle-exclamation"; }
     
-    const totalActualHrsPacing = (totalActual / 60).toFixed(1); 
-    const expectedHrs = (expectedSoFar / 60).toFixed(1);
+    const pacingHtml = `
+        <div>
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
+            <div class="flex items-center gap-2">
+                <i class="fa-solid ${pacingIcon} ${pacingColor}"></i>
+                <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
+            </div>
+            <div class="text-right md:text-left flex flex-col items-end md:items-start mt-1">
+                <span class="text-[10px] text-slate-300 font-mono">Act: ${Math.round(totalActual)}m</span>
+                <span class="text-[10px] text-slate-300 font-mono">Tgt: ${Math.round(expectedSoFar)}m</span>
+            </div>
+        </div>
+    `;
 
-    // Streaks (Calculated from History)
-    const dailyStreak = calculateDailyStreak(fullLogData);
-    const volumeStreak = calculateVolumeStreak(fullLogData);
+    const getStreakColor = (val) => val >= 8 ? "text-red-500" : (val >= 3 ? "text-orange-400" : "text-slate-500");
 
-    const getStreakColor = (val) => {
-        if (val >= 8) return "text-red-500";
-        if (val >= 3) return "text-orange-400";
-        return "text-slate-500";
-    };
-    
+    // 5. Return Full HTML
     return `
-    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm">
         <div class="flex-1 w-full">
-            ${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true, 'All')}
+            <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-700/50">
+                <div class="flex items-center gap-2">
+                    <button onclick="${canLeft ? 'window.moveProgressWeek(-1)' : ''}" class="${canLeft ? btnClass : btnDisabled}">
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                    </button>
+                    <div class="text-center w-24">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">${weekLabel}</div>
+                        <div class="text-[9px] text-slate-500 font-mono leading-none mt-1">${dateRangeLabel}</div>
+                    </div>
+                    <button onclick="${canRight ? 'window.moveProgressWeek(1)' : ''}" class="${canRight ? btnClass : btnDisabled}">
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                </div>
+                <div class="text-right">
+                    <span class="text-2xl font-black text-white">${mainPct}%</span>
+                    <span class="text-[9px] text-slate-500 font-bold uppercase block -mt-1">Goal</span>
+                </div>
+            </div>
+
+            <div class="relative w-full h-3 bg-slate-700 rounded-full overflow-hidden mb-4">
+                <div class="absolute top-0 left-0 h-full bg-slate-200 transition-all duration-1000" style="width: ${Math.min(mainPct,100)}%"></div>
+                </div>
+
             ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers, false, 'Bike')}
             ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers, false, 'Run')}
             ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers, false, 'Swim')}
         </div>
+
         <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-6 md:gap-4 self-center">
-            <div>
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid ${pacingIcon} ${pacingColor}"></i>
-                    <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
-                </div>
-                <div class="text-right md:text-left flex flex-col items-end md:items-start mt-1">
-                    <span class="text-[10px] text-slate-300 font-mono">Act: ${Math.round(totalActual)}m <span class="text-slate-500">(${totalActualHrsPacing}h)</span></span>
-                    <span class="text-[10px] text-slate-300 font-mono">Tgt: ${Math.round(expectedSoFar)}m <span class="text-slate-500">(${expectedHrs}h)</span></span>
-                </div>
-            </div>
+            ${pacingHtml}
             <div>
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Daily Streak</span>
-                <div class="flex items-center gap-2" title="Consecutive weeks where every single workout was Completed">
-                    <i class="fa-solid fa-calendar-day ${getStreakColor(dailyStreak)}"></i>
-                    <span class="text-lg font-bold ${getStreakColor(dailyStreak)}">${dailyStreak} Wks</span>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-day ${getStreakColor(s.streaks.daily)}"></i>
+                    <span class="text-lg font-bold ${getStreakColor(s.streaks.daily)}">${s.streaks.daily} Wks</span>
                 </div>
             </div>
             <div>
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Volume Streak</span>
-                <div class="flex items-center gap-2" title="Consecutive weeks where total volume was >95%">
-                    <i class="fa-solid fa-fire ${getStreakColor(volumeStreak)}"></i>
-                    <span class="text-lg font-bold ${getStreakColor(volumeStreak)}">${volumeStreak} Wks</span>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-fire ${getStreakColor(s.streaks.volume)}"></i>
+                    <span class="text-lg font-bold ${getStreakColor(s.streaks.volume)}">${s.streaks.volume} Wks</span>
                 </div>
             </div>
         </div>
-    </div>`;
+    `;
 }
