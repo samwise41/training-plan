@@ -15,7 +15,6 @@ window.moveProgressWeek = (direction) => {
     const s = window.DashboardProgressState;
     const newOffset = s.offset + direction;
 
-    // Strict Boundary Check
     if (newOffset < s.minOffset || newOffset > s.maxOffset) return;
 
     s.offset = newOffset;
@@ -27,9 +26,10 @@ window.moveProgressWeek = (direction) => {
 };
 
 // --- HELPER: DATE FORMATTING ---
-// Safely converts any date input to a local "YYYY-MM-DD" string for comparison
 function toLocalYMD(input) {
     if (!input) return "0000-00-00";
+    if (typeof input === 'string' && input.match(/^\d{4}-\d{2}-\d{2}$/)) return input;
+    
     const d = new Date(input);
     if (isNaN(d.getTime())) return "0000-00-00";
     
@@ -39,11 +39,31 @@ function toLocalYMD(input) {
     return local.toISOString().split('T')[0];
 }
 
-// --- HELPER: STREAK CALCULATORS ---
+// --- HELPER: TIME PARSING ---
+function parseTime(str) {
+    if (!str) return 0;
+    if (typeof str === 'number') return str;
+    str = str.toString().trim();
+    
+    // Handle "1h 30m"
+    if (str.includes('h')) {
+        const parts = str.split('h');
+        const h = parseFloat(parts[0]) || 0;
+        const m = parseFloat(parts[1]) || 0;
+        return (h * 60) + m;
+    }
+    // Handle "1:30"
+    if (str.includes(':')) {
+        const parts = str.split(':');
+        return (parseFloat(parts[0]) * 60) + parseFloat(parts[1]);
+    }
+    return parseFloat(str) || 0;
+}
+
+// --- STREAK CALCULATORS ---
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
 
-    // Normalize "Current Week Start" to Monday
     const today = new Date(); 
     const day = today.getDay();
     const diff = today.getDate() - day + (day === 0 ? -6 : 1);
@@ -53,37 +73,32 @@ function calculateDailyStreak(fullLogData) {
     
     fullLogData.forEach(item => {
         if (!item.date) return;
-        const itemYMD = toLocalYMD(item.date);
-        
-        // Determine the Monday of the item's week
         const d = new Date(item.date);
         const dDay = d.getDay();
         const dDiff = d.getDate() - dDay + (dDay === 0 ? -6 : 1);
         const wStartStr = toLocalYMD(new Date(d.setDate(dDiff)));
 
-        if (wStartStr >= currentWeekStartStr) return; // Skip current/future weeks
+        if (wStartStr >= currentWeekStartStr) return; 
 
         if (!weeksMap[wStartStr]) weeksMap[wStartStr] = { failed: false };
         
         if (item.plannedDuration > 0) {
             const statusStr = (item.status || '').toUpperCase();
             const isCompleted = item.completed === true || statusStr === 'COMPLETED';
-            const hasDuration = (item.actualDuration || 0) > 0;
+            const hasDuration = (parseTime(item.actualDuration) || 0) > 0;
             if (!isCompleted && !hasDuration) weeksMap[wStartStr].failed = true;
         }
     });
 
     let streak = 0; 
-    // Start checking from Last Week
     const checkDate = new Date(currentWeekStartStr);
     checkDate.setDate(checkDate.getDate() - 7);
 
-    for (let i = 0; i < 260; i++) { // Max 5 years check
+    for (let i = 0; i < 260; i++) { 
         const key = toLocalYMD(checkDate);
         const weekData = weeksMap[key];
-        if (!weekData) break; // Week missing (break streak)
-        if (weekData.failed) break; // Failed workout (break streak)
-        
+        if (!weekData) break; 
+        if (weekData.failed) break; 
         streak++;
         checkDate.setDate(checkDate.getDate() - 7);
     }
@@ -110,8 +125,8 @@ function calculateVolumeStreak(fullLogData) {
         if (wStartStr >= currentWeekStartStr) return;
 
         if (!weeksMap[wStartStr]) weeksMap[wStartStr] = { planned: 0, actual: 0 };
-        weeksMap[wStartStr].planned += (item.plannedDuration || 0);
-        weeksMap[wStartStr].actual += (item.actualDuration || 0);
+        weeksMap[wStartStr].planned += (parseTime(item.plannedDuration) || 0);
+        weeksMap[wStartStr].actual += (parseTime(item.actualDuration) || 0);
     });
 
     let streak = 0; 
@@ -123,7 +138,7 @@ function calculateVolumeStreak(fullLogData) {
         const stats = weeksMap[key];
         if (!stats) break;
         if (stats.planned === 0) {
-            streak++; // Rest weeks count if planned is 0
+            streak++; 
         } else { 
             const ratio = stats.actual / stats.planned; 
             if (ratio >= 0.95) streak++; else break; 
@@ -140,22 +155,22 @@ export function renderProgressWidget(workouts, fullLogData) {
     s.logs = fullLogData || [];
     s.offset = 0; 
 
-    // Calculate Streaks
+    // Streaks
     s.streaks.daily = calculateDailyStreak(s.logs);
     s.streaks.volume = calculateVolumeStreak(s.logs);
 
-    // --- BOUNDS CALCULATION ---
+    // Bounds Calculation
     const todayTs = new Date().getTime();
     let minTs = todayTs;
 
-    // 1. Scan History (Logs) for earliest date
+    // Scan History for Earliest Date
     if (s.logs.length > 0) {
         s.logs.forEach(l => {
             const t = new Date(l.date).getTime();
             if (!isNaN(t) && t < minTs) minTs = t;
         });
     }
-    // 2. Scan Plan for earliest date
+    // Scan Plan for Earliest Date
     if (s.workouts.length > 0) {
         s.workouts.forEach(p => {
             const t = new Date(p.date).getTime();
@@ -163,11 +178,10 @@ export function renderProgressWidget(workouts, fullLogData) {
         });
     }
 
-    // Convert Time difference to Weeks
     const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
     const diffMs = minTs - todayTs;
-    s.minOffset = Math.floor(diffMs / oneWeekMs) - 1; // Extra buffer week
-    s.maxOffset = 0; // STRICTLY Current Week (0)
+    s.minOffset = Math.floor(diffMs / oneWeekMs) - 1; 
+    s.maxOffset = 0; 
 
     return `
     <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 shadow-sm">
@@ -181,21 +195,21 @@ export function renderProgressWidget(workouts, fullLogData) {
 function generateWidgetContent() {
     const s = window.DashboardProgressState;
     
-    // 1. Determine Week Date Range
+    // 1. Date Range
     const today = new Date();
-    // Shift by offset
-    const viewDate = new Date(today.getTime() + (s.offset * 7 * 24 * 60 * 60 * 1000));
+    const viewTarget = new Date(today.getTime() + (s.offset * 7 * 24 * 60 * 60 * 1000));
     
-    const day = viewDate.getDay();
-    const diffToMon = viewDate.getDate() - day + (day === 0 ? -6 : 1);
+    const day = viewTarget.getDay();
+    const diffToMon = viewTarget.getDate() - day + (day === 0 ? -6 : 1);
     
-    const monday = new Date(viewDate);
+    const monday = new Date(viewTarget);
     monday.setDate(diffToMon);
+    monday.setHours(0,0,0,0);
     
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23,59,59,999);
 
-    // Create Strings for Comparison
     const startStr = toLocalYMD(monday);
     const endStr = toLocalYMD(sunday);
     const nowStr = toLocalYMD(new Date());
@@ -213,30 +227,22 @@ function generateWidgetContent() {
     let expectedSoFar = 0; 
     const totalDailyMarkers = {};
 
-    const detectSport = (txt) => {
-        if (!txt) return 'Other';
-        const t = txt.toUpperCase();
-        if (t.includes('[RUN]')) return 'Run';
-        if (t.includes('[BIKE]')) return 'Bike';
-        if (t.includes('[SWIM]')) return 'Swim';
-        return 'Other';
-    };
-
-    // Planned
+    // Planned Workouts
     s.workouts.forEach(w => {
         const wDateStr = toLocalYMD(w.date);
         
         if (wDateStr >= startStr && wDateStr <= endStr) {
-            const planDur = w.plannedDuration || 0;
+            const planDur = parseTime(w.plannedDuration);
             totalPlanned += planDur;
             
-            // Pacing: Count expected if day is today or past
+            // Pacing
             if (wDateStr <= nowStr) expectedSoFar += planDur;
 
             if (!totalDailyMarkers[wDateStr]) totalDailyMarkers[wDateStr] = 0;
             totalDailyMarkers[wDateStr] += planDur;
 
-            const planSport = detectSport(w.planName);
+            // Use the Type from Parser
+            const planSport = w.type || 'Other'; 
             if (sportStats[planSport]) {
                 sportStats[planSport].planned += planDur;
                 if (!sportStats[planSport].dailyMarkers[wDateStr]) sportStats[planSport].dailyMarkers[wDateStr] = 0;
@@ -245,20 +251,29 @@ function generateWidgetContent() {
         }
     });
 
-    // Actuals
+    // Actual Logs
     s.logs.forEach(item => {
         if (!item.date) return;
         const actDateStr = toLocalYMD(item.date);
         
         if (actDateStr >= startStr && actDateStr <= endStr) {
-            const actDur = parseFloat(item.actualDuration) || 0;
+            const actDur = parseTime(item.actualDuration);
+            
             if (actDur > 0) {
                 totalActual += actDur;
                 
-                // If past/today, count toward total. If future (weird?), count.
-                // Note: Pacing only subtracts 'expectedSoFar', doesn't filter actuals.
+                // Use Actual Type from Parser (Reliable)
+                // If it's undefined, try to fallback to Plan Type if linked
+                let actSport = item.actualType || item.type || 'Other';
                 
-                const actSport = detectSport(item.actualName || "");
+                // Capitalize for key matching
+                actSport = actSport.charAt(0).toUpperCase() + actSport.slice(1).toLowerCase();
+                
+                // Safety map
+                if (actSport.includes('Cycl') || actSport.includes('Rid')) actSport = 'Bike';
+                if (actSport.includes('Jog')) actSport = 'Run';
+                if (actSport.includes('Pool')) actSport = 'Swim';
+
                 if (sportStats[actSport]) sportStats[actSport].actual += actDur;
                 else sportStats.Other.actual += actDur;
             }
@@ -322,7 +337,6 @@ function generateWidgetContent() {
     if (s.offset === -1) weekLabel = "LAST WEEK";
     else if (s.offset !== 0) weekLabel = `${Math.abs(s.offset)} WEEKS AGO`;
 
-    // Arrows
     const canLeft = s.offset > s.minOffset;
     const canRight = s.offset < s.maxOffset;
     const btnClass = "text-slate-400 hover:text-white transition-colors p-1 cursor-pointer";
@@ -342,7 +356,20 @@ function generateWidgetContent() {
         pacingLabel = `${Math.abs(Math.round(pacingDiff))}m Behind`; pacingColor = "text-orange-400"; pacingIcon = "fa-triangle-exclamation"; 
     }
     
-    // Streak Colors
+    const pacingHtml = `
+        <div>
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
+            <div class="flex items-center gap-2">
+                <i class="fa-solid ${pacingIcon} ${pacingColor}"></i>
+                <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
+            </div>
+            <div class="text-right md:text-left flex flex-col items-end md:items-start mt-1">
+                <span class="text-[10px] text-slate-300 font-mono">Act: ${Math.round(totalActual)}m</span>
+                <span class="text-[10px] text-slate-300 font-mono">Tgt: ${Math.round(expectedSoFar)}m</span>
+            </div>
+        </div>
+    `;
+
     const getStreakColor = (val) => val >= 8 ? "text-red-500" : (val >= 3 ? "text-orange-400" : "text-slate-500");
 
     return `
@@ -378,17 +405,7 @@ function generateWidgetContent() {
         </div>
 
         <div class="w-full md:w-auto md:border-l md:border-slate-700 md:pl-6 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-start gap-6 md:gap-4 self-center">
-            <div>
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Pacing</span>
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid ${pacingIcon} ${pacingColor}"></i>
-                    <span class="text-lg font-bold ${pacingColor}">${pacingLabel}</span>
-                </div>
-                <div class="text-right md:text-left flex flex-col items-end md:items-start mt-1">
-                    <span class="text-[10px] text-slate-300 font-mono">Act: ${Math.round(totalActual)}m</span>
-                    <span class="text-[10px] text-slate-300 font-mono">Tgt: ${Math.round(expectedSoFar)}m</span>
-                </div>
-            </div>
+            ${pacingHtml}
             <div>
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-0.5">Daily Streak</span>
                 <div class="flex items-center gap-2">
