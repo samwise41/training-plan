@@ -27,26 +27,42 @@ window.moveProgressWeek = (direction) => {
     }
 };
 
-// --- HELPERS: STREAK CALCULATORS ---
+// --- HELPERS: DATE & STREAKS ---
+
+// Helper: Normalize any date input to local "YYYY-MM-DD" string for safe comparison
+function toYMD(dateInput) {
+    if (!dateInput) return "0000-00-00";
+    const d = new Date(dateInput);
+    // Adjust for timezone offset to ensure we get the LOCAL date string, not UTC
+    const offset = d.getTimezoneOffset() * 60000;
+    const localDate = new Date(d.getTime() - offset);
+    return localDate.toISOString().split('T')[0];
+}
+
 function calculateDailyStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
 
-    const today = new Date(); today.setHours(0,0,0,0);
-    const dayOfWeek = today.getDay(); 
+    const today = new Date(); 
     const currentWeekStart = new Date(today); 
-    currentWeekStart.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+    const day = currentWeekStart.getDay();
+    const diff = currentWeekStart.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
+    currentWeekStart.setDate(diff);
+    currentWeekStart.setHours(0,0,0,0);
     
     const weeksMap = {};
     fullLogData.forEach(item => {
         if (!item.date) return;
-        const d = new Date(item.date); d.setHours(0,0,0,0);
-        const day = d.getDay(); 
-        const weekStart = new Date(d); 
-        weekStart.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+        // Find week start for this item
+        const d = new Date(item.date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day == 0 ? -6 : 1);
+        const wStart = new Date(d);
+        wStart.setDate(diff);
+        wStart.setHours(0,0,0,0);
         
-        if (weekStart >= currentWeekStart) return; 
+        if (wStart >= currentWeekStart) return; 
         
-        const key = weekStart.toISOString().split('T')[0];
+        const key = wStart.toISOString().split('T')[0];
         if (!weeksMap[key]) weeksMap[key] = { failed: false };
         
         if (item.plannedDuration > 0) {
@@ -74,22 +90,27 @@ function calculateDailyStreak(fullLogData) {
 
 function calculateVolumeStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
-    const today = new Date(); today.setHours(0,0,0,0);
-    const dayOfWeek = today.getDay(); 
+    
+    const today = new Date(); 
     const currentWeekStart = new Date(today); 
-    currentWeekStart.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+    const day = currentWeekStart.getDay();
+    const diff = currentWeekStart.getDate() - day + (day == 0 ? -6 : 1);
+    currentWeekStart.setDate(diff);
+    currentWeekStart.setHours(0,0,0,0);
 
     const weeksMap = {};
     fullLogData.forEach(item => {
         if (!item.date) return;
-        const d = new Date(item.date); d.setHours(0,0,0,0);
-        const day = d.getDay(); 
-        const weekStart = new Date(d); 
-        weekStart.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+        const d = new Date(item.date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day == 0 ? -6 : 1);
+        const wStart = new Date(d);
+        wStart.setDate(diff);
+        wStart.setHours(0,0,0,0);
         
-        if (weekStart >= currentWeekStart) return;
+        if (wStart >= currentWeekStart) return;
 
-        const key = weekStart.toISOString().split('T')[0];
+        const key = wStart.toISOString().split('T')[0];
         if (!weeksMap[key]) weeksMap[key] = { planned: 0, actual: 0 };
         weeksMap[key].planned += (item.plannedDuration || 0);
         weeksMap[key].actual += (item.actualDuration || 0);
@@ -125,20 +146,27 @@ export function renderProgressWidget(workouts, fullLogData) {
     s.streaks.daily = calculateDailyStreak(s.logs);
     s.streaks.volume = calculateVolumeStreak(s.logs);
 
-    // Calculate Bounds
-    // Min: Earliest planned date
-    // Max: 0 (Current Week) - strict limit
+    // --- FIX: CALCULATE BOUNDS FROM BOTH LOGS AND PLAN ---
+    const today = new Date();
+    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+    
+    let minTs = today.getTime();
+    
+    // Check Plans
     if (s.workouts.length > 0) {
-        const today = new Date();
-        const startDates = s.workouts.map(p => new Date(p.date));
-        const minDate = new Date(Math.min(...startDates));
-        const oneWeek = 7 * 24 * 60 * 60 * 1000;
-        
-        s.minOffset = Math.floor((minDate - today) / oneWeek);
-    } else {
-        s.minOffset = -52; 
+        const earliestPlan = Math.min(...s.workouts.map(p => new Date(p.date).getTime()));
+        if (!isNaN(earliestPlan)) minTs = Math.min(minTs, earliestPlan);
     }
-    s.maxOffset = 0; // Prevent going into future weeks
+    // Check Logs (History)
+    if (s.logs.length > 0) {
+        const earliestLog = Math.min(...s.logs.map(l => new Date(l.date).getTime()));
+        if (!isNaN(earliestLog)) minTs = Math.min(minTs, earliestLog);
+    }
+
+    // Calculate how many weeks back we can go
+    const minDate = new Date(minTs);
+    s.minOffset = Math.floor((minDate - today) / oneWeek);
+    s.maxOffset = 0; // Lock to current week (no future surfing)
 
     return `
     <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 shadow-sm">
@@ -152,25 +180,23 @@ export function renderProgressWidget(workouts, fullLogData) {
 function generateWidgetContent() {
     const s = window.DashboardProgressState;
     
-    // 1. Calculate Date Range for Offset
+    // 1. Determine Current View Week (Monday - Sunday)
     const today = new Date();
-    today.setHours(0,0,0,0);
+    const viewTarget = new Date(today.getTime() + (s.offset * 7 * 24 * 60 * 60 * 1000));
     
-    // Calculate the "View Date" based on offset
-    const viewDate = new Date(today);
-    viewDate.setDate(today.getDate() + (s.offset * 7));
+    // Get Monday of that week
+    const currentDay = viewTarget.getDay();
+    const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1;
+    const monday = new Date(viewTarget);
+    monday.setDate(viewTarget.getDate() - distanceToMonday);
     
-    // Find Monday of that View Date
-    const dayOfWeek = viewDate.getDay();
-    const distToMon = (dayOfWeek + 6) % 7; // Distance to previous Monday
-    const monday = new Date(viewDate);
-    monday.setDate(viewDate.getDate() - distToMon);
-    monday.setHours(0,0,0,0);
-    
-    // Find Sunday
+    // Get Sunday
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23,59,59,999);
+
+    // Format strings for strict comparison
+    const startStr = toYMD(monday);
+    const endStr = toYMD(sunday);
 
     // 2. Filter Data for Window
     const sportStats = { 
@@ -194,29 +220,28 @@ function generateWidgetContent() {
         return 'Other';
     };
 
-    const now = new Date();
+    const nowStr = toYMD(new Date());
 
     // Process Planned Workouts
     s.workouts.forEach(w => {
-        // Ensure date is a valid object
-        const d = new Date(w.date); 
-        if (d >= monday && d <= sunday) {
+        const dateStr = toYMD(w.date);
+        
+        // String comparison is safer for dates
+        if (dateStr >= startStr && dateStr <= endStr) {
             const planDur = w.plannedDuration || 0;
-            const dateKey = w.date.toISOString().split('T')[0];
-            
             totalPlanned += planDur;
             
-            // Pacing: If date is in past, count it
-            if (d < now) expectedSoFar += planDur;
+            // Pacing: If date is today or past, count it
+            if (dateStr <= nowStr) expectedSoFar += planDur;
 
-            if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
-            totalDailyMarkers[dateKey] += planDur;
+            if (!totalDailyMarkers[dateStr]) totalDailyMarkers[dateStr] = 0;
+            totalDailyMarkers[dateStr] += planDur;
 
             const planSport = detectSport(w.planName);
             if (sportStats[planSport]) {
                 sportStats[planSport].planned += planDur;
-                if (!sportStats[planSport].dailyMarkers[dateKey]) sportStats[planSport].dailyMarkers[dateKey] = 0;
-                sportStats[planSport].dailyMarkers[dateKey] += planDur;
+                if (!sportStats[planSport].dailyMarkers[dateStr]) sportStats[planSport].dailyMarkers[dateStr] = 0;
+                sportStats[planSport].dailyMarkers[dateStr] += planDur;
             }
         }
     });
@@ -224,10 +249,9 @@ function generateWidgetContent() {
     // Process Actual Logs
     s.logs.forEach(item => {
         if (!item.date) return;
-        const d = new Date(item.date);
+        const dateStr = toYMD(item.date);
         
-        // Fix: Ensure we are comparing same timezones/dates correctly
-        if (d >= monday && d <= sunday) {
+        if (dateStr >= startStr && dateStr <= endStr) {
             const actDur = parseFloat(item.actualDuration) || 0;
             if (actDur > 0) {
                 totalActual += actDur;
@@ -293,7 +317,7 @@ function generateWidgetContent() {
     
     let weekLabel = "THIS WEEK";
     if (s.offset === -1) weekLabel = "LAST WEEK";
-    else if (s.offset === 1) weekLabel = "NEXT WEEK"; // Only visible if maxOffset allows
+    else if (s.offset === 1) weekLabel = "NEXT WEEK"; 
     else if (s.offset !== 0) weekLabel = `${Math.abs(s.offset)} WEEKS ${s.offset > 0 ? 'AHEAD' : 'AGO'}`;
 
     // Nav State
