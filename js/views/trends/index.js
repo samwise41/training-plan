@@ -1,6 +1,6 @@
 import { buildCollapsibleSection } from './utils.js';
 import { renderVolumeChart } from './volume.js';
-#import { buildFTPChart } from './ftp.js';
+import { buildFTPChart } from './ftp.js';
 import { renderDynamicCharts } from './adherence.js';
 import { renderComplianceSection } from './compliance.js';
 import { renderDurationTool, updateDurationAnalysis } from './duration.js';
@@ -33,9 +33,9 @@ export function renderTrends(mergedLogData) {
     const trendContainerHtml = `<div id="trend-charts-container"></div>`;
     const trendsSection = buildCollapsibleSection('trends-section', 'Adherence Trends', trendContainerHtml, true);
 
-    #// --- FTP SECTION ---
-    #const ftpHtml = buildFTPChart(planMdContent);
-    #const ftpSection = buildCollapsibleSection('ftp-section', 'Fitness Progression', ftpHtml, true);
+    // --- FTP SECTION ---
+    const ftpHtml = buildFTPChart(planMdContent);
+    const ftpSection = buildCollapsibleSection('ftp-section', 'Fitness Progression', ftpHtml, true);
 
     // --- ADHERENCE OVERVIEW ---
     const adherenceHtml = renderComplianceSection(logData);
