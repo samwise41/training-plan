@@ -1,72 +1,126 @@
-import os
 import json
-import datetime
+import os
 from garminconnect import Garmin
-from dotenv import load_dotenv
 
-# Load env variables from the parent directory
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.dirname(BASE_DIR)
-load_dotenv(os.path.join(PARENT_DIR, '.env'))
+# --- CONFIGURATION ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(SCRIPT_DIR)
+JSON_FILE = os.path.join(PARENT_DIR, 'garmin_data', 'my_garmin_data_ALL.json')
+FETCH_LIMIT = 40
 
-EMAIL = os.getenv("GARMIN_EMAIL")
-PASSWORD = os.getenv("GARMIN_PASSWORD")
-DATA_FILE = os.path.join(PARENT_DIR, "garmin_data", "my_garmin_data_ALL.json")
+# --- CREDENTIALS ---
+EMAIL = os.environ.get('GARMIN_EMAIL')
+PASSWORD = os.environ.get('GARMIN_PASSWORD')
 
-def fetch_garmin_data():
-    print("🔐 Authenticating with Garmin...")
-    
+def load_existing_data():
+    if os.path.exists(JSON_FILE):
+        try:
+            with open(JSON_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_data(data):
+    data.sort(key=lambda x: x.get('startTimeLocal', ''), reverse=True)
+    with open(JSON_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4)
+    print(f"💾 Saved {len(data)} activities.")
+
+def main():
     if not EMAIL or not PASSWORD:
-        print("❌ Error: Missing GARMIN_EMAIL or GARMIN_PASSWORD in .env")
-        return None
+        print("❌ Error: Credentials missing.")
+        return
 
     try:
-        # --- FIX: Removed the trailing comma here ---
-        client = Garmin(EMAIL, PASSWORD) 
-        # --------------------------------------------
-        
+        print("🔐 Authenticating...")
+        client = (EMAIL, PASSWORD)
         client.login()
-        print("✅ Login Successful.")
-
-        print("📡 Fetching Stats...")
-        # Fetch stats for the last 7 days to keep it fast
-        today = datetime.date.today()
-        start_date = today - datetime.timedelta(days=7)
-        
-        # We need to loop because get_stats is daily
-        all_stats = []
-        # If we already have data, load it so we don't overwrite history
-        if os.path.exists(DATA_FILE):
-            with open(DATA_FILE, 'r') as f:
-                try:
-                    all_stats = json.load(f)
-                except:
-                    all_stats = []
-
-        # Fetch new data
-        for i in range(8):
-            d = start_date + datetime.timedelta(days=i)
-            d_str = d.isoformat()
-            try:
-                stats = client.get_stats(d_str)
-                # Add/Update list
-                # (Simple dedupe logic: remove entry if date exists, then append new)
-                all_stats = [x for x in all_stats if x.get('calendarDate') != d_str]
-                all_stats.append(stats)
-            except Exception as e:
-                print(f"   ⚠️ No data for {d_str}: {e}")
-
-        # Save
-        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-        with open(DATA_FILE, 'w') as f:
-            json.dump(all_stats, f, indent=2)
-            
-        print(f"💾 Data Saved to {DATA_FILE}")
-        return all_stats
-
     except Exception as e:
-        print(f"❌ Login/Fetch Failed: {e}")
-        return None
+        print(f"❌ Login Failed: {e}")
+        return
+
+    print(f"📡 Fetching summaries for last {FETCH_LIMIT} activities...")
+    try:
+        new_activities = client.get_activities(0, FETCH_LIMIT)
+    except Exception as e:
+        print(f"❌ Fetch Failed: {e}")
+        return
+
+    print("🔄 performing Deep Fetch for RPE data...")
+    existing_data = load_existing_data()
+    db = {str(item['activityId']): item for item in existing_data}
+    
+    new_count = 0
+    updated_count = 0
+
+    for act in new_activities:
+        aid = str(act['activityId'])
+        is_new = aid not in db
+        
+        # Fetch if new OR if existing record is missing RPE
+        should_fetch = is_new or (aid in db and 'perceivedEffort' not in db[aid])
+        
+        if should_fetch:
+            try:
+                # DEEP FETCH
+                full = client.get_activity(aid)
+                
+                rpe = None
+                feeling = None
+                
+                # --- LOCATION 1: summaryDTO (Your Finding) ---
+                if 'summaryDTO' in full:
+                    #  uses 0-100 scale. We convert to 1-10 and 1-5.
+                    raw_rpe = full['summaryDTO'].get('directWorkoutRpe')
+                    raw_feel = full['summaryDTO'].get('directWorkoutFeel')
+                    
+                    if raw_rpe is not None:
+                        rpe = int(raw_rpe / 10) # 30 -> 3
+                    
+                    if raw_feel is not None:
+                        # 0=Terrible, 25=Weak, 50=Normal, 75=Strong, 100=Very Strong
+                        # Map 0-100 -> 1-5
+                        feeling = int((raw_feel / 25) + 1) 
+
+                # --- LOCATION 2: selfEvaluation (Root) ---
+                elif 'selfEvaluation' in full:
+                    rpe = full['selfEvaluation'].get('perceivedEffort')
+                    feeling = full['selfEvaluation'].get('feeling')
+
+                # --- LOCATION 3: metadataDTO ---
+                elif 'metadataDTO' in full and 'selfEvaluation' in full['metadataDTO']:
+                    rpe = full['metadataDTO']['selfEvaluation'].get('perceivedEffort')
+                    feeling = full['metadataDTO']['selfEvaluation'].get('feeling')
+
+                # SAVE DATA
+                if rpe is not None:
+                    act['perceivedEffort'] = rpe
+                    if not is_new:
+                        db[aid]['perceivedEffort'] = rpe
+                        updated_count += 1
+                
+                if feeling is not None:
+                    act['feeling'] = feeling
+                    if not is_new:
+                        db[aid]['feeling'] = feeling
+                        
+                if rpe or feeling:
+                    print(f"   + Found RPE ({rpe}) / Feel ({feeling}) for {act['activityName']}")
+
+            except Exception as e:
+                # Keep going even if one activity fails
+                pass
+
+        if is_new:
+            db[aid] = act
+            new_count += 1
+        elif aid in db:
+            db[aid].update(act)
+
+    print(f"   - Added: {new_count} | Updated RPE on: {updated_count}")
+    save_data(list(db.values()))
 
 if __name__ == "__main__":
-    fetch_garmin_data()
+    main()
