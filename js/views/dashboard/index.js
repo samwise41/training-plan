@@ -4,8 +4,58 @@ import { renderPlannedWorkouts } from './plannedWorkouts.js';
 import { renderProgressWidget } from './progressWidget.js';
 import { renderHeatmaps } from './heatmaps.js';
 
-// --- Global Tooltip Handler ---
-// Updated to accept 'details' param
+// --- GITHUB SYNC TRIGGER ---
+window.triggerGitHubSync = async () => {
+    let token = localStorage.getItem('github_pat');
+    
+    // First time setup: Ask for token
+    if (!token) {
+        token = prompt("🔐 Enter GitHub Personal Access Token (PAT) to enable remote sync:");
+        if (token) {
+            localStorage.setItem('github_pat', token.trim());
+        } else {
+            return; // User cancelled
+        }
+    }
+
+    const btn = document.getElementById('btn-force-sync');
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Syncing...</span>';
+
+    try {
+        const response = await fetch(`https://api.github.com/repos/samwise41/training-plan/actions/workflows/01_1_Training_Data_Sync.yml/dispatches`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ref: 'main' })
+        });
+
+        if (response.ok) {
+            alert("🚀 Sync Started!\n\nThe update process is running on GitHub.\nCheck back in ~2-3 minutes and refresh the page.");
+        } else {
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('github_pat'); // Clear bad token
+                alert("❌ Authentication Failed.\n\nYour token might be invalid or expired. Please try again.");
+            } else {
+                const err = await response.text();
+                alert(`❌ Error: ${err}`);
+            }
+        }
+    } catch (e) {
+        alert(`❌ Network Connection Error: ${e.message}`);
+    } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.innerHTML = originalContent;
+    }
+};
+
+// --- TOOLTIP HANDLER ---
 window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType, details) => {
     let tooltip = document.getElementById('dashboard-tooltip-popup');
     
@@ -16,7 +66,6 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType, de
         document.body.appendChild(tooltip);
     }
 
-    // Optional: Only show details section if details exist
     const detailsHtml = details ? `
         <div class="mt-2 pt-2 border-t border-slate-700 border-dashed text-slate-400 font-mono text-[10px] leading-tight text-left">
             ${details}
@@ -28,30 +77,19 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType, de
             <div class="text-white font-bold text-sm mb-0.5 whitespace-nowrap">
                 Plan: ${Math.round(plan)}m | Act: ${Math.round(act)}m
             </div>
-            
-            <div class="text-[10px] text-slate-400 font-normal mb-1">
-                ${date}
-            </div>
-
-            <div class="text-[10px] text-slate-200 font-mono font-bold border-b border-slate-700 pb-1 mb-1">
-                ${sportType}
-            </div>
-
-            <div class="text-[11px] font-bold mt-1 uppercase tracking-wide" style="color: ${color}">
-                ${label}
-            </div>
+            <div class="text-[10px] text-slate-400 font-normal mb-1">${date}</div>
+            <div class="text-[10px] text-slate-200 font-mono font-bold border-b border-slate-700 pb-1 mb-1">${sportType}</div>
+            <div class="text-[11px] font-bold mt-1 uppercase tracking-wide" style="color: ${color}">${label}</div>
             ${detailsHtml}
         </div>
     `;
 
-    // Position Logic
     const x = evt.clientX;
     const y = evt.clientY;
     const viewportWidth = window.innerWidth;
     
     tooltip.style.top = `${y - 75}px`; 
-    tooltip.style.left = '';
-    tooltip.style.right = '';
+    tooltip.style.left = ''; tooltip.style.right = '';
 
     if (x > viewportWidth * 0.60) {
         tooltip.style.right = `${viewportWidth - x + 10}px`;
@@ -64,31 +102,36 @@ window.showDashboardTooltip = (evt, date, plan, act, label, color, sportType, de
     if (parseInt(tooltip.style.left) < 10) tooltip.style.left = '10px';
 
     tooltip.classList.remove('opacity-0');
-    
     if (window.dashTooltipTimer) clearTimeout(window.dashTooltipTimer);
-    window.dashTooltipTimer = setTimeout(() => {
-        tooltip.classList.add('opacity-0');
-    }, 3000);
+    window.dashTooltipTimer = setTimeout(() => tooltip.classList.add('opacity-0'), 3000);
 };
 
 export function renderDashboard(planMd, mergedLogData) {
-    // 1. Common Data Prep
     const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
     if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
 
-    // Parse workouts for the Progress Widget
     const workouts = Parser._parseTableBlock(scheduleSection);
     workouts.sort((a, b) => a.date - b.date);
 
     const fullLogData = mergedLogData || [];
 
-    // 2. Render Sub-Components
     const progressHtml = renderProgressWidget(workouts, fullLogData);
     const plannedWorkoutsHtml = renderPlannedWorkouts(planMd);
     const heatmapsHtml = renderHeatmaps(fullLogData, planMd);
 
-    // 3. Assemble Final View
+    // --- SYNC BUTTON HTML ---
+    const syncButtonHtml = `
+        <div class="flex justify-end mb-4">
+            <button id="btn-force-sync" onclick="window.triggerGitHubSync()" 
+                class="text-[10px] uppercase tracking-wider bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 font-bold py-1.5 px-3 rounded transition-all shadow-sm flex items-center gap-2">
+                <i class="fa-solid fa-rotate"></i>
+                <span>Force Sync</span>
+            </button>
+        </div>
+    `;
+
     return `
+        ${syncButtonHtml}
         ${progressHtml}
         ${plannedWorkoutsHtml}
         ${heatmapsHtml}
