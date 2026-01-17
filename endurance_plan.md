@@ -162,7 +162,7 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 | COMPLETED | Wednesday | [BIKE] Zwift Race | 45 mins | [BIKE] Zwift - Race: Zwift Crit Racing Club - Avon Flyer (D) on Avon Flyer in New York (+2) | 53.7 | **Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus. | 2026-01-14 |
 | COMPLETED | Thursday | [BIKE] Zone 2 Endurance | 45 mins | [BIKE] North Ayrshire Virtual Cycling | 45.2 | **Deload.** Easy spin. Zone 2 (134-180W). Keep it smooth. | 2026-01-15 |
 | COMPLETED | Friday | [RUN] Easy / Base | 25 mins | [RUN] Roy - 25 Min at high cadence | 27.3 | **Ankle Test.** Flat surface only. Focus: High Cadence (175+ spm) to fix Ground Contact Time. | 2026-01-16 |
-| PLANNED | Saturday | [BIKE] Long Steady Distance | 75 mins | | | **Deload.** Reduced volume. Zone 2 Focus. Monitor Aerobic Efficiency. | 2026-01-17 |
+| COMPLETED | Saturday | [BIKE] Long Steady Distance | 75 mins | [BIKE] Thio Virtual Cycling | 76.0 | **Deload.** Reduced volume. Zone 2 Focus. Monitor Aerobic Efficiency. | 2026-01-17 |
 | PLANNED | Sunday | Rest | - | | | Total Recovery. Ice ankle if needed. | 2026-01-18 |
 
 
