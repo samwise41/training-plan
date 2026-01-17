@@ -430,7 +430,7 @@ export function renderFTP(planMd) {
                 width: 800, height: 300,
                 xType: 'time', 
                 colorAll: bikeColor, // <--- DYNAMIC CSS COLOR
-                color6w: '#22c55e',
+                color6w:  bikeColor ,
                 showPoints: false 
             };
             
@@ -455,7 +455,7 @@ export function renderFTP(planMd) {
                 width: 800, height: 300,
                 xType: 'distance', 
                 colorAll: runColor, // <--- DYNAMIC CSS COLOR
-                color6w: '#f97316',
+                color6w: runColor,
                 showPoints: true 
             };
             
