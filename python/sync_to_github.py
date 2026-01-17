@@ -4,75 +4,79 @@ import subprocess
 from datetime import datetime
 
 # ================= CONFIGURATION =================
-# 1. Source: Where are the files on your computer?
-# Example (Windows): r"C:\Users\Sam\Documents\Zwift\Workouts\123456"
-# Example (Mac): "/Users/Sam/Documents/Zwift/Workouts/123456"
-SOURCE_DIR = r"C:\Users\samwi\Documents\training-plan\zwift_library"
 
-# 2. Destination: Where in this repo should they go?
-# This creates a 'zwift_library' folder in the same directory as this script
-REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
-DEST_FOLDER_NAME = "zwift_library"
-DEST_DIR = os.path.join(REPO_ROOT, DEST_FOLDER_NAME)
+# 1. SOURCE: Where are the files coming FROM? (The Game Folder)
+#    YOU MUST UPDATE THIS PATH below to match your real Zwift folder.
+#    Example: r"C:\Users\samwi\Documents\Zwift\Workouts\123456"
+SOURCE_DIR = r"C:\Users\samwi\OneDrive\Documents\Zwift\Workouts\7381990"
 
-# 3. File Types: What extensions to copy?
-EXTENSIONS = [".zwo"] 
+# 2. DESTINATION: Where are the files going TO? (The GitHub Repo)
+#    I have updated this to the specific path you requested.
+DEST_DIR = r"C:\Users\samwi\Documents\training-plan\zwift_library"
+
 # =================================================
 
 def sync_files():
     print(f"\n🚀 Starting Sync: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    
-    # --- Step 1: Copy Files ---
+    print(f"   📂 FROM: {SOURCE_DIR}")
+    print(f"   📂 TO:   {DEST_DIR}")
+
+    # --- Safety Checks ---
+    if not os.path.exists(SOURCE_DIR) or "PASTE_YOUR" in SOURCE_DIR:
+        print(f"   ❌ Error: You forgot to set the SOURCE_DIR to your Zwift folder!")
+        return
+
+    # Create destination if it doesn't exist
     if not os.path.exists(DEST_DIR):
         os.makedirs(DEST_DIR)
-        print(f"   Created folder: {DEST_FOLDER_NAME}")
+        print(f"   [+] Created destination folder.")
 
     files_copied = 0
-    try:
-        for filename in os.listdir(SOURCE_DIR):
-            if any(filename.endswith(ext) for ext in EXTENSIONS):
-                src = os.path.join(SOURCE_DIR, filename)
+    
+    # --- Step 1: Copy Files ---
+    # We walk through the source folder recursively to find all .zwo files
+    for root, dirs, files in os.walk(SOURCE_DIR):
+        for filename in files:
+            if filename.endswith(".zwo"):
+                src = os.path.join(root, filename)
                 dst = os.path.join(DEST_DIR, filename)
                 
-                # Check if file is new or modified
+                # Only copy if file is new or modified
                 if not os.path.exists(dst) or os.path.getmtime(src) > os.path.getmtime(dst):
                     shutil.copy2(src, dst)
                     files_copied += 1
                     print(f"   [+] Copied: {filename}")
-        
-        if files_copied == 0:
-            print("   ✅ Files are already up to date locally.")
-        else:
-            print(f"   📂 Copied {files_copied} new/updated files.")
 
-    except FileNotFoundError:
-        print(f"   ❌ Error: Source directory not found: {SOURCE_DIR}")
-        return
+    if files_copied == 0:
+        print("   ✅ Files are already up to date locally.")
+    else:
+        print(f"   📂 Copied {files_copied} new/updated files.")
 
     # --- Step 2: Git Push ---
-    print("\n🐙 GIT: Checking for changes...")
-    try:
-        # Change cwd to repo root to ensure git commands work
-        os.chdir(REPO_ROOT)
+    if files_copied > 0:
+        print("\n🐙 GIT: Pushing to GitHub...")
+        try:
+            # We assume the repo root is the parent of the destination folder
+            # i.e., C:\Users\samwi\Documents\training-plan
+            repo_root = os.path.dirname(DEST_DIR)
+            os.chdir(repo_root)
 
-        # Stage all changes
-        subprocess.run(["git", "add", "."], check=True)
+            # Add the specific folder
+            subprocess.run(["git", "add", "zwift_library/."], check=True)
+            
+            # Check status
+            status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
+            
+            if status:
+                subprocess.run(["git", "commit", "-m", f"Sync Workouts {datetime.now().strftime('%Y-%m-%d')}"], check=True)
+                subprocess.run(["git", "push"], check=True)
+                print("   ✅ Success: Workouts are on GitHub!")
+            else:
+                print("   ℹ️  Git status clean (No changes to push).")
 
-        # Check status
-        status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
-
-        if status:
-            commit_msg = f"Auto-Sync: Local Files {datetime.now().strftime('%Y-%m-%d')}"
-            subprocess.run(["git", "commit", "-m", commit_msg], check=True)
-            subprocess.run(["git", "push"], check=True)
-            print("   ✅ Success: Changes pushed to GitHub!")
-        else:
-            print("   ℹ️  No git changes to commit.")
-
-    except subprocess.CalledProcessError as e:
-        print(f"   ⚠️ Git Error: {e}")
-    except FileNotFoundError:
-        print("   ⚠️ Error: 'git' command not found. Is Git installed?")
+        except Exception as e:
+            print(f"   ⚠️ Git Error: {e}")
+            print("   (Ensure you have GitHub Desktop installed or Git configured in this folder)")
 
 if __name__ == "__main__":
     sync_files()
