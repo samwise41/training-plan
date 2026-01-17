@@ -4,7 +4,6 @@ from garminconnect import Garmin
 
 # --- CONFIGURATION ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(SCRIPT_DIR)
 JSON_FILE = os.path.join(PARENT_DIR, 'garmin_data', 'my_garmin_data_ALL.json')
 FETCH_LIMIT = 40
@@ -35,8 +34,10 @@ def main():
 
     try:
         print("🔐 Authenticating...")
-        client = (EMAIL, PASSWORD)
+        # --- FIX IS HERE ---
+        client = Garmin(EMAIL, PASSWORD) 
         client.login()
+        # -------------------
     except Exception as e:
         print(f"❌ Login Failed: {e}")
         return
@@ -70,21 +71,18 @@ def main():
                 rpe = None
                 feeling = None
                 
-                # --- LOCATION 1: summaryDTO (Your Finding) ---
+                # --- LOCATION 1: summaryDTO ---
                 if 'summaryDTO' in full:
-                    #  uses 0-100 scale. We convert to 1-10 and 1-5.
                     raw_rpe = full['summaryDTO'].get('directWorkoutRpe')
                     raw_feel = full['summaryDTO'].get('directWorkoutFeel')
                     
                     if raw_rpe is not None:
-                        rpe = int(raw_rpe / 10) # 30 -> 3
+                        rpe = int(raw_rpe / 10) 
                     
                     if raw_feel is not None:
-                        # 0=Terrible, 25=Weak, 50=Normal, 75=Strong, 100=Very Strong
-                        # Map 0-100 -> 1-5
                         feeling = int((raw_feel / 25) + 1) 
 
-                # --- LOCATION 2: selfEvaluation (Root) ---
+                # --- LOCATION 2: selfEvaluation ---
                 elif 'selfEvaluation' in full:
                     rpe = full['selfEvaluation'].get('perceivedEffort')
                     feeling = full['selfEvaluation'].get('feeling')
@@ -110,7 +108,6 @@ def main():
                     print(f"   + Found RPE ({rpe}) / Feel ({feeling}) for {act['activityName']}")
 
             except Exception as e:
-                # Keep going even if one activity fails
                 pass
 
         if is_new:
