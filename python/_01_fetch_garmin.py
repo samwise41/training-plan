@@ -1,11 +1,23 @@
 import json
 import os
+import sys
 from garminconnect import Garmin
 
-# --- CONFIGURATION ---
+# --- ROBUST IMPORT LOGIC ---
+# Ensure we can import 'modules.config' regardless of how this script is run
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.dirname(SCRIPT_DIR)
-JSON_FILE = os.path.join(PARENT_DIR, 'garmin_data', 'my_garmin_data_ALL.json')
+sys.path.append(SCRIPT_DIR)
+
+try:
+    from modules import config
+except ImportError:
+    # If running from root, try adding python/ to path
+    sys.path.append(os.path.join(os.getcwd(), 'python'))
+    from modules import config
+
+# --- CONFIGURATION ---
+# Use the Single Source of Truth from config.py
+JSON_FILE = config.GARMIN_JSON
 FETCH_LIMIT = 40
 
 # --- CREDENTIALS ---
@@ -22,22 +34,23 @@ def load_existing_data():
     return []
 
 def save_data(data):
+    # DEFENSIVE: Ensure the 'garmin_data' folder exists before writing
+    os.makedirs(os.path.dirname(JSON_FILE), exist_ok=True)
+    
     data.sort(key=lambda x: x.get('startTimeLocal', ''), reverse=True)
     with open(JSON_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4)
-    print(f"💾 Saved {len(data)} activities.")
+    print(f"💾 Saved {len(data)} activities to: {JSON_FILE}")
 
 def main():
     if not EMAIL or not PASSWORD:
-        print("❌ Error: Credentials missing.")
+        print("❌ Error: Credentials missing (GARMIN_EMAIL / GARMIN_PASSWORD).")
         return
 
     try:
-        print("🔐 Authenticating...")
-        # --- FIX IS HERE ---
+        print("🔐 Authenticating with Garmin...")
         client = Garmin(EMAIL, PASSWORD) 
         client.login()
-        # -------------------
     except Exception as e:
         print(f"❌ Login Failed: {e}")
         return
@@ -92,17 +105,15 @@ def main():
                     rpe = full['metadataDTO']['selfEvaluation'].get('perceivedEffort')
                     feeling = full['metadataDTO']['selfEvaluation'].get('feeling')
 
-                # SAVE DATA
+                # UPDATE OBJECTS
                 if rpe is not None:
                     act['perceivedEffort'] = rpe
-                    if not is_new:
-                        db[aid]['perceivedEffort'] = rpe
-                        updated_count += 1
+                    if aid in db: db[aid]['perceivedEffort'] = rpe
+                    updated_count += 1
                 
                 if feeling is not None:
                     act['feeling'] = feeling
-                    if not is_new:
-                        db[aid]['feeling'] = feeling
+                    if aid in db: db[aid]['feeling'] = feeling
                         
                 if rpe or feeling:
                     print(f"   + Found RPE ({rpe}) / Feel ({feeling}) for {act['activityName']}")
@@ -114,6 +125,7 @@ def main():
             db[aid] = act
             new_count += 1
         elif aid in db:
+            # Update existing record with fresh summary data (e.g. name changes)
             db[aid].update(act)
 
     print(f"   - Added: {new_count} | Updated RPE on: {updated_count}")
