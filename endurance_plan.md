@@ -186,12 +186,12 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 
 | **Status** | **Day** | **Planned Workout** | **Planned Duration** | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** |
 |:---|:---|:---|:---|:---|:---|:---|:---|
-| COMPLETED | Monday | [BIKE] Strength / Hill Focus | 40 mins | [BIKE] North Ayrshire Virtual Cycling | 45.7 | **Deload.** Focus: Low Cadence (60-65 rpm) intervals to fix low Torque Efficiency (1.90) . | 2026-01-12 |
-| COMPLETED | Tuesday | [SWIM] Technique Focus | 30 mins | [SWIM] Swim coaching session | 30.0 | **Deload.** Use a Pull Buoy if ankle kicking is painful. Focus: Smooth rotation. | 2026-01-13 |
-| COMPLETED | Wednesday | [BIKE] Zwift Race | 45 mins | [BIKE] Zwift - Race: Zwift Crit Racing Club - Avon Flyer (D) on Avon Flyer in New York (+2) | 53.7 | **Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus. | 2026-01-14 |
-| COMPLETED | Thursday | [BIKE] Zone 2 Endurance | 45 mins | [BIKE] North Ayrshire Virtual Cycling | 45.2 | **Deload.** Easy spin. Zone 2 (134-180W). Keep it smooth. | 2026-01-15 |
-| COMPLETED | Friday | [RUN] Easy / Base | 25 mins | [RUN] Roy - 25 Min at high cadence | 27.3 | **Ankle Test.** Flat surface only. Focus: High Cadence (175+ spm) to fix Ground Contact Time. | 2026-01-16 |
-| PLANNED | Saturday | [BIKE] Long Steady Distance | 75 mins | | | **Deload.** Reduced volume. Zone 2 Focus. Monitor Aerobic Efficiency. | 2026-01-17 |
+| COMPLETED | Monday | [BIKE] Strength / Hill Focus | 40 mins | North Ayrshire Virtual Cycling | 45.7 | **Deload.** Focus: Low Cadence (60-65 rpm) intervals to fix low Torque Efficiency (1.90) . | 2026-01-12 |
+| COMPLETED | Tuesday | [SWIM] Technique Focus | 30 mins | Swim coaching session  | 30.0 | **Deload.** Use a Pull Buoy if ankle kicking is painful. Focus: Smooth rotation. | 2026-01-13 |
+| COMPLETED | Wednesday | [BIKE] Zwift Race | 45 mins | Zwift - Race: Zwift Crit Racing Club - Avon Flyer (D) on Avon Flyer in New York (+2) | 53.7 | **Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus. | 2026-01-14 |
+| COMPLETED | Thursday | [BIKE] Zone 2 Endurance | 45 mins | North Ayrshire Virtual Cycling | 45.2 | **Deload.** Easy spin. Zone 2 (134-180W). Keep it smooth. | 2026-01-15 |
+| COMPLETED | Friday | [RUN] Easy / Base | 25 mins | Roy - 25 Min at high cadence | 27.3 | **Ankle Test.** Flat surface only. Focus: High Cadence (175+ spm) to fix Ground Contact Time. | 2026-01-16 |
+| COMPLETED | Saturday | [BIKE] Long Steady Distance | 75 mins | Thio Virtual Cycling | 76.0 | **Deload.** Reduced volume. Zone 2 Focus. Monitor Aerobic Efficiency. | 2026-01-17 |
 | PLANNED | Sunday | Rest | - | | | Total Recovery. Ice ankle if needed. | 2026-01-18 |
 
 
