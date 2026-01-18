@@ -3,9 +3,9 @@ import { renderSummaryTable } from './table.js';
 import { updateCharts } from './charts.js';
 import { METRIC_DEFINITIONS } from './definitions.js';
 
-let currentRange = '6m'; // DEFAULT: 6 Months
+let currentRange = '6m'; 
+let activeTooltipId = null; // Track currently open data tooltip
 
-// Global Handler
 window.updateMetricsTime = (range) => {
     currentRange = range;
     if(window.App && window.App.allData) {
@@ -13,11 +13,9 @@ window.updateMetricsTime = (range) => {
     }
 };
 
-// Collapsible Helper
 const buildSection = (id, title, content, isOpen = true) => {
     const heightClass = isOpen ? "max-h-[5000px] opacity-100 py-4" : "max-h-0 opacity-0 py-0 overflow-hidden";
     const rotateClass = isOpen ? "rotate-0" : "-rotate-90";
-    
     return `
         <div class="border-b border-slate-800 pb-4">
             <div class="flex items-center gap-2 cursor-pointer group select-none py-2" onclick="const el=document.getElementById('${id}'); const ic=this.querySelector('i'); el.classList.toggle('max-h-0'); el.classList.toggle('opacity-0'); el.classList.toggle('py-0'); el.classList.toggle('overflow-hidden'); el.classList.toggle('max-h-[5000px]'); el.classList.toggle('opacity-100'); el.classList.toggle('py-4'); ic.classList.toggle('-rotate-90');">
@@ -42,36 +40,10 @@ export const renderMetrics = (allData) => {
     ).join('');
 
     const gridClass = "grid grid-cols-1 md:grid-cols-2 gap-6";
-    
-    // CHANGED: TSS is now standard size (removed md:col-span-2)
-    const generalCharts = `
-        <div class="${gridClass}">
-            <div id="metric-chart-tss"></div>
-            <div id="metric-chart-vo2max"></div>
-            <div id="metric-chart-anaerobic"></div>
-        </div>`;
-
-    const bikeCharts = `
-        <div class="${gridClass}">
-            <div id="metric-chart-subjective_bike"></div>
-            <div id="metric-chart-endurance"></div>
-            <div id="metric-chart-strength"></div>
-        </div>`;
-
-    const runCharts = `
-        <div class="${gridClass}">
-            <div id="metric-chart-subjective_run"></div>
-            <div id="metric-chart-run"></div>
-            <div id="metric-chart-mechanical"></div>
-            <div id="metric-chart-gct"></div>
-            <div id="metric-chart-vert"></div>
-        </div>`;
-
-    const swimCharts = `
-        <div class="${gridClass}">
-            <div id="metric-chart-subjective_swim"></div>
-            <div id="metric-chart-swim"></div>
-        </div>`;
+    const generalCharts = `<div class="${gridClass}"><div id="metric-chart-tss"></div><div id="metric-chart-vo2max"></div><div id="metric-chart-anaerobic"></div></div>`;
+    const bikeCharts = `<div class="${gridClass}"><div id="metric-chart-subjective_bike"></div><div id="metric-chart-endurance"></div><div id="metric-chart-strength"></div></div>`;
+    const runCharts = `<div class="${gridClass}"><div id="metric-chart-subjective_run"></div><div id="metric-chart-run"></div><div id="metric-chart-mechanical"></div><div id="metric-chart-gct"></div><div id="metric-chart-vert"></div></div>`;
+    const swimCharts = `<div class="${gridClass}"><div id="metric-chart-subjective_swim"></div><div id="metric-chart-swim"></div></div>`;
 
     const html = `
         <div class="max-w-7xl mx-auto space-y-8 animate-fade-in pb-24 font-sans">
@@ -96,7 +68,7 @@ export const renderMetrics = (allData) => {
         
         <div id="metric-tooltip-popup" class="fixed z-50 pointer-events-none opacity-0 transition-opacity bg-slate-900/95 border border-slate-600 p-3 rounded-lg shadow-2xl text-xs backdrop-blur-md transform -translate-x-1/2 -translate-y-full mt-[-10px]"></div>
         
-        <div id="metric-info-popup" class="fixed z-50 opacity-0 transition-opacity bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs max-w-[300px] pointer-events-none"></div>
+        <div id="metric-info-popup" class="fixed z-50 opacity-0 transition-opacity bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs max-w-[300px] pointer-events-auto"></div>
     `;
 
     setTimeout(() => {
@@ -108,13 +80,22 @@ export const renderMetrics = (allData) => {
     return html;
 };
 
-// --- TOOLTIP HANDLERS ---
-
-// 1. Data Point Tooltip (Hover)
-window.showMetricTooltip = (e, date, title, val, unit, label, color) => {
+// --- TOOLTIP HANDLER: DATA POINTS ---
+window.showMetricTooltip = (e, uniqueId, date, title, val, unit, label, color) => {
+    e.stopPropagation(); // Stop click from propagating (helps with conflicts)
     const el = document.getElementById('metric-tooltip-popup');
     if(!el) return;
     
+    // TOGGLE LOGIC:
+    if (activeTooltipId === uniqueId && !el.classList.contains('opacity-0')) {
+        // Clicked the same point -> Close it
+        el.classList.add('opacity-0');
+        activeTooltipId = null;
+        return;
+    }
+    
+    // Open New
+    activeTooltipId = uniqueId;
     el.innerHTML = `
         <div class="text-slate-400 mb-1 border-b border-slate-700 pb-1 font-mono text-[10px]">${date}</div>
         <div class="font-bold text-white mb-1 truncate max-w-[200px]">${title}</div>
@@ -128,23 +109,20 @@ window.showMetricTooltip = (e, date, title, val, unit, label, color) => {
     el.style.left = `${e.clientX}px`;
     el.style.top = `${e.clientY - 15}px`;
     el.classList.remove('opacity-0');
-    
-    clearTimeout(window.metricTooltipTimer);
-    window.metricTooltipTimer = setTimeout(() => el.classList.add('opacity-0'), 2500);
 };
 
-// 2. Info Tooltip (Static Popover)
+// --- TOOLTIP HANDLER: INFO ICON ---
 window.showAnalysisTooltip = (evt, key) => {
+    evt.stopPropagation(); 
     const def = METRIC_DEFINITIONS[key];
     if (!def) return;
     
     const el = document.getElementById('metric-info-popup');
     if(!el) return;
 
-    // Toggle behavior
+    // Toggle if clicking same icon
     if (!el.classList.contains('opacity-0') && el.dataset.activeKey === key) {
         el.classList.add('opacity-0');
-        el.classList.add('pointer-events-none');
         return;
     }
 
@@ -179,26 +157,35 @@ window.showAnalysisTooltip = (evt, key) => {
             <div class="text-[9px] text-slate-600 text-center pt-1 italic cursor-pointer hover:text-white" onclick="document.getElementById('metric-info-popup').classList.add('opacity-0')">Click to close</div>
         </div>`;
 
-    // Position carefully
+    // Intelligent Positioning
     const rect = evt.target.getBoundingClientRect();
     const screenW = window.innerWidth;
     
+    // If icon is on right side of screen, show popup to the left
     if (rect.left > screenW / 2) {
-        el.style.left = `${rect.left - 310}px`; // Show to left
+        el.style.left = `${rect.left - 310}px`; 
+        el.style.right = 'auto';
     } else {
-        el.style.left = `${rect.right + 10}px`; // Show to right
+        el.style.left = `${rect.right + 10}px`;
+        el.style.right = 'auto';
     }
     
     el.style.top = `${rect.top + window.scrollY}px`;
     el.classList.remove('opacity-0');
-    el.classList.remove('pointer-events-none');
 };
 
-// Close info popup on global click outside
+// GLOBAL CLICK LISTENER: Closes tooltips when clicking empty space
 document.addEventListener('click', (e) => {
-    const el = document.getElementById('metric-info-popup');
-    if (el && !el.contains(e.target) && !e.target.closest('.fa-circle-info')) {
-        el.classList.add('opacity-0');
-        el.classList.add('pointer-events-none');
+    // Close Data Tooltip if click is outside
+    const dataEl = document.getElementById('metric-tooltip-popup');
+    if (dataEl && !dataEl.contains(e.target)) {
+        dataEl.classList.add('opacity-0');
+        activeTooltipId = null;
+    }
+    
+    // Close Info Tooltip if click is outside
+    const infoEl = document.getElementById('metric-info-popup');
+    if (infoEl && !infoEl.contains(e.target) && !e.target.closest('.fa-circle-info')) {
+        infoEl.classList.add('opacity-0');
     }
 });
