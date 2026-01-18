@@ -1,17 +1,15 @@
 // js/views/metrics/charts.js
 import { METRIC_DEFINITIONS } from './definitions.js';
-import { calculateTrend, getTrendIcon, checkSport } from './utils.js';
+import { calculateTrend, getTrendIcon, checkSport, aggregateWeeklyTSS } from './utils.js';
 
 // --- DATA EXTRACTION ---
-// This aligns strictly with your new JSON schema
 
 const extractChartData = (allData, key) => {
-    // Helper: Must be a number > 0 to be charted
     const valid = (val) => typeof val === 'number' && val > 0;
 
     switch(key) {
         // --- CYCLING ---
-        case 'endurance': // Aerobic Efficiency (NP / HR)
+        case 'endurance': 
             return allData.filter(d => checkSport(d, 'BIKE') && valid(d.normPower) && valid(d.avgHR))
                 .map(d => ({
                     date: d.date,
@@ -21,7 +19,7 @@ const extractChartData = (allData, key) => {
                     breakdown: `${Math.round(d.normPower)}w / ${Math.round(d.avgHR)}bpm`
                 }));
 
-        case 'strength': // Torque Proxy (Power / Cadence)
+        case 'strength': 
             return allData.filter(d => checkSport(d, 'BIKE') && valid(d.avgPower) && valid(d.avgCadence))
                 .map(d => ({
                     date: d.date,
@@ -31,7 +29,7 @@ const extractChartData = (allData, key) => {
                     breakdown: `${Math.round(d.avgPower)}w / ${Math.round(d.avgCadence)}rpm`
                 }));
 
-        case 'subjective_bike': // Efficiency (Power / RPE)
+        case 'subjective_bike': 
             return allData.filter(d => checkSport(d, 'BIKE') && valid(d.avgPower) && valid(d.RPE))
                 .map(d => ({
                     date: d.date,
@@ -42,17 +40,17 @@ const extractChartData = (allData, key) => {
                 }));
 
         // --- RUNNING ---
-        case 'run': // Running Efficiency (Speed / HR)
+        case 'run': 
             return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgSpeed) && valid(d.avgHR))
                 .map(d => ({
                     date: d.date,
                     dateStr: d.date.toISOString().split('T')[0],
-                    val: (d.avgSpeed * 60) / d.avgHR, // Meters per min per beat
+                    val: (d.avgSpeed * 60) / d.avgHR,
                     name: d.actualName,
                     breakdown: `${(1000/(d.avgSpeed*60)).toFixed(2)} / ${Math.round(d.avgHR)}bpm`
                 }));
 
-        case 'subjective_run': // Efficiency (Speed / RPE)
+        case 'subjective_run': 
             return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgSpeed) && valid(d.RPE))
                 .map(d => ({
                     date: d.date,
@@ -62,7 +60,7 @@ const extractChartData = (allData, key) => {
                     breakdown: `${d.avgSpeed.toFixed(2)}m/s / ${d.RPE} RPE`
                 }));
 
-        case 'mechanical': // Stiffness (Speed / Power) - Requires Running Power
+        case 'mechanical': 
             return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgSpeed) && valid(d.avgPower))
                 .map(d => ({
                     date: d.date,
@@ -72,7 +70,7 @@ const extractChartData = (allData, key) => {
                     breakdown: `${d.avgSpeed.toFixed(1)}m/s / ${Math.round(d.avgPower)}w`
                 }));
 
-        case 'gct': // Ground Contact Time
+        case 'gct': 
             return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgGroundContactTime))
                 .map(d => ({
                     date: d.date,
@@ -82,7 +80,7 @@ const extractChartData = (allData, key) => {
                     breakdown: `${Math.round(d.avgGroundContactTime)}ms`
                 }));
 
-        case 'vert': // Vertical Oscillation
+        case 'vert': 
             return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgVerticalOscillation))
                 .map(d => ({
                     date: d.date,
@@ -93,7 +91,7 @@ const extractChartData = (allData, key) => {
                 }));
 
         // --- SWIMMING ---
-        case 'swim': // Swim Efficiency (Speed / HR)
+        case 'swim': 
             return allData.filter(d => checkSport(d, 'SWIM') && valid(d.avgSpeed) && valid(d.avgHR))
                 .map(d => ({
                     date: d.date,
@@ -103,7 +101,7 @@ const extractChartData = (allData, key) => {
                     breakdown: `${(d.avgSpeed*60).toFixed(1)}m/min / ${Math.round(d.avgHR)}bpm`
                 }));
 
-        case 'subjective_swim': // Efficiency (Speed / RPE)
+        case 'subjective_swim': 
             return allData.filter(d => checkSport(d, 'SWIM') && valid(d.avgSpeed) && valid(d.RPE))
                 .map(d => ({
                     date: d.date,
@@ -113,7 +111,7 @@ const extractChartData = (allData, key) => {
                     breakdown: `${d.avgSpeed.toFixed(1)}m/s / ${d.RPE} RPE`
                 }));
 
-        // --- PHYSIOLOGY (General) ---
+        // --- PHYSIOLOGY ---
         case 'vo2max':
             return allData.filter(d => valid(d.vO2MaxValue))
                 .map(d => ({
@@ -125,7 +123,8 @@ const extractChartData = (allData, key) => {
                 }));
 
         case 'anaerobic':
-            return allData.filter(d => valid(d.anaerobicTrainingEffect))
+            // Filter: Only significant Anaerobic Impact (>2.0)
+            return allData.filter(d => valid(d.anaerobicTrainingEffect) && d.anaerobicTrainingEffect > 2.0)
                 .map(d => ({
                     date: d.date,
                     dateStr: d.date.toISOString().split('T')[0],
@@ -135,23 +134,15 @@ const extractChartData = (allData, key) => {
                 }));
 
         case 'tss':
-            // TSS needs special weekly aggregation, handled in utils usually, 
-            // but for charts we can just plot daily TSS for now or reuse the agg logic if available.
-            return allData.filter(d => valid(d.trainingStressScore))
-                .map(d => ({
-                    date: d.date,
-                    dateStr: d.date.toISOString().split('T')[0],
-                    val: d.trainingStressScore,
-                    name: d.actualName,
-                    breakdown: `${Math.round(d.trainingStressScore)} TSS`
-                }));
+            // FIX: Use Weekly Aggregation for Load
+            return aggregateWeeklyTSS(allData);
 
         default:
             return [];
     }
 };
 
-// --- CHART BUILDER (Standardized) ---
+// --- CHART BUILDER ---
 
 const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
@@ -160,6 +151,7 @@ const buildMetricChart = (displayData, fullData, key) => {
     const unitLabel = def.rangeInfo ? def.rangeInfo.split(' ').pop() : '';
     const color = def.colorVar;
 
+    // --- TREND INDICATORS ---
     const now = new Date();
     const getSlope = (days) => {
         const cutoff = new Date();
@@ -201,18 +193,20 @@ const buildMetricChart = (displayData, fullData, key) => {
         </div>`;
     }
 
-    // Chart Dimensions
+    // --- CHART MATH ---
     const width = 800, height = 150;
     const pad = { t: 20, b: 30, l: 50, r: 20 };
     
-    // Scaling
     const getX = (d, i) => pad.l + (i / (displayData.length - 1)) * (width - pad.l - pad.r);
     
     const vals = displayData.map(d => d.val);
     let minV = Math.min(...vals);
     let maxV = Math.max(...vals);
 
-    // Padding for Y-Axis
+    // Expand range to include targets if defined
+    if (def.refMin !== undefined) minV = Math.min(minV, def.refMin);
+    if (def.refMax !== undefined) maxV = Math.max(maxV, def.refMax);
+
     const range = maxV - minV;
     const buf = range * 0.1 || (maxV * 0.05) || 1;
     const dMin = Math.max(0, minV - buf);
@@ -220,10 +214,36 @@ const buildMetricChart = (displayData, fullData, key) => {
 
     const getY = (v) => height - pad.b - ((v - dMin) / (dMax - dMin)) * (height - pad.t - pad.b);
 
-    // SVG Elements
+    // --- TARGET LINES ---
+    let refLinesHtml = '';
+    if (def.refMin !== undefined && def.refMax !== undefined) {
+        const yMin = getY(def.refMin);
+        const yMax = getY(def.refMax);
+        
+        // Color Logic: Invert = Low is Good (Green), High is Bad (Red)
+        // Standard = Low is Bad (Red), High is Good (Green)
+        const colorTop = def.invertRanges ? '#ef4444' : '#10b981'; // Red if inverted, Green if standard
+        const colorBot = def.invertRanges ? '#10b981' : '#ef4444'; // Green if inverted, Red if standard
+
+        // Top Line (Max)
+        if (yMax >= pad.t && yMax <= height - pad.b) {
+            refLinesHtml += `
+                <line x1="${pad.l}" y1="${yMax}" x2="${width - pad.r}" y2="${yMax}" stroke="${colorTop}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />
+                <text x="${width - pad.r + 5}" y="${yMax + 3}" font-size="8" fill="${colorTop}" opacity="0.8">Target Max</text>
+            `;
+        }
+        // Bottom Line (Min)
+        if (yMin >= pad.t && yMin <= height - pad.b) {
+            refLinesHtml += `
+                <line x1="${pad.l}" y1="${yMin}" x2="${width - pad.r}" y2="${yMin}" stroke="${colorBot}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />
+                <text x="${width - pad.r + 5}" y="${yMin + 3}" font-size="8" fill="${colorBot}" opacity="0.8">Target Min</text>
+            `;
+        }
+    }
+
     const yAxisLine = `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" stroke="#475569" stroke-width="1" />`;
     
-    // Y-Axis Labels (Max, Mid, Min)
+    // Axis Labels
     const yMid = (dMin + dMax) / 2;
     const axisLabels = `
         <text x="${pad.l - 6}" y="${getY(dMax) + 4}" text-anchor="end" font-size="9" fill="#64748b">${dMax.toFixed(1)}</text>
@@ -237,7 +257,7 @@ const buildMetricChart = (displayData, fullData, key) => {
         `<line x1="${getX(null,0)}" y1="${getY(trend.startVal)}" x2="${getX(null,displayData.length-1)}" y2="${getY(trend.endVal)}" stroke="${color}" stroke-width="2" stroke-dasharray="4,4" opacity="0.4" />` 
         : '';
 
-    // Data Line & Points
+    // Data Path & Points
     let pathD = `M ${getX(displayData[0], 0)} ${getY(displayData[0].val)}`;
     let points = '';
     
@@ -264,6 +284,7 @@ const buildMetricChart = (displayData, fullData, key) => {
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
                     ${yAxisLine}
                     ${axisLabels}
+                    ${refLinesHtml}
                     ${trendLine}
                     <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.8" />
                     ${points}
@@ -278,14 +299,12 @@ const buildMetricChart = (displayData, fullData, key) => {
 export const updateCharts = (allData, timeRange) => {
     if (!allData || allData.length === 0) return;
     
-    // Determine Cutoff Date
     const cutoff = new Date();
     if (timeRange === '30d') cutoff.setDate(cutoff.getDate() - 30);
     else if (timeRange === '90d') cutoff.setDate(cutoff.getDate() - 90);
     else if (timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
     
-    // Helper to Render One Chart
     const render = (containerId, metricKey) => {
         const el = document.getElementById(containerId);
         if (el) {
@@ -295,29 +314,23 @@ export const updateCharts = (allData, timeRange) => {
         }
     };
 
-    // --- EXECUTE RENDER ---
-    // General
     render('metric-chart-vo2max', 'vo2max');
     render('metric-chart-tss', 'tss');
     render('metric-chart-anaerobic', 'anaerobic');
 
-    // Cycling
     render('metric-chart-subjective_bike', 'subjective_bike');
     render('metric-chart-endurance', 'endurance');
     render('metric-chart-strength', 'strength');
 
-    // Running
     render('metric-chart-subjective_run', 'subjective_run');
     render('metric-chart-run', 'run');
     render('metric-chart-mechanical', 'mechanical');
     render('metric-chart-gct', 'gct');
     render('metric-chart-vert', 'vert');
 
-    // Swimming
     render('metric-chart-subjective_swim', 'subjective_swim');
     render('metric-chart-swim', 'swim');
 
-    // Update Button State
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
         if(btn) {
