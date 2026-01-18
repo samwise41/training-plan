@@ -1,270 +1,179 @@
 // js/views/metrics/charts.js
 import { METRIC_DEFINITIONS } from './definitions.js';
-import { calculateTrend, getTrendIcon } from './utils.js';
-import { extractMetricData } from './table.js';
 
-const METRIC_FORMULAS = {
-    'subjective_bike': '(Avg Power / RPE)',
-    'subjective_run': '(Avg Speed / RPE)',
-    'subjective_swim': '(Avg Speed / RPE)',
-    'endurance': '(Norm Power / Avg HR)',
-    'strength': '(Torque / Output)',
-    'run': '(Avg Power / Avg Speed)',
-    'swim': '(Avg Speed / Stroke Rate)',
-    'mechanical': '(Vert Osc / GCT)'
-};
+// --- 1. DATA PREPARATION ---
+const prepareData = (allData, key) => {
+    const def = METRIC_DEFINITIONS[key];
+    if (!def) return [];
 
-// --- Helper to calculate Subjective Efficiency per Sport ---
-const calculateSubjectiveEfficiency = (allData, sportMode) => {
+    // Special Case: Weekly TSS Aggregation
+    if (def.isWeekly) {
+        const weeks = {};
+        allData.forEach(d => {
+            if (!d.tss) return;
+            // Calculate "Week Ending" date
+            const date = new Date(d.date);
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? 0 : 7); // Adjust to Sunday
+            const weekEnd = new Date(date.setDate(diff));
+            weekEnd.setHours(0,0,0,0);
+            const k = weekEnd.toISOString().split('T')[0];
+            
+            weeks[k] = (weeks[k] || 0) + d.tss;
+        });
+        return Object.keys(weeks).sort().map(k => ({
+            date: new Date(k),
+            dateStr: k,
+            val: weeks[k],
+            label: `${Math.round(weeks[k])} TSS`
+        }));
+    }
+
+    // Standard Case: Daily Metrics
     return allData
-        .map(d => {
-            const rpe = parseFloat(d.RPE);
-            if (!rpe || rpe <= 0) return null;
-
-            let val = 0;
-            let breakdown = "";
-            let match = false;
-
-            // BIKE (Power / RPE)
-            if (sportMode === 'bike') {
-                const isBike = d.sportTypeId == '2' || (d.activityType && d.activityType.includes('cycl')) || (d.actualType === 'Bike');
-                const pwr = parseFloat(d.avgPower);
-                if (isBike && pwr > 0) {
-                    val = pwr / rpe;
-                    breakdown = `${Math.round(pwr)}W / ${rpe} RPE`;
-                    match = true;
-                }
-            }
-            // RUN (Speed / RPE)
-            else if (sportMode === 'run') {
-                const isRun = d.sportTypeId == '1' || (d.activityType && d.activityType.includes('run')) || (d.actualType === 'Run');
-                const spd = parseFloat(d.avgSpeed); 
-                if (isRun && spd > 0) {
-                    val = spd / rpe;
-                    breakdown = `${spd.toFixed(2)} m/s / ${rpe} RPE`;
-                    match = true;
-                }
-            }
-            // SWIM (Speed / RPE)
-            else if (sportMode === 'swim') {
-                const isSwim = d.sportTypeId == '5' || (d.activityType && d.activityType.includes('swim')) || (d.actualType === 'Swim');
-                const spd = parseFloat(d.avgSpeed);
-                if (isSwim && spd > 0) {
-                    val = spd / rpe;
-                    breakdown = `${spd.toFixed(2)} m/s / ${rpe} RPE`;
-                    match = true;
-                }
-            }
-
-            if (match && val > 0) {
-                return {
-                    date: d.date,
-                    dateStr: d.date.toISOString().split('T')[0],
-                    val: val,
-                    name: d.actualName || d.activityName || 'Activity',
-                    breakdown: breakdown
-                };
-            }
-            return null;
+        .filter(d => {
+            // Filter by Sport (if specified)
+            if (def.sport !== 'All' && d.sport !== def.sport) return false;
+            // Check if value exists
+            const v = def.getValue(d);
+            return v !== null;
         })
-        .filter(Boolean)
+        .map(d => ({
+            date: d.date,
+            dateStr: d.dateStr,
+            val: def.getValue(d),
+            label: def.getLabel(d),
+            title: d.title
+        }))
         .sort((a, b) => a.date - b.date);
 };
 
-const buildMetricChart = (displayData, fullData, key) => {
-    const def = METRIC_DEFINITIONS[key];
-    if (!def) return `<div class="p-4 text-red-500 text-xs">Error: Definition missing for ${key}</div>`;
-
-    const unitLabel = def.rangeInfo.split(' ').pop(); 
-    const color = def.colorVar;
-
-    const now = new Date();
-    const getSlope = (days) => {
-        const cutoff = new Date();
-        cutoff.setDate(now.getDate() - days);
-        const subset = fullData.filter(d => d.date >= cutoff);
-        const trend = calculateTrend(subset);
-        return trend ? getTrendIcon(trend.slope, def.invertRanges) : { icon: 'fa-minus', color: 'text-slate-600' };
+// --- 2. TREND CALCULATOR ---
+const calcTrend = (data) => {
+    const n = data.length;
+    if (n < 3) return null;
+    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    for (let i = 0; i < n; i++) {
+        sumX += i; sumY += data[i].val;
+        sumXY += i * data[i].val; sumXX += i * i;
+    }
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    return { 
+        start: intercept, 
+        end: intercept + slope * (n - 1),
+        slope: slope 
     };
-    const t30 = getSlope(30);
-    const t90 = getSlope(90);
-    const t6m = getSlope(180);
+};
 
-    const indicatorsHtml = `
-        <div class="flex gap-1 ml-auto">
-            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="30d Trend">
-                <span class="text-[8px] font-bold text-slate-400">30d</span><i class="fa-solid ${t30.icon} ${t30.color} text-[8px]"></i>
-            </div>
-            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="90d Trend">
-                <span class="text-[8px] font-bold text-slate-400">90d</span><i class="fa-solid ${t90.icon} ${t90.color} text-[8px]"></i>
-            </div>
-            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="6m Trend">
-                <span class="text-[8px] font-bold text-slate-400">6m</span><i class="fa-solid ${t6m.icon} ${t6m.color} text-[8px]"></i>
-            </div>
-        </div>`;
-
-    const formula = METRIC_FORMULAS[key] || '';
-    const titleHtml = `
-        <h3 class="text-xs font-bold text-white flex items-center gap-2">
-            <i class="fa-solid ${def.icon}" style="color: ${color}"></i> 
-            ${def.title}
-            ${formula ? `<span class="text-[10px] font-normal opacity-50 ml-1 font-mono">${formula}</span>` : ''}
-        </h3>
-    `;
-
-    if (!displayData || displayData.length < 2) {
-        return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 h-full flex flex-col justify-between">
-            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                ${titleHtml}
-            </div>
-            <div class="flex-1 flex items-center justify-center"><p class="text-xs text-slate-500 italic">No data available.</p></div>
-        </div>`;
+// --- 3. CHART RENDERER ---
+const renderChart = (data, def) => {
+    if (!data || data.length < 2) {
+        return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 h-[150px] flex items-center justify-center text-xs text-slate-500 italic">No data found for ${def.title}</div>`;
     }
 
-    const width = 800, height = 150;
-    const pad = { t: 20, b: 30, l: 50, r: 20 };
-    const getX = (d, i) => pad.l + (i / (displayData.length - 1)) * (width - pad.l - pad.r);
+    const w = 800, h = 150;
+    const pad = { t: 20, b: 20, l: 40, r: 10 };
     
-    const dataValues = displayData.map(d => d.val);
-    let minV = Math.min(...dataValues);
-    let maxV = Math.max(...dataValues);
+    // Scale Y-Axis
+    const vals = data.map(d => d.val);
+    let min = Math.min(...vals);
+    let max = Math.max(...vals);
+    
+    // Expand to include targets
+    if (def.refMin) min = Math.min(min, def.refMin);
+    if (def.refMax) max = Math.max(max, def.refMax);
+    
+    // Add padding
+    const range = max - min || 1;
+    min -= range * 0.1;
+    max += range * 0.1;
 
-    if (def.refMin !== undefined) minV = Math.min(minV, def.refMin);
-    if (def.refMax !== undefined) maxV = Math.max(maxV, def.refMax);
+    const getX = (i) => pad.l + (i / (data.length - 1)) * (w - pad.l - pad.r);
+    const getY = (v) => h - pad.b - ((v - min) / (max - min)) * (h - pad.t - pad.b);
 
-    const range = maxV - minV;
-    const buf = range * 0.15 || (maxV * 0.1); 
-    const domainMin = Math.max(0, minV - buf);
-    const domainMax = maxV + buf;
+    // SVG Components
+    let svgContent = '';
 
-    const getY = (val) => height - pad.b - ((val - domainMin) / (domainMax - domainMin)) * (height - pad.t - pad.b);
-
-    let refLinesHtml = '';
-    if (def.refMin !== undefined && def.refMax !== undefined) {
+    // A. Target Lines
+    if (def.refMin && def.refMax) {
         const yMin = getY(def.refMin);
         const yMax = getY(def.refMax);
-        const colorMax = def.invertRanges ? '#ef4444' : '#10b981';
-        const colorMin = def.invertRanges ? '#10b981' : '#ef4444';
+        const colorGood = def.invertRanges ? '#10b981' : '#10b981'; // Green
+        const colorBad = '#ef4444'; // Red
+        
+        // If Standard (High=Good): Top is Green, Bottom is Red
+        // If Inverted (Low=Good): Top is Red, Bottom is Green
+        const cTop = def.invertRanges ? colorBad : colorGood;
+        const cBot = def.invertRanges ? colorGood : colorBad;
 
-        if (yMin >= pad.t && yMin <= height - pad.b) refLinesHtml += `<line x1="${pad.l}" y1="${yMin}" x2="${width - pad.r}" y2="${yMin}" stroke="${colorMin}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />`;
-        if (yMax >= pad.t && yMax <= height - pad.b) refLinesHtml += `<line x1="${pad.l}" y1="${yMax}" x2="${width - pad.r}" y2="${yMax}" stroke="${colorMax}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />`;
+        if(yMax > pad.t && yMax < h-pad.b) svgContent += `<line x1="${pad.l}" y1="${yMax}" x2="${w-pad.r}" y2="${yMax}" stroke="${cTop}" stroke-width="1" stroke-dasharray="4,4" opacity="0.5" />`;
+        if(yMin > pad.t && yMin < h-pad.b) svgContent += `<line x1="${pad.l}" y1="${yMin}" x2="${w-pad.r}" y2="${yMin}" stroke="${cBot}" stroke-width="1" stroke-dasharray="4,4" opacity="0.5" />`;
     }
 
-    const yAxisLine = `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" stroke="#475569" stroke-width="1" />`;
-    const yMid = (domainMin + domainMax) / 2;
-    const axisLabelsHtml = `
-        <text x="${pad.l - 6}" y="${getY(domainMax) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMax.toFixed(2)}</text>
-        <text x="${pad.l - 6}" y="${getY(yMid) + 4}" text-anchor="end" font-size="9" fill="#64748b">${yMid.toFixed(2)}</text>
-        <text x="${pad.l - 6}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(2)}</text>
-    `;
+    // B. Data Line
+    const pathD = data.map((d, i) => `${i===0?'M':'L'} ${getX(i)} ${getY(d.val)}`).join(' ');
+    svgContent += `<path d="${pathD}" fill="none" stroke="${def.colorVar}" stroke-width="2" opacity="0.8" />`;
 
-    // X-Axis Date Labels
-    let xAxisLabelsHtml = '';
-    if (displayData.length > 1) {
-        const targetCount = 5; 
-        const step = (displayData.length - 1) / (targetCount - 1);
-        const indices = new Set();
-        
-        for (let j = 0; j < targetCount; j++) {
-            indices.add(Math.round(j * step));
-        }
-        
-        indices.forEach(index => {
-            if (index < displayData.length) {
-                const d = displayData[index];
-                const xPos = getX(d, index);
-                const dateObj = new Date(d.date);
-                const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                
-                let anchor = 'middle';
-                if (index === 0) anchor = 'start';
-                if (index === displayData.length - 1) anchor = 'end';
-                
-                xAxisLabelsHtml += `<text x="${xPos}" y="${height - 5}" text-anchor="${anchor}" font-size="9" fill="#64748b">${label}</text>`;
-            }
-        });
+    // C. Trend Line
+    const trend = calcTrend(data);
+    if (trend) {
+        svgContent += `<line x1="${getX(0)}" y1="${getY(trend.start)}" x2="${getX(data.length-1)}" y2="${getY(trend.end)}" stroke="white" stroke-width="1" stroke-dasharray="2,2" opacity="0.3" />`;
     }
 
-    const chartTrend = calculateTrend(displayData);
-    let trendHtml = chartTrend ? `<line x1="${getX(null, 0)}" y1="${getY(chartTrend.startVal)}" x2="${getX(null, displayData.length - 1)}" y2="${getY(chartTrend.endVal)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5" />` : '';
-    
-    let pathD = `M ${getX(displayData[0], 0)} ${getY(displayData[0].val)}`;
-    let pointsHtml = '';
-    displayData.forEach((d, i) => {
-        const x = getX(d, i), y = getY(d.val);
-        pathD += ` L ${x} ${y}`;
-        pointsHtml += `<circle cx="${x}" cy="${y}" r="3.5" fill="#0f172a" stroke="${color}" stroke-width="2" class="cursor-pointer hover:stroke-white transition-all" onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown || ""}', '${color}')"></circle>`;
+    // D. Interactive Points
+    data.forEach((d, i) => {
+        const cx = getX(i);
+        const cy = getY(d.val);
+        svgContent += `<circle cx="${cx}" cy="${cy}" r="3" fill="#0f172a" stroke="${def.colorVar}" stroke-width="2" class="cursor-pointer hover:stroke-white transition-all" 
+            onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.title.replace(/'/g,"")}', '${d.val.toFixed(2)}', '', '${d.label}', '${def.colorVar}')" />`;
     });
+
+    // E. Y-Axis Text
+    svgContent += `
+        <text x="${pad.l-5}" y="${getY(max)+4}" text-anchor="end" font-size="9" fill="#64748b">${max.toFixed(1)}</text>
+        <text x="${pad.l-5}" y="${getY(min)+4}" text-anchor="end" font-size="9" fill="#64748b">${min.toFixed(1)}</text>
+    `;
 
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 h-full flex flex-col hover:border-slate-600 transition-colors">
-            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <div class="flex items-center gap-2">
-                    ${titleHtml}
-                </div>
-                <div class="flex items-center gap-3">
-                    ${indicatorsHtml}
-                    <div class="cursor-pointer text-slate-500 hover:text-white transition-colors p-1" onclick="window.showAnalysisTooltip(event, '${key}')">
-                        <i class="fa-solid fa-circle-info text-sm"></i>
-                    </div>
-                </div>
+            <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-700">
+                <h3 class="text-xs font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid ${def.icon}" style="color: ${def.colorVar}"></i> ${def.title}
+                </h3>
             </div>
             <div class="flex-1 w-full h-[120px]">
-                <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
-                    ${yAxisLine}
-                    ${axisLabelsHtml}
-                    ${xAxisLabelsHtml}
-                    ${refLinesHtml}
-                    ${trendHtml}
-                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9" />
-                    ${pointsHtml}
+                <svg viewBox="0 0 ${w} ${h}" class="w-full h-full overflow-visible">
+                    ${svgContent}
                 </svg>
             </div>
         </div>
     `;
 };
 
+// --- 4. MAIN EXPORT ---
 export const updateCharts = (allData, timeRange) => {
-    if (!allData || allData.length === 0) return;
-    
+    // 1. Determine Date Cutoff
     const cutoff = new Date();
     if (timeRange === '30d') cutoff.setDate(cutoff.getDate() - 30);
     else if (timeRange === '90d') cutoff.setDate(cutoff.getDate() - 90);
     else if (timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
-    
-    const render = (id, key) => {
-        const el = document.getElementById(id);
-        if (el) {
-            let full;
-            if (key === 'subjective_bike') full = calculateSubjectiveEfficiency(allData, 'bike');
-            else if (key === 'subjective_run') full = calculateSubjectiveEfficiency(allData, 'run');
-            else if (key === 'subjective_swim') full = calculateSubjectiveEfficiency(allData, 'swim');
-            else full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
-            
-            const display = full.filter(d => d.date >= cutoff);
-            el.innerHTML = buildMetricChart(display, full, key);
+
+    // 2. Render Loop
+    Object.keys(METRIC_DEFINITIONS).forEach(key => {
+        const container = document.getElementById(`metric-chart-${key}`);
+        if (container) {
+            // Get Data
+            const fullData = prepareData(allData, key);
+            // Filter by Time
+            const displayData = fullData.filter(d => d.date >= cutoff);
+            // Render
+            container.innerHTML = renderChart(displayData, METRIC_DEFINITIONS[key]);
         }
-    };
+    });
 
-    // Render grouped charts
-    render('metric-chart-vo2max', 'vo2max');
-    render('metric-chart-tss', 'tss');
-    render('metric-chart-anaerobic', 'anaerobic');
-
-    render('metric-chart-subjective_bike', 'subjective_bike');
-    render('metric-chart-endurance', 'endurance');
-    render('metric-chart-strength', 'strength');
-
-    render('metric-chart-subjective_run', 'subjective_run');
-    render('metric-chart-run', 'run');
-    render('metric-chart-mechanical', 'mechanical');
-    render('metric-chart-gct', 'gct');
-    render('metric-chart-vert', 'vert');
-
-    render('metric-chart-subjective_swim', 'subjective_swim');
-    render('metric-chart-swim', 'swim');
-
+    // 3. Update Buttons
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
         if(btn) {
