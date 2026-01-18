@@ -33,7 +33,7 @@ const getSportColorVar = (type) => {
     if (type === 'Bike') return 'var(--color-bike)';
     if (type === 'Run') return 'var(--color-run)';
     if (type === 'Swim') return 'var(--color-swim)';
-    return 'var(--color-other)'; // Default for Strength/Yoga/Etc
+    return 'var(--color-other)'; 
 };
 
 // --- Internal Builder: Generic Heatmap (Consistency) ---
@@ -182,15 +182,17 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
 
-    // --- SPORT DETECTION LOGIC (STRICT - THE FIX) ---
-    // Reads directly from the hydrated JSON 'actualType' field.
+    // --- SPORT DETECTION LOGIC (STRICT) ---
     const detectSport = (item) => {
+        // 1. Try Strict Database Field
         let s = item.actualType || item.type || 'Other';
+        
+        // 2. Normalize
         if (s === 'Running') return 'Run';
         if (s === 'Cycling') return 'Bike';
         if (s === 'Swimming') return 'Swim';
         
-        // Final fallback if strings differ
+        // 3. Fallback to String Match (just in case)
         if (s.includes('Run')) return 'Run';
         if (s.includes('Bike') || s.includes('Cycle')) return 'Bike';
         if (s.includes('Swim') || s.includes('Pool')) return 'Swim';
