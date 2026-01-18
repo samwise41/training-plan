@@ -53,6 +53,9 @@ def bundle_activities(activities):
     main = activities[0]
     combined = main.copy()
     
+    # Preserve key metadata from the main file
+    combined['trainingEffectLabel'] = main.get('trainingEffectLabel')
+    
     combined['duration'] = sum((a.get('duration') or 0) for a in activities)
     combined['distance'] = sum((a.get('distance') or 0) for a in activities)
     combined['calories'] = sum((a.get('calories') or 0) for a in activities)
@@ -165,8 +168,13 @@ def sync():
     for plan in planned_items:
         p_date = plan['date']
         p_name = plan.get('plannedWorkout', '')
+        
         if p_date < cutoff_date or p_date > today_str: continue 
         if not p_name or "rest day" in p_name.lower(): continue
+        
+        # --- SUNDAY FILTER: Skip unless it's a real workout ---
+        if plan.get('day') == 'Sunday' and not plan.get('plannedSport'):
+            continue
         
         exists = False
         for rec in db_data:
@@ -223,7 +231,9 @@ def sync():
             "calories": clean_numeric(composite.get('calories')),
             "elevation": clean_numeric(composite.get('elevationGain')),
             "rpe": clean_numeric(composite.get('perceivedEffort')),
-            "feeling": clean_numeric(composite.get('feeling'))
+            "feeling": clean_numeric(composite.get('feeling')),
+            # --- NEW: Capture Training Effect Label ---
+            "trainingEffectLabel": composite.get('trainingEffectLabel')
         }
         if metrics['normPower'] and metrics['movingTime']:
             i_factor = metrics['normPower'] / current_ftp
@@ -243,7 +253,8 @@ def sync():
 
         matched = False
         for rec in db_data:
-            if rec.get('date') == g_date and rec.get('status') == 'Pending':
+            rec_status = str(rec.get('status', '')).upper()
+            if rec.get('date') == g_date and (rec_status == 'PENDING' or rec_status == 'PLANNED'):
                 if rec.get('plannedSport') == sport:
                     rec.update(metrics)
                     rec['status'] = "COMPLETED"
@@ -267,7 +278,6 @@ def sync():
     print(f"   + Added {count_unplanned} new unplanned bundles.")
     save_db(db_data)
     
-    # --- IMPORTANT: Return the data so Main.py can use it ---
     return db_data 
 
 if __name__ == "__main__":
