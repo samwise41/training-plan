@@ -20,12 +20,10 @@ def normalize_sport(val, activity_type=None):
     val = str(val).upper() if val else ""
     act_type = str(activity_type).upper() if activity_type else ""
     
-    # 1. Check strict Activity Types (Garmin/Strava)
     if 'RIDE' in act_type or 'CYCL' in act_type or 'BIK' in act_type: return 'Bike'
     if 'RUN' in act_type: return 'Run'
     if 'SWIM' in act_type or 'POOL' in act_type: return 'Swim'
 
-    # 2. Check text tags
     if '[BIKE]' in val or 'ZWIFT' in val or 'CYCLING' in val: return 'Bike'
     if '[RUN]' in val or 'RUNNING' in val: return 'Run'
     if '[SWIM]' in val or 'SWIMMING' in val: return 'Swim'
@@ -47,52 +45,37 @@ def get_current_ftp():
     except: pass
     return 241
 
-# --- 2. BUNDLING LOGIC (The Fix) ---
+# --- 2. BUNDLING LOGIC ---
 
 def bundle_activities(activities):
-    """Combines multiple partial recordings into one workout."""
     if not activities: return None
-    
-    # Sort by duration (longest is usually the 'main' file)
     activities.sort(key=lambda x: x.get('duration', 0) or 0, reverse=True)
     main = activities[0]
-    
-    # Base data from main file
     combined = main.copy()
     
-    # Sum totals
     combined['duration'] = sum((a.get('duration') or 0) for a in activities)
     combined['distance'] = sum((a.get('distance') or 0) for a in activities)
     combined['calories'] = sum((a.get('calories') or 0) for a in activities)
     combined['elevationGain'] = sum((a.get('elevationGain') or 0) for a in activities)
     
-    # Weighted Averages (Power, HR)
     total_dur = combined['duration']
     if total_dur > 0:
         def weighted(key):
             val = sum((a.get(key) or 0) * (a.get('duration') or 0) for a in activities)
             return val / total_dur
-
         combined['averageHR'] = weighted('averageHR')
         combined['avgPower'] = weighted('avgPower')
-        combined['normPower'] = weighted('normPower') # Approximation
+        combined['normPower'] = weighted('normPower')
     
-    # Max values
     combined['maxHR'] = max((a.get('maxHR') or 0) for a in activities)
     combined['maxPower'] = max((a.get('maxPower') or 0) for a in activities)
     
-    # Join IDs
     all_ids = [str(a.get('activityId')) for a in activities if a.get('activityId')]
     combined['activityId'] = ",".join(all_ids)
     
-    # Formatting Name: If multiple, append (+)
     if len(activities) > 1:
         base_name = main.get('activityName', 'Activity')
-        # Check if [TAG] is present, if not add it based on normalized sport
         sport = normalize_sport(base_name, main.get('activityType', {}).get('typeKey'))
-        if sport and f"[{sport.upper()}]" not in base_name:
-             # Don't double add if it's "Run" and "[RUN]"
-             pass 
         combined['activityName'] = f"{base_name} (+{len(activities)-1})"
         
     return combined
@@ -166,7 +149,6 @@ def sync():
     if not os.path.exists(config.GARMIN_JSON): return
     with open(config.GARMIN_JSON, 'r', encoding='utf-8') as f: garmin_list = json.load(f)
 
-    # A. Index Existing IDs (Handle Comma-Separated Bundles)
     existing_ids = {}
     for item in db_data:
         id_val = str(item.get('id', ''))
@@ -175,12 +157,10 @@ def sync():
                 clean_id = sub_id.strip()
                 if clean_id: existing_ids[clean_id] = item
 
-    # B. Time Gates
     today = datetime.now()
     today_str = today.strftime('%Y-%m-%d')
     cutoff_date = (today - timedelta(days=SYNC_WINDOW_DAYS)).strftime('%Y-%m-%d')
 
-    # C. Add New Planned Workouts
     count_new_plan = 0
     for plan in planned_items:
         p_date = plan['date']
@@ -207,37 +187,28 @@ def sync():
             count_new_plan += 1
     print(f"   + Added {count_new_plan} new planned items.")
 
-    # D. Group Garmin Data (The Fix for Duplicates)
     grouped_garmin = {} 
-    
     for g in garmin_list:
         g_date = g.get('startTimeLocal', '')[:10]
         if g_date < cutoff_date or g_date > today_str: continue
-        
-        # Determine Sport
         g_type_key = g.get('activityType', {}).get('typeKey', '')
         sport = normalize_sport(g.get('activityName'), g_type_key)
         if not sport: continue 
-        
-        # Group Key: "2026-01-14|Bike"
         key = f"{g_date}|{sport}"
         if key not in grouped_garmin: grouped_garmin[key] = []
         grouped_garmin[key].append(g)
 
-    # E. Process Groups
     count_linked = 0
     count_unplanned = 0
 
     for key, group in grouped_garmin.items():
-        # Bundle 3 files -> 1 composite
         composite = bundle_activities(group)
         if not composite: continue
         
         g_date, sport = key.split('|')
-        comp_id_str = str(composite.get('activityId')) # "ID1,ID2,ID3"
+        comp_id_str = str(composite.get('activityId'))
         comp_ids = comp_id_str.split(',')
         
-        # Prepare Metrics
         metrics = {
             "id": comp_id_str,
             "actualSport": sport,
@@ -259,38 +230,28 @@ def sync():
             metrics['if'] = round(i_factor, 2)
             metrics['tss'] = round((metrics['movingTime'] * metrics['normPower'] * i_factor) / (current_ftp * 3600) * 100, 1)
 
-        # 1. CHECK IF ALREADY CLAIMED
-        # If ANY of the IDs in the bundle are known, we update that record
         found_existing = False
         for cid in comp_ids:
             if cid in existing_ids:
                 rec = existing_ids[cid]
-                # Update logic: If it's a "better" match (e.g. bundle vs single), update
-                # For safety, we just ensure it's COMPLETED and has latest metrics
                 rec.update(metrics)
                 rec['status'] = "COMPLETED"
                 found_existing = True
-                break # Matched one, so the bundle is accounted for
+                break
         
-        if found_existing:
-            continue 
+        if found_existing: continue 
 
-        # 2. LINK TO PENDING
         matched = False
         for rec in db_data:
             if rec.get('date') == g_date and rec.get('status') == 'Pending':
                 if rec.get('plannedSport') == sport:
                     rec.update(metrics)
                     rec['status'] = "COMPLETED"
-                    
-                    # Mark IDs as claimed so we don't re-use
                     for cid in comp_ids: existing_ids[cid] = rec
-                    
                     count_linked += 1
                     matched = True
                     break
         
-        # 3. ADD UNPLANNED (Bundled)
         if not matched:
             new_unp = {
                 "date": g_date, "status": "COMPLETED",
@@ -305,6 +266,9 @@ def sync():
     print(f"   + Linked {count_linked} new bundles.")
     print(f"   + Added {count_unplanned} new unplanned bundles.")
     save_db(db_data)
+    
+    # --- IMPORTANT: Return the data so Main.py can use it ---
+    return db_data 
 
 if __name__ == "__main__":
     sync()
