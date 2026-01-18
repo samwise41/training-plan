@@ -6,7 +6,7 @@ import ast
 import numpy as np
 
 # --- CONFIGURATION ---
-INPUT_FILE = 'MASTER_TRAINING_DATABASE.md'
+INPUT_FILE = 'python/MASTER_TRAINING_DATABASE.md'
 OUTPUT_FILE = 'data/training_log.json'
 
 def normalize_sport(val, activity_type=None):
