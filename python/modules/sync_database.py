@@ -132,7 +132,18 @@ def sync():
     with open(config.GARMIN_JSON, 'r', encoding='utf-8') as f:
         garmin_list = json.load(f)
 
-    existing_ids = {str(item.get('id')): item for item in db_data if item.get('id')}
+    # --- FIX START: Handle Comma-Separated IDs ---
+    # Convert "123,456" into keys "123" and "456" pointing to the same record
+    existing_ids = {}
+    for item in db_data:
+        id_val = str(item.get('id', ''))
+        if id_val and id_val.lower() != 'nan':
+            # Split by comma to handle bundled activities
+            for single_id in id_val.split(','):
+                clean_id = single_id.strip()
+                if clean_id:
+                    existing_ids[clean_id] = item
+    # --- FIX END ---
     
     # Time Boundaries
     today = datetime.now()
@@ -146,7 +157,7 @@ def sync():
         p_name = plan.get('plannedWorkout', '')
         
         if p_date < cutoff_date: continue
-        if p_date > today_str: continue # <--- STRICTLY BLOCK FUTURE DATES
+        if p_date > today_str: continue 
         if not p_name or "rest day" in p_name.lower(): continue
         
         exists = False
@@ -211,12 +222,23 @@ def sync():
             metrics['if'] = round(intensity, 2)
             metrics['tss'] = round((metrics['movingTime'] * metrics['normPower'] * intensity) / (current_ftp * 3600) * 100, 1)
 
+        # 1. Check if ID is already claimed (handles bundled IDs now)
         if g_id in existing_ids:
             rec = existing_ids[g_id]
-            rec.update(metrics)
+            
+            # OPTIONAL: You might not want to overwrite bundled metrics with single file metrics
+            # But we update status to ensure it's COMPLETED
             rec['status'] = "COMPLETED"
+            
+            # Only update metrics if the DB record has a single matching ID (not bundled)
+            # This prevents a smaller file from overwriting the total duration of a bundle
+            current_db_id = str(rec.get('id', ''))
+            if ',' not in current_db_id:
+                 rec.update(metrics)
+                 
             continue
 
+        # 2. Try to Match Pending
         matched = False
         for rec in db_data:
             if rec.get('date') == g_date and rec.get('status') == 'Pending':
@@ -228,6 +250,7 @@ def sync():
                     matched = True
                     break
         
+        # 3. Add Unplanned
         if not matched:
             new_unplanned = {
                 "date": g_date,
