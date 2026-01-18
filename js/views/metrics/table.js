@@ -14,34 +14,114 @@ const METRIC_FORMULAS = {
 };
 
 export const extractMetricData = (data, key) => {
-    const isInt = (item, labels) => {
-        const l = (item.trainingEffectLabel || "").toString().toUpperCase().trim();
-        return labels.some(allowed => l === allowed.toUpperCase());
+    const valid = (val) => typeof val === 'number' && val > 0;
+    
+    // --- SMART FILTER HELPER ---
+    // Checks if the Garmin label matches our target types.
+    // Falls back to true if no label exists (to prevent empty charts on old data).
+    const hasLabel = (item, allowedLabels) => {
+        const raw = item.trainingEffectLabel;
+        if (!raw) return true; // Keep old data visible
+        const l = raw.toUpperCase().replace(/_/g, ' '); // Normalize "AEROBIC_BASE" -> "AEROBIC BASE"
+        return allowedLabels.some(allowed => l.includes(allowed));
     };
 
     switch(key) {
-        case 'endurance': return data.filter(x => checkSport(x, 'BIKE') && x.avgPower > 0 && x.avgHR > 0 && isInt(x, ['AEROBIC_BASE', 'RECOVERY'])).map(x => ({ val: x.avgPower / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / HR:${Math.round(x.avgHR)}` }));
-        case 'strength': return data.filter(x => checkSport(x, 'BIKE') && x.avgPower > 0 && x.avgCadence > 0 && (isInt(x, ['VO2MAX', 'LACTATE_THRESHOLD', 'TEMPO', 'ANAEROBIC_CAPACITY']) || (isInt(x, ['AEROBIC_BASE']) && x.normPower > 185))).map(x => ({ val: x.avgPower / x.avgCadence, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pwr:${Math.round(x.avgPower)} / RPM:${Math.round(x.avgCadence)}` }));
+        // --- CYCLING ---
+        case 'endurance': 
+            // Aerobic Efficiency (EF) = NP / HR
+            // FILTER: Long steady rides only. Intervals skew this metric.
+            return data.filter(x => 
+                checkSport(x, 'BIKE') && 
+                valid(x.normPower) && 
+                valid(x.avgHR) && 
+                hasLabel(x, ['BASE', 'RECOVERY', 'AEROBIC'])
+            ).map(x => ({ 
+                val: x.normPower / x.avgHR, 
+                date: x.date, 
+                dateStr: x.date.toISOString().split('T')[0], 
+                name: x.actualName, 
+                breakdown: `NP:${Math.round(x.normPower)} / HR:${Math.round(x.avgHR)}` 
+            }));
+
+        case 'strength': 
+            // Torque Proxy = Power / Cadence
+            // FILTER: High intensity rides (Tempo, Threshold, VO2)
+            return data.filter(x => 
+                checkSport(x, 'BIKE') && 
+                valid(x.avgPower) && 
+                valid(x.avgCadence) && 
+                hasLabel(x, ['TEMPO', 'THRESHOLD', 'VO2', 'ANAEROBIC'])
+            ).map(x => ({ 
+                val: x.avgPower / x.avgCadence, 
+                date: x.date, 
+                dateStr: x.date.toISOString().split('T')[0], 
+                name: x.actualName, 
+                breakdown: `Pwr:${Math.round(x.avgPower)} / RPM:${Math.round(x.avgCadence)}` 
+            }));
         
-        case 'run': return data.filter(x => checkSport(x, 'RUN') && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Pace:${Math.round(x.avgSpeed*60)}m/m / HR:${Math.round(x.avgHR)}` }));
-        case 'mechanical': return data.filter(x => checkSport(x, 'RUN') && x.avgSpeed > 0 && x.avgPower > 0).map(x => ({ val: (x.avgSpeed * 100) / x.avgPower, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${x.avgSpeed.toFixed(1)} / Pwr:${Math.round(x.avgPower)}` }));
-        case 'gct': return data.filter(x => checkSport(x, 'RUN') && x.avgGroundContactTime > 0).map(x => ({ val: x.avgGroundContactTime, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${Math.round(x.avgGroundContactTime)} ms` }));
-        case 'vert': return data.filter(x => checkSport(x, 'RUN') && x.avgVerticalOscillation > 0).map(x => ({ val: x.avgVerticalOscillation, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${x.avgVerticalOscillation.toFixed(1)} cm` }));
+        // --- RUNNING ---
+        case 'run': 
+            return data.filter(x => checkSport(x, 'RUN') && valid(x.avgSpeed) && valid(x.avgHR))
+                .map(x => ({ 
+                    val: (x.avgSpeed * 60) / x.avgHR, 
+                    date: x.date, 
+                    dateStr: x.date.toISOString().split('T')[0], 
+                    name: x.actualName, 
+                    breakdown: `Pace:${(1000 / (x.avgSpeed * 60)).toFixed(2)} / HR:${Math.round(x.avgHR)}` 
+                }));
+
+        case 'mechanical': 
+            return data.filter(x => checkSport(x, 'RUN') && valid(x.avgSpeed) && valid(x.avgPower))
+                .map(x => ({ 
+                    val: (x.avgSpeed * 100) / x.avgPower, 
+                    date: x.date, 
+                    dateStr: x.date.toISOString().split('T')[0], 
+                    name: x.actualName, 
+                    breakdown: `Spd:${x.avgSpeed.toFixed(1)} / Pwr:${Math.round(x.avgPower)}` 
+                }));
+
+        case 'gct': 
+            return data.filter(x => checkSport(x, 'RUN') && valid(x.avgGroundContactTime))
+                .map(x => ({ val: x.avgGroundContactTime, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${Math.round(x.avgGroundContactTime)} ms` }));
         
-        case 'swim': return data.filter(x => checkSport(x, 'SWIM') && x.avgSpeed > 0 && x.avgHR > 0).map(x => ({ val: (x.avgSpeed * 60) / x.avgHR, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Spd:${(x.avgSpeed*60).toFixed(1)}m/m / HR:${Math.round(x.avgHR)}` }));
+        case 'vert': 
+            return data.filter(x => checkSport(x, 'RUN') && valid(x.avgVerticalOscillation))
+                .map(x => ({ val: x.avgVerticalOscillation, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `${x.avgVerticalOscillation.toFixed(1)} cm` }));
         
-        case 'vo2max': return data.filter(x => x.vO2MaxValue > 0).map(x => ({ val: x.vO2MaxValue, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: "VO2 Est", breakdown: `Score: ${x.vO2MaxValue}` }));
-        case 'anaerobic': return data.filter(x => x.anaerobicTrainingEffect > 0.5).map(x => ({ val: x.anaerobicTrainingEffect, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Anaerobic: ${x.anaerobicTrainingEffect}` }));
-        case 'tss': return aggregateWeeklyTSS(data);
+        // --- SWIMMING ---
+        case 'swim': 
+            return data.filter(x => checkSport(x, 'SWIM') && valid(x.avgSpeed) && valid(x.avgHR))
+                .map(x => ({ 
+                    val: (x.avgSpeed * 60) / x.avgHR, 
+                    date: x.date, 
+                    dateStr: x.date.toISOString().split('T')[0], 
+                    name: x.actualName, 
+                    breakdown: `Spd:${(x.avgSpeed*60).toFixed(1)}m/m / HR:${Math.round(x.avgHR)}` 
+                }));
+        
+        // --- GENERAL ---
+        case 'vo2max': 
+            return data.filter(x => valid(x.vO2MaxValue))
+                .map(x => ({ val: x.vO2MaxValue, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: "VO2 Est", breakdown: `Score: ${x.vO2MaxValue}` }));
+        
+        case 'anaerobic': 
+            // Filter: Only significant Anaerobic Impact (>2.0)
+            return data.filter(x => valid(x.anaerobicTrainingEffect) && x.anaerobicTrainingEffect > 2.0)
+                .map(x => ({ val: x.anaerobicTrainingEffect, date: x.date, dateStr: x.date.toISOString().split('T')[0], name: x.actualName, breakdown: `Anaerobic: ${x.anaerobicTrainingEffect}` }));
+        
+        case 'tss': 
+            return aggregateWeeklyTSS(data);
+            
         default: return [];
     }
 };
 
 const extractSubjectiveTableData = (data, key) => {
     let sportMode = null;
-    if (key === 'subjective_bike') sportMode = 'bike';
-    else if (key === 'subjective_run') sportMode = 'run';
-    else if (key === 'subjective_swim') sportMode = 'swim';
+    if (key === 'subjective_bike') sportMode = 'BIKE';
+    else if (key === 'subjective_run') sportMode = 'RUN';
+    else if (key === 'subjective_swim') sportMode = 'SWIM';
     if (!sportMode) return [];
 
     return data.map(d => {
@@ -49,18 +129,17 @@ const extractSubjectiveTableData = (data, key) => {
         if (!rpe || rpe <= 0) return null;
         let val = 0;
 
-        if (sportMode === 'bike') {
-            const isBike = d.sportTypeId == '2' || (d.activityType && d.activityType.includes('cycl')) || (d.actualType === 'Bike');
-            const pwr = parseFloat(d.avgPower);
-            if (isBike && pwr > 0) val = pwr / rpe;
-        } else if (sportMode === 'run') {
-            const isRun = d.sportTypeId == '1' || (d.activityType && d.activityType.includes('run')) || (d.actualType === 'Run');
-            const spd = parseFloat(d.avgSpeed);
-            if (isRun && spd > 0) val = spd / rpe;
-        } else if (sportMode === 'swim') {
-            const isSwim = d.sportTypeId == '5' || (d.activityType && d.activityType.includes('swim')) || (d.actualType === 'Swim');
-            const spd = parseFloat(d.avgSpeed);
-            if (isSwim && spd > 0) val = spd / rpe;
+        if (checkSport(d, sportMode)) {
+            // Bike uses Power/RPE
+            if (sportMode === 'BIKE') {
+                const pwr = parseFloat(d.avgPower);
+                if (pwr > 0) val = pwr / rpe;
+            } 
+            // Run/Swim uses Speed/RPE
+            else {
+                const spd = parseFloat(d.avgSpeed);
+                if (spd > 0) val = spd / rpe;
+            }
         }
         
         if (val > 0) return { val, date: d.date };
