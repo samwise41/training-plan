@@ -1,11 +1,11 @@
 // js/app.js
 
 (async function initApp() {
-    console.log("🚀 Booting App (Simple Data Mode)...");
+    console.log("🚀 Booting App (ID Injection Mode)...");
 
     const cacheBuster = Date.now();
     
-    // --- 1. SETUP NAVIGATION (Priority 1) ---
+    // --- 1. SETUP NAVIGATION ---
     function setupEventListeners() {
         const navMap = {
             'nav-dashboard': 'dashboard', 'nav-trends': 'trends', 'nav-logbook': 'logbook',
@@ -57,15 +57,31 @@
     const App = {
         planMd: "", gearMd: "", allData: [], 
 
-        // --- 3. HYDRATION (Simplified Adapter) ---
+        // --- 3. HYDRATION (The "Silver Bullet" Fix) ---
         hydrateData(jsonArray) {
             if (!Array.isArray(jsonArray)) return [];
             
             return jsonArray.map(item => {
                 const dateObj = new Date(`${item.date}T12:00:00`); 
                 const getNum = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v) : 0;
-                
                 const cad = getNum(item.averageBikingCadenceInRevPerMinute) || getNum(item.averageRunningCadenceInStepsPerMinute);
+
+                // --- SMART SPORT DETECTION ---
+                // We manually assign the IDs that definitions.js expects
+                let safeSportId = item.sportTypeId; // Default to DB value
+                let safeActualType = item.actualSport || "Other";
+
+                // Force Standard Names & IDs
+                if (safeActualType.includes('Bike') || safeActualType.includes('Cycl')) {
+                    safeActualType = 'Bike';
+                    safeSportId = 2; // Matches SPORT_IDS.BIKE
+                } else if (safeActualType.includes('Run')) {
+                    safeActualType = 'Run';
+                    safeSportId = 1; // Matches SPORT_IDS.RUN
+                } else if (safeActualType.includes('Swim')) {
+                    safeActualType = 'Swim';
+                    safeSportId = 5; // Matches SPORT_IDS.SWIM
+                }
 
                 return {
                     ...item, 
@@ -74,16 +90,15 @@
                     date: dateObj,
                     id: item.id,
                     dayName: item.Day || item.day || "Unknown",
-                    type: item.actualSport || item.plannedSport || 'Other',
+                    type: safeActualType, // Used by Trends
                     
-                    // --- CRITICAL FIX FOR CHARTS ---
-                    // 1. Set actualType to the simple string ("Bike", "Run")
-                    // 2. Set activityType to NULL to prevent object crash
-                    actualType: item.actualSport, 
-                    activityType: null, // Forces utils.js/charts.js to use actualType fallback
-                    sportTypeId: item.sportTypeId, 
+                    // --- CRITICAL COMPATIBILITY FIX ---
+                    actualType: safeActualType,  // String ("Bike") for text fallbacks
+                    activityType: null,          // Prevent .includes() crash
+                    sportTypeId: safeSportId,    // Integer (2) for robust ID matching
+                    // ----------------------------------
 
-                    // Metrics (Mapped from Garmin JSON -> App Variable Names)
+                    // Metrics
                     plannedDuration: getNum(item.plannedDuration),
                     actualDuration: getNum(item.actualDuration),
                     avgHR: getNum(item.averageHR),
@@ -108,7 +123,6 @@
                     
                     completed: item.status === 'COMPLETED',
                     
-                    // Strings for Heatmap
                     plannedWorkout: item.plannedWorkout || "",
                     actualWorkout: item.actualWorkout || ""
                 };
