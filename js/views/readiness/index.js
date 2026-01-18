@@ -2,198 +2,261 @@
 
 // --- 1. HELPERS ---
 
-// Parse duration strings (e.g. "1h 30m" -> 90) from the Markdown Plan
-const parseGoalDuration = (str) => {
+const parseGoalValue = (str) => {
     if (!str || typeof str !== 'string') return 0;
     str = str.toLowerCase().trim();
     if (str === '-' || str === '') return 0;
     
+    // Handle Elevation (e.g. "1,200 ft")
+    if (str.includes('ft')) {
+        return parseInt(str.replace(/,/g, '').replace('ft', '').trim());
+    }
+
+    // Handle Duration (e.g. "1h 30m" or "0:30")
     let total = 0;
-    // Handle "1h 30m" or "90m" formats
+    
+    // Format "1h 30m"
     const hMatch = str.match(/(\d+)\s*h/);
     const mMatch = str.match(/(\d+)\s*m/);
-    
     if (hMatch) total += parseInt(hMatch[1]) * 60;
     if (mMatch) total += parseInt(mMatch[1]);
     
-    // Fallback: if just a number, assume minutes
+    // Format "1:30" (H:MM)
+    if (str.includes(':')) {
+        const parts = str.split(':');
+        total += parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        return total;
+    }
+
+    // Fallback: simple number
     if (!hMatch && !mMatch && !isNaN(parseInt(str))) {
         total = parseInt(str);
     }
     return total;
 };
 
-// Calculate Confidence Score based on completed volume vs goal
-const getScoreColor = (pct) => {
-    if (pct >= 100) return 'text-emerald-400';
-    if (pct >= 85) return 'text-blue-400';
-    if (pct >= 70) return 'text-yellow-400';
-    return 'text-red-400';
+const formatDuration = (mins) => {
+    if (!mins) return "0:00";
+    const h = Math.floor(mins / 60);
+    const m = Math.round(mins % 60);
+    return `${h}:${m.toString().padStart(2, '0')}`;
 };
 
-const getProgressBar = (pct, colorClass) => {
-    const safePct = Math.min(100, Math.max(0, pct));
-    // Extract Tailwind color class for bg (e.g. 'text-blue-400' -> 'bg-blue-500')
-    const bgClass = colorClass.replace('text-', 'bg-').replace('-400', '-500');
-    
-    return `
-        <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
-            <div class="h-full ${bgClass} transition-all duration-1000" style="width: ${safePct}%"></div>
-        </div>
-    `;
+const getScoreColor = (pct) => {
+    if (pct >= 85) return 'text-emerald-400 border-emerald-500/30';
+    if (pct >= 60) return 'text-yellow-400 border-yellow-500/30';
+    return 'text-red-500 border-red-500/30'; // Warning
+};
+
+const getScoreLabel = (pct) => {
+    if (pct >= 85) return "Race Ready";
+    if (pct >= 60) return "Developing";
+    return "Warning";
 };
 
 // --- 2. DATA PROCESSING ---
 
-// Find the NEXT race in the markdown plan
-const getNextEvent = (planMd) => {
-    if (!planMd) return null;
+// Parse ALL events from the markdown
+const getEvents = (planMd) => {
+    if (!planMd) return [];
     const lines = planMd.split('\n');
     let inTable = false;
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const events = [];
 
     for (let line of lines) {
         if (line.includes('| **Date** |')) { inTable = true; continue; }
         if (inTable && line.startsWith('| :---')) continue;
         if (inTable && line.startsWith('|')) {
             const cols = line.split('|').map(c => c.trim());
-            // Col 1: Date, Col 2: Event Name, Col 7: Swim Goal, Col 9: Bike Goal, Col 11: Run Goal
-            // (Adjust indices based on your specific MD table structure if needed)
+            // Expected Cols: | Date | Event | ... | Swim | ... | Bike | Elev | Run |
+            // Based on standard template (approx indices):
+            // 1: Date, 2: Name, 8: Swim, 10: Bike, 11: Elev, 12: Run
             if (cols.length >= 2) {
-                const eventDate = new Date(cols[1]);
-                if (!isNaN(eventDate) && eventDate >= today) {
-                    return {
+                const d = new Date(cols[1]);
+                if (!isNaN(d) && d >= today) {
+                    events.push({
                         name: cols[2],
-                        date: eventDate,
-                        swimGoal: parseGoalDuration(cols[8]),  // Adjust index if column moved
-                        bikeGoal: parseGoalDuration(cols[10]), // Adjust index if column moved
-                        runGoal: parseGoalDuration(cols[12])   // Adjust index if column moved
-                    };
+                        type: cols[2].includes('**') ? cols[2].split('**')[1] : 'Event', // Extract "A-Race" if present
+                        date: d,
+                        swim: parseGoalValue(cols[8]),
+                        bike: parseGoalValue(cols[10]),
+                        climb: parseGoalValue(cols[11]), // Elevation column
+                        run: parseGoalValue(cols[12])
+                    });
                 }
             }
         }
     }
-    return null;
+    return events;
 };
 
-// Analyze Training Data against Goals
-const calculateReadiness = (allData, event) => {
-    if (!event) return null;
-
-    // Lookback window: Last 6 weeks for Longest Session
+// Calculate Max Capabilities in Lookback Window
+const calculateCapabilities = (allData) => {
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 42); 
+    cutoff.setDate(cutoff.getDate() - 42); // 6 Week Lookback
 
-    // Find Longest Sessions in the Clean Data (d.sport, d.duration)
-    let maxSwim = 0, maxBike = 0, maxRun = 0;
+    const caps = { swim: 0, bike: 0, run: 0, climb: 0 };
 
     allData.forEach(d => {
         if (d.date >= cutoff) {
-            if (d.sport === 'Swim') maxSwim = Math.max(maxSwim, d.duration);
-            if (d.sport === 'Bike') maxBike = Math.max(maxBike, d.duration);
-            if (d.sport === 'Run') maxRun = Math.max(maxRun, d.duration);
+            if (d.sport === 'Swim') caps.swim = Math.max(caps.swim, d.duration);
+            if (d.sport === 'Bike') {
+                caps.bike = Math.max(caps.bike, d.duration);
+                caps.climb = Math.max(caps.climb, d.elevationGain || 0);
+            }
+            if (d.sport === 'Run') caps.run = Math.max(caps.run, d.duration);
         }
     });
-
-    return {
-        swim: { current: maxSwim, goal: event.swimGoal, pct: event.swimGoal ? (maxSwim / event.swimGoal) * 100 : 0 },
-        bike: { current: maxBike, goal: event.bikeGoal, pct: event.bikeGoal ? (maxBike / event.bikeGoal) * 100 : 0 },
-        run: { current: maxRun, goal: event.runGoal, pct: event.runGoal ? (maxRun / event.runGoal) * 100 : 0 }
-    };
+    return caps;
 };
 
 // --- 3. RENDERERS ---
 
-const renderSportCard = (sport, data, icon) => {
-    if (!data.goal) return ''; // Skip if no goal set for this sport
-
-    const color = getScoreColor(data.pct);
-    const label = data.pct >= 100 ? "READY" : (data.pct >= 75 ? "BUILDING" : "BEHIND");
+const buildProgressBar = (label, icon, current, goal, unit = 'dur') => {
+    if (!goal || goal === 0) return '';
     
+    const pct = Math.min(100, (current / goal) * 100);
+    
+    // Color Logic
+    let barColor = 'bg-red-500';
+    if (pct >= 85) barColor = 'bg-emerald-500';
+    else if (pct >= 60) barColor = 'bg-yellow-500';
+
+    const currentStr = unit === 'dur' ? formatDuration(current) : `${Math.round(current)} ft`;
+    const goalStr = unit === 'dur' ? formatDuration(goal) : `${Math.round(goal)} ft`;
+
     return `
-        <div class="bg-slate-800/50 border border-slate-700 p-5 rounded-xl flex flex-col justify-between">
-            <div class="flex justify-between items-start mb-2">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-                        <i class="fa-solid ${icon} text-slate-400"></i>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-bold text-white uppercase tracking-wider">${sport}</h4>
-                        <span class="text-[10px] text-slate-500">Longest Session (Last 6w)</span>
-                    </div>
+        <div class="mb-4 last:mb-0">
+            <div class="flex justify-between items-end mb-1">
+                <div class="flex items-center gap-2 text-slate-300 text-xs font-bold">
+                    <i class="fa-solid ${icon} w-4 text-center"></i> ${label}
                 </div>
-                <div class="text-right">
-                    <div class="text-xl font-mono font-bold ${color}">${Math.round(data.pct)}%</div>
-                    <div class="text-[9px] font-bold bg-slate-900 px-2 py-0.5 rounded text-slate-400 border border-slate-700 inline-block">${label}</div>
+                <div class="text-[10px] font-mono text-white">
+                    <span class="text-slate-400">${currentStr}</span> / ${goalStr}
                 </div>
             </div>
-            
-            <div class="space-y-1">
-                <div class="flex justify-between text-xs font-mono text-slate-400">
-                    <span>Current: <strong class="text-white">${Math.round(data.current)}m</strong></span>
-                    <span>Goal: <strong class="text-white">${Math.round(data.goal)}m</strong></span>
-                </div>
-                ${getProgressBar(data.pct, color)}
+            <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                <div class="h-full ${barColor} shadow-[0_0_10px_rgba(0,0,0,0.5)]" style="width: ${pct}%"></div>
             </div>
         </div>
     `;
 };
 
-// Exported Render Function
-export const renderReadiness = (allData, planMd) => {
-    const event = getNextEvent(planMd);
-    
-    if (!event) {
-        return `
-            <div class="max-w-4xl mx-auto mt-10 p-8 bg-slate-800 rounded-xl border border-slate-700 text-center">
-                <i class="fa-solid fa-calendar-xmark text-4xl text-slate-600 mb-4"></i>
-                <h2 class="text-xl font-bold text-white">No Upcoming Race Found</h2>
-                <p class="text-slate-400 text-sm mt-2">Add a race with specific time goals to your training plan to see readiness stats.</p>
-            </div>
-        `;
-    }
+const renderEventCard = (evt, caps) => {
+    // Calculate Overall Readiness (Weighted Average of available goals)
+    let totalPct = 0;
+    let count = 0;
 
-    const stats = calculateReadiness(allData, event);
-    const daysOut = Math.ceil((event.date - new Date()) / (1000 * 60 * 60 * 24));
+    if (evt.swim > 0) { totalPct += Math.min((caps.swim / evt.swim), 1.1); count++; }
+    if (evt.bike > 0) { totalPct += Math.min((caps.bike / evt.bike), 1.1); count++; }
+    if (evt.run > 0) { totalPct += Math.min((caps.run / evt.run), 1.1); count++; }
+    if (evt.climb > 0) { totalPct += Math.min((caps.climb / evt.climb), 1.1); count++; }
+
+    const overallPct = count > 0 ? (totalPct / count) * 100 : 0;
+    const scoreColorClass = getScoreColor(overallPct);
+    const label = getScoreLabel(overallPct);
+
+    // Date Math
+    const diffTime = Math.abs(evt.date - new Date());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const weeks = Math.floor(diffDays / 7);
+    const days = diffDays % 7;
 
     return `
-        <div class="max-w-5xl mx-auto space-y-8 pb-20 animate-fade-in">
-            
-            <div class="bg-gradient-to-r from-blue-900/40 to-slate-900/40 border border-blue-500/30 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6 backdrop-blur-sm">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-0 overflow-hidden shadow-lg mb-6">
+            <div class="bg-slate-800/50 p-4 border-b border-slate-700 flex justify-between items-center">
                 <div>
-                    <div class="flex items-center gap-3 mb-1">
-                        <span class="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Target Event</span>
-                        <span class="text-blue-400 text-xs font-mono"><i class="fa-regular fa-clock"></i> ${daysOut} Days Out</span>
-                    </div>
-                    <h1 class="text-3xl font-black text-white italic tracking-tighter uppercase">${event.name}</h1>
-                    <p class="text-slate-400 text-sm mt-1">
-                        <i class="fa-regular fa-calendar text-slate-500 mr-1"></i> ${event.date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                    </p>
+                    <h3 class="text-white font-bold text-lg leading-none">${evt.name.replace(/\*\*/g, '')}</h3>
+                    <span class="text-[10px] text-slate-500 uppercase tracking-widest">${evt.type || 'Event'}</span>
                 </div>
+                <div class="text-right">
+                    <div class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs font-mono text-slate-300">
+                        <i class="fa-regular fa-calendar mr-1"></i> ${evt.date.toLocaleDateString()} 
+                        <span class="border-l border-slate-700 mx-2 pl-2 font-bold text-white">${weeks}W ${days}D TO GO</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-[160px_1fr] gap-8 items-center">
                 
-                <div class="text-center bg-slate-950/50 p-4 rounded-xl border border-blue-500/20 min-w-[150px]">
-                    <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Overall Confidence</div>
-                    <div class="text-4xl font-black text-white">
-                        ${Math.round((stats.swim.pct + stats.bike.pct + stats.run.pct) / 3)}%
+                <div class="text-center">
+                    <div class="text-6xl font-black ${scoreColorClass.split(' ')[0]} leading-none">${Math.round(overallPct)}%</div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">Readiness</div>
+                    <div class="mt-2 inline-block px-3 py-1 rounded bg-slate-950 border ${scoreColorClass} text-[10px] font-bold uppercase">
+                        ${label}
                     </div>
                 </div>
-            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                ${renderSportCard("Swim Readiness", stats.swim, "fa-person-swimming")}
-                ${renderSportCard("Bike Readiness", stats.bike, "fa-person-biking")}
-                ${renderSportCard("Run Readiness", stats.run, "fa-person-running")}
+                <div class="border-l border-slate-800 pl-8 md:pl-8 border-t md:border-t-0 pt-6 md:pt-0">
+                    ${buildProgressBar('Swim', 'fa-person-swimming', caps.swim, evt.swim)}
+                    ${buildProgressBar('Bike', 'fa-person-biking', caps.bike, evt.bike)}
+                    ${buildProgressBar('Bike (Climb)', 'fa-mountain', caps.climb, evt.climb, 'ft')}
+                    ${buildProgressBar('Run', 'fa-person-running', caps.run, evt.run)}
+                </div>
             </div>
+        </div>
+    `;
+};
 
-            <div class="bg-slate-900/50 border border-slate-800 p-4 rounded-lg text-center">
-                <p class="text-[10px] text-slate-500 font-mono">
-                    * Readiness is calculated by comparing your longest single session in the last 6 weeks against your race day duration goals.
+// Collapsible Logic
+const buildCollapsible = (title, content) => `
+    <div class="mb-6">
+        <div class="flex items-center gap-2 cursor-pointer border-b border-slate-800 pb-2 mb-4 group" 
+             onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('i').classList.toggle('-rotate-90');">
+            <i class="fa-solid fa-caret-down text-slate-500 transition-transform duration-200"></i>
+            <h3 class="text-sm font-bold text-slate-300 uppercase group-hover:text-white">${title}</h3>
+        </div>
+        <div class="block animate-fade-in">
+            ${content}
+        </div>
+    </div>
+`;
+
+// --- 4. MAIN EXPORT ---
+
+export const renderReadiness = (allData, planMd) => {
+    const events = getEvents(planMd);
+    const caps = calculateCapabilities(allData);
+
+    if (events.length === 0) {
+        return `<div class="p-10 text-center text-slate-500">No upcoming events found in plan.</div>`;
+    }
+
+    const legendHtml = `
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 grid grid-cols-3 gap-4 text-center mb-2">
+            <div>
+                <div class="w-3 h-3 rounded-full bg-red-500 mx-auto mb-2 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+                <div class="text-red-400 font-bold text-xs uppercase">Warning</div>
+                <div class="text-[10px] text-slate-500">< 60%</div>
+            </div>
+            <div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500 mx-auto mb-2 shadow-[0_0_10px_rgba(234,179,8,0.5)]"></div>
+                <div class="text-yellow-400 font-bold text-xs uppercase">Developing</div>
+                <div class="text-[10px] text-slate-500">60% - 84%</div>
+            </div>
+            <div>
+                <div class="w-3 h-3 rounded-full bg-emerald-500 mx-auto mb-2 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                <div class="text-emerald-400 font-bold text-xs uppercase">Race Ready</div>
+                <div class="text-[10px] text-slate-500">85% - 100%</div>
+            </div>
+            <div class="col-span-3 text-center border-t border-slate-800 mt-3 pt-2">
+                <p class="text-[10px] text-slate-500 italic">
+                    Score = (Longest Session in Last 6 Weeks / Race Goal) for each discipline.
                 </p>
             </div>
         </div>
     `;
+
+    let html = `<div class="max-w-5xl mx-auto pb-24">`;
+    html += buildCollapsible("Legend & Logic", legendHtml);
+    html += `<div class="space-y-8">`;
+    events.forEach(evt => {
+        html += renderEventCard(evt, caps);
+    });
+    html += `</div></div>`;
+
+    return html;
 };
 
-// Optional: Placeholder if you want a chart later
 export const renderReadinessChart = (data) => {};
