@@ -1,11 +1,11 @@
 // js/app.js
 
 (async function initApp() {
-    console.log("🚀 Booting App (Simple Sport Mode)...");
+    console.log("🚀 Booting App (Simple Data Mode)...");
 
     const cacheBuster = Date.now();
     
-    // --- 1. SETUP NAVIGATION (First priority) ---
+    // --- 1. SETUP NAVIGATION (Priority 1) ---
     function setupEventListeners() {
         const navMap = {
             'nav-dashboard': 'dashboard', 'nav-trends': 'trends', 'nav-logbook': 'logbook',
@@ -57,7 +57,7 @@
     const App = {
         planMd: "", gearMd: "", allData: [], 
 
-        // --- 3. HYDRATION (THE FIX) ---
+        // --- 3. HYDRATION (Simplified Adapter) ---
         hydrateData(jsonArray) {
             if (!Array.isArray(jsonArray)) return [];
             
@@ -65,25 +65,25 @@
                 const dateObj = new Date(`${item.date}T12:00:00`); 
                 const getNum = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v) : 0;
                 
-                // Consolidate Cadence
                 const cad = getNum(item.averageBikingCadenceInRevPerMinute) || getNum(item.averageRunningCadenceInStepsPerMinute);
 
                 return {
                     ...item, 
                     
-                    // Core Identity
+                    // Identity
                     date: dateObj,
                     id: item.id,
                     dayName: item.Day || item.day || "Unknown",
                     type: item.actualSport || item.plannedSport || 'Other',
                     
-                    // --- THE FIX: Force Simple Strings for Charts ---
-                    // This maps the JSON 'actualSport' (e.g. "Bike") to 'activityType'
-                    // So when utils.js does d.activityType.includes(), it works.
-                    actualType: item.actualSport || "", 
-                    activityType: item.actualSport || "", // <--- THIS IS THE KEY FIX
-                    
-                    // Metrics
+                    // --- CRITICAL FIX FOR CHARTS ---
+                    // 1. Set actualType to the simple string ("Bike", "Run")
+                    // 2. Set activityType to NULL to prevent object crash
+                    actualType: item.actualSport, 
+                    activityType: null, // Forces utils.js/charts.js to use actualType fallback
+                    sportTypeId: item.sportTypeId, 
+
+                    // Metrics (Mapped from Garmin JSON -> App Variable Names)
                     plannedDuration: getNum(item.plannedDuration),
                     actualDuration: getNum(item.actualDuration),
                     avgHR: getNum(item.averageHR),
@@ -108,7 +108,7 @@
                     
                     completed: item.status === 'COMPLETED',
                     
-                    // Direct Mapping for Heatmap strings
+                    // Strings for Heatmap
                     plannedWorkout: item.plannedWorkout || "",
                     actualWorkout: item.actualWorkout || ""
                 };
