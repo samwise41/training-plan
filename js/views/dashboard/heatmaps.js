@@ -38,7 +38,7 @@ const getSportColorVar = (type) => {
 
 // --- Internal Builder: Generic Heatmap (Consistency) ---
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
-    if (!fullLog) fullLog = [];
+    // Data is already consolidated by renderHeatmaps, so we can trust it.
     const dataMap = {}; 
     fullLog.forEach(item => { 
         const dateKey = dateToKeyFn(item.date); 
@@ -110,6 +110,8 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         const isFuture = currentDate > today;
 
         if (eventName) { colorClass = 'bg-purple-500'; statusLabel = `${eventName}`; }
+        // FIXED LOGIC: If Plan > 0 and Act > 0, it falls through to the Ratio check (Green/Yellow)
+        // "Unplanned" (Green Stripe) only happens if Act > 0 AND Plan == 0.
         else if (totalAct > 0 && (totalPlan === 0 || isRestType)) { colorClass = 'bg-emerald-500'; inlineStyle = highContrastStripe; statusLabel = "Unplanned"; }
         else if (isFuture) { 
             if (totalPlan > 0) { colorClass = 'bg-slate-700'; statusLabel = "Planned"; } 
@@ -180,19 +182,13 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 
 // --- Internal Builder: Activity Heatmap (Sport Types) ---
 function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, containerId = null) {
-    if (!fullLog) fullLog = [];
-
     // --- SPORT DETECTION LOGIC (STRICT) ---
     const detectSport = (item) => {
-        // 1. Try Strict Database Field
         let s = item.actualType || item.type || 'Other';
-        
-        // 2. Normalize
         if (s === 'Running') return 'Run';
         if (s === 'Cycling') return 'Bike';
         if (s === 'Swimming') return 'Swim';
         
-        // 3. Fallback to String Match (just in case)
         if (s.includes('Run')) return 'Run';
         if (s.includes('Bike') || s.includes('Cycle')) return 'Bike';
         if (s.includes('Swim') || s.includes('Pool')) return 'Swim';
@@ -200,7 +196,6 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
         return 'Other';
     };
     
-    // Map: Date -> { sports: Set(), totalAct: 0, details: [] }
     const activityMap = {};
     fullLog.forEach(item => {
         if (item.actualDuration > 0) {
@@ -245,12 +240,10 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
             detailStr = entry.details.join('<br>'); // Combine workouts
 
             if (sports.length === 1) {
-                // Single sport
                 const color = getSportColorVar(sports[0]);
                 style = `background-color: ${color};`;
                 colorClass = ''; 
             } else if (sports.length > 1) {
-                // Multi-sport Gradient
                 const step = 100 / sports.length;
                 let gradientStr = 'linear-gradient(135deg, ';
                 sports.forEach((s, idx) => {
@@ -263,14 +256,12 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
                 colorClass = '';
             }
             
-            // Opacity based on Duration intensity
             if (totalMinutes > 90) style += " opacity: 1.0;";
             else if (totalMinutes > 60) style += " opacity: 0.8;";
             else if (totalMinutes > 30) style += " opacity: 0.6;";
             else style += " opacity: 0.4;";
         }
 
-        // Hide empty Sundays
         if (dayOfWeek === 0 && !hasActivity) {
             style = 'opacity: 0;';
             colorClass = '';
@@ -325,13 +316,51 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
 }
 
 // --- Main Render Function ---
-export function renderHeatmaps(fullLogData, planMd) {
+export function renderHeatmaps(rawLogData, planMd) {
     const eventMap = parseEvents(planMd);
     const today = new Date();
     today.setHours(0,0,0,0);
 
+    // --- DATA CONSOLIDATION (The Fix) ---
+    // Merge duplicates (Plan vs Actual) into a single "Day-Sport" record
+    const consolidatedMap = {};
+    
+    rawLogData.forEach(item => {
+        if (!item.date) return;
+        const dKey = toLocalYMD(item.date);
+        
+        // Use a composite key to merge identical workouts (e.g. "2026-01-17_Bike")
+        // If type is generic or missing, just use Date
+        let sportKey = item.actualType || item.type || "Any";
+        // Normalize
+        if (sportKey.includes('Bike')) sportKey = "Bike";
+        else if (sportKey.includes('Run')) sportKey = "Run";
+        else if (sportKey.includes('Swim')) sportKey = "Swim";
+        
+        const compositeKey = `${dKey}_${sportKey}`;
+        
+        if (!consolidatedMap[compositeKey]) {
+            // New Entry
+            consolidatedMap[compositeKey] = { ...item }; // Clone
+        } else {
+            // Merge!
+            const existing = consolidatedMap[compositeKey];
+            
+            // Take the max of Plan/Act to combine a "Planned" shell with an "Actual" result
+            existing.plannedDuration = Math.max(existing.plannedDuration || 0, item.plannedDuration || 0);
+            existing.actualDuration = Math.max(existing.actualDuration || 0, item.actualDuration || 0);
+            
+            // Prefer the "Completed" status if available
+            if (item.status === 'COMPLETED') existing.status = 'COMPLETED';
+            if (item.actualWorkout) existing.actualWorkout = item.actualWorkout;
+            if (item.actualName) existing.actualName = item.actualName;
+        }
+    });
+    
+    // Flatten back to array
+    const fullLogData = Object.values(consolidatedMap);
+
     // --- DATE RANGE LOGIC ---
-    // Ensure we always render up to the upcoming Saturday.
     const endOfWeek = new Date(today); 
     const dayOfWeek = endOfWeek.getDay(); 
     const distToSaturday = 6 - dayOfWeek;
@@ -340,7 +369,6 @@ export function renderHeatmaps(fullLogData, planMd) {
     const startTrailing = new Date(endOfWeek); 
     startTrailing.setMonth(startTrailing.getMonth() - 6);
     
-    // Annual Calculation
     const startYear = new Date(today.getFullYear(), 0, 1); 
     const endYear = new Date(today.getFullYear(), 11, 31);
     
