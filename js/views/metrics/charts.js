@@ -1,15 +1,18 @@
 // js/views/metrics/charts.js
 import { METRIC_DEFINITIONS } from './definitions.js';
 
-// --- INTERNAL HELPERS (No External Dependencies) ---
+// --- INTERNAL HELPERS ---
 
 const checkSport = (activity, sportKey) => {
-    const type = (activity.actualType || activity.type || '').toUpperCase();
+    // 1. Trust the hydrated 'type' from app.js (e.g., "Bike", "Run")
+    const type = (activity.type || activity.actualSport || '').toUpperCase();
     const target = sportKey.toUpperCase();
+
     if (type === target) return true;
-    if (target === 'RUN' && (type === 'RUNNING' || type.includes('RUN'))) return true;
-    if (target === 'BIKE' && (type === 'CYCLING' || type.includes('BIKE') || type.includes('RIDE'))) return true;
-    if (target === 'SWIM' && (type === 'SWIMMING' || type.includes('SWIM') || type.includes('POOL'))) return true;
+    if (target === 'RUN' && (type.includes('RUN') || type.includes('TREADMILL'))) return true;
+    if (target === 'BIKE' && (type.includes('BIKE') || type.includes('CYCL') || type.includes('RIDE') || type.includes('ZWIFT'))) return true;
+    if (target === 'SWIM' && (type.includes('SWIM') || type.includes('POOL'))) return true;
+    
     return false;
 };
 
@@ -44,7 +47,7 @@ const aggregateWeeklyTSS = (data) => {
         
         const date = new Date(d.date);
         const day = date.getDay(); 
-        const diff = date.getDate() - day + (day === 0 ? 0 : 7); // Adjust to Sunday
+        const diff = date.getDate() - day + (day === 0 ? 0 : 7); 
         const weekEnd = new Date(date.setDate(diff));
         weekEnd.setHours(0,0,0,0);
         
@@ -183,7 +186,7 @@ const extractChartData = (allData, key) => {
                 }));
 
         case 'anaerobic':
-            return allData.filter(d => valid(d.anaerobicTrainingEffect) && d.anaerobicTrainingEffect > 2.0)
+            return allData.filter(d => valid(d.anaerobicTrainingEffect) && d.anaerobicTrainingEffect > 0.5)
                 .map(d => ({
                     date: d.date,
                     dateStr: d.date.toISOString().split('T')[0],
@@ -204,52 +207,27 @@ const extractChartData = (allData, key) => {
 
 const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
-    if (!def) return `<div class="p-4 text-red-500 text-xs">Error: Definition missing for ${key}</div>`;
+    if (!def) return `<div class="p-4 text-red-500 text-xs">Definition missing: ${key}</div>`;
 
-    const unitLabel = def.rangeInfo ? def.rangeInfo.split(' ').pop() : '';
-    const color = def.colorVar;
-
-    const now = new Date();
-    const getSlope = (days) => {
-        const cutoff = new Date();
-        cutoff.setDate(now.getDate() - days);
-        const subset = fullData.filter(d => d.date >= cutoff);
-        const trend = calculateTrend(subset);
-        return trend ? getTrendIcon(trend.slope, def.invertRanges) : { icon: 'fa-minus', color: 'text-slate-600' };
-    };
-    const t30 = getSlope(30);
-    const t90 = getSlope(90);
-    const t6m = getSlope(180);
-
-    const indicatorsHtml = `
-        <div class="flex gap-1 ml-auto">
-            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="30d Trend">
-                <span class="text-[8px] font-bold text-slate-400">30d</span><i class="fa-solid ${t30.icon} ${t30.color} text-[8px]"></i>
-            </div>
-            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="90d Trend">
-                <span class="text-[8px] font-bold text-slate-400">90d</span><i class="fa-solid ${t90.icon} ${t90.color} text-[8px]"></i>
-            </div>
-            <div class="flex items-center gap-1 bg-slate-900/50 px-1.5 py-0.5 rounded border border-slate-700/50" title="6m Trend">
-                <span class="text-[8px] font-bold text-slate-400">6m</span><i class="fa-solid ${t6m.icon} ${t6m.color} text-[8px]"></i>
-            </div>
-        </div>`;
-
-    const titleHtml = `
-        <h3 class="text-xs font-bold text-white flex items-center gap-2">
-            <i class="fa-solid ${def.icon}" style="color: ${color}"></i> 
-            ${def.title}
-        </h3>
-    `;
+    // --- COLOR FIX: Robust check for whatever key the user has in definitions.js ---
+    const color = def.colorVar || def.color || '#94a3b8'; 
+    const unitLabel = def.rangeInfo || '';
 
     if (!displayData || displayData.length < 2) {
-        return `<div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 h-full flex flex-col justify-between">
+        return `
+        <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 h-full flex flex-col justify-between">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                ${titleHtml}
+                <h3 class="text-xs font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid ${def.icon}" style="color: ${color}"></i> ${def.title}
+                </h3>
             </div>
-            <div class="flex-1 flex items-center justify-center"><p class="text-xs text-slate-500 italic">Not enough data to chart.</p></div>
+            <div class="flex-1 flex items-center justify-center">
+                <p class="text-xs text-slate-500 italic">Waiting for data...</p>
+            </div>
         </div>`;
     }
 
+    // Chart Dimensions
     const width = 800, height = 150;
     const pad = { t: 20, b: 30, l: 50, r: 20 };
     
@@ -269,42 +247,26 @@ const buildMetricChart = (displayData, fullData, key) => {
 
     const getY = (v) => height - pad.b - ((v - dMin) / (dMax - dMin)) * (height - pad.t - pad.b);
 
+    // Target Lines
     let refLinesHtml = '';
     if (def.refMin !== undefined && def.refMax !== undefined) {
         const yMin = getY(def.refMin);
         const yMax = getY(def.refMax);
-        
-        const colorTop = def.invertRanges ? '#ef4444' : '#10b981'; 
-        const colorBot = def.invertRanges ? '#10b981' : '#ef4444'; 
+        const cTop = def.invertRanges ? '#ef4444' : '#10b981'; 
+        const cBot = def.invertRanges ? '#10b981' : '#ef4444'; 
 
-        if (yMax >= pad.t && yMax <= height - pad.b) {
-            refLinesHtml += `
-                <line x1="${pad.l}" y1="${yMax}" x2="${width - pad.r}" y2="${yMax}" stroke="${colorTop}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />
-                <text x="${width - pad.r + 5}" y="${yMax + 3}" font-size="8" fill="${colorTop}" opacity="0.8">Max</text>
-            `;
-        }
-        if (yMin >= pad.t && yMin <= height - pad.b) {
-            refLinesHtml += `
-                <line x1="${pad.l}" y1="${yMin}" x2="${width - pad.r}" y2="${yMin}" stroke="${colorBot}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />
-                <text x="${width - pad.r + 5}" y="${yMin + 3}" font-size="8" fill="${colorBot}" opacity="0.8">Min</text>
-            `;
-        }
+        if (yMax >= pad.t && yMax <= height - pad.b) refLinesHtml += `<line x1="${pad.l}" y1="${yMax}" x2="${width - pad.r}" y2="${yMax}" stroke="${cTop}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />`;
+        if (yMin >= pad.t && yMin <= height - pad.b) refLinesHtml += `<line x1="${pad.l}" y1="${yMin}" x2="${width - pad.r}" y2="${yMin}" stroke="${cBot}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />`;
     }
 
     const yAxisLine = `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" stroke="#475569" stroke-width="1" />`;
     
-    const yMid = (dMin + dMax) / 2;
-    const axisLabels = `
-        <text x="${pad.l - 6}" y="${getY(dMax) + 4}" text-anchor="end" font-size="9" fill="#64748b">${dMax.toFixed(1)}</text>
-        <text x="${pad.l - 6}" y="${getY(yMid) + 4}" text-anchor="end" font-size="9" fill="#64748b">${yMid.toFixed(1)}</text>
-        <text x="${pad.l - 6}" y="${getY(dMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${dMin.toFixed(1)}</text>
-    `;
-
+    // Simple Trend
     const trend = calculateTrend(displayData);
     const trendLine = trend ? 
-        `<line x1="${getX(null,0)}" y1="${getY(trend.startVal)}" x2="${getX(null,displayData.length-1)}" y2="${getY(trend.endVal)}" stroke="${color}" stroke-width="2" stroke-dasharray="4,4" opacity="0.4" />` 
-        : '';
+        `<line x1="${getX(null,0)}" y1="${getY(trend.startVal)}" x2="${getX(null,displayData.length-1)}" y2="${getY(trend.endVal)}" stroke="${color}" stroke-width="2" stroke-dasharray="4,4" opacity="0.4" />` : '';
 
+    // Path
     let pathD = `M ${getX(displayData[0], 0)} ${getY(displayData[0].val)}`;
     let points = '';
     
@@ -316,21 +278,17 @@ const buildMetricChart = (displayData, fullData, key) => {
             onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown}', '${color}')" />`;
     });
 
+    // Header with simple stats
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 h-full flex flex-col hover:border-slate-600 transition-colors">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <div class="flex items-center gap-2">${titleHtml}</div>
-                <div class="flex items-center gap-3">
-                    ${indicatorsHtml}
-                    <div class="cursor-pointer text-slate-500 hover:text-white transition-colors p-1" onclick="window.showAnalysisTooltip(event, '${key}')">
-                        <i class="fa-solid fa-circle-info text-sm"></i>
-                    </div>
-                </div>
+                <h3 class="text-xs font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid ${def.icon}" style="color: ${color}"></i> ${def.title}
+                </h3>
             </div>
             <div class="flex-1 w-full h-[120px]">
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
                     ${yAxisLine}
-                    ${axisLabels}
                     ${refLinesHtml}
                     ${trendLine}
                     <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.8" />
@@ -355,6 +313,7 @@ export const updateCharts = (allData, timeRange) => {
     const render = (containerId, metricKey) => {
         const el = document.getElementById(containerId);
         if (el) {
+            console.log(`Rendering ${metricKey}...`); // Debug Log
             const fullSet = extractChartData(allData, metricKey).sort((a,b) => new Date(a.date) - new Date(b.date));
             const displaySet = fullSet.filter(d => d.date >= cutoff);
             el.innerHTML = buildMetricChart(displaySet, fullSet, metricKey);
