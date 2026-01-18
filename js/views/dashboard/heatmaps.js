@@ -46,7 +46,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     });
     
     const today = new Date(); today.setHours(0,0,0,0);
-    const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
     
     const getHexColor = (cls) => {
         if (cls.includes('emerald-500')) return '#10b981';
@@ -88,17 +87,18 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         const uniqueTypes = new Set();
 
         if (dayData && dayData.length > 0) {
-            // 1. Detect Plan Mode
+            // 1. Detect Plan Mode (Fix: Use planName)
             dayData.forEach(d => {
-                if (d.plannedWorkout && d.plannedWorkout.length > 0) {
+                if (d.planName && d.planName.length > 0) {
                     isPlanMode = true;
-                    if (d.plannedWorkout.toLowerCase().includes('rest')) isRestDay = true;
+                    if (d.planName.toLowerCase().includes('rest')) isRestDay = true;
                 }
             });
 
             // 2. Calculate Totals
             dayData.forEach(d => {
-                const isItemPlanned = (d.plannedWorkout && d.plannedWorkout.length > 0);
+                // Fix: Use planName check
+                const isItemPlanned = (d.planName && d.planName.length > 0);
                 
                 // Strict Filter: Ignore Unplanned items if Plan Mode is active
                 if (isPlanMode && !isItemPlanned) return; 
@@ -148,6 +148,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
                 }
             } else {
                 const ratio = finalPlannedDur > 0 ? (finalActualDur / finalPlannedDur) : 1.0;
+                // SOLID GREEN for Completed
                 if (ratio >= 0.90) { 
                     colorClass = 'bg-emerald-500'; statusLabel = "Completed"; 
                 } else { 
@@ -219,7 +220,6 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, containerId = null) {
     if (!fullLog) fullLog = [];
 
-    // --- SPORT DETECTION LOGIC (STRICT) ---
     const detectSport = (item) => {
         let s = item.actualType || item.type || 'Other';
         if (s === 'Running') return 'Run';
@@ -293,8 +293,6 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
                 colorClass = '';
             }
             
-            // --- FIX: Force 100% Opacity for all Activities ---
-            // (Removed the duration-based opacity logic here)
             style += " opacity: 1.0;";
         }
 
@@ -357,7 +355,7 @@ export function renderHeatmaps(fullLogData, planMd) {
     const today = new Date();
     today.setHours(0,0,0,0);
 
-    // --- DATA CONSOLIDATION ---
+    // --- DATA CONSOLIDATION (Fix: Merge planName) ---
     const consolidatedMap = {};
     
     fullLogData.forEach(item => {
@@ -380,7 +378,10 @@ export function renderHeatmaps(fullLogData, planMd) {
             
             if (item.status === 'COMPLETED') existing.status = 'COMPLETED';
             if (item.actualWorkout) existing.actualWorkout = item.actualWorkout;
-            if (item.plannedWorkout) existing.plannedWorkout = item.plannedWorkout;
+            if (item.actualName) existing.actualName = item.actualName;
+            
+            // --- FIX: Merge planName explicitly ---
+            if (item.planName && item.planName.length > 0) existing.planName = item.planName;
         }
     });
     
