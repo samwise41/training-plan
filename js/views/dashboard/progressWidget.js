@@ -186,7 +186,7 @@ export function renderProgressWidget(workouts, fullLogData) {
                 if (actDur > 0) {
                     totalActual += actDur;
                     
-                    // --- CHANGED: Use Strict 'actualType' from Database ---
+                    // --- THE FIX: Use Strict 'actualType' from Database ---
                     // No more guessing from name strings!
                     let sport = item.actualType || item.type || 'Other';
                     
