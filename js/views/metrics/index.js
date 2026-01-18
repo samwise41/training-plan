@@ -4,7 +4,7 @@ import { updateCharts } from './charts.js';
 import { METRIC_DEFINITIONS } from './definitions.js';
 
 let currentRange = '6m'; 
-let activeTooltipId = null; // Track currently open data tooltip
+let activeTooltipId = null;
 
 window.updateMetricsTime = (range) => {
     currentRange = range;
@@ -68,7 +68,7 @@ export const renderMetrics = (allData) => {
         
         <div id="metric-tooltip-popup" class="fixed z-50 pointer-events-none opacity-0 transition-opacity bg-slate-900/95 border border-slate-600 p-3 rounded-lg shadow-2xl text-xs backdrop-blur-md transform -translate-x-1/2 -translate-y-full mt-[-10px]"></div>
         
-        <div id="metric-info-popup" class="fixed z-50 opacity-0 transition-opacity bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs max-w-[300px] pointer-events-auto"></div>
+        <div id="metric-info-popup" class="fixed z-[100] opacity-0 transition-opacity bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs max-w-[300px] pointer-events-auto"></div>
     `;
 
     setTimeout(() => {
@@ -80,21 +80,19 @@ export const renderMetrics = (allData) => {
     return html;
 };
 
-// --- TOOLTIP HANDLER: DATA POINTS ---
+// --- CLICK HANDLER: DATA POINTS ---
 window.showMetricTooltip = (e, uniqueId, date, title, val, unit, label, color) => {
-    e.stopPropagation(); // Stop click from propagating (helps with conflicts)
+    e.stopPropagation(); 
     const el = document.getElementById('metric-tooltip-popup');
     if(!el) return;
     
-    // TOGGLE LOGIC:
+    // Toggle Logic
     if (activeTooltipId === uniqueId && !el.classList.contains('opacity-0')) {
-        // Clicked the same point -> Close it
         el.classList.add('opacity-0');
         activeTooltipId = null;
         return;
     }
     
-    // Open New
     activeTooltipId = uniqueId;
     el.innerHTML = `
         <div class="text-slate-400 mb-1 border-b border-slate-700 pb-1 font-mono text-[10px]">${date}</div>
@@ -111,7 +109,7 @@ window.showMetricTooltip = (e, uniqueId, date, title, val, unit, label, color) =
     el.classList.remove('opacity-0');
 };
 
-// --- TOOLTIP HANDLER: INFO ICON ---
+// --- CLICK HANDLER: INFO ICON ---
 window.showAnalysisTooltip = (evt, key) => {
     evt.stopPropagation(); 
     const def = METRIC_DEFINITIONS[key];
@@ -120,7 +118,6 @@ window.showAnalysisTooltip = (evt, key) => {
     const el = document.getElementById('metric-info-popup');
     if(!el) return;
 
-    // Toggle if clicking same icon
     if (!el.classList.contains('opacity-0') && el.dataset.activeKey === key) {
         el.classList.add('opacity-0');
         return;
@@ -130,8 +127,9 @@ window.showAnalysisTooltip = (evt, key) => {
     const rangeColor = def.invertRanges ? "bg-gradient-to-r from-emerald-500 to-red-500" : "bg-gradient-to-r from-red-500 to-emerald-500";
     
     el.innerHTML = `
-        <div class="space-y-3">
-            <div class="flex items-center gap-2 border-b border-slate-700 pb-2">
+        <div class="space-y-3 relative">
+            <div class="absolute -top-2 -right-2 p-2 cursor-pointer text-slate-500 hover:text-white" onclick="document.getElementById('metric-info-popup').classList.add('opacity-0')"><i class="fa-solid fa-times"></i></div>
+            <div class="flex items-center gap-2 border-b border-slate-700 pb-2 pr-6">
                 <i class="fa-solid ${def.icon} text-lg" style="color: ${def.colorVar}"></i>
                 <div>
                     <h4 class="text-white font-bold text-sm leading-none">${def.title}</h4>
@@ -154,36 +152,29 @@ window.showAnalysisTooltip = (evt, key) => {
                 <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wide">How to Improve</span>
                 <div class="text-[11px] text-slate-400 mt-1 pl-2 border-l-2 border-blue-500/30">${def.improvement}</div>
             </div>
-            <div class="text-[9px] text-slate-600 text-center pt-1 italic cursor-pointer hover:text-white" onclick="document.getElementById('metric-info-popup').classList.add('opacity-0')">Click to close</div>
         </div>`;
 
-    // Intelligent Positioning
     const rect = evt.target.getBoundingClientRect();
     const screenW = window.innerWidth;
     
-    // If icon is on right side of screen, show popup to the left
     if (rect.left > screenW / 2) {
-        el.style.left = `${rect.left - 310}px`; 
-        el.style.right = 'auto';
+        el.style.left = `${rect.left - 310}px`;
     } else {
         el.style.left = `${rect.right + 10}px`;
-        el.style.right = 'auto';
     }
     
     el.style.top = `${rect.top + window.scrollY}px`;
     el.classList.remove('opacity-0');
 };
 
-// GLOBAL CLICK LISTENER: Closes tooltips when clicking empty space
+// GLOBAL CLOSE
 document.addEventListener('click', (e) => {
-    // Close Data Tooltip if click is outside
     const dataEl = document.getElementById('metric-tooltip-popup');
     if (dataEl && !dataEl.contains(e.target)) {
         dataEl.classList.add('opacity-0');
         activeTooltipId = null;
     }
     
-    // Close Info Tooltip if click is outside
     const infoEl = document.getElementById('metric-info-popup');
     if (infoEl && !infoEl.contains(e.target) && !e.target.closest('.fa-circle-info')) {
         infoEl.classList.add('opacity-0');
