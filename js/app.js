@@ -1,11 +1,12 @@
 // js/app.js
 
 (async function initApp() {
-    console.log("🚀 Booting App (ID Injection Mode)...");
+    console.log("🚀 Booting App (Adapter Mode: Active)...");
 
     const cacheBuster = Date.now();
     
-    // --- 1. SETUP NAVIGATION ---
+    // --- 1. NAVIGATION SETUP (Priority 1) ---
+    // Ensures tabs are clickable immediately, even if data loads slowly.
     function setupEventListeners() {
         const navMap = {
             'nav-dashboard': 'dashboard', 'nav-trends': 'trends', 'nav-logbook': 'logbook',
@@ -57,48 +58,66 @@
     const App = {
         planMd: "", gearMd: "", allData: [], 
 
-        // --- 3. HYDRATION (The "Silver Bullet" Fix) ---
+        // --- 3. THE ADAPTER (HYDRATION) ---
+        // This function translates "New Database Format" -> "Legacy Chart Format"
         hydrateData(jsonArray) {
             if (!Array.isArray(jsonArray)) return [];
             
             return jsonArray.map(item => {
                 const dateObj = new Date(`${item.date}T12:00:00`); 
                 const getNum = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v) : 0;
+                
+                // Consolidate Cadence fields into one
                 const cad = getNum(item.averageBikingCadenceInRevPerMinute) || getNum(item.averageRunningCadenceInStepsPerMinute);
 
-                // --- SMART SPORT DETECTION ---
-                // We manually assign the IDs that definitions.js expects
-                let safeSportId = item.sportTypeId; // Default to DB value
-                let safeActualType = item.actualSport || "Other";
+                // --- FIX A: FLATTEN ACTIVITY TYPE ---
+                // Prevents "d.activityType.includes is not a function" crash.
+                // We extract the string "cycling" from the object, or default to empty string.
+                let flatActivityType = "";
+                if (item.activityType) {
+                    if (typeof item.activityType === 'string') {
+                        flatActivityType = item.activityType;
+                    } else if (item.activityType.typeKey) {
+                        flatActivityType = item.activityType.typeKey; 
+                    }
+                }
 
-                // Force Standard Names & IDs
-                if (safeActualType.includes('Bike') || safeActualType.includes('Cycl')) {
-                    safeActualType = 'Bike';
-                    safeSportId = 2; // Matches SPORT_IDS.BIKE
-                } else if (safeActualType.includes('Run')) {
-                    safeActualType = 'Run';
-                    safeSportId = 1; // Matches SPORT_IDS.RUN
-                } else if (safeActualType.includes('Swim')) {
-                    safeActualType = 'Swim';
-                    safeSportId = 5; // Matches SPORT_IDS.SWIM
+                // --- FIX B: INJECT LEGACY SPORT IDs ---
+                // definitions.js filters data by these exact IDs:
+                // Run=1, Bike=2, Swim=5. We force them here based on the name.
+                let safeActualSport = item.actualSport || "Other";
+                let safeSportId = item.sportTypeId; 
+
+                if (safeActualSport.includes('Bike') || safeActualSport.includes('Cycl')) {
+                    safeActualSport = 'Bike';
+                    safeSportId = 2; // Force ID 2
+                } else if (safeActualSport.includes('Run')) {
+                    safeActualSport = 'Run';
+                    safeSportId = 1; // Force ID 1
+                } else if (safeActualSport.includes('Swim')) {
+                    safeActualSport = 'Swim';
+                    safeSportId = 5; // Force ID 5
                 }
 
                 return {
                     ...item, 
                     
-                    // Identity
+                    // Core Identity
                     date: dateObj,
                     id: item.id,
                     dayName: item.Day || item.day || "Unknown",
-                    type: safeActualType, // Used by Trends
+                    type: safeActualSport, 
                     
-                    // --- CRITICAL COMPATIBILITY FIX ---
-                    actualType: safeActualType,  // String ("Bike") for text fallbacks
-                    activityType: null,          // Prevent .includes() crash
-                    sportTypeId: safeSportId,    // Integer (2) for robust ID matching
-                    // ----------------------------------
-
-                    // Metrics
+                    // --- MAPPED FIELDS FOR LEGACY CHARTS ---
+                    actualType: safeActualSport,     // Used by utils.js fallback
+                    activityType: flatActivityType,  // Used by charts.js (now a String)
+                    sportTypeId: safeSportId,        // Used by definitions.js (Correct ID)
+                    
+                    // Strings for Heatmap
+                    plannedWorkout: item.plannedWorkout || "",
+                    actualWorkout: item.actualWorkout || "",
+                    
+                    // Metric Mapping (New JSON Name -> Old App Name)
                     plannedDuration: getNum(item.plannedDuration),
                     actualDuration: getNum(item.actualDuration),
                     avgHR: getNum(item.averageHR),
@@ -121,10 +140,7 @@
                     RPE: getNum(item.RPE),
                     Feeling: getNum(item.Feeling),
                     
-                    completed: item.status === 'COMPLETED',
-                    
-                    plannedWorkout: item.plannedWorkout || "",
-                    actualWorkout: item.actualWorkout || ""
+                    completed: item.status === 'COMPLETED'
                 };
             });
         },
