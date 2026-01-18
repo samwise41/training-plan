@@ -42,7 +42,8 @@
     "calories": 617.0,
     "elevation": 180.0,
     "rpe": 3.0,
-    "feeling": 2.0
+    "feeling": 2.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "date": "2026-01-17",
@@ -64,7 +65,8 @@
     "calories": 292.0,
     "elevation": 0.0,
     "rpe": 4.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21565654253",
@@ -89,7 +91,8 @@
     "calories": 409.0,
     "elevation": 0.0,
     "rpe": 5.0,
-    "feeling": 5.0
+    "feeling": 5.0,
+    "trainingEffectLabel": "TEMPO"
   },
   {
     "id": "21555400588",
@@ -114,7 +117,8 @@
     "calories": 427.0,
     "elevation": 209.0,
     "rpe": 3.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21544205799,21544384067,21543836765",
@@ -139,7 +143,8 @@
     "calories": 600.0,
     "elevation": 170.93,
     "rpe": 9.0,
-    "feeling": 5.0
+    "feeling": 5.0,
+    "trainingEffectLabel": "TEMPO"
   },
   {
     "id": "21540135238",
@@ -164,7 +169,8 @@
     "calories": 242.0,
     "elevation": 0.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": null
   },
   {
     "id": "21522302639",
@@ -189,7 +195,8 @@
     "calories": 463.0,
     "elevation": 319.13,
     "rpe": 7.0,
-    "feeling": 5.0
+    "feeling": 5.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "date": "2026-01-12",
@@ -211,7 +218,8 @@
     "calories": 398.0,
     "elevation": 0.0,
     "rpe": 4.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21502893617",
@@ -286,7 +294,8 @@
     "calories": 264.0,
     "elevation": 0.0,
     "rpe": 4.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21502893617",
@@ -311,7 +320,8 @@
     "calories": 1011.0,
     "elevation": 582.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21491950789",
@@ -336,7 +346,8 @@
     "calories": 710.0,
     "elevation": 54.0,
     "rpe": 3.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21482224757",
@@ -361,7 +372,8 @@
     "calories": 681.0,
     "elevation": 571.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21471583079",
@@ -386,7 +398,8 @@
     "calories": 640.0,
     "elevation": 55.0,
     "rpe": 5.0,
-    "feeling": 2.0
+    "feeling": 2.0,
+    "trainingEffectLabel": "TEMPO"
   },
   {
     "id": "21460455111",
@@ -411,7 +424,8 @@
     "calories": 380.0,
     "elevation": 0.0,
     "rpe": 5.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21450339268",
@@ -436,7 +450,8 @@
     "calories": 585.0,
     "elevation": 219.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21430613393",
@@ -461,7 +476,8 @@
     "calories": 1064.0,
     "elevation": 508.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21419915623",
@@ -486,7 +502,8 @@
     "calories": 695.0,
     "elevation": 31.0,
     "rpe": 3.0,
-    "feeling": 2.0
+    "feeling": 2.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21402836501",
@@ -511,7 +528,8 @@
     "calories": 558.0,
     "elevation": 500.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21392665719",
@@ -536,7 +554,8 @@
     "calories": 664.0,
     "elevation": 48.0,
     "rpe": 3.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "",
@@ -586,7 +605,8 @@
     "calories": 268.0,
     "elevation": 0.0,
     "rpe": 4.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21365025939",
@@ -611,7 +631,8 @@
     "calories": 551.0,
     "elevation": 363.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21355282531",
@@ -636,7 +657,8 @@
     "calories": 785.0,
     "elevation": 44.0,
     "rpe": 7.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "VO2MAX"
   },
   {
     "id": "21347428905",
@@ -661,7 +683,8 @@
     "calories": 560.0,
     "elevation": 504.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21341393579",
@@ -686,7 +709,8 @@
     "calories": 299.0,
     "elevation": 206.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21331728746",
@@ -736,7 +760,8 @@
     "calories": 1036.0,
     "elevation": 1075.0,
     "rpe": 10.0,
-    "feeling": 5.0
+    "feeling": 5.0,
+    "trainingEffectLabel": "LACTATE_THRESHOLD"
   },
   {
     "id": "21309912155",
@@ -761,7 +786,8 @@
     "calories": 1208.0,
     "elevation": 173.0,
     "rpe": 4.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21305772239",
@@ -786,7 +812,8 @@
     "calories": 310.0,
     "elevation": 0.0,
     "rpe": 3.0,
-    "feeling": 2.0
+    "feeling": 2.0,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21298044597",
@@ -811,7 +838,8 @@
     "calories": 1141.0,
     "elevation": 62.0,
     "rpe": 4.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21289830125",
@@ -861,7 +889,8 @@
     "calories": 426.0,
     "elevation": 238.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "",
@@ -911,7 +940,8 @@
     "calories": 925.0,
     "elevation": 443.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "TEMPO"
   },
   {
     "id": "",
@@ -961,7 +991,8 @@
     "calories": 1235.0,
     "elevation": 327.0,
     "rpe": 3.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21248283077",
@@ -1011,7 +1042,8 @@
     "calories": 978.0,
     "elevation": 58.0,
     "rpe": 4.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21233520275",
@@ -1061,7 +1093,8 @@
     "calories": 806.0,
     "elevation": 270.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21220528664",
@@ -1086,7 +1119,8 @@
     "calories": 451.0,
     "elevation": 27.0,
     "rpe": 3.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21212937186",
@@ -1111,7 +1145,8 @@
     "calories": 608.0,
     "elevation": 338.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21201288872",
@@ -1136,7 +1171,8 @@
     "calories": 344.0,
     "elevation": 0.0,
     "rpe": 4.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21186856698",
@@ -1161,7 +1197,8 @@
     "calories": 976.0,
     "elevation": 48.0,
     "rpe": 7.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "VO2MAX"
   },
   {
     "id": "21183998146",
@@ -1186,7 +1223,8 @@
     "calories": 383.0,
     "elevation": 0.0,
     "rpe": 5.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21175545787",
@@ -1236,7 +1274,8 @@
     "calories": 534.0,
     "elevation": 0.0,
     "rpe": 5.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21171009238",
@@ -1286,7 +1325,8 @@
     "calories": 523.0,
     "elevation": 127.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21158636550",
@@ -1311,7 +1351,8 @@
     "calories": 543.0,
     "elevation": 26.0,
     "rpe": 6.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "TEMPO"
   },
   {
     "id": "21149163183",
@@ -1336,7 +1377,8 @@
     "calories": 771.0,
     "elevation": 471.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21139107284",
@@ -1361,7 +1403,8 @@
     "calories": 435.0,
     "elevation": 0.0,
     "rpe": 5.0,
-    "feeling": 5.0
+    "feeling": 5.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21114574435",
@@ -1386,7 +1429,8 @@
     "calories": 681.0,
     "elevation": 137.0,
     "rpe": 5.0,
-    "feeling": 1.0
+    "feeling": 1.0,
+    "trainingEffectLabel": "TEMPO"
   },
   {
     "id": "21106121388",
@@ -1411,7 +1455,8 @@
     "calories": 842.0,
     "elevation": 142.0,
     "rpe": 7.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "LACTATE_THRESHOLD"
   },
   {
     "id": "21095755582",
@@ -1436,7 +1481,8 @@
     "calories": 340.0,
     "elevation": 0.0,
     "rpe": 5.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21088747868",
@@ -1461,7 +1507,8 @@
     "calories": 869.0,
     "elevation": 713.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21079887240",
@@ -1486,7 +1533,8 @@
     "calories": 246.0,
     "elevation": 0.0,
     "rpe": 4.0,
-    "feeling": 3.0
+    "feeling": 3.0,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21062564187",
@@ -1511,7 +1559,8 @@
     "calories": 779.0,
     "elevation": 103.0,
     "rpe": 6.0,
-    "feeling": 5.0
+    "feeling": 5.0,
+    "trainingEffectLabel": "AEROBIC_BASE"
   },
   {
     "id": "21052251510",
@@ -1536,7 +1585,8 @@
     "calories": 785.0,
     "elevation": 32.0,
     "rpe": 4.0,
-    "feeling": 4.0
+    "feeling": 4.0,
+    "trainingEffectLabel": "LACTATE_THRESHOLD"
   },
   {
     "id": "21044929035",
@@ -1561,7 +1611,8 @@
     "calories": 530.0,
     "elevation": 326.0,
     "rpe": null,
-    "feeling": null
+    "feeling": null,
+    "trainingEffectLabel": "VO2MAX"
   },
   {
     "id": "21035833949",
@@ -1586,7 +1637,8 @@
     "calories": 345.0,
     "elevation": 0.0,
     "rpe": 5.0,
-    "feeling": 2.0
+    "feeling": 2.0,
+    "trainingEffectLabel": "RECOVERY"
   },
   {
     "id": "21026701403",
