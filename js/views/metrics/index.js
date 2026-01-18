@@ -1,8 +1,9 @@
 // js/views/metrics/index.js
 import { renderSummaryTable } from './table.js';
 import { updateCharts } from './charts.js';
+import { METRIC_DEFINITIONS } from './definitions.js';
 
-let currentRange = '90d'; // Set default to 90d
+let currentRange = '6m'; // DEFAULT: 6 Months
 
 // Global Handler
 window.updateMetricsTime = (range) => {
@@ -33,7 +34,6 @@ const buildSection = (id, title, content, isOpen = true) => {
 export const renderMetrics = (allData) => {
     if (!allData) return `<div class="p-10 text-center text-red-400 font-mono">Error: No data available</div>`;
 
-    // 1. Time Toggle Buttons
     const buttons = ['30d', '90d', '6m', '1y'].map(r => 
         `<button id="btn-metric-${r}" onclick="window.updateMetricsTime('${r}')" 
           class="px-3 py-1 rounded text-[10px] font-bold transition-all ${r===currentRange ? 'bg-emerald-500 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:text-white'}">
@@ -41,12 +41,12 @@ export const renderMetrics = (allData) => {
         </button>`
     ).join('');
 
-    // 2. Build Chart Grids
     const gridClass = "grid grid-cols-1 md:grid-cols-2 gap-6";
     
+    // CHANGED: TSS is now standard size (removed md:col-span-2)
     const generalCharts = `
         <div class="${gridClass}">
-            <div class="md:col-span-2" id="metric-chart-tss"></div>
+            <div id="metric-chart-tss"></div>
             <div id="metric-chart-vo2max"></div>
             <div id="metric-chart-anaerobic"></div>
         </div>`;
@@ -73,7 +73,6 @@ export const renderMetrics = (allData) => {
             <div id="metric-chart-swim"></div>
         </div>`;
 
-    // 3. Assemble HTML
     const html = `
         <div class="max-w-7xl mx-auto space-y-8 animate-fade-in pb-24 font-sans">
             <div class="flex flex-col md:flex-row justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-800 backdrop-blur-md sticky top-0 z-20 shadow-xl">
@@ -89,7 +88,6 @@ export const renderMetrics = (allData) => {
             </div>
 
             ${buildSection('sect-table', 'Statistical Overview', renderSummaryTable(allData), true)}
-
             ${buildSection('sect-general', 'General Fitness', generalCharts, true)}
             ${buildSection('sect-bike', 'Cycling Dynamics', bikeCharts, true)}
             ${buildSection('sect-run', 'Running Dynamics', runCharts, true)}
@@ -97,9 +95,10 @@ export const renderMetrics = (allData) => {
         </div>
         
         <div id="metric-tooltip-popup" class="fixed z-50 pointer-events-none opacity-0 transition-opacity bg-slate-900/95 border border-slate-600 p-3 rounded-lg shadow-2xl text-xs backdrop-blur-md transform -translate-x-1/2 -translate-y-full mt-[-10px]"></div>
+        
+        <div id="metric-info-popup" class="fixed z-50 opacity-0 transition-opacity bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs max-w-[300px] pointer-events-none"></div>
     `;
 
-    // 4. Initialize Charts
     setTimeout(() => {
         if(window.App && window.App.allData) {
             updateCharts(window.App.allData, currentRange);
@@ -109,7 +108,9 @@ export const renderMetrics = (allData) => {
     return html;
 };
 
-// Tooltip Helper
+// --- TOOLTIP HANDLERS ---
+
+// 1. Data Point Tooltip (Hover)
 window.showMetricTooltip = (e, date, title, val, unit, label, color) => {
     const el = document.getElementById('metric-tooltip-popup');
     if(!el) return;
@@ -124,13 +125,80 @@ window.showMetricTooltip = (e, date, title, val, unit, label, color) => {
         <div class="text-slate-300 mt-2 bg-slate-800 px-2 py-1 rounded border border-slate-700 inline-block font-mono text-[10px]">${label}</div>
     `;
     
-    const x = e.clientX;
-    const y = e.clientY;
-    
-    el.style.left = `${x}px`;
-    el.style.top = `${y - 15}px`;
+    el.style.left = `${e.clientX}px`;
+    el.style.top = `${e.clientY - 15}px`;
     el.classList.remove('opacity-0');
     
     clearTimeout(window.metricTooltipTimer);
     window.metricTooltipTimer = setTimeout(() => el.classList.add('opacity-0'), 2500);
 };
+
+// 2. Info Tooltip (Static Popover)
+window.showAnalysisTooltip = (evt, key) => {
+    const def = METRIC_DEFINITIONS[key];
+    if (!def) return;
+    
+    const el = document.getElementById('metric-info-popup');
+    if(!el) return;
+
+    // Toggle behavior
+    if (!el.classList.contains('opacity-0') && el.dataset.activeKey === key) {
+        el.classList.add('opacity-0');
+        el.classList.add('pointer-events-none');
+        return;
+    }
+
+    el.dataset.activeKey = key;
+    const rangeColor = def.invertRanges ? "bg-gradient-to-r from-emerald-500 to-red-500" : "bg-gradient-to-r from-red-500 to-emerald-500";
+    
+    el.innerHTML = `
+        <div class="space-y-3">
+            <div class="flex items-center gap-2 border-b border-slate-700 pb-2">
+                <i class="fa-solid ${def.icon} text-lg" style="color: ${def.colorVar}"></i>
+                <div>
+                    <h4 class="text-white font-bold text-sm leading-none">${def.title}</h4>
+                    <span class="text-[10px] text-slate-400 font-mono">${def.sport.toUpperCase()} METRIC</span>
+                </div>
+            </div>
+            <div class="text-slate-300 leading-relaxed">${def.description}</div>
+            <div class="bg-slate-800/50 rounded p-2 border border-slate-700">
+                <div class="flex justify-between items-end mb-1">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Target Range</span>
+                    <span class="text-xs font-mono font-bold text-emerald-400">${def.rangeInfo}</span>
+                </div>
+                <div class="h-1.5 w-full rounded-full ${rangeColor} opacity-80"></div>
+                <div class="flex justify-between text-[8px] text-slate-500 mt-1 font-mono">
+                    <span>${def.invertRanges ? "Low (Good)" : "Floor"}</span>
+                    <span>${def.invertRanges ? "High (Bad)" : "Ceiling"}</span>
+                </div>
+            </div>
+            <div>
+                <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wide">How to Improve</span>
+                <div class="text-[11px] text-slate-400 mt-1 pl-2 border-l-2 border-blue-500/30">${def.improvement}</div>
+            </div>
+            <div class="text-[9px] text-slate-600 text-center pt-1 italic cursor-pointer hover:text-white" onclick="document.getElementById('metric-info-popup').classList.add('opacity-0')">Click to close</div>
+        </div>`;
+
+    // Position carefully
+    const rect = evt.target.getBoundingClientRect();
+    const screenW = window.innerWidth;
+    
+    if (rect.left > screenW / 2) {
+        el.style.left = `${rect.left - 310}px`; // Show to left
+    } else {
+        el.style.left = `${rect.right + 10}px`; // Show to right
+    }
+    
+    el.style.top = `${rect.top + window.scrollY}px`;
+    el.classList.remove('opacity-0');
+    el.classList.remove('pointer-events-none');
+};
+
+// Close info popup on global click outside
+document.addEventListener('click', (e) => {
+    const el = document.getElementById('metric-info-popup');
+    if (el && !el.contains(e.target) && !e.target.closest('.fa-circle-info')) {
+        el.classList.add('opacity-0');
+        el.classList.add('pointer-events-none');
+    }
+});
