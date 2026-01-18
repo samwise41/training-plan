@@ -46,6 +46,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
     });
     
     const today = new Date(); today.setHours(0,0,0,0);
+    const highContrastStripe = "background-image: repeating-linear-gradient(45deg, #10b981, #10b981 3px, #065f46 3px, #065f46 6px);";
     
     const getHexColor = (cls) => {
         if (cls.includes('emerald-500')) return '#10b981';
@@ -133,9 +134,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         }
         else if (isPlanMode) {
             if (isRestDay) {
-                // VISUAL FIX: 
-                // Future Rest = Neutral Grey (Planned)
-                // Past/Today Rest = Green 50%
+                // Future Rest = Grey, Past Rest = Green 50%
                 if (isFuture) {
                     colorClass = 'bg-slate-700/50'; statusLabel = "Rest Day";
                 } else {
@@ -157,7 +156,7 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
             }
         }
         else if (finalActualDur > 0) {
-            // VISUAL FIX: Unplanned = Green 50% (No more stripes)
+            // Unplanned = Green 50%
             colorClass = 'bg-emerald-500/50'; statusLabel = "Unplanned";
         }
         else if (isFuture) {
@@ -294,10 +293,9 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
                 colorClass = '';
             }
             
-            if (totalMinutes > 90) style += " opacity: 1.0;";
-            else if (totalMinutes > 60) style += " opacity: 0.8;";
-            else if (totalMinutes > 30) style += " opacity: 0.6;";
-            else style += " opacity: 0.4;";
+            // --- FIX: Force 100% Opacity for all Activities ---
+            // (Removed the duration-based opacity logic here)
+            style += " opacity: 1.0;";
         }
 
         if (dayOfWeek === 0 && !hasActivity) {
