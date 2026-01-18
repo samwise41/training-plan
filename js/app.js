@@ -82,7 +82,7 @@
                     // Core Identity
                     date: dateObj,
                     id: item.id,
-                    dayName: item.day,
+                    dayName: item.Day || item.day,
                     
                     // Type Mapping
                     type: item.actualSport || item.plannedSport || 'Other',
@@ -93,28 +93,28 @@
                     actualName: item.actualWorkout,
                     notes: item.notes,
                     
-                    // Metrics (MAPPED FROM NEW KEYS)
+                    // Metrics (With Safeties to prevent Chart Crashes)
                     plannedDuration: item.plannedDuration || 0,
                     actualDuration: item.actualDuration || 0,
                     
-                    avgHR: item.averageHR,
-                    avgPower: item.avgPower,
-                    normPower: item.normPower,
-                    avgSpeed: item.averageSpeed,
-                    avgCadence: cadence,
+                    avgHR: item.averageHR || 0,
+                    avgPower: item.avgPower || 0,
+                    normPower: item.normPower || 0,
+                    avgSpeed: item.averageSpeed || 0,
+                    avgCadence: cadence || 0,
                     
-                    trainingStressScore: item.trainingStressScore,
-                    intensityFactor: item.intensityFactor,
-                    elevationGain: item.elevationGain,
-                    calories: item.calories,
-                    RPE: item.RPE,
-                    Feeling: item.Feeling,
+                    trainingStressScore: item.trainingStressScore || 0,
+                    intensityFactor: item.intensityFactor || 0,
+                    elevationGain: item.elevationGain || 0,
+                    calories: item.calories || 0,
+                    RPE: item.RPE || 0,
+                    Feeling: item.Feeling || 0,
                     
                     // Running Specific
-                    avgGroundContactTime: item.avgGroundContactTime,
-                    avgVerticalOscillation: item.avgVerticalOscillation,
-                    vO2MaxValue: item.vO2MaxValue,
-                    anaerobicTrainingEffect: item.anaerobicTrainingEffect,
+                    avgGroundContactTime: item.avgGroundContactTime || 0,
+                    avgVerticalOscillation: item.avgVerticalOscillation || 0,
+                    vO2MaxValue: item.vO2MaxValue || 0,
+                    anaerobicTrainingEffect: item.anaerobicTrainingEffect || 0,
                     
                     // Logic Flags
                     completed: item.status === 'COMPLETED'
