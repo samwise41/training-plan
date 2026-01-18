@@ -122,8 +122,10 @@
                 <p class="text-slate-400 mt-2 text-sm">Restricted Access Environment</p>
             </div>
             <div class="space-y-4">
-                <input type="password" id="access-code"  autofocus placeholder="Enter Access Code"
+                
+                <input type="password" id="access-code" autofocus autocomplete="off" placeholder="Enter Access Code"
                        class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 transition-colors text-center font-mono">
+                
                 <button id="btn-unlock" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
                     Unlock Dashboard
                 </button>
@@ -133,6 +135,44 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const curtain = document.getElementById('security-curtain');
+            const input = document.getElementById('access-code');
+
+            // 1. Helper to force focus
+            const doFocus = () => {
+                if (input) {
+                    input.focus();
+                    input.click(); // Mobile browser helper
+                }
+            };
+
+            // 2. Watch for the curtain becoming visible (removes 'hidden' class)
+            // This is needed because if app.js runs AFTER this script, normal autofocus fails.
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === "attributes" && mutation.attributeName === "class") {
+                        if (!curtain.classList.contains('hidden')) {
+                            setTimeout(doFocus, 100); // Wait 100ms for transition
+                        }
+                    }
+                });
+            });
+            observer.observe(curtain, { attributes: true });
+
+            // 3. Also try immediately just in case
+            if (!curtain.classList.contains('hidden')) doFocus();
+
+            // 4. "Enter" Key to Unlock
+            input.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('btn-unlock').click();
+                }
+            });
+        });
+    </script>
 
     <script>
         const script = document.createElement('script');
