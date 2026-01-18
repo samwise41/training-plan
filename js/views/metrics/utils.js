@@ -4,17 +4,26 @@ import { SPORT_IDS, METRIC_DEFINITIONS } from './definitions.js';
 // --- DATA HELPERS ---
 
 export const checkSport = (activity, sportKey) => {
-    // 1. Try ID Match (Most Robust)
-    const typeId = activity.activityType ? activity.activityType.typeId : null;
-    const parentId = activity.activityType ? activity.activityType.parentTypeId : null;
-    
-    if (SPORT_IDS[sportKey] && (SPORT_IDS[sportKey].includes(typeId) || SPORT_IDS[sportKey].includes(parentId))) {
-        return true;
-    }
+    // 1. Get the actual type from our hydrated data
+    // (This is the most reliable source after our migration)
+    const type = (activity.actualType || activity.type || '').toUpperCase();
+    const target = sportKey.toUpperCase();
 
-    // 2. Fallback: String Match (Safety Net)
-    if (activity.actualType && activity.actualType.toUpperCase() === sportKey) {
-        return true;
+    // 2. Direct String Match
+    if (type === target) return true;
+
+    // 3. Fuzzy/Alias Match
+    if (target === 'RUN' && (type === 'RUNNING' || type.includes('RUN'))) return true;
+    if (target === 'BIKE' && (type === 'CYCLING' || type.includes('BIKE') || type.includes('RIDE'))) return true;
+    if (target === 'SWIM' && (type === 'SWIMMING' || type.includes('SWIM') || type.includes('POOL'))) return true;
+
+    // 4. Legacy ID Match (Fallthrough for raw Garmin objects if any)
+    if (activity.activityType) {
+        const typeId = activity.activityType.typeId;
+        const parentId = activity.activityType.parentTypeId;
+        if (SPORT_IDS[target] && (SPORT_IDS[target].includes(typeId) || SPORT_IDS[target].includes(parentId))) {
+            return true;
+        }
     }
     
     return false;
