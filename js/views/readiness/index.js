@@ -1,58 +1,58 @@
 // js/views/readiness/index.js
 
-// --- 1. PARSING & FORMATTING HELPERS ---
+// --- 1. CONFIG & HELPERS ---
 
-const parseGoalValue = (str) => {
-    if (!str || typeof str !== 'string') return 0;
-    const clean = str.toLowerCase().replace(/\*/g, '').trim();
-    if (clean === '-' || clean === '') return 0;
-    
-    // 1. Handle Elevation (e.g. "4,905 ft" or "1200")
-    if (clean.includes('ft') || (clean.match(/^\d{1,3}(,\d{3})*$/) && !clean.includes(':'))) {
-        // Remove commas and 'ft'
-        const numStr = clean.replace(/,/g, '').replace('ft', '').trim();
-        return parseInt(numStr) || 0;
-    }
-
-    // 2. Handle Duration (e.g. "1h 30m" or "2:30")
-    let totalMinutes = 0;
-    
-    // Format A: "1h 30m"
-    const hMatch = clean.match(/(\d+)\s*h/);
-    const mMatch = clean.match(/(\d+)\s*m/);
-    if (hMatch) totalMinutes += parseInt(hMatch[1]) * 60;
-    if (mMatch) totalMinutes += parseInt(mMatch[1]);
-    
-    // Format B: "2:30" (H:MM)
-    if (clean.includes(':')) {
-        const parts = clean.split(':');
-        totalMinutes += parseInt(parts[0]) * 60 + parseInt(parts[1]);
-        return totalMinutes;
-    }
-
-    // Format C: Just a number (assume minutes if small, else elevation?) 
-    // Context usually handles this, but here we assume minutes if not elevation
-    if (!hMatch && !mMatch && !isNaN(parseInt(clean))) {
-        totalMinutes = parseInt(clean);
-    }
-    
-    return totalMinutes;
+const SPORT_CONFIG = {
+    swim: { color: 'text-cyan-400', bar: 'bg-cyan-500', icon: 'fa-person-swimming', label: 'Swim' },
+    bike: { color: 'text-purple-400', bar: 'bg-purple-500', icon: 'fa-person-biking', label: 'Bike' },
+    climb: { color: 'text-fuchsia-400', bar: 'bg-fuchsia-500', icon: 'fa-mountain', label: 'Bike (Climb)' },
+    run:  { color: 'text-pink-400', bar: 'bg-pink-500', icon: 'fa-person-running',  label: 'Run' }
 };
 
-const formatDuration = (mins) => {
+// Formats
+const formatTime = (mins) => {
     if (!mins) return "0:00";
     const h = Math.floor(mins / 60);
     const m = Math.round(mins % 60);
     return `${h}:${m.toString().padStart(2, '0')}`;
 };
 
-const formatElevation = (ft) => {
-    return new Intl.NumberFormat('en-US').format(Math.round(ft)) + " ft";
+const formatElev = (ft) => {
+    return Math.round(ft).toLocaleString() + " ft";
 };
 
-// --- 2. DATA PROCESSING ---
+const parseGoalValue = (str) => {
+    if (!str || typeof str !== 'string') return 0;
+    const clean = str.toLowerCase().replace(/\*/g, '').trim();
+    if (clean === '-' || clean === '') return 0;
+    
+    // Elevation (ft)
+    if (clean.includes('ft') || (clean.match(/^\d{1,3}(,\d{3})*$/) && !clean.includes(':'))) {
+        const numStr = clean.replace(/,/g, '').replace('ft', '').trim();
+        return parseInt(numStr) || 0;
+    }
 
-// Parse ALL events from the markdown table
+    // Duration (1h 30m or 1:30)
+    let totalMinutes = 0;
+    const hMatch = clean.match(/(\d+)\s*h/);
+    const mMatch = clean.match(/(\d+)\s*m/);
+    if (hMatch) totalMinutes += parseInt(hMatch[1]) * 60;
+    if (mMatch) totalMinutes += parseInt(mMatch[1]);
+    
+    if (clean.includes(':')) {
+        const parts = clean.split(':');
+        totalMinutes += parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        return totalMinutes;
+    }
+    
+    if (!hMatch && !mMatch && !isNaN(parseInt(clean))) {
+        totalMinutes = parseInt(clean);
+    }
+    return totalMinutes;
+};
+
+// --- 2. LOGIC (Updated for New App.js Schema) ---
+
 const getEvents = (planMd) => {
     if (!planMd) return [];
     const lines = planMd.split('\n');
@@ -65,18 +65,18 @@ const getEvents = (planMd) => {
         if (inTable && line.startsWith('| :---')) continue;
         if (inTable && line.startsWith('|')) {
             const cols = line.split('|').map(c => c.trim());
-            // Columns: 1=Date, 2=Name, 8=Swim, 10=Bike, 11=Elev, 12=Run
+            // Indexes based on standard plan format: Date=1, Name=2, Swim=8, Bike=10, Elev=11, Run=12
             if (cols.length >= 12) {
                 const d = new Date(cols[1]);
                 if (!isNaN(d) && d >= today) {
                     events.push({
-                        name: cols[2].replace(/\*\*/g, ''), // Clean name
-                        type: cols[2].includes('**A-Race**') ? 'A-Race' : (cols[2].includes('**B-Race**') ? 'B-Race' : 'Event'),
+                        name: cols[2].replace(/\*\*/g, ''),
+                        priority: cols[2].includes('**A-Race**') ? 'A-Race' : (cols[2].includes('**B-Race**') ? 'B-Race' : 'Event'),
                         date: d,
                         goals: {
                             swim: parseGoalValue(cols[8]),
                             bike: parseGoalValue(cols[10]),
-                            climb: parseGoalValue(cols[11]), // Elevation column
+                            climb: parseGoalValue(cols[11]),
                             run: parseGoalValue(cols[12])
                         }
                     });
@@ -84,26 +84,24 @@ const getEvents = (planMd) => {
             }
         }
     }
-    // SORT: Earliest to Latest
     return events.sort((a,b) => a.date - b.date);
 };
 
-// Calculate Max Capabilities in Lookback Window (Last 6 Weeks)
 const calculateCapabilities = (allData) => {
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 42); 
+    cutoff.setDate(cutoff.getDate() - 42); // 6 Weeks
 
     const caps = { swim: 0, bike: 0, run: 0, climb: 0 };
 
     allData.forEach(d => {
         if (d.date >= cutoff) {
-            // Using Clean Schema from app.js (d.sport, d.duration, d.elevationGain)
+            // Using CLEAN SCHEMA from app.js (d.sport, d.duration)
             if (d.sport === 'Swim') caps.swim = Math.max(caps.swim, d.duration);
             if (d.sport === 'Bike') {
                 caps.bike = Math.max(caps.bike, d.duration);
-                // Handle raw Elevation data
+                // Handle Elevation (Convert meters to feet if needed, assuming DB is metric)
                 const elev = d.source?.elevationGain || d.elevationGain || 0;
-                caps.climb = Math.max(caps.climb, elev * 3.28084); // Convert Meters to Feet
+                caps.climb = Math.max(caps.climb, elev * 3.28084); 
             }
             if (d.sport === 'Run') caps.run = Math.max(caps.run, d.duration);
         }
@@ -111,134 +109,157 @@ const calculateCapabilities = (allData) => {
     return caps;
 };
 
-// --- 3. UI RENDERERS ---
+// --- 3. COMPONENT RENDERERS (Exact Visual Match) ---
 
-const buildProgressBar = (label, icon, current, goal, type = 'time') => {
-    if (!goal || goal === 0) return '';
+const renderLegend = () => `
+    <div class="max-w-5xl mx-auto bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg mb-8">
+        <div class="bg-slate-900/80 p-3 border-b border-slate-700 flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-blue-400"></i>
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Readiness Guide</span>
+        </div>
+        <div class="grid grid-cols-3 text-center py-4 px-2">
+            <div class="flex flex-col items-center">
+                <div class="w-3 h-3 rounded-full bg-red-500 mb-2 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+                <span class="text-[10px] font-black text-red-500 uppercase">Warning</span>
+                <span class="text-[10px] text-slate-400">&lt; 60%</span>
+            </div>
+            <div class="flex flex-col items-center border-x border-slate-700">
+                <div class="w-3 h-3 rounded-full bg-yellow-500 mb-2 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></div>
+                <span class="text-[10px] font-black text-yellow-500 uppercase">Developing</span>
+                <span class="text-[10px] text-slate-400">60% - 84%</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <div class="w-3 h-3 rounded-full bg-emerald-500 mb-2 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                <span class="text-[10px] font-black text-emerald-500 uppercase">Race Ready</span>
+                <span class="text-[10px] text-slate-400">85% - 100%</span>
+            </div>
+        </div>
+        <div class="bg-slate-900/30 p-2 text-center border-t border-slate-700/50">
+            <p class="text-[9px] text-slate-500 italic">Score = (Longest Session in Last 6 Weeks / Goal) for your <strong>weakest</strong> discipline.</p>
+        </div>
+    </div>`;
+
+const buildBar = (type, current, target, isElev = false) => {
+    if (!target || target === 0) return '';
     
-    const pct = Math.min(100, (current / goal) * 100);
+    const pct = Math.min(100, Math.round((current / target) * 100));
+    const config = SPORT_CONFIG[type];
+    
+    // Color Logic matches Guide
     let barColor = 'bg-red-500';
     if (pct >= 85) barColor = 'bg-emerald-500';
     else if (pct >= 60) barColor = 'bg-yellow-500';
 
-    const currentStr = type === 'elev' ? formatElevation(current) : formatDuration(current);
-    const goalStr = type === 'elev' ? formatElevation(goal) : formatDuration(goal);
+    const displayCurrent = isElev ? formatElev(current) : formatTime(current);
+    const displayTarget  = isElev ? formatElev(target) : formatTime(target);
 
     return `
-        <div class="mb-4 last:mb-0 group">
+        <div class="mb-5 last:mb-0">
             <div class="flex justify-between items-end mb-1">
-                <div class="flex items-center gap-2 text-slate-300 text-xs font-bold">
-                    <i class="fa-solid ${icon} w-4 text-center text-slate-500 group-hover:text-white transition-colors"></i> ${label}
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid ${config.icon} ${config.color}"></i>
+                    <span class="text-xs font-bold text-slate-400">${config.label}</span>
                 </div>
-                <div class="text-[10px] font-mono text-white">
-                    <span class="text-slate-400">${currentStr}</span> / ${goalStr}
+                <div class="text-right">
+                     <span class="text-xs font-bold text-white">${displayCurrent} / ${displayTarget}</span>
                 </div>
             </div>
-            <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
-                <div class="h-full ${barColor} shadow-[0_0_10px_rgba(0,0,0,0.3)] transition-all duration-1000" style="width: ${pct}%"></div>
+            <div class="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden relative">
+                <div class="${barColor} h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(0,0,0,0.3)]" style="width: ${pct}%"></div>
             </div>
         </div>
     `;
 };
 
 const renderEventCard = (evt, caps) => {
-    // Logic: Score is based on the WEAKEST link
-    const scores = [];
-    if (evt.goals.swim > 0) scores.push(caps.swim / evt.goals.swim);
-    if (evt.goals.bike > 0) scores.push(caps.bike / evt.goals.bike);
-    if (evt.goals.run > 0) scores.push(caps.run / evt.goals.run);
-    if (evt.goals.climb > 0) scores.push(caps.climb / evt.goals.climb);
+    // 1. Calculate Score (Weakest Link)
+    const pcts = [];
+    if (evt.goals.swim > 0) pcts.push(caps.swim / evt.goals.swim);
+    if (evt.goals.bike > 0) pcts.push(caps.bike / evt.goals.bike);
+    if (evt.goals.run > 0) pcts.push(caps.run / evt.goals.run);
+    if (evt.goals.climb > 0) pcts.push(caps.climb / evt.goals.climb);
 
-    // If no goals, 0%. If goals, find min. Cap at 100% for display logic.
-    const rawScore = scores.length ? Math.min(...scores) : 0;
-    const scorePct = Math.min(100, Math.round(rawScore * 100));
+    const minRatio = pcts.length ? Math.min(...pcts) : 0;
+    const readinessScore = Math.min(100, Math.round(minRatio * 100));
 
-    // Status Label
-    let status = { label: 'Warning', color: 'text-red-500', border: 'border-red-500/20', bg: 'bg-red-500/10' };
-    if (scorePct >= 85) status = { label: 'Race Ready', color: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/10' };
-    else if (scorePct >= 60) status = { label: 'Developing', color: 'text-yellow-400', border: 'border-yellow-500/20', bg: 'bg-yellow-500/10' };
+    // 2. Determine Labels
+    let scoreColor = "text-red-500";
+    let scoreLabel = "Warning";
+    let badgeClass = "bg-red-500/10 border-red-500/20";
+    
+    if (readinessScore >= 85) { 
+        scoreColor = "text-emerald-500"; 
+        scoreLabel = "Race Ready";
+        badgeClass = "bg-emerald-500/10 border-emerald-500/20";
+    } else if (readinessScore >= 60) { 
+        scoreColor = "text-yellow-500"; 
+        scoreLabel = "Developing";
+        badgeClass = "bg-yellow-500/10 border-yellow-500/20";
+    }
 
-    // Countdown
+    // 3. Date Math
     const diff = Math.ceil((evt.date - new Date()) / (1000 * 60 * 60 * 24));
     const weeks = Math.floor(diff / 7);
     const days = diff % 7;
 
     return `
-        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg mb-6 hover:border-slate-700 transition-colors">
-            <div class="bg-slate-800/40 p-4 border-b border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center border border-slate-700 shadow-inner">
-                        <i class="fa-solid fa-flag-checkered text-slate-400"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-white font-bold text-lg leading-tight">${evt.name}</h3>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="text-[10px] font-bold bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700 uppercase tracking-wider">
-                                ${evt.type} Event
-                            </span>
-                        </div>
-                    </div>
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-0 mb-8 overflow-hidden shadow-lg relative max-w-5xl mx-auto">
+        <div class="bg-slate-900/50 border-b border-slate-700 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-700 p-2 rounded-lg text-white shadow-inner">
+                    <i class="fa-solid fa-flag-checkered"></i>
                 </div>
-                <div class="flex items-center gap-3 bg-slate-950/50 px-3 py-1.5 rounded-lg border border-slate-800">
-                    <div class="text-xs text-slate-400 border-r border-slate-700 pr-3 mr-1">
-                        <i class="fa-regular fa-calendar mr-1"></i> ${evt.date.toLocaleDateString()}
-                    </div>
-                    <div class="text-xs font-mono font-bold text-white">
-                        <i class="fa-solid fa-hourglass-half mr-1 text-slate-500"></i> ${weeks}W ${days}D
-                    </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white leading-none">${evt.name}</h3>
+                    <div class="text-xs text-slate-500 font-mono mt-1 font-bold uppercase tracking-wider">${evt.priority} Event</div>
                 </div>
             </div>
-
-            <div class="p-6 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-8 items-center">
-                
-                <div class="text-center">
-                    <div class="text-7xl font-black ${status.color} leading-none tracking-tighter" style="text-shadow: 0 0 20px rgba(0,0,0,0.5)">
-                        ${scorePct}%
-                    </div>
-                    <div class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2 mb-3">Readiness</div>
-                    <span class="px-3 py-1 rounded text-[10px] font-bold uppercase ${status.color} ${status.bg} border ${status.border}">
-                        ${status.label}
-                    </span>
+            <div class="flex items-center gap-4 text-xs font-mono text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/50">
+                <div class="flex items-center gap-2">
+                    <i class="fa-regular fa-calendar"></i> ${evt.date.toLocaleDateString()}
                 </div>
-
-                <div class="border-t md:border-t-0 md:border-l border-slate-800 pt-6 md:pt-0 md:pl-8 space-y-1">
-                    ${buildProgressBar('Swim', 'fa-person-swimming', caps.swim, evt.goals.swim, 'time')}
-                    ${buildProgressBar('Bike', 'fa-person-biking', caps.bike, evt.goals.bike, 'time')}
-                    ${buildProgressBar('Bike (Climb)', 'fa-mountain', caps.climb, evt.goals.climb, 'elev')}
-                    ${buildProgressBar('Run', 'fa-person-running', caps.run, evt.goals.run, 'time')}
+                <div class="w-px h-3 bg-slate-600"></div>
+                <div class="flex items-center gap-2 font-bold text-white">
+                    <i class="fa-solid fa-hourglass-half"></i> ${weeks}W ${days}D TO GO
                 </div>
             </div>
         </div>
-    `;
+
+        <div class="p-6 flex flex-col md:flex-row gap-8 items-center">
+            <div class="md:w-1/4 flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r border-slate-700 pb-6 md:pb-0 md:pr-6 w-full">
+                <div class="text-6xl font-black ${scoreColor} tracking-tighter drop-shadow-sm leading-none mb-2">
+                    ${readinessScore}%
+                </div>
+                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-2">Readiness</div>
+                <div class="text-[10px] font-bold uppercase ${scoreColor} border ${badgeClass} px-3 py-1 rounded-full">
+                    ${scoreLabel}
+                </div>
+            </div>
+
+            <div class="md:w-3/4 w-full pl-0 md:pl-4">
+                ${buildBar('swim', caps.swim, evt.goals.swim)}
+                ${buildBar('bike', caps.bike, evt.goals.bike)}
+                ${buildBar('climb', caps.climb, evt.goals.climb, true)}
+                ${buildBar('run', caps.run, evt.goals.run)}
+            </div>
+        </div>
+    </div>`;
 };
 
-const buildLegend = () => `
-    <div class="mb-8">
-        <div class="flex items-center gap-2 mb-2">
-            <i class="fa-solid fa-circle-info text-blue-500"></i>
-            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Readiness Guide</h3>
+// --- 4. MAIN EXPORT ---
+
+const buildCollapsible = (title, content) => `
+    <div class="mb-6">
+        <div class="flex items-center gap-2 cursor-pointer border-b border-slate-800 pb-2 mb-4 group" 
+             onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('i').classList.toggle('-rotate-90');">
+            <i class="fa-solid fa-caret-down text-slate-500 transition-transform duration-200"></i>
+            <h3 class="text-sm font-bold text-slate-300 uppercase group-hover:text-white">${title}</h3>
         </div>
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 grid grid-cols-3 gap-px bg-slate-800/50 overflow-hidden">
-            <div class="bg-slate-900 p-3 text-center">
-                <div class="text-red-500 font-bold text-xs uppercase mb-1">Warning</div>
-                <div class="text-[10px] text-slate-500">&lt; 60%</div>
-            </div>
-            <div class="bg-slate-900 p-3 text-center">
-                <div class="text-yellow-500 font-bold text-xs uppercase mb-1">Developing</div>
-                <div class="text-[10px] text-slate-500">60% - 84%</div>
-            </div>
-            <div class="bg-slate-900 p-3 text-center">
-                <div class="text-emerald-500 font-bold text-xs uppercase mb-1">Race Ready</div>
-                <div class="text-[10px] text-slate-500">85% - 100%</div>
-            </div>
+        <div class="block animate-fade-in">
+            ${content}
         </div>
-        <p class="text-[9px] text-slate-500 text-center mt-2 italic">
-            Score = (Longest Session in Last 6 Weeks / Goal) for your <strong class="text-slate-400">weakest</strong> discipline.
-        </p>
     </div>
 `;
-
-// --- 4. EXPORT ---
 
 export const renderReadiness = (allData, planMd) => {
     const events = getEvents(planMd);
@@ -247,27 +268,21 @@ export const renderReadiness = (allData, planMd) => {
     if (events.length === 0) {
         return `<div class="p-12 text-center border border-slate-800 rounded-xl bg-slate-900/50">
             <i class="fa-solid fa-calendar-xmark text-4xl text-slate-700 mb-4"></i>
-            <h3 class="text-slate-400 font-bold">No Events Found</h3>
-            <p class="text-slate-600 text-xs mt-2">Add events to your plan markdown file to see readiness stats.</p>
+            <h3 class="text-slate-400 font-bold">No Upcoming Events</h3>
+            <p class="text-slate-600 text-xs mt-2">Check your plan markdown file for formatting.</p>
         </div>`;
     }
 
-    let html = `<div class="max-w-5xl mx-auto pb-24 animate-fade-in font-sans">`;
+    let html = `<div class="max-w-5xl mx-auto pb-24 font-sans">`;
+    html += buildCollapsible("Legend & Logic", renderLegend());
     
-    // Legend Section (Fixed Open)
-    html += buildLegend();
-
-    // Events Section
-    html += `<div class="flex items-center gap-2 mb-4 mt-8 border-b border-slate-800 pb-2">
-                <i class="fa-solid fa-caret-down text-slate-500"></i>
-                <h3 class="text-sm font-bold text-white uppercase tracking-widest">Event Status</h3>
-             </div>`;
-             
-    html += `<div class="space-y-6">`;
+    let eventHtml = '';
     events.forEach(evt => {
-        html += renderEventCard(evt, caps);
+        eventHtml += renderEventCard(evt, caps);
     });
-    html += `</div></div>`;
+    
+    html += buildCollapsible("Event Status", eventHtml);
+    html += `</div>`;
 
     return html;
 };
