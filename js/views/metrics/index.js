@@ -6,6 +6,7 @@ import { METRIC_DEFINITIONS } from './definitions.js';
 let currentRange = '6m'; 
 let activeTooltipId = null;
 
+// Global Handler
 window.updateMetricsTime = (range) => {
     currentRange = range;
     if(window.App && window.App.allData) {
@@ -45,8 +46,9 @@ export const renderMetrics = (allData) => {
     const runCharts = `<div class="${gridClass}"><div id="metric-chart-subjective_run"></div><div id="metric-chart-run"></div><div id="metric-chart-mechanical"></div><div id="metric-chart-gct"></div><div id="metric-chart-vert"></div></div>`;
     const swimCharts = `<div class="${gridClass}"><div id="metric-chart-subjective_swim"></div><div id="metric-chart-swim"></div></div>`;
 
+    // NOTE: Tooltips are now OUTSIDE the main wrapper to avoid Z-index traps
     const html = `
-        <div class="max-w-7xl mx-auto space-y-8 animate-fade-in pb-24 font-sans">
+        <div class="max-w-7xl mx-auto space-y-8 animate-fade-in pb-24 font-sans relative">
             <div class="flex flex-col md:flex-row justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-800 backdrop-blur-md sticky top-0 z-20 shadow-xl">
                 <div class="mb-3 md:mb-0">
                     <h2 class="text-xl font-black text-white italic tracking-tighter flex items-center gap-2">
@@ -66,9 +68,8 @@ export const renderMetrics = (allData) => {
             ${buildSection('sect-swim', 'Swimming Dynamics', swimCharts, true)}
         </div>
         
-        <div id="metric-tooltip-popup" class="fixed z-50 pointer-events-none opacity-0 transition-opacity bg-slate-900/95 border border-slate-600 p-3 rounded-lg shadow-2xl text-xs backdrop-blur-md transform -translate-x-1/2 -translate-y-full mt-[-10px]"></div>
-        
-        <div id="metric-info-popup" class="fixed z-[100] opacity-0 transition-opacity bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs max-w-[300px] pointer-events-auto"></div>
+        <div id="metric-tooltip-popup" class="fixed z-[9999] pointer-events-none opacity-0 transition-opacity bg-slate-900/95 border border-slate-600 p-3 rounded-lg shadow-2xl text-xs backdrop-blur-md mt-[-10px]"></div>
+        <div id="metric-info-popup" class="fixed z-[9999] opacity-0 transition-opacity bg-slate-900 border border-blue-500/50 p-4 rounded-xl shadow-2xl text-xs max-w-[300px] pointer-events-auto"></div>
     `;
 
     setTimeout(() => {
@@ -80,7 +81,7 @@ export const renderMetrics = (allData) => {
     return html;
 };
 
-// --- CLICK HANDLER: DATA POINTS ---
+// --- DATA TOOLTIP HANDLER ---
 window.showMetricTooltip = (e, uniqueId, date, title, val, unit, label, color) => {
     e.stopPropagation(); 
     const el = document.getElementById('metric-tooltip-popup');
@@ -104,16 +105,30 @@ window.showMetricTooltip = (e, uniqueId, date, title, val, unit, label, color) =
         <div class="text-slate-300 mt-2 bg-slate-800 px-2 py-1 rounded border border-slate-700 inline-block font-mono text-[10px]">${label}</div>
     `;
     
-    el.style.left = `${e.clientX}px`;
-    el.style.top = `${e.clientY - 15}px`;
+    // Position carefully
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    // Prevent going off screen
+    const rect = el.getBoundingClientRect();
+    const screenW = window.innerWidth;
+    
+    if (x > screenW / 2) {
+        el.style.left = `${x - 160}px`; // Shift left
+    } else {
+        el.style.left = `${x + 10}px`;
+    }
+
+    el.style.top = `${y - 15}px`;
     el.classList.remove('opacity-0');
 };
 
-// --- CLICK HANDLER: INFO ICON ---
+// --- INFO TOOLTIP HANDLER ---
 window.showAnalysisTooltip = (evt, key) => {
+    console.log("ℹ️ Info Clicked:", key); // DEBUG LOG
     evt.stopPropagation(); 
     const def = METRIC_DEFINITIONS[key];
-    if (!def) return;
+    if (!def) { console.error("Missing Def for", key); return; }
     
     const el = document.getElementById('metric-info-popup');
     if(!el) return;
@@ -169,14 +184,20 @@ window.showAnalysisTooltip = (evt, key) => {
 
 // GLOBAL CLOSE
 document.addEventListener('click', (e) => {
-    const dataEl = document.getElementById('metric-tooltip-popup');
-    if (dataEl && !dataEl.contains(e.target)) {
-        dataEl.classList.add('opacity-0');
-        activeTooltipId = null;
+    const infoEl = document.getElementById('metric-info-popup');
+    if (infoEl && !infoEl.classList.contains('opacity-0')) {
+        // Close if click is NOT inside the popup AND NOT on an info icon
+        if (!infoEl.contains(e.target) && !e.target.closest('.fa-circle-info')) {
+            infoEl.classList.add('opacity-0');
+        }
     }
     
-    const infoEl = document.getElementById('metric-info-popup');
-    if (infoEl && !infoEl.contains(e.target) && !e.target.closest('.fa-circle-info')) {
-        infoEl.classList.add('opacity-0');
+    const dataEl = document.getElementById('metric-tooltip-popup');
+    if (dataEl && !dataEl.classList.contains('opacity-0')) {
+        // Close if click is NOT inside popup AND NOT on a chart dot
+        if (!dataEl.contains(e.target) && e.target.tagName !== 'circle') {
+             dataEl.classList.add('opacity-0');
+             activeTooltipId = null;
+        }
     }
 });
