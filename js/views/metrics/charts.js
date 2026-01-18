@@ -1,6 +1,66 @@
 // js/views/metrics/charts.js
 import { METRIC_DEFINITIONS } from './definitions.js';
-import { calculateTrend, getTrendIcon, checkSport, aggregateWeeklyTSS } from './utils.js';
+
+// --- INTERNAL HELPERS (No External Dependencies) ---
+
+const checkSport = (activity, sportKey) => {
+    const type = (activity.actualType || activity.type || '').toUpperCase();
+    const target = sportKey.toUpperCase();
+    if (type === target) return true;
+    if (target === 'RUN' && (type === 'RUNNING' || type.includes('RUN'))) return true;
+    if (target === 'BIKE' && (type === 'CYCLING' || type.includes('BIKE') || type.includes('RIDE'))) return true;
+    if (target === 'SWIM' && (type === 'SWIMMING' || type.includes('SWIM') || type.includes('POOL'))) return true;
+    return false;
+};
+
+const calculateTrend = (dataPoints) => {
+    const n = dataPoints.length;
+    if (n < 3) return null;
+    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    for (let i = 0; i < n; i++) {
+        sumX += i; sumY += dataPoints[i].val;
+        sumXY += i * dataPoints[i].val; sumXX += i * i;
+    }
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    return { slope, startVal: intercept, endVal: intercept + slope * (n - 1) };
+};
+
+const getTrendIcon = (slope, invert) => {
+    if (Math.abs(slope) < 0.001) return { icon: 'fa-arrow-right', color: 'text-slate-500' };
+    const isUp = slope > 0;
+    const isGood = invert ? !isUp : isUp;
+    return {
+        icon: isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down',
+        color: isGood ? 'text-emerald-400' : 'text-red-400'
+    };
+};
+
+const aggregateWeeklyTSS = (data) => {
+    const weeks = {};
+    data.forEach(d => {
+        const val = typeof d.trainingStressScore === 'number' ? d.trainingStressScore : 0;
+        if (val <= 0) return;
+        
+        const date = new Date(d.date);
+        const day = date.getDay(); 
+        const diff = date.getDate() - day + (day === 0 ? 0 : 7); // Adjust to Sunday
+        const weekEnd = new Date(date.setDate(diff));
+        weekEnd.setHours(0,0,0,0);
+        
+        const key = weekEnd.toISOString().split('T')[0];
+        if (!weeks[key]) weeks[key] = 0;
+        weeks[key] += val;
+    });
+    
+    return Object.keys(weeks).sort().map(k => ({
+        date: new Date(k),
+        dateStr: k,
+        val: weeks[k],
+        name: "Weekly Load",
+        breakdown: `${Math.round(weeks[k])} TSS`
+    }));
+};
 
 // --- DATA EXTRACTION ---
 
@@ -123,7 +183,6 @@ const extractChartData = (allData, key) => {
                 }));
 
         case 'anaerobic':
-            // Filter: Only significant Anaerobic Impact (>2.0)
             return allData.filter(d => valid(d.anaerobicTrainingEffect) && d.anaerobicTrainingEffect > 2.0)
                 .map(d => ({
                     date: d.date,
@@ -134,7 +193,6 @@ const extractChartData = (allData, key) => {
                 }));
 
         case 'tss':
-            // FIX: Use Weekly Aggregation for Load
             return aggregateWeeklyTSS(allData);
 
         default:
@@ -151,7 +209,6 @@ const buildMetricChart = (displayData, fullData, key) => {
     const unitLabel = def.rangeInfo ? def.rangeInfo.split(' ').pop() : '';
     const color = def.colorVar;
 
-    // --- TREND INDICATORS ---
     const now = new Date();
     const getSlope = (days) => {
         const cutoff = new Date();
@@ -193,7 +250,6 @@ const buildMetricChart = (displayData, fullData, key) => {
         </div>`;
     }
 
-    // --- CHART MATH ---
     const width = 800, height = 150;
     const pad = { t: 20, b: 30, l: 50, r: 20 };
     
@@ -203,7 +259,6 @@ const buildMetricChart = (displayData, fullData, key) => {
     let minV = Math.min(...vals);
     let maxV = Math.max(...vals);
 
-    // Expand range to include targets if defined
     if (def.refMin !== undefined) minV = Math.min(minV, def.refMin);
     if (def.refMax !== undefined) maxV = Math.max(maxV, def.refMax);
 
@@ -214,36 +269,30 @@ const buildMetricChart = (displayData, fullData, key) => {
 
     const getY = (v) => height - pad.b - ((v - dMin) / (dMax - dMin)) * (height - pad.t - pad.b);
 
-    // --- TARGET LINES ---
     let refLinesHtml = '';
     if (def.refMin !== undefined && def.refMax !== undefined) {
         const yMin = getY(def.refMin);
         const yMax = getY(def.refMax);
         
-        // Color Logic: Invert = Low is Good (Green), High is Bad (Red)
-        // Standard = Low is Bad (Red), High is Good (Green)
-        const colorTop = def.invertRanges ? '#ef4444' : '#10b981'; // Red if inverted, Green if standard
-        const colorBot = def.invertRanges ? '#10b981' : '#ef4444'; // Green if inverted, Red if standard
+        const colorTop = def.invertRanges ? '#ef4444' : '#10b981'; 
+        const colorBot = def.invertRanges ? '#10b981' : '#ef4444'; 
 
-        // Top Line (Max)
         if (yMax >= pad.t && yMax <= height - pad.b) {
             refLinesHtml += `
                 <line x1="${pad.l}" y1="${yMax}" x2="${width - pad.r}" y2="${yMax}" stroke="${colorTop}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />
-                <text x="${width - pad.r + 5}" y="${yMax + 3}" font-size="8" fill="${colorTop}" opacity="0.8">Target Max</text>
+                <text x="${width - pad.r + 5}" y="${yMax + 3}" font-size="8" fill="${colorTop}" opacity="0.8">Max</text>
             `;
         }
-        // Bottom Line (Min)
         if (yMin >= pad.t && yMin <= height - pad.b) {
             refLinesHtml += `
                 <line x1="${pad.l}" y1="${yMin}" x2="${width - pad.r}" y2="${yMin}" stroke="${colorBot}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />
-                <text x="${width - pad.r + 5}" y="${yMin + 3}" font-size="8" fill="${colorBot}" opacity="0.8">Target Min</text>
+                <text x="${width - pad.r + 5}" y="${yMin + 3}" font-size="8" fill="${colorBot}" opacity="0.8">Min</text>
             `;
         }
     }
 
     const yAxisLine = `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" stroke="#475569" stroke-width="1" />`;
     
-    // Axis Labels
     const yMid = (dMin + dMax) / 2;
     const axisLabels = `
         <text x="${pad.l - 6}" y="${getY(dMax) + 4}" text-anchor="end" font-size="9" fill="#64748b">${dMax.toFixed(1)}</text>
@@ -251,13 +300,11 @@ const buildMetricChart = (displayData, fullData, key) => {
         <text x="${pad.l - 6}" y="${getY(dMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${dMin.toFixed(1)}</text>
     `;
 
-    // Trend Line
     const trend = calculateTrend(displayData);
     const trendLine = trend ? 
         `<line x1="${getX(null,0)}" y1="${getY(trend.startVal)}" x2="${getX(null,displayData.length-1)}" y2="${getY(trend.endVal)}" stroke="${color}" stroke-width="2" stroke-dasharray="4,4" opacity="0.4" />` 
         : '';
 
-    // Data Path & Points
     let pathD = `M ${getX(displayData[0], 0)} ${getY(displayData[0].val)}`;
     let points = '';
     
@@ -294,7 +341,7 @@ const buildMetricChart = (displayData, fullData, key) => {
     `;
 };
 
-// --- MAIN UPDATE FUNCTION ---
+// --- MAIN EXPORT ---
 
 export const updateCharts = (allData, timeRange) => {
     if (!allData || allData.length === 0) return;
