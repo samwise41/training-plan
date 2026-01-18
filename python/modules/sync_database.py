@@ -11,7 +11,8 @@ except ImportError:
     import config
 
 # --- CONFIGURATION ---
-SYNC_WINDOW_DAYS = 60  
+# Set to 10 years to ensure ALL history is re-processed with new fields
+SYNC_WINDOW_DAYS = 3650  
 
 # --- 1. HELPER FUNCTIONS ---
 
@@ -214,7 +215,8 @@ def sync():
     grouped_garmin = {} 
     for g in garmin_list:
         g_date = g.get('startTimeLocal', '')[:10]
-        if g_date < cutoff_date or g_date > today_str: continue
+        # Allow FULL history re-process
+        # if g_date < cutoff_date or g_date > today_str: continue
         g_type_key = g.get('activityType', {}).get('typeKey', '')
         sport = normalize_sport(g.get('activityName'), g_type_key)
         if not sport: continue 
@@ -233,20 +235,23 @@ def sync():
         comp_id_str = str(composite.get('activityId'))
         comp_ids = comp_id_str.split(',')
         
-        # Calculate Date Day Name
+        # Calculate Day Name
         try:
             dt_obj = datetime.strptime(g_date, '%Y-%m-%d')
             day_name = dt_obj.strftime('%A')
         except:
             day_name = "Unknown"
 
-        # --- FULL METRICS EXTRACTION (The requested list) ---
+        # --- FULL METRICS EXTRACTION (Strictly as requested) ---
         metrics = {
             # Identity
             "id": comp_id_str,
-            "date": g_date,
-            "status": "COMPLETED",
+            "Date": g_date,
+            "date": g_date, # Duplicate for app compatibility
+            "Status": "COMPLETED",
+            "status": "COMPLETED", # Duplicate for app compatibility
             "Day": day_name,
+            "day": day_name, # Duplicate for app compatibility
             
             # Types
             "actualSport": sport,
