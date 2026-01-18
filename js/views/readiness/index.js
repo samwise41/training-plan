@@ -3,10 +3,10 @@
 // --- 1. CONFIG & HELPERS ---
 
 const SPORT_CONFIG = {
-    swim: { color: 'text-cyan-400', bar: 'bg-cyan-500', icon: 'fa-person-swimming', label: 'Swim' },
-    bike: { color: 'text-purple-400', bar: 'bg-purple-500', icon: 'fa-person-biking', label: 'Bike' },
-    climb: { color: 'text-fuchsia-400', bar: 'bg-fuchsia-500', icon: 'fa-mountain', label: 'Bike (Climb)' },
-    run:  { color: 'text-pink-400', bar: 'bg-pink-500', icon: 'fa-person-running',  label: 'Run' }
+    swim:  { colorVar: 'var(--color-swim)', icon: 'fa-person-swimming', label: 'Swim' },
+    bike:  { colorVar: 'var(--color-bike)', icon: 'fa-person-biking', label: 'Bike' },
+    climb: { colorVar: 'var(--color-bike)', icon: 'fa-mountain', label: 'Bike (Climb)' }, // Matches Bike Color
+    run:   { colorVar: 'var(--color-run)',  icon: 'fa-person-running',  label: 'Run' }
 };
 
 // Formats
@@ -51,7 +51,7 @@ const parseGoalValue = (str) => {
     return totalMinutes;
 };
 
-// --- 2. LOGIC (Updated for New App.js Schema) ---
+// --- 2. LOGIC (Clean Schema) ---
 
 const getEvents = (planMd) => {
     if (!planMd) return [];
@@ -95,13 +95,12 @@ const calculateCapabilities = (allData) => {
 
     allData.forEach(d => {
         if (d.date >= cutoff) {
-            // Using CLEAN SCHEMA from app.js (d.sport, d.duration)
+            // Clean Schema Keys: d.sport, d.duration, d.source.elevationGain
             if (d.sport === 'Swim') caps.swim = Math.max(caps.swim, d.duration);
             if (d.sport === 'Bike') {
                 caps.bike = Math.max(caps.bike, d.duration);
-                // Handle Elevation (Convert meters to feet if needed, assuming DB is metric)
                 const elev = d.source?.elevationGain || d.elevationGain || 0;
-                caps.climb = Math.max(caps.climb, elev * 3.28084); 
+                caps.climb = Math.max(caps.climb, elev * 3.28084); // Meters -> Feet
             }
             if (d.sport === 'Run') caps.run = Math.max(caps.run, d.duration);
         }
@@ -109,7 +108,7 @@ const calculateCapabilities = (allData) => {
     return caps;
 };
 
-// --- 3. COMPONENT RENDERERS (Exact Visual Match) ---
+// --- 3. COMPONENT RENDERERS ---
 
 const renderLegend = () => `
     <div class="max-w-5xl mx-auto bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg mb-8">
@@ -145,10 +144,16 @@ const buildBar = (type, current, target, isElev = false) => {
     const pct = Math.min(100, Math.round((current / target) * 100));
     const config = SPORT_CONFIG[type];
     
-    // Color Logic matches Guide
-    let barColor = 'bg-red-500';
-    if (pct >= 85) barColor = 'bg-emerald-500';
-    else if (pct >= 60) barColor = 'bg-yellow-500';
+    // Status Color Logic
+    let barColorClass = 'bg-red-500';
+    if (pct >= 85) barColorClass = 'bg-emerald-500';
+    else if (pct >= 60) barColorClass = 'bg-yellow-500';
+
+    // Override with Sport Color if 100% or purely for style? 
+    // Usually readiness bars show status (Red/Yellow/Green). 
+    // However, the user asked to match styles.css colors. 
+    // Let's use the status color for the BAR itself (Green=Ready), 
+    // but the ICON/TEXT will match the sport.
 
     const displayCurrent = isElev ? formatElev(current) : formatTime(current);
     const displayTarget  = isElev ? formatElev(target) : formatTime(target);
@@ -156,16 +161,15 @@ const buildBar = (type, current, target, isElev = false) => {
     return `
         <div class="mb-5 last:mb-0">
             <div class="flex justify-between items-end mb-1">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid ${config.icon} ${config.color}"></i>
-                    <span class="text-xs font-bold text-slate-400">${config.label}</span>
+                <div class="flex items-center gap-2 text-xs font-bold" style="color: ${config.colorVar}">
+                    <i class="fa-solid ${config.icon} w-4 text-center"></i> ${config.label}
                 </div>
                 <div class="text-right">
-                     <span class="text-xs font-bold text-white">${displayCurrent} / ${displayTarget}</span>
+                     <span class="text-xs font-bold text-white font-mono">${displayCurrent} / ${displayTarget}</span>
                 </div>
             </div>
-            <div class="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden relative">
-                <div class="${barColor} h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(0,0,0,0.3)]" style="width: ${pct}%"></div>
+            <div class="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden relative border border-slate-600/30">
+                <div class="${barColorClass} h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(0,0,0,0.3)]" style="width: ${pct}%"></div>
             </div>
         </div>
     `;
@@ -203,24 +207,24 @@ const renderEventCard = (evt, caps) => {
     const days = diff % 7;
 
     return `
-    <div class="bg-slate-800 border border-slate-700 rounded-xl p-0 mb-8 overflow-hidden shadow-lg relative max-w-5xl mx-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-0 mb-8 overflow-hidden shadow-lg relative max-w-5xl mx-auto hover:border-slate-700 transition-colors">
         <div class="bg-slate-900/50 border-b border-slate-700 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div class="flex items-center gap-3">
-                <div class="bg-slate-700 p-2 rounded-lg text-white shadow-inner">
-                    <i class="fa-solid fa-flag-checkered"></i>
+                <div class="bg-slate-800 p-2 rounded-lg text-white border border-slate-700">
+                    <i class="fa-solid fa-flag-checkered text-slate-400"></i>
                 </div>
                 <div>
                     <h3 class="text-lg font-bold text-white leading-none">${evt.name}</h3>
                     <div class="text-xs text-slate-500 font-mono mt-1 font-bold uppercase tracking-wider">${evt.priority} Event</div>
                 </div>
             </div>
-            <div class="flex items-center gap-4 text-xs font-mono text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/50">
+            <div class="flex items-center gap-4 text-xs font-mono text-slate-400 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700">
                 <div class="flex items-center gap-2">
                     <i class="fa-regular fa-calendar"></i> ${evt.date.toLocaleDateString()}
                 </div>
                 <div class="w-px h-3 bg-slate-600"></div>
                 <div class="flex items-center gap-2 font-bold text-white">
-                    <i class="fa-solid fa-hourglass-half"></i> ${weeks}W ${days}D TO GO
+                    <i class="fa-solid fa-hourglass-half text-blue-500"></i> ${weeks}W ${days}D TO GO
                 </div>
             </div>
         </div>
@@ -252,7 +256,7 @@ const buildCollapsible = (title, content) => `
     <div class="mb-6">
         <div class="flex items-center gap-2 cursor-pointer border-b border-slate-800 pb-2 mb-4 group" 
              onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('i').classList.toggle('-rotate-90');">
-            <i class="fa-solid fa-caret-down text-slate-500 transition-transform duration-200"></i>
+            <i class="fa-solid fa-caret-down text-slate-500 transition-transform duration-200 group-hover:text-white"></i>
             <h3 class="text-sm font-bold text-slate-300 uppercase group-hover:text-white">${title}</h3>
         </div>
         <div class="block animate-fade-in">
@@ -273,7 +277,7 @@ export const renderReadiness = (allData, planMd) => {
         </div>`;
     }
 
-    let html = `<div class="max-w-5xl mx-auto pb-24 font-sans">`;
+    let html = `<div class="max-w-5xl mx-auto pb-24 font-sans animate-fade-in">`;
     html += buildCollapsible("Legend & Logic", renderLegend());
     
     let eventHtml = '';
