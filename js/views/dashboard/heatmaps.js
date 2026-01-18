@@ -38,7 +38,6 @@ const getSportColorVar = (type) => {
 
 // --- Internal Builder: Generic Heatmap (Consistency) ---
 function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateToKeyFn, containerId = null) {
-    // Data is already consolidated by renderHeatmaps, so we can trust it.
     const dataMap = {}; 
     fullLog.forEach(item => { 
         const dateKey = dateToKeyFn(item.date); 
@@ -78,61 +77,101 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
         let statusLabel = "Empty"; 
         let inlineStyle = ""; 
         
-        let totalPlan = 0; let totalAct = 0; let isRestType = false; 
+        // --- LOGIC START ---
+        let finalPlannedDur = 0; 
+        let finalActualDur = 0;
+        let isPlanMode = false;
+        let isRestDay = false;
+        
+        let detailList = [];
         let sportLabel = "--";
         const uniqueTypes = new Set();
-        let detailList = [];
 
-        if (dayData && dayData.length > 0) { 
-            dayData.forEach(d => { 
-                totalPlan += (d.plannedDuration || 0); 
-                totalAct += (d.actualDuration || 0); 
-                if (d.type === 'Rest') isRestType = true;
+        if (dayData && dayData.length > 0) {
+            // 1. First Pass: Detect if this is a "Planned Day"
+            dayData.forEach(d => {
+                if (d.plannedWorkout && d.plannedWorkout.length > 0) {
+                    isPlanMode = true;
+                    // Check for explicit Rest Day
+                    if (d.plannedWorkout.toLowerCase().includes('rest')) isRestDay = true;
+                }
+            });
+
+            // 2. Second Pass: Calculate Totals based on Mode
+            dayData.forEach(d => {
+                const isItemPlanned = (d.plannedWorkout && d.plannedWorkout.length > 0);
+                
+                // --- STRICT FILTER ---
+                // If the day has a plan, IGNORE any unplanned items (User request)
+                if (isPlanMode && !isItemPlanned) return; 
+
+                // --- DATA REPAIR ---
+                // If Planned Workout exists but Duration is null/0 (Database error),
+                // use Actual Duration as a fallback to prevent "Unplanned" errors.
+                let pDur = d.plannedDuration || 0;
+                let aDur = d.actualDuration || 0;
+                
+                if (isItemPlanned && pDur === 0 && aDur > 0) {
+                    pDur = aDur; // Auto-fix for 1/17 scenario
+                }
+
+                finalPlannedDur += pDur;
+                finalActualDur += aDur;
+
                 if (d.type && d.type !== 'Rest') uniqueTypes.add(d.type);
-
-                // Build Detail String
+                
                 const name = (d.actualName || d.planName || 'Workout').replace(/['"]/g, ""); 
-                const dur = d.actualDuration || 0;
-                detailList.push(`${name} (${dur}m)`);
-            }); 
-            if (uniqueTypes.size > 0) {
-                sportLabel = Array.from(uniqueTypes).join(' + ');
-            } else if (isRestType) {
-                sportLabel = "Rest Day";
-            }
-        }
-        
-        const detailStr = detailList.join('<br>');
+                detailList.push(`${name} (${Math.round(aDur)}/${Math.round(pDur)}m)`);
+            });
 
+            if (uniqueTypes.size > 0) sportLabel = Array.from(uniqueTypes).join(' + ');
+            else if (isRestDay) sportLabel = "Rest Day";
+        }
+        // --- LOGIC END ---
+
+        const detailStr = detailList.join('<br>');
         if (eventName) sportLabel = "Event";
 
-        const hasActivity = (totalPlan > 0 || totalAct > 0 || isRestType || eventName); 
+        const hasActivity = (finalPlannedDur > 0 || finalActualDur > 0 || isRestDay || eventName); 
         const isFuture = currentDate > today;
 
-        if (eventName) { colorClass = 'bg-purple-500'; statusLabel = `${eventName}`; }
-        // FIXED LOGIC: If Plan > 0 and Act > 0, it falls through to the Ratio check (Green/Yellow)
-        // "Unplanned" (Green Stripe) only happens if Act > 0 AND Plan == 0.
-        else if (totalAct > 0 && (totalPlan === 0 || isRestType)) { colorClass = 'bg-emerald-500'; inlineStyle = highContrastStripe; statusLabel = "Unplanned"; }
-        else if (isFuture) { 
-            if (totalPlan > 0) { colorClass = 'bg-slate-700'; statusLabel = "Planned"; } 
-            else { colorClass = 'bg-slate-800'; statusLabel = "Future"; } 
+        // --- COLOR ASSIGNMENT ---
+        if (eventName) { 
+            colorClass = 'bg-purple-500'; statusLabel = `${eventName}`; 
         }
-        else { 
-            if (totalPlan > 0) { 
-                if (totalAct === 0) { colorClass = 'bg-red-500/80'; statusLabel = "Missed"; } 
-                else { 
-                    const ratio = totalAct / totalPlan; 
-                    if (ratio >= 0.95) { colorClass = 'bg-emerald-500'; statusLabel = "Completed"; } 
-                    else { colorClass = 'bg-yellow-500'; statusLabel = `Partial (${Math.round(ratio*100)}%)`; } 
-                } 
-            } else { colorClass = 'bg-emerald-500/50'; statusLabel = "Rest Day"; } 
+        else if (isPlanMode) {
+            if (isRestDay) {
+                colorClass = 'bg-emerald-500/50'; statusLabel = "Rest Day";
+            } else if (finalActualDur === 0) {
+                // If it's today/future, show Planned (Grey). If Past, show Missed (Red)
+                if (isFuture || toLocalYMD(currentDate) === toLocalYMD(today)) {
+                    colorClass = 'bg-slate-700'; statusLabel = "Planned";
+                } else {
+                    colorClass = 'bg-red-500/80'; statusLabel = "Missed";
+                }
+            } else {
+                // We have activity. Calculate Ratio.
+                const ratio = finalPlannedDur > 0 ? (finalActualDur / finalPlannedDur) : 1.0;
+                if (ratio >= 0.90) { 
+                    colorClass = 'bg-emerald-500'; statusLabel = "Completed"; 
+                } else { 
+                    colorClass = 'bg-yellow-500'; statusLabel = `Partial (${Math.round(ratio*100)}%)`; 
+                }
+            }
+        }
+        else if (finalActualDur > 0) {
+            // No Plan, but Activity exists = Unplanned
+            colorClass = 'bg-emerald-500'; inlineStyle = highContrastStripe; statusLabel = "Unplanned";
+        }
+        else if (isFuture) {
+            colorClass = 'bg-slate-800'; statusLabel = "Future";
         }
 
         if (dayOfWeek === 0 && !hasActivity && !eventName) { colorClass = ''; inlineStyle = 'opacity: 0;'; }
 
         const hexColor = getHexColor(colorClass);
         const clickAttr = hasActivity || isFuture ? 
-            `onclick="window.showDashboardTooltip(event, '${dateKey}', ${totalPlan}, ${totalAct}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}', '${sportLabel}', '${detailStr}')"` : '';
+            `onclick="window.showDashboardTooltip(event, '${dateKey}', ${Math.round(finalPlannedDur)}, ${Math.round(finalActualDur)}, '${statusLabel.replace(/'/g, "\\'")}', '${hexColor}', '${sportLabel}', '${detailStr}')"` : '';
         const cursorClass = (hasActivity || isFuture) ? 'cursor-pointer hover:opacity-80' : '';
 
         cellsHtml += `<div class="w-3 h-3 rounded-sm ${colorClass} ${cursorClass} m-[1px]" style="${inlineStyle}" ${clickAttr}></div>`;
@@ -182,6 +221,8 @@ function buildGenericHeatmap(fullLog, eventMap, startDate, endDate, title, dateT
 
 // --- Internal Builder: Activity Heatmap (Sport Types) ---
 function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, containerId = null) {
+    if (!fullLog) fullLog = [];
+
     // --- SPORT DETECTION LOGIC (STRICT) ---
     const detectSport = (item) => {
         let s = item.actualType || item.type || 'Other';
@@ -240,10 +281,12 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
             detailStr = entry.details.join('<br>'); // Combine workouts
 
             if (sports.length === 1) {
+                // Single sport
                 const color = getSportColorVar(sports[0]);
                 style = `background-color: ${color};`;
                 colorClass = ''; 
             } else if (sports.length > 1) {
+                // Multi-sport Gradient
                 const step = 100 / sports.length;
                 let gradientStr = 'linear-gradient(135deg, ';
                 sports.forEach((s, idx) => {
@@ -256,6 +299,7 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
                 colorClass = '';
             }
             
+            // Opacity based on Duration intensity
             if (totalMinutes > 90) style += " opacity: 1.0;";
             else if (totalMinutes > 60) style += " opacity: 0.8;";
             else if (totalMinutes > 30) style += " opacity: 0.6;";
@@ -316,51 +360,11 @@ function buildActivityHeatmap(fullLog, startDate, endDate, title, dateToKeyFn, c
 }
 
 // --- Main Render Function ---
-export function renderHeatmaps(rawLogData, planMd) {
+export function renderHeatmaps(fullLogData, planMd) {
     const eventMap = parseEvents(planMd);
     const today = new Date();
     today.setHours(0,0,0,0);
 
-    // --- DATA CONSOLIDATION (The Fix) ---
-    // Merge duplicates (Plan vs Actual) into a single "Day-Sport" record
-    const consolidatedMap = {};
-    
-    rawLogData.forEach(item => {
-        if (!item.date) return;
-        const dKey = toLocalYMD(item.date);
-        
-        // Use a composite key to merge identical workouts (e.g. "2026-01-17_Bike")
-        // If type is generic or missing, just use Date
-        let sportKey = item.actualType || item.type || "Any";
-        // Normalize
-        if (sportKey.includes('Bike')) sportKey = "Bike";
-        else if (sportKey.includes('Run')) sportKey = "Run";
-        else if (sportKey.includes('Swim')) sportKey = "Swim";
-        
-        const compositeKey = `${dKey}_${sportKey}`;
-        
-        if (!consolidatedMap[compositeKey]) {
-            // New Entry
-            consolidatedMap[compositeKey] = { ...item }; // Clone
-        } else {
-            // Merge!
-            const existing = consolidatedMap[compositeKey];
-            
-            // Take the max of Plan/Act to combine a "Planned" shell with an "Actual" result
-            existing.plannedDuration = Math.max(existing.plannedDuration || 0, item.plannedDuration || 0);
-            existing.actualDuration = Math.max(existing.actualDuration || 0, item.actualDuration || 0);
-            
-            // Prefer the "Completed" status if available
-            if (item.status === 'COMPLETED') existing.status = 'COMPLETED';
-            if (item.actualWorkout) existing.actualWorkout = item.actualWorkout;
-            if (item.actualName) existing.actualName = item.actualName;
-        }
-    });
-    
-    // Flatten back to array
-    const fullLogData = Object.values(consolidatedMap);
-
-    // --- DATE RANGE LOGIC ---
     const endOfWeek = new Date(today); 
     const dayOfWeek = endOfWeek.getDay(); 
     const distToSaturday = 6 - dayOfWeek;
@@ -372,13 +376,8 @@ export function renderHeatmaps(rawLogData, planMd) {
     const startYear = new Date(today.getFullYear(), 0, 1); 
     const endYear = new Date(today.getFullYear(), 11, 31);
     
-    // 1. Existing Consistency Heatmap (Trailing)
     const heatmapTrailingHtml = buildGenericHeatmap(fullLogData, eventMap, startTrailing, endOfWeek, "Recent Consistency (Trailing 6 Months)", toLocalYMD, "heatmap-trailing-scroll");
-    
-    // 2. Activity Heatmap (Trailing)
     const heatmapActivityHtml = buildActivityHeatmap(fullLogData, startTrailing, endOfWeek, "Activity Log (Workout Types)", toLocalYMD, "heatmap-activity-scroll");
-
-    // 3. Annual Overview (Full Year)
     const heatmapYearHtml = buildGenericHeatmap(fullLogData, eventMap, startYear, endYear, `Annual Overview (${today.getFullYear()})`, toLocalYMD, null);
 
     setTimeout(() => {
