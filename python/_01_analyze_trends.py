@@ -1,15 +1,25 @@
 import json
 import os
+import sys
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-# --- CONFIG ---
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_FILE = os.path.join(REPO_ROOT, 'python', 'my_garmin_data_ALL.json')
+# --- ROBUST IMPORT LOGIC ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(SCRIPT_DIR)
 
-# *** TARGET FILE: COACH_BRIEFING.md ***
-OUTPUT_FILE = os.path.join(REPO_ROOT, 'COACH_BRIEFING.md')
+try:
+    from modules import config
+except ImportError:
+    # Fallback if running from root
+    sys.path.append(os.path.join(os.getcwd(), 'python'))
+    from modules import config
+
+# --- CONFIG ---
+# FIX: Use the central config to find the JSON file correctly
+DATA_FILE = config.GARMIN_JSON
+OUTPUT_FILE = config.BRIEF_FILE
 
 # --- SPORT ID CONSTANTS ---
 SPORT_IDS = {
@@ -20,7 +30,7 @@ SPORT_IDS = {
 
 METRICS = {
     'aerobic_efficiency':    {'unit': 'EF', 'good': 'up', 'range': (1.3, 1.7)},
-    'subjective_efficiency': {'unit': 'W/RPE', 'good': 'up', 'range': (25, 50)}, # NEW METRIC
+    'subjective_efficiency': {'unit': 'W/RPE', 'good': 'up', 'range': (25, 50)},
     'torque_efficiency':     {'unit': 'W/RPM', 'good': 'up', 'range': (2.5, 3.5)},
     'run_economy':           {'unit': 'm/beat', 'good': 'up', 'range': (1.0, 1.6)},
     'run_stiffness':         {'unit': 'ratio', 'good': 'up', 'range': (0.75, 0.95)},
@@ -100,7 +110,7 @@ def analyze_metric(df, col_name, config):
 
 def get_sport_filter(row, sport_type):
     act_type = row.get('activityType', {})
-    if isinstance(act_type, str): return False # Handle edge cases where it's just a string key
+    if isinstance(act_type, str): return False 
     
     type_id = act_type.get('typeId')
     parent_id = act_type.get('parentTypeId')
@@ -123,7 +133,7 @@ def main():
     df = load_data()
     
     if df.empty:
-        print("DF Empty")
+        print("DF Empty - No Garmin Data Found")
         return
 
     df['startTime_dt'] = pd.to_datetime(df['startTimeLocal'])
@@ -132,16 +142,13 @@ def main():
     is_bike = df.apply(lambda x: get_sport_filter(x, 'BIKE'), axis=1)
     is_swim = df.apply(lambda x: get_sport_filter(x, 'SWIM'), axis=1)
 
-    # --- 1. Aerobic Efficiency (Physiological) ---
-    # Power / Heart Rate
+    # --- 1. Aerobic Efficiency ---
     df['aerobic_efficiency'] = np.where(
         is_bike & (df['avgPower'] > 0) & (df['averageHR'] > 0),
         df['avgPower'] / df['averageHR'], np.nan
     )
 
-    # --- 2. Subjective Efficiency (Mental/Fatigue) ---
-    # Power / RPE (Watts per unit of Perceived Exertion)
-    # Note: Requires RPE to be 1-10. If 0, we treat as NaN to avoid div/0
+    # --- 2. Subjective Efficiency ---
     if 'perceivedEffort' in df.columns:
         df['rpe'] = pd.to_numeric(df['perceivedEffort'], errors='coerce')
         df['subjective_efficiency'] = np.where(
@@ -151,7 +158,7 @@ def main():
     else:
         df['subjective_efficiency'] = np.nan
     
-    # --- 3. Torque Efficiency (Muscular) ---
+    # --- 3. Torque Efficiency ---
     df['torque_efficiency'] = np.where(
         is_bike & (df['avgPower'] > 0) & (df['averageBikingCadenceInRevPerMinute'] > 0),
         df['avgPower'] / df['averageBikingCadenceInRevPerMinute'], np.nan
