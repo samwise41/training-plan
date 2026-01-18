@@ -71,20 +71,20 @@
             if (!Array.isArray(jsonArray)) return [];
             
             return jsonArray.map(item => {
-                // A. Fix Date (YYYY-MM-DD -> Date Object)
                 const dateObj = new Date(`${item.date}T12:00:00`); 
+                
+                // Helper to merge Bike/Run Cadence
+                const cadence = item.averageBikingCadenceInRevPerMinute || item.averageRunningCadenceInStepsPerMinute || 0;
 
-                // B. Normalize Keys (JSON CamelCase -> View Schema)
                 return {
-                    ...item,
+                    ...item, 
                     
                     // Core Identity
                     date: dateObj,
                     id: item.id,
                     dayName: item.day,
                     
-                    // Type Mapping (Strict -> UI Fallback)
-                    // Use actualType if available, else planned, else Other
+                    // Type Mapping
                     type: item.actualSport || item.plannedSport || 'Other',
                     actualType: item.actualSport,
                     
@@ -93,19 +93,28 @@
                     actualName: item.actualWorkout,
                     notes: item.notes,
                     
-                    // Metrics
+                    // Metrics (MAPPED FROM NEW KEYS)
                     plannedDuration: item.plannedDuration || 0,
                     actualDuration: item.actualDuration || 0,
-                    avgHR: item.avgHr,
+                    
+                    avgHR: item.averageHR,
                     avgPower: item.avgPower,
                     normPower: item.normPower,
-                    avgSpeed: 0, 
-                    trainingStressScore: item.tss,
-                    intensityFactor: item.if,
-                    elevationGain: item.elevation,
+                    avgSpeed: item.averageSpeed,
+                    avgCadence: cadence,
+                    
+                    trainingStressScore: item.trainingStressScore,
+                    intensityFactor: item.intensityFactor,
+                    elevationGain: item.elevationGain,
                     calories: item.calories,
-                    RPE: item.rpe,
-                    Feeling: item.feeling,
+                    RPE: item.RPE,
+                    Feeling: item.Feeling,
+                    
+                    // Running Specific
+                    avgGroundContactTime: item.avgGroundContactTime,
+                    avgVerticalOscillation: item.avgVerticalOscillation,
+                    vO2MaxValue: item.vO2MaxValue,
+                    anaerobicTrainingEffect: item.anaerobicTrainingEffect,
                     
                     // Logic Flags
                     completed: item.status === 'COMPLETED'
@@ -177,7 +186,6 @@
             if (initialNavBtn) initialNavBtn.classList.add('active');
             
             try {
-                // Fetch JSON + Resources
                 const [planRes, gearRes, historyRes] = await Promise.all([
                     fetch(`./${CONFIG.PLAN_FILE}?t=${cacheBuster}`),
                     fetch(`./${CONFIG.GEAR_FILE}?t=${cacheBuster}`),
@@ -189,7 +197,6 @@
                 this.planMd = await planRes.text();
                 this.gearMd = await gearRes.text();
                 
-                // --- 1. SINGLE SOURCE OF TRUTH: JSON ---
                 if (historyRes.ok) {
                     const rawJson = await historyRes.json();
                     this.allData = this.hydrateData(rawJson).sort((a,b) => b.date - a.date);
@@ -198,10 +205,6 @@
                     console.error("Could not load training_log.json");
                     this.allData = [];
                 }
-
-                // Note: We no longer parse planMd for daily workouts.
-                // We ONLY use planMd for "Events", "Goals", and the "Weekly Schedule" visuals 
-                // in specific widgets (like Dashboard or Roadmap), but not for the core dataset.
 
                 this.setupEventListeners();
                 window.addEventListener('hashchange', () => this.handleHashChange());
