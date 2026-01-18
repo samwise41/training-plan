@@ -42,7 +42,6 @@
     const CONFIG = {
         PLAN_FILE: "endurance_plan.md",
         GEAR_FILE: "js/views/gear/Gear.md",
-        // CHANGED: Point to the new JSON database
         DATA_FILE: "data/training_log.json", 
         AUTH_FILE: "auth_config.json",
         WEATHER_MAP: {
@@ -73,13 +72,11 @@
             
             return jsonArray.map(item => {
                 // A. Fix Date (YYYY-MM-DD -> Date Object)
-                // We append T12:00:00 to prevent timezone shifts (e.g. 2023-10-01 becoming Sep 30 in PST)
                 const dateObj = new Date(`${item.date}T12:00:00`); 
 
                 // B. Normalize Keys (JSON CamelCase -> View Schema)
-                // This ensures old Views (Trends, Dashboard) still work without full rewrites
                 return {
-                    ...item, // Keep all new JSON fields (actualSport, etc)
+                    ...item,
                     
                     // Core Identity
                     date: dateObj,
@@ -87,6 +84,7 @@
                     dayName: item.day,
                     
                     // Type Mapping (Strict -> UI Fallback)
+                    // Use actualType if available, else planned, else Other
                     type: item.actualSport || item.plannedSport || 'Other',
                     actualType: item.actualSport,
                     
@@ -95,13 +93,13 @@
                     actualName: item.actualWorkout,
                     notes: item.notes,
                     
-                    // Metrics (Map to names expected by charts)
+                    // Metrics
                     plannedDuration: item.plannedDuration || 0,
                     actualDuration: item.actualDuration || 0,
                     avgHR: item.avgHr,
                     avgPower: item.avgPower,
                     normPower: item.normPower,
-                    avgSpeed: 0, // Calculated if needed, or added to JSON later
+                    avgSpeed: 0, 
                     trainingStressScore: item.tss,
                     intensityFactor: item.if,
                     elevationGain: item.elevation,
@@ -179,11 +177,11 @@
             if (initialNavBtn) initialNavBtn.classList.add('active');
             
             try {
-                // --- CHANGED: Fetch JSON instead of MD History ---
+                // Fetch JSON + Resources
                 const [planRes, gearRes, historyRes] = await Promise.all([
                     fetch(`./${CONFIG.PLAN_FILE}?t=${cacheBuster}`),
                     fetch(`./${CONFIG.GEAR_FILE}?t=${cacheBuster}`),
-                    fetch(`./${CONFIG.DATA_FILE}?t=${cacheBuster}`) // New JSON
+                    fetch(`./${CONFIG.DATA_FILE}?t=${cacheBuster}`) 
                 ]);
                 
                 if (!planRes.ok) throw new Error(`Could not load ${CONFIG.PLAN_FILE}`);
@@ -191,47 +189,19 @@
                 this.planMd = await planRes.text();
                 this.gearMd = await gearRes.text();
                 
-                // 1. Process History (JSON)
-                let historyData = [];
+                // --- 1. SINGLE SOURCE OF TRUTH: JSON ---
                 if (historyRes.ok) {
                     const rawJson = await historyRes.json();
-                    historyData = this.hydrateData(rawJson);
+                    this.allData = this.hydrateData(rawJson).sort((a,b) => b.date - a.date);
+                    this.logData = this.allData;
                 } else {
-                    console.error("Could not load history JSON");
+                    console.error("Could not load training_log.json");
+                    this.allData = [];
                 }
 
-                // 2. Process Future Plan (Markdown)
-                // We still parse the Markdown for *future* workouts that haven't happened yet
-                const planLog = Parser.parseTrainingLog(this.planMd);
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                
-                const futurePlan = planLog.filter(item => item.date > today);
-
-                // 3. Merge: History (JSON) + Future (MD)
-                // Use a Map to prevent duplicates on "Today"
-                const dataMap = new Map();
-                
-                // Add History first (Source of Truth)
-                historyData.forEach(item => {
-                    if (item.date) {
-                        const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
-                        dataMap.set(key, item);
-                    }
-                });
-
-                // Add Future Plan only if slot is empty
-                futurePlan.forEach(item => {
-                    if (item.date) {
-                        const key = `${item.date.toISOString().split('T')[0]}_${item.type}`;
-                        if (!dataMap.has(key)) {
-                            dataMap.set(key, item);
-                        }
-                    }
-                });
-
-                this.allData = Array.from(dataMap.values()).sort((a,b) => b.date - a.date);
-                this.logData = this.allData; 
+                // Note: We no longer parse planMd for daily workouts.
+                // We ONLY use planMd for "Events", "Goals", and the "Weekly Schedule" visuals 
+                // in specific widgets (like Dashboard or Roadmap), but not for the core dataset.
 
                 this.setupEventListeners();
                 window.addEventListener('hashchange', () => this.handleHashChange());
@@ -240,13 +210,7 @@
                 
             } catch (e) {
                 console.error("Init Error:", e);
-                document.getElementById('content').innerHTML = `
-                    <div class="p-8 text-center">
-                        <h2 class="text-xl text-red-500 font-bold mb-2">System Error</h2>
-                        <p class="text-slate-400">Failed to load data. Please verify 'data/training_log.json' exists.</p>
-                        <pre class="mt-4 text-xs text-slate-600 bg-slate-900 p-2 rounded text-left overflow-auto">${e.stack}</pre>
-                    </div>
-                `;
+                document.getElementById('content').innerHTML = `<div class="p-8 text-center text-red-500">System Error: ${e.message}</div>`;
             }
         },
 
@@ -287,7 +251,6 @@
         },
 
         // --- STATS BAR & UI ---
-        // (This logic remains mostly the same, just consuming `allData`)
         getStatsBar() {
             return `
                 <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -387,7 +350,7 @@
                     this.allData.forEach(d => {
                         if(new Date(d.date) >= lookback) {
                             let dur = typeof d.actualDuration === 'number' ? d.actualDuration : parseDur(d.duration);
-                            let t = d.actualType || d.type; // Use hydrated type
+                            let t = d.actualType || d.type; 
                             if(t==='Swim') mS=Math.max(mS,dur);
                             if(t==='Bike') mB=Math.max(mB,dur);
                             if(t==='Run') mR=Math.max(mR,dur);
@@ -482,8 +445,6 @@
                         content.innerHTML = renderMetrics(this.allData);
                     }
                     else if (view === 'logbook') {
-                        // For the Logbook, we just show a table of the fetched JSON data
-                        // (Parsing the original MD history is removed since we use JSON now)
                         let rows = this.allData.map(d => {
                             const dateStr = d.date.toLocaleDateString();
                             return `<tr>
