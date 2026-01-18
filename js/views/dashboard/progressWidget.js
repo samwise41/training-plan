@@ -1,79 +1,92 @@
 // js/views/dashboard/progressWidget.js
 import { getSportColorVar } from './utils.js';
 
+// --- HELPER: Strict Date String (YYYY-MM-DD) ---
+// Prevents timezone shifting bugs by ignoring time components entirely
+function toLocalYMD(dateObj) {
+    if (!dateObj || isNaN(dateObj.getTime())) return "INVALID";
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // --- Internal Helper: Streak Calculators ---
 function calculateDailyStreak(fullLogData) {
-    if (!fullLogData || fullLogData.length === 0) {
-        console.log("Streak Calc: No data available.");
-        return 0;
-    }
+    if (!fullLogData || fullLogData.length === 0) return 0;
 
-    const today = new Date(); today.setHours(0,0,0,0);
-    const dayOfWeek = today.getDay(); 
-    // Align to Monday start for consistency
+    // 1. Align to Current Week Start (Monday)
+    const today = new Date(); 
+    const dayNum = today.getDay(); 
     const currentWeekStart = new Date(today); 
-    currentWeekStart.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
-    
+    currentWeekStart.setDate(today.getDate() - (dayNum === 0 ? 6 : dayNum - 1));
+    const currentWeekStr = toLocalYMD(currentWeekStart);
+
+    // 2. Group by Week (Monday Strings)
     const weeksMap = {};
+    
     fullLogData.forEach(item => {
         if (!item.date) return;
-        const d = new Date(item.date); d.setHours(0,0,0,0);
+        const d = new Date(item.date);
         const day = d.getDay(); 
         const weekStart = new Date(d); 
-        weekStart.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+        weekStart.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+        const weekKey = toLocalYMD(weekStart);
         
-        if (weekStart >= currentWeekStart) return; 
+        // Ignore current incomplete week
+        if (weekKey >= currentWeekStr) return; 
         
-        const key = weekStart.toISOString().split('T')[0];
-        if (!weeksMap[key]) weeksMap[key] = { failed: false };
+        if (!weeksMap[weekKey]) weeksMap[weekKey] = { failed: false };
         
-        if (item.plannedDuration > 0) {
-            const statusStr = (item.status || '').toUpperCase();
-            const isCompleted = item.completed === true || statusStr === 'COMPLETED';
-            const hasDuration = (item.actualDuration || 0) > 0;
-            if (!isCompleted && !hasDuration) weeksMap[key].failed = true;
+        // If a workout was planned but not completed (and no actual duration), mark week as failed
+        if ((item.plannedDuration || 0) > 0) {
+            const hasData = (item.actualDuration || 0) > 0;
+            const isCompleted = item.completed === true;
+            if (!isCompleted && !hasData) weeksMap[weekKey].failed = true;
         }
     });
 
+    // 3. Count Backwards
     let streak = 0; 
     let checkDate = new Date(currentWeekStart); 
     checkDate.setDate(checkDate.getDate() - 7); 
 
-    for (let i = 0; i < 260; i++) { 
-        const key = checkDate.toISOString().split('T')[0]; 
+    for (let i = 0; i < 260; i++) { // Check last 5 years max
+        const key = toLocalYMD(checkDate);
         const weekData = weeksMap[key];
-        if (!weekData) break; 
-        if (weekData.failed) break; 
+        
+        // If no data for this week, or the week failed, streak ends
+        if (!weekData || weekData.failed) break; 
+        
         streak++; 
         checkDate.setDate(checkDate.getDate() - 7);
     }
-    
-    // DEBUG LOG
-    console.log(`🔥 Daily Streak Calculated: ${streak} weeks`);
     return streak;
 }
 
 function calculateVolumeStreak(fullLogData) {
     if (!fullLogData || fullLogData.length === 0) return 0;
-    const today = new Date(); today.setHours(0,0,0,0);
-    const dayOfWeek = today.getDay(); 
+
+    const today = new Date(); 
+    const dayNum = today.getDay(); 
     const currentWeekStart = new Date(today); 
-    currentWeekStart.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+    currentWeekStart.setDate(today.getDate() - (dayNum === 0 ? 6 : dayNum - 1));
+    const currentWeekStr = toLocalYMD(currentWeekStart);
 
     const weeksMap = {};
     fullLogData.forEach(item => {
         if (!item.date) return;
-        const d = new Date(item.date); d.setHours(0,0,0,0);
+        const d = new Date(item.date);
         const day = d.getDay(); 
         const weekStart = new Date(d); 
-        weekStart.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+        weekStart.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+        const weekKey = toLocalYMD(weekStart);
         
-        if (weekStart >= currentWeekStart) return;
+        if (weekKey >= currentWeekStr) return;
 
-        const key = weekStart.toISOString().split('T')[0];
-        if (!weeksMap[key]) weeksMap[key] = { planned: 0, actual: 0 };
-        weeksMap[key].planned += (item.plannedDuration || 0);
-        weeksMap[key].actual += (item.actualDuration || 0);
+        if (!weeksMap[weekKey]) weeksMap[weekKey] = { planned: 0, actual: 0 };
+        weeksMap[weekKey].planned += (item.plannedDuration || 0);
+        weeksMap[weekKey].actual += (item.actualDuration || 0);
     });
 
     let streak = 0; 
@@ -81,9 +94,11 @@ function calculateVolumeStreak(fullLogData) {
     checkDate.setDate(checkDate.getDate() - 7); 
 
     for (let i = 0; i < 260; i++) { 
-        const key = checkDate.toISOString().split('T')[0]; 
+        const key = toLocalYMD(checkDate); 
         const stats = weeksMap[key];
-        if (!stats) break;
+        if (!stats) break; // Break on empty week
+        
+        // Pass if 0 planned (Rest Week) OR >95% compliance
         if (stats.planned === 0) {
             streak++; 
         } else { 
@@ -92,35 +107,26 @@ function calculateVolumeStreak(fullLogData) {
         }
         checkDate.setDate(checkDate.getDate() - 7);
     }
-
-    // DEBUG LOG
-    console.log(`🔥 Volume Streak Calculated: ${streak} weeks`);
     return streak;
 }
 
 // --- Main Component ---
 export function renderProgressWidget(workouts, fullLogData) {
-    console.group("🚀 Progress Widget Debug Start");
-    console.log("Input Workouts:", workouts?.length || 0);
-    console.log("Input Log Data:", fullLogData?.length || 0);
-
-    // 1. Strictly Define Current Week (Monday - Sunday)
+    // 1. Define Current Week Bucket (Monday-Sunday Strings)
     const today = new Date();
-    today.setHours(0,0,0,0);
-    const currentDay = today.getDay(); 
-    
-    // Calculate Monday
-    const distToMon = currentDay === 0 ? 6 : currentDay - 1;
+    const dayNum = today.getDay(); 
     const monday = new Date(today);
-    monday.setDate(today.getDate() - distToMon);
-    monday.setHours(0,0,0,0);
+    monday.setDate(today.getDate() - (dayNum === 0 ? 6 : dayNum - 1));
+    
+    // Create Set of 7 target dates (YYYY-MM-DD)
+    const weekBucket = new Set();
+    for(let i=0; i<7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        weekBucket.add(toLocalYMD(d));
+    }
 
-    // Calculate Sunday
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23,59,59,999);
-
-    console.log(`📅 Current Week Window: ${monday.toDateString()} to ${sunday.toDateString()}`);
+    const todayStr = toLocalYMD(today);
 
     // 2. Initialize Stats
     const sportStats = { 
@@ -135,102 +141,82 @@ export function renderProgressWidget(workouts, fullLogData) {
     let expectedSoFar = 0; 
     const totalDailyMarkers = {};
 
-    // --- STRICT DETECTION (CASE INSENSITIVE) ---
-    const detectSport = (txt) => {
-        if (!txt) return 'Other';
-        const t = txt.toUpperCase();
-
-        if (t.includes('[RUN]')) return 'Run';
-        if (t.includes('[BIKE]')) return 'Bike';
-        if (t.includes('[SWIM]')) return 'Swim';
-        
-        return 'Other';
-    };
-
-    const now = new Date(); 
-
-    // 3. Process PLANNED Data
-    let plannedCount = 0;
+    // 3. Process PLANNED Data (Future/Scheduled)
     if (workouts) {
         workouts.forEach(w => {
-            const d = new Date(w.date);
-            if (d >= monday && d <= sunday) {
-                plannedCount++;
+            const wDateStr = toLocalYMD(w.date);
+            if (weekBucket.has(wDateStr)) {
                 const planDur = w.plannedDuration || 0;
-                const dateKey = w.date.toISOString().split('T')[0];
-                
                 totalPlanned += planDur;
-                if (w.date < now) expectedSoFar += planDur;
+                
+                // Add to Expected if date is today or in past
+                if (wDateStr <= todayStr) expectedSoFar += planDur;
 
-                if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
-                totalDailyMarkers[dateKey] += planDur;
+                // Markers
+                if (!totalDailyMarkers[wDateStr]) totalDailyMarkers[wDateStr] = 0;
+                totalDailyMarkers[wDateStr] += planDur;
 
-                // Check Plan Name for Tags (or use type if tags missing in plan)
-                const planSport = detectSport(w.planName);
-                if (sportStats[planSport]) {
-                    sportStats[planSport].planned += planDur;
-                    if (!sportStats[planSport].dailyMarkers[dateKey]) sportStats[planSport].dailyMarkers[dateKey] = 0;
-                    sportStats[planSport].dailyMarkers[dateKey] += planDur;
+                // Detect Planned Sport (Use 'type' from parser, fallback to Other)
+                let sport = w.type || 'Other';
+                // Normalize casing just in case
+                if (sport.match(/Run/i)) sport = 'Run';
+                else if (sport.match(/Bike|Cycle/i)) sport = 'Bike';
+                else if (sport.match(/Swim|Pool/i)) sport = 'Swim';
+                else sport = 'Other';
+
+                if (sportStats[sport]) {
+                    sportStats[sport].planned += planDur;
+                    if (!sportStats[sport].dailyMarkers[wDateStr]) sportStats[sport].dailyMarkers[wDateStr] = 0;
+                    sportStats[sport].dailyMarkers[wDateStr] += planDur;
                 }
             }
         });
     }
-    console.log(`📝 Planned Workouts found in window: ${plannedCount}. Total Minutes: ${totalPlanned}`);
 
-    // 4. Process ACTUAL Data
-    const debugActuals = [];
-    const debugSkipped = [];
-
+    // 4. Process ACTUAL Data (History from JSON)
     if (fullLogData) {
         fullLogData.forEach(item => {
             if (!item.date) return;
-            const d = new Date(item.date);
+            const itemDateStr = toLocalYMD(item.date);
             
-            // Strict Filter: Current Week Only
-            if (d >= monday && d <= sunday) {
-                const actDur = parseFloat(item.actualDuration) || 0;
+            // STRICT FILTER: Is this item in the current week bucket?
+            if (weekBucket.has(itemDateStr)) {
+                const actDur = item.actualDuration || 0;
                 
                 if (actDur > 0) {
                     totalActual += actDur;
                     
-                    const nameToCheck = item.actualName || "";
-                    const actSport = detectSport(nameToCheck);
+                    // --- CHANGED: Use Strict 'actualType' from Database ---
+                    // No more guessing from name strings!
+                    let sport = item.actualType || item.type || 'Other';
                     
-                    debugActuals.push({ date: item.date, name: nameToCheck, dur: actDur, detected: actSport });
+                    // Normalize to ensure it hits the keys
+                    if (sport === 'Running') sport = 'Run';
+                    if (sport === 'Cycling') sport = 'Bike';
+                    if (sport === 'Swimming') sport = 'Swim';
 
-                    if (sportStats[actSport]) {
-                        sportStats[actSport].actual += actDur;
-                    } else {
-                        sportStats.Other.actual += actDur;
-                    }
-                }
-            } else {
-                // Keep track of a few skipped items just to check logic
-                if (debugSkipped.length < 5) {
-                    debugSkipped.push({ date: item.date, reason: "Outside Date Range" });
+                    // Fallback to Other if unknown
+                    if (!sportStats[sport]) sport = 'Other';
+
+                    sportStats[sport].actual += actDur;
                 }
             }
         });
     }
 
-    console.log("✅ Captured Actuals:", debugActuals);
-    if (debugActuals.length === 0) {
-        console.warn("⚠️ No actuals captured! Sample skipped items:", debugSkipped);
-        if (fullLogData && fullLogData.length > 0) {
-            console.log("Sample First Log Date:", fullLogData[0].date);
-        }
-    }
-
-    console.groupEnd(); // End Debug Group
-
-    // 5. HTML Generation
+    // 5. HTML Generation (Visuals)
     const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false, sportType = 'All') => {
-        const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0; 
-        const displayPct = rawPct; 
+        // Prevent Divide by Zero
+        const safePlanned = planned || 1; 
+        const rawPct = planned > 0 ? Math.round((actual / safePlanned) * 100) : (actual > 0 ? 100 : 0);
+        
+        const displayPct = planned > 0 ? Math.round((actual / planned) * 100) : "";
         const barWidth = Math.min(rawPct, 100); 
+        
         const actualHrs = (actual / 60).toFixed(1); 
         const plannedHrs = (planned / 60).toFixed(1);
         
+        // Generate Daily Markers (Little black ticks on the bar)
         let markersHtml = ''; 
         let runningTotal = 0; 
         const sortedDays = Object.keys(dailyMap).sort();
@@ -248,10 +234,15 @@ export function renderProgressWidget(workouts, fullLogData) {
         const iconHtml = iconClass ? `<i class="fa-solid ${iconClass} mr-2 w-4 text-center" ${colorStyle}></i>` : ''; 
         const heightClass = isMain ? 'h-3' : 'h-2.5'; 
         const mbClass = isMain ? 'mb-4' : 'mb-3'; 
-        const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
+        
+        let pctColor = 'text-slate-500';
+        if (planned > 0) {
+            pctColor = rawPct > 100 ? 'text-emerald-400' : 'text-blue-400';
+        }
+
         const barBgStyle = `style="width: ${barWidth}%; background-color: ${getSportColorVar(sportType)}"`;
 
-        // If no plan and no actual, hide the row (except main)
+        // Hide empty rows (except Main Goal)
         if (!isMain && planned === 0 && actual === 0) return '';
 
         return `
@@ -295,7 +286,7 @@ export function renderProgressWidget(workouts, fullLogData) {
     const totalActualHrsPacing = (totalActual / 60).toFixed(1); 
     const expectedHrs = (expectedSoFar / 60).toFixed(1);
 
-    // Streaks (Calculated from History)
+    // Streaks
     const dailyStreak = calculateDailyStreak(fullLogData);
     const volumeStreak = calculateVolumeStreak(fullLogData);
 
