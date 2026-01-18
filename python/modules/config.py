@@ -8,30 +8,17 @@ PYTHON_DIR = os.path.dirname(MODULES_DIR) # python/
 ROOT_DIR = os.path.dirname(PYTHON_DIR)    # Project Root
 
 PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
-MASTER_DB = os.path.join(ROOT_DIR, 'MASTER_TRAINING_DATABASE.md')
+# CHANGED: Now points to the JSON database
+MASTER_DB = os.path.join(ROOT_DIR, 'data', 'training_log.json')
 BRIEF_FILE = os.path.join(ROOT_DIR, 'COACH_BRIEFING.md') 
 
-# --- FIX: Point to the 'garmin_data' folder, NOT 'python' folder ---
+# Point to the 'garmin_data' folder
 GARMIN_JSON = os.path.join(ROOT_DIR, 'garmin_data', 'my_garmin_data_ALL.json')
 
-# --- SCHEMA ---
-# The Single Source of Truth for your Database Columns
-MASTER_COLUMNS = [
-    'Status', 'Day', 'Planned Workout', 'Planned Duration', 
-    'Actual Workout', 'Actual Duration', 'Notes / Targets', 'Date', 'Match Status',
-    'activityId', 'activityName', 'activityType', 'sportTypeId',
-    'duration', 'distance', 'averageHR', 'maxHR', 
-    'aerobicTrainingEffect', 'anaerobicTrainingEffect', 'trainingEffectLabel',
-    'avgPower', 'maxPower', 'normPower', 'trainingStressScore', 'intensityFactor',
-    'averageSpeed', 'maxSpeed', 
-    'averageBikingCadenceInRevPerMinute', 'averageRunningCadenceInStepsPerMinute',
-    'avgStrideLength', 'avgVerticalOscillation', 'avgGroundContactTime',
-    'vO2MaxValue', 'calories', 'elevationGain', 'RPE', 'Feeling'
-]
-
 # --- SETTINGS ---
-# Activities to include in the database
-ALLOWED_SPORT_TYPES = [1, 2, 5, 255] # Run, Bike, Swim, Other
+# Strict Sport Types (Garmin IDs)
+# 1=Run, 2=Bike, 5=Swim
+ALLOWED_SPORT_TYPES = [1, 2, 5] 
 
 # Sport Detection Helpers
 SPORT_IDS = {
