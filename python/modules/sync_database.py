@@ -11,7 +11,7 @@ except ImportError:
     import config
 
 # --- CONFIGURATION ---
-# Set to 10 years to ensure ALL history is re-processed with new fields
+# FORCE UPDATE: Scan last 10 years to fix all historical data
 SYNC_WINDOW_DAYS = 3650  
 
 # --- 1. HELPER FUNCTIONS ---
@@ -36,20 +36,10 @@ def clean_numeric(val):
     try: return float(s_val)
     except ValueError: return None
 
-def get_current_ftp():
-    if not os.path.exists(config.PLAN_FILE): return 241
-    try:
-        with open(config.PLAN_FILE, 'r', encoding='utf-8') as f: content = f.read()
-        match = re.search(r"Cycling FTP[:\*]*\s*(\d+)", content, re.IGNORECASE)
-        if match: return int(match.group(1))
-    except: pass
-    return 241
-
 # --- 2. BUNDLING LOGIC ---
 
 def bundle_activities(activities):
     if not activities: return None
-    # Sort by duration to find the "Main" activity
     activities.sort(key=lambda x: x.get('duration', 0) or 0, reverse=True)
     main = activities[0]
     combined = main.copy()
@@ -88,7 +78,6 @@ def bundle_activities(activities):
     combined['maxPower'] = max((a.get('maxPower') or 0) for a in activities)
     combined['maxSpeed'] = max((a.get('maxSpeed') or 0) for a in activities)
     
-    # --- IDS ---
     all_ids = [str(a.get('activityId')) for a in activities if a.get('activityId')]
     combined['activityId'] = ",".join(all_ids)
     
@@ -158,11 +147,10 @@ def extract_planned_workouts():
 # --- 4. MAIN SYNC ---
 
 def sync():
-    print(f"🔄 SYNC: JSON Architecture (Window: {SYNC_WINDOW_DAYS} days)")
+    print(f"🔄 SYNC: Full History Repair (Window: {SYNC_WINDOW_DAYS} days)")
     
     db_data = load_db()
     planned_items = extract_planned_workouts()
-    current_ftp = get_current_ftp()
     
     if not os.path.exists(config.GARMIN_JSON): return
     with open(config.GARMIN_JSON, 'r', encoding='utf-8') as f: garmin_list = json.load(f)
@@ -179,17 +167,14 @@ def sync():
     today_str = today.strftime('%Y-%m-%d')
     cutoff_date = (today - timedelta(days=SYNC_WINDOW_DAYS)).strftime('%Y-%m-%d')
 
-    count_new_plan = 0
+    # 1. Process Plan
     for plan in planned_items:
         p_date = plan['date']
         p_name = plan.get('plannedWorkout', '')
         
         if p_date < cutoff_date or p_date > today_str: continue 
         if not p_name or "rest day" in p_name.lower(): continue
-        
-        # Skip Sundays unless explicitly planned
-        if plan.get('day') == 'Sunday' and not plan.get('plannedSport'):
-            continue
+        if plan.get('day') == 'Sunday' and not plan.get('plannedSport'): continue
         
         exists = False
         for rec in db_data:
@@ -203,20 +188,17 @@ def sync():
                 "actualSport": None, "plannedWorkout": p_name,
                 "plannedDuration": plan.get('plannedDuration'), "actualWorkout": "",
                 "actualDuration": None, "notes": plan.get('notes', ''),
-                
-                # Default Fields to None
-                "distance": None, "movingTime": None, "avgPower": None, "normPower": None,
-                "avgHr": None, "tss": None, "if": None, "Match Status": "Planned"
+                "Match Status": "Planned"
             }
             db_data.append(new_rec)
-            count_new_plan += 1
-    print(f"   + Added {count_new_plan} new planned items.")
 
+    # 2. Process Garmin
     grouped_garmin = {} 
     for g in garmin_list:
         g_date = g.get('startTimeLocal', '')[:10]
-        # Allow FULL history re-process
-        # if g_date < cutoff_date or g_date > today_str: continue
+        # SKIP CUTOFF CHECK to force all history to process
+        # if g_date < cutoff_date: continue 
+        
         g_type_key = g.get('activityType', {}).get('typeKey', '')
         sport = normalize_sport(g.get('activityName'), g_type_key)
         if not sport: continue 
@@ -235,87 +217,60 @@ def sync():
         comp_id_str = str(composite.get('activityId'))
         comp_ids = comp_id_str.split(',')
         
-        # Calculate Day Name
+        # Calculate Day
         try:
             dt_obj = datetime.strptime(g_date, '%Y-%m-%d')
             day_name = dt_obj.strftime('%A')
-        except:
-            day_name = "Unknown"
+        except: day_name = "Unknown"
 
-        # --- FULL METRICS EXTRACTION (Strictly as requested) ---
+        # --- THE FIX: EXTRACT ALL METRICS ---
         metrics = {
-            # Identity
             "id": comp_id_str,
-            "Date": g_date,
-            "date": g_date, # Duplicate for app compatibility
-            "Status": "COMPLETED",
-            "status": "COMPLETED", # Duplicate for app compatibility
+            "date": g_date,
+            "status": "COMPLETED",
             "Day": day_name,
-            "day": day_name, # Duplicate for app compatibility
-            
-            # Types
             "actualSport": sport,
             "activityId": comp_id_str,
             "activityName": composite.get('activityName'),
             "actualWorkout": composite.get('activityName'), 
             "activityType": composite.get('activityType'),
             "sportTypeId": composite.get('sportTypeId'),
-
-            # Core Stats
             "duration": clean_numeric(composite.get('duration')), 
             "actualDuration": clean_numeric(composite.get('duration', 0)) / 60.0, 
             "movingTime": clean_numeric(composite.get('movingDuration')),
             "distance": clean_numeric(composite.get('distance')),
             "calories": clean_numeric(composite.get('calories')),
             "elevationGain": clean_numeric(composite.get('elevationGain')),
-
-            # Heart Rate
             "averageHR": clean_numeric(composite.get('averageHR')),
             "maxHR": clean_numeric(composite.get('maxHR')),
-            
-            # Power
             "avgPower": clean_numeric(composite.get('avgPower')),
             "maxPower": clean_numeric(composite.get('maxPower')),
             "normPower": clean_numeric(composite.get('normPower')),
-            
-            # Speed & Cadence
             "averageSpeed": clean_numeric(composite.get('averageSpeed')),
             "maxSpeed": clean_numeric(composite.get('maxSpeed')),
             "averageBikingCadenceInRevPerMinute": clean_numeric(composite.get('averageBikingCadenceInRevPerMinute')),
             "averageRunningCadenceInStepsPerMinute": clean_numeric(composite.get('averageRunningCadenceInStepsPerMinute')),
-
-            # Running Dynamics
             "avgStrideLength": clean_numeric(composite.get('avgStrideLength')),
             "avgVerticalOscillation": clean_numeric(composite.get('avgVerticalOscillation')),
             "avgGroundContactTime": clean_numeric(composite.get('avgGroundContactTime')),
-            
-            # Physiology
             "aerobicTrainingEffect": clean_numeric(composite.get('aerobicTrainingEffect')),
             "anaerobicTrainingEffect": clean_numeric(composite.get('anaerobicTrainingEffect')),
             "trainingEffectLabel": composite.get('trainingEffectLabel'),
             "vO2MaxValue": clean_numeric(composite.get('vO2MaxValue')),
-            
-            # Subjective
             "RPE": clean_numeric(composite.get('perceivedEffort')),
             "Feeling": clean_numeric(composite.get('feeling')),
-            
-            # Default Status
             "Match Status": "Matched"
         }
         
         # Calculations
         if metrics['normPower'] and metrics['movingTime']:
-            i_factor = metrics['normPower'] / current_ftp
-            metrics['intensityFactor'] = round(i_factor, 2)
-            metrics['trainingStressScore'] = round((metrics['movingTime'] * metrics['normPower'] * i_factor) / (current_ftp * 3600) * 100, 1)
+            metrics['trainingStressScore'] = round((metrics['movingTime'] * metrics['normPower'] * (metrics['normPower']/241)) / (241 * 3600) * 100, 1)
 
-        # Logic: Link to Existing or Create New
         found_existing = False
         for cid in comp_ids:
             if cid in existing_ids:
                 rec = existing_ids[cid]
-                rec.update(metrics)
-                rec['Day'] = day_name # Ensure day is updated
+                rec.update(metrics) # FORCE UPDATE EXISTING RECORD
                 found_existing = True
                 break
         
@@ -335,11 +290,8 @@ def sync():
         if not matched:
             new_unp = {
                 "date": g_date, 
-                "plannedWorkout": "", 
-                "plannedDuration": None,
-                "plannedSport": None, 
-                "notes": "Unplanned Session",
-                "Match Status": "Unplanned"
+                "plannedWorkout": "", "plannedDuration": None, "plannedSport": None, 
+                "notes": "Unplanned Session", "Match Status": "Unplanned"
             }
             new_unp.update(metrics)
             db_data.append(new_unp)
@@ -349,7 +301,6 @@ def sync():
     print(f"   + Linked {count_linked} new bundles.")
     print(f"   + Added {count_unplanned} new unplanned bundles.")
     save_db(db_data)
-    
     return db_data 
 
 if __name__ == "__main__":
