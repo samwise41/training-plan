@@ -3,11 +3,17 @@ import json
 import os
 import re
 import ast
-import numpy as np
+import sys
 
-# --- CONFIGURATION ---
-INPUT_FILE = 'python/MASTER_TRAINING_DATABASE.md'
-OUTPUT_FILE = 'data/training_log.json'
+# --- ROBUST PATH SETUP ---
+# Gets the absolute path of the directory where this script is located (python/)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) 
+# Go up one level to the Project Root
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR) 
+
+# Define paths relative to Root
+INPUT_FILE = os.path.join(PROJECT_ROOT, 'MASTER_TRAINING_DATABASE.md')
+OUTPUT_FILE = os.path.join(PROJECT_ROOT, 'data', 'training_log.json')
 
 def normalize_sport(val, activity_type=None):
     """
@@ -90,11 +96,16 @@ def parse_markdown_table(file_path):
     return records
 
 def migrate():
-    print(f"🚀 Starting Migration: {INPUT_FILE} -> {OUTPUT_FILE}")
+    print(f"🚀 Starting Migration...")
+    print(f"   📂 Input:  {INPUT_FILE}")
+    print(f"   📂 Output: {OUTPUT_FILE}")
     
     raw_data = parse_markdown_table(INPUT_FILE)
+    if not raw_data:
+        print("❌ No data found or file read error.")
+        return
+
     cleaned_data = []
-    
     stats = {"Bike": 0, "Run": 0, "Swim": 0, "Ignored": 0}
 
     for row in raw_data:
@@ -145,7 +156,7 @@ def migrate():
             
             # Metrics (Strict Numbers)
             "distance": clean_numeric(row.get('distance')),
-            "movingTime": clean_numeric(row.get('duration')), # Assuming duration is seconds
+            "movingTime": clean_numeric(row.get('duration')), 
             "avgHr": clean_numeric(row.get('averageHR')),
             "maxHr": clean_numeric(row.get('maxHR')),
             "avgPower": clean_numeric(row.get('avgPower')),
