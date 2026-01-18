@@ -1,7 +1,7 @@
 // js/views/metrics/table.js
 import { METRIC_DEFINITIONS } from './definitions.js';
 
-// --- 1. TREND CALCULATOR (Reused logic) ---
+// --- 1. TREND CALCULATOR ---
 const calcTrend = (data) => {
     const n = data.length;
     if (n < 3) return null;
@@ -56,7 +56,6 @@ export const renderSummaryTable = (allData) => {
     const now = new Date();
 
     groups.forEach(group => {
-        // Section Header
         rows += `
             <tr class="bg-slate-900/80">
                 <td colspan="5" class="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700">
@@ -72,7 +71,6 @@ export const renderSummaryTable = (allData) => {
             const data = getMetricData(allData, key);
             if (data.length === 0) return;
 
-            // Calculate Trends
             const getT = (days) => {
                 const cutoff = new Date();
                 cutoff.setDate(now.getDate() - days);
@@ -85,21 +83,20 @@ export const renderSummaryTable = (allData) => {
             const t90 = getT(90);
             const t6m = getT(180);
 
-            // Status Check (Last 30 Days Average)
             const recent = data.filter(d => d.date >= new Date(now.getTime() - 30 * 86400000));
             let statusHtml = '<span class="text-slate-600 text-[10px]">--</span>';
             
             if (recent.length > 0 && def.refMin && def.refMax) {
                 const avg = recent.reduce((a,b) => a + b.val, 0) / recent.length;
                 let isGood = false;
-                
-                if (def.invertRanges) isGood = avg <= def.refMax; // Lower is better
-                else isGood = avg >= def.refMin; // Higher is better
+                if (def.invertRanges) isGood = avg <= def.refMax; 
+                else isGood = avg >= def.refMin; 
 
                 if (isGood) statusHtml = '<span class="text-emerald-400 font-bold text-[10px] bg-emerald-900/30 px-1.5 py-0.5 rounded">✅ On Target</span>';
                 else statusHtml = '<span class="text-yellow-400 font-bold text-[10px] bg-yellow-900/30 px-1.5 py-0.5 rounded">⚠️ Off Target</span>';
             }
 
+            // UPDATED: Added Formula to Title
             rows += `
                 <tr class="border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors group">
                     <td class="px-4 py-3 flex items-center gap-3">
@@ -107,7 +104,10 @@ export const renderSummaryTable = (allData) => {
                             <i class="fa-solid ${def.icon} text-xs" style="color: ${def.colorVar}"></i>
                         </div>
                         <div>
-                            <div class="font-bold text-slate-200 text-xs">${def.title}</div>
+                            <div class="font-bold text-slate-200 text-xs">
+                                ${def.title}
+                                <span class="text-[9px] text-slate-500 font-mono ml-1 font-normal">${def.formula || ''}</span>
+                            </div>
                             <div class="text-[9px] text-slate-500 font-mono">${def.rangeInfo || ''}</div>
                         </div>
                     </td>
