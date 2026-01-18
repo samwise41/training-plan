@@ -105,22 +105,26 @@ const renderChart = (data, def, key) => {
         svgContent += `<line x1="${getX(0)}" y1="${getY(trend.start)}" x2="${getX(data.length-1)}" y2="${getY(trend.end)}" stroke="white" stroke-width="1" stroke-dasharray="2,2" opacity="0.3" />`;
     }
 
+    // UPDATED: Added a unique ID (the dateStr) to the click handler for toggle logic
     data.forEach((d, i) => {
         const cx = getX(i); const cy = getY(d.val);
+        const uniqueId = `${key}-${d.dateStr}`; // Unique ID for Toggle
         svgContent += `<circle cx="${cx}" cy="${cy}" r="3" fill="#0f172a" stroke="${def.colorVar}" stroke-width="2" class="cursor-pointer hover:stroke-white transition-all" 
-            onclick="window.showMetricTooltip(event, '${d.dateStr}', '${(d.title||"").replace(/'/g,"")}', '${d.val.toFixed(2)}', '', '${d.label}', '${def.colorVar}')" />`;
+            onclick="window.showMetricTooltip(event, '${uniqueId}', '${d.dateStr}', '${(d.title||"").replace(/'/g,"")}', '${d.val.toFixed(2)}', '', '${d.label}', '${def.colorVar}')" />`;
     });
 
     svgContent += `<text x="${pad.l-5}" y="${getY(max)+4}" text-anchor="end" font-size="9" fill="#64748b">${max.toFixed(1)}</text>
                    <text x="${pad.l-5}" y="${getY(min)+4}" text-anchor="end" font-size="9" fill="#64748b">${min.toFixed(1)}</text>`;
 
-    // --- RESTORED HEADER WITH INFO ICON ---
+    // UPDATED: Header now includes the Formula
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 h-full flex flex-col hover:border-slate-600 transition-colors">
             <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-700">
                 <div class="flex items-center gap-2">
                     <h3 class="text-xs font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid ${def.icon}" style="color: ${def.colorVar}"></i> ${def.title}
+                        <i class="fa-solid ${def.icon}" style="color: ${def.colorVar}"></i> 
+                        ${def.title}
+                        <span class="text-[10px] text-slate-500 font-mono ml-1 font-normal">${def.formula || ''}</span>
                     </h3>
                 </div>
                 <div class="cursor-pointer text-slate-500 hover:text-blue-400 transition-colors p-1" onclick="window.showAnalysisTooltip(event, '${key}')">
