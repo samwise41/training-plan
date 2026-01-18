@@ -1,10 +1,10 @@
 // js/app.js
 
 (async function initApp() {
-    console.log("🚀 Booting App (Aggressive Fix Mode)...");
+    console.log("🚀 Booting App (Phase 1: Ingestor & Standard Schema)...");
 
     const cacheBuster = Date.now();
-    
+
     // --- 1. SETUP NAVIGATION ---
     function setupEventListeners() {
         const navMap = {
@@ -16,10 +16,20 @@
             const el = document.getElementById(id);
             if (el) el.onclick = (e) => { e.preventDefault(); App.navigate(navMap[id]); };
         });
-        const btnOpen = document.getElementById('btn-sidebar-open');
+        
+        // Mobile Sidebar
+        const toggle = () => {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebar-overlay');
+            sb.classList.toggle('sidebar-closed'); sb.classList.toggle('sidebar-open');
+            ov.classList.toggle('hidden');
+        };
+        const open = document.getElementById('btn-sidebar-open');
+        if(open) open.onclick = toggle;
+        const close = document.getElementById('btn-sidebar-close');
+        if(close) close.onclick = toggle;
         const overlay = document.getElementById('sidebar-overlay');
-        if (btnOpen) btnOpen.onclick = () => App.toggleSidebar();
-        if (overlay) overlay.onclick = () => App.toggleSidebar();
+        if(overlay) overlay.onclick = toggle;
     }
 
     const safeImport = async (path) => {
@@ -57,81 +67,68 @@
     const App = {
         planMd: "", gearMd: "", allData: [], 
 
-        // --- 3. THE "NUCLEAR" ADAPTER ---
-        hydrateData(jsonArray) {
+        // --- 3. THE INGESTOR (Standard Schema Enforcer) ---
+        processData(jsonArray) {
             if (!Array.isArray(jsonArray)) return [];
-            console.log("💧 Hydrating Data: Processing " + jsonArray.length + " records...");
-            
+            console.log(`📥 Ingesting ${jsonArray.length} records...`);
+
             return jsonArray.map(item => {
-                // 1. REMOVE the problem field entirely.
-                // We strip 'activityType' out so it cannot accidentally be spread back in.
-                const { activityType, ...cleanItem } = item;
+                // Helper: Ensure we get a number, or null (never undefined/NaN)
+                const num = (v) => (v !== null && v !== undefined && !isNaN(v) && v !== "") ? Number(v) : null;
+                const str = (v) => (v || "").toString();
 
-                // 2. Prepare Safe Values
+                // A. IDENTITY
                 const dateObj = new Date(`${item.date}T12:00:00`); 
-                const getNum = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v) : 0;
-                const cad = getNum(item.averageBikingCadenceInRevPerMinute) || getNum(item.averageRunningCadenceInStepsPerMinute);
+                
+                // B. SPORT NORMALIZATION
+                // We flatten "Virtual Cycling", "Road Cycling" -> "Bike"
+                let rawSport = str(item.actualSport || item.activityType?.typeKey || "Other");
+                let cleanSport = "Other";
+                if (rawSport.match(/Run|Jog/i)) cleanSport = "Run";
+                else if (rawSport.match(/Bike|Cycl|Ride|Zwift/i)) cleanSport = "Bike";
+                else if (rawSport.match(/Swim|Pool/i)) cleanSport = "Swim";
 
-                // 3. Force Sport Identity
-                let safeActualSport = item.actualSport || "Other";
-                let safeSportId = 99;
+                // C. CADENCE MERGE
+                // Bike and Run cadence are in different source fields. We merge them.
+                const cadBike = num(item.averageBikingCadenceInRevPerMinute);
+                const cadRun = num(item.averageRunningCadenceInStepsPerMinute);
+                const cleanCadence = cadBike || cadRun || 0;
 
-                if (safeActualSport.includes('Bike') || safeActualSport.includes('Cycl')) {
-                    safeActualSport = 'Bike';
-                    safeSportId = 2; // Matches definitions.js ID for Bike
-                } else if (safeActualSport.includes('Run')) {
-                    safeActualSport = 'Run';
-                    safeSportId = 1; // Matches definitions.js ID for Run
-                } else if (safeActualSport.includes('Swim')) {
-                    safeActualSport = 'Swim';
-                    safeSportId = 5; // Matches definitions.js ID for Swim
-                }
-
+                // --- D. THE STANDARD SCHEMA ---
                 return {
-                    ...cleanItem, // Spread the clean item (WITHOUT activityType)
-                    
-                    // Core Identity
+                    // Identity
+                    id: str(item.id),
                     date: dateObj,
-                    id: item.id,
-                    type: safeActualSport, 
+                    dateStr: item.date, // Keep ISO string for easy ref
+                    title: str(item.actualWorkout || item.activityName || "Workout"),
+                    sport: cleanSport, // "Bike", "Run", "Swim", "Other"
+
+                    // Volume
+                    duration: num(item.actualDuration) || 0, // Minutes
+                    distance: num(item.distance) || 0,       // Meters
+
+                    // Intensity
+                    hr: num(item.averageHR) || 0,
+                    power: num(item.avgPower) || num(item.normPower) || 0,
+                    speed: num(item.averageSpeed) || 0,
+                    cadence: cleanCadence,
+                    rpe: num(item.RPE) || 0,
                     
-                    // --- SAFETY OVERRIDES ---
-                    // We set activityType to NULL. This forces utils.js to skip the .includes() check
-                    // and fall back to checking 'actualType', which we ensure is a string.
-                    activityType: null, 
-                    actualType: safeActualSport,
-                    sportTypeId: safeSportId,
+                    // Load
+                    tss: num(item.trainingStressScore) || 0,
+                    feel: num(item.Feeling) || 0,
+
+                    // Physio & Dynamics
+                    vo2: num(item.vO2MaxValue) || 0,
+                    anaerobic: num(item.anaerobicTrainingEffect) || 0,
+                    gct: num(item.avgGroundContactTime) || 0,
+                    vert: num(item.avgVerticalOscillation) || 0,
                     
-                    // Strings for Heatmap
-                    plannedWorkout: item.plannedWorkout || "",
-                    actualWorkout: item.actualWorkout || "",
-                    
-                    // Metric Mapping (Old Name -> New JSON Value)
-                    plannedDuration: getNum(item.plannedDuration),
-                    actualDuration: getNum(item.actualDuration),
-                    avgHR: getNum(item.averageHR),
-                    maxHR: getNum(item.maxHR),
-                    avgPower: getNum(item.avgPower),
-                    normPower: getNum(item.normPower),
-                    avgSpeed: getNum(item.averageSpeed),
-                    avgCadence: cad,
-                    
-                    avgGroundContactTime: getNum(item.avgGroundContactTime),
-                    avgVerticalOscillation: getNum(item.avgVerticalOscillation),
-                    vO2MaxValue: getNum(item.vO2MaxValue),
-                    anaerobicTrainingEffect: getNum(item.anaerobicTrainingEffect),
-                    trainingEffectLabel: item.trainingEffectLabel,
-                    
-                    trainingStressScore: getNum(item.trainingStressScore),
-                    intensityFactor: getNum(item.intensityFactor),
-                    elevationGain: getNum(item.elevationGain),
-                    calories: getNum(item.calories),
-                    RPE: getNum(item.RPE),
-                    Feeling: getNum(item.Feeling),
-                    
-                    completed: item.status === 'COMPLETED'
+                    // Metadata
+                    status: item.status === 'COMPLETED' ? 'COMPLETED' : 'PLANNED',
+                    source: item // Keep raw just in case, but views should NOT use it
                 };
-            });
+            }).sort((a,b) => b.date - a.date);
         },
 
         async init() {
@@ -141,6 +138,7 @@
             const startView = window.location.hash.substring(1) || 'dashboard';
             
             try {
+                // Parallel Fetch
                 const [planRes, gearRes, historyRes] = await Promise.all([
                     fetch(`./${CONFIG.PLAN_FILE}?t=${cacheBuster}`),
                     fetch(`./${CONFIG.GEAR_FILE}?t=${cacheBuster}`),
@@ -152,8 +150,13 @@
                 
                 if (historyRes.ok) {
                     const rawJson = await historyRes.json();
-                    this.allData = this.hydrateData(rawJson).sort((a,b) => b.date - a.date);
-                    console.log("✅ Data Hydrated Successfully. Rows:", this.allData.length);
+                    // RUN THE INGESTOR
+                    this.allData = this.processData(rawJson);
+                    
+                    // DEBUG: Validate Schema in Console
+                    if(this.allData.length > 0) {
+                        console.log("✅ Schema Verification (First Record):", this.allData[0]);
+                    }
                 } else {
                     console.error("❌ Failed to load training_log.json");
                 }
@@ -174,6 +177,7 @@
             const content = document.getElementById('content');
             if(!content) return;
             
+            // UI Updates
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             const navBtn = document.getElementById(`nav-${view}`);
             if(navBtn) navBtn.classList.add('active');
@@ -183,6 +187,7 @@
             content.classList.add('opacity-0');
             setTimeout(() => {
                 try {
+                    // Pass CLEAN data to views
                     if (view === 'metrics' && renderMetrics) content.innerHTML = renderMetrics(this.allData);
                     else if (view === 'trends' && renderTrends) {
                         const res = renderTrends(this.allData);
@@ -206,12 +211,16 @@
                     else if (view === 'zones' && renderZones) content.innerHTML = renderZones(this.planMd);
                     else if (view === 'ftp' && renderFTP) content.innerHTML = renderFTP(this.planMd);
                     else if (view === 'logbook') {
+                        // Debug View for Clean Data
                         let rows = this.allData.map(d => 
                             `<tr><td class="p-2 border-b border-slate-700 text-xs">${d.date.toLocaleDateString()}</td>
-                                 <td class="p-2 border-b border-slate-700 text-xs font-bold">${d.type}</td>
-                                 <td class="p-2 border-b border-slate-700 text-xs">${d.actualWorkout || d.plannedWorkout}</td>
-                                 <td class="p-2 border-b border-slate-700 text-xs text-right">${Math.round(d.actualDuration||d.plannedDuration)}m</td></tr>`).join('');
-                        content.innerHTML = `<div class="bg-slate-800 p-4 rounded-xl overflow-x-auto"><table class="w-full text-left text-slate-300"><thead><tr><th>Date</th><th>Type</th><th>Activity</th><th class="text-right">Dur</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+                                 <td class="p-2 border-b border-slate-700 text-xs font-bold ${d.sport === 'Run' ? 'text-pink-400' : d.sport === 'Bike' ? 'text-purple-400' : 'text-cyan-400'}">${d.sport}</td>
+                                 <td class="p-2 border-b border-slate-700 text-xs">${d.title}</td>
+                                 <td class="p-2 border-b border-slate-700 text-xs text-right">${Math.round(d.duration)}m</td>
+                                 <td class="p-2 border-b border-slate-700 text-xs text-right">${d.hr > 0 ? Math.round(d.hr) : '-'}</td>
+                                 <td class="p-2 border-b border-slate-700 text-xs text-right">${d.power > 0 ? Math.round(d.power) : '-'}</td>
+                            </tr>`).join('');
+                        content.innerHTML = `<div class="bg-slate-800 p-4 rounded-xl overflow-x-auto"><table class="w-full text-left text-slate-300"><thead><tr><th>Date</th><th>Sport</th><th>Activity</th><th class="text-right">Dur</th><th class="text-right">HR</th><th class="text-right">Pwr</th></tr></thead><tbody>${rows}</tbody></table></div>`;
                     }
                 } catch (e) {
                     console.error("Render Error:", e);
