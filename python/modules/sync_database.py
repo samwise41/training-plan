@@ -54,7 +54,6 @@ def bundle_activities(activities):
     combined = main.copy()
     
     # --- METADATA PRESERVATION ---
-    # Ensure specific fields from the main file are kept
     combined['trainingEffectLabel'] = main.get('trainingEffectLabel')
     combined['activityType'] = main.get('activityType')
     combined['sportTypeId'] = main.get('sportTypeId')
@@ -203,9 +202,10 @@ def sync():
                 "actualSport": None, "plannedWorkout": p_name,
                 "plannedDuration": plan.get('plannedDuration'), "actualWorkout": "",
                 "actualDuration": None, "notes": plan.get('notes', ''),
+                
+                # Default Fields to None
                 "distance": None, "movingTime": None, "avgPower": None, "normPower": None,
-                "avgHr": None, "tss": None, "if": None,
-                "Match Status": "Planned"
+                "avgHr": None, "tss": None, "if": None, "Match Status": "Planned"
             }
             db_data.append(new_rec)
             count_new_plan += 1
@@ -233,25 +233,32 @@ def sync():
         comp_id_str = str(composite.get('activityId'))
         comp_ids = comp_id_str.split(',')
         
-        # --- FULL METRICS EXTRACTION ---
+        # Calculate Date Day Name
+        try:
+            dt_obj = datetime.strptime(g_date, '%Y-%m-%d')
+            day_name = dt_obj.strftime('%A')
+        except:
+            day_name = "Unknown"
+
+        # --- FULL METRICS EXTRACTION (The requested list) ---
         metrics = {
             # Identity
             "id": comp_id_str,
             "date": g_date,
             "status": "COMPLETED",
-            "Match Status": "Matched", # Default, changed later if unplanned
+            "Day": day_name,
             
             # Types
             "actualSport": sport,
             "activityId": comp_id_str,
             "activityName": composite.get('activityName'),
-            "actualWorkout": composite.get('activityName'), # Duplicate for compat
+            "actualWorkout": composite.get('activityName'), 
             "activityType": composite.get('activityType'),
             "sportTypeId": composite.get('sportTypeId'),
 
             # Core Stats
-            "duration": clean_numeric(composite.get('duration')), # Seconds
-            "actualDuration": clean_numeric(composite.get('duration', 0)) / 60.0, # Minutes
+            "duration": clean_numeric(composite.get('duration')), 
+            "actualDuration": clean_numeric(composite.get('duration', 0)) / 60.0, 
             "movingTime": clean_numeric(composite.get('movingDuration')),
             "distance": clean_numeric(composite.get('distance')),
             "calories": clean_numeric(composite.get('calories')),
@@ -285,7 +292,10 @@ def sync():
             
             # Subjective
             "RPE": clean_numeric(composite.get('perceivedEffort')),
-            "Feeling": clean_numeric(composite.get('feeling'))
+            "Feeling": clean_numeric(composite.get('feeling')),
+            
+            # Default Status
+            "Match Status": "Matched"
         }
         
         # Calculations
@@ -300,6 +310,7 @@ def sync():
             if cid in existing_ids:
                 rec = existing_ids[cid]
                 rec.update(metrics)
+                rec['Day'] = day_name # Ensure day is updated
                 found_existing = True
                 break
         
