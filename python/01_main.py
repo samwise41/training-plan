@@ -24,21 +24,23 @@ def main():
 
     # STEP 2: Sync Database
     # (Merges Plan + JSON -> Master DB)
-    # Returns the DataFrame so we don't have to reload it
-    df_master = sync_database.sync()
+    # Returns the List of Records (JSON)
+    db_data = sync_database.sync()
 
     # STEP 3: Analyze Trends
     # (Generates Coach Briefing from the fresh DB)
     try:
-        # --- FIX: Use the correct module name ---
         _01_analyze_trends.main()
     except Exception as e:
         print(f"⚠️ Analysis Warning: {e}")
 
     # STEP 4: Update Visuals
     # (Updates checkmarks in the Markdown Plan)
-    if df_master is not None and not df_master.empty:
-        update_visuals.update_weekly_plan(df_master)
+    # FIX: Check if list has items (db_data is a list, not a DataFrame)
+    if db_data and len(db_data) > 0:
+        update_visuals.update_weekly_plan(db_data)
+    else:
+        print("⚠️ No database data returned; skipping visual update.")
 
     # STEP 5: Save to GitHub
     try:
