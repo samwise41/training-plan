@@ -1,16 +1,52 @@
 // js/app.js
 
 (async function initApp() {
-    console.log("🚀 Booting App (Fixed Navigation)...");
+    console.log("🚀 Booting App (Fixed Navigation Priority)...");
 
     const cacheBuster = Date.now();
     
+    // --- 1. SETUP NAVIGATION IMMEDIATELY ---
+    // We do this first so tabs work even if data fails later
+    function setupEventListeners() {
+        const navMap = {
+            'nav-dashboard': 'dashboard', 
+            'nav-trends': 'trends', 
+            'nav-logbook': 'logbook',
+            'nav-roadmap': 'roadmap', 
+            'nav-gear': 'gear', 
+            'nav-zones': 'zones', 
+            'nav-ftp': 'ftp', 
+            'nav-readiness': 'readiness', 
+            'nav-metrics': 'metrics'
+        };
+        
+        Object.keys(navMap).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.onclick = (e) => {
+                    e.preventDefault();
+                    App.navigate(navMap[id]);
+                };
+            }
+        });
+
+        // Mobile Sidebar
+        const btnOpen = document.getElementById('btn-sidebar-open');
+        const btnClose = document.getElementById('btn-sidebar-close');
+        const overlay = document.getElementById('sidebar-overlay');
+        
+        if (btnOpen) btnOpen.onclick = () => App.toggleSidebar();
+        if (btnClose) btnClose.onclick = () => App.toggleSidebar();
+        if (overlay) overlay.onclick = () => App.toggleSidebar();
+    }
+
+    // --- 2. SAFE IMPORT HELPER ---
     const safeImport = async (path) => {
         try { return await import(`${path}?t=${cacheBuster}`); } 
-        catch (e) { console.error(`Failed to load ${path}`, e); return null; }
+        catch (e) { console.error(`⚠️ Failed to load ${path}`, e); return null; }
     };
 
-    // --- 1. IMPORT MODULES ---
+    // --- 3. LOAD MODULES ---
     const trendsMod = await safeImport('./views/trends/index.js');
     const gearMod = await safeImport('./views/gear/index.js');
     const zonesMod = await safeImport('./views/zones/index.js');
@@ -43,7 +79,7 @@
         gearMd: "",
         allData: [], 
 
-        // --- 2. HYDRATION ---
+        // --- 4. HYDRATION (Safe & Strict) ---
         hydrateData(jsonArray) {
             if (!Array.isArray(jsonArray)) return [];
             
@@ -51,16 +87,19 @@
                 const dateObj = new Date(`${item.date}T12:00:00`); 
                 const getNum = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v) : 0;
                 
+                // Consolidate Cadence
                 const cad = getNum(item.averageBikingCadenceInRevPerMinute) || getNum(item.averageRunningCadenceInStepsPerMinute);
 
                 return {
-                    ...item, 
+                    ...item, // PRESERVE ALL ORIGINAL KEYS (plannedWorkout, actualWorkout, etc.)
+                    
+                    // Core
                     date: dateObj,
                     id: item.id,
                     dayName: item.Day || item.day || "Unknown",
                     type: item.actualSport || item.plannedSport || 'Other',
                     
-                    // Chart Metrics
+                    // Chart Metrics (Mapped Safely)
                     avgHR: getNum(item.averageHR),
                     maxHR: getNum(item.maxHR),
                     avgPower: getNum(item.avgPower),
@@ -91,13 +130,10 @@
 
         async init() {
             await this.checkSecurity();
-            
-            // Set initial active tab visually
-            const startView = window.location.hash.substring(1) || 'dashboard';
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            const initialNavBtn = document.getElementById(`nav-${startView}`);
-            if (initialNavBtn) initialNavBtn.classList.add('active');
+            setupEventListeners(); // <-- Tabs enabled immediately
 
+            const startView = window.location.hash.substring(1) || 'dashboard';
+            
             try {
                 const [planRes, gearRes, historyRes] = await Promise.all([
                     fetch(`./${CONFIG.PLAN_FILE}?t=${cacheBuster}`),
@@ -113,50 +149,15 @@
                     this.allData = this.hydrateData(rawJson).sort((a,b) => b.date - a.date);
                 }
                 
-                // --- CRITICAL RESTORATION: Setup Listeners ---
-                this.setupEventListeners();
-                
-                // Initial Render
                 this.renderView(startView);
                 window.addEventListener('hashchange', () => this.renderView(window.location.hash.substring(1)));
-                
                 this.fetchWeather();
+
             } catch (e) {
                 console.error("Init Error:", e);
-                document.getElementById('content').innerHTML = `<div class="p-8 text-center text-red-500">System Error: ${e.message}</div>`;
+                // Even if data fails, try to render the dashboard shell
+                document.getElementById('content').innerHTML = `<div class="p-8 text-center text-red-500">Error loading data: ${e.message}</div>`;
             }
-        },
-
-        // --- 3. NAVIGATION LOGIC (Restored) ---
-        setupEventListeners() {
-            const navMap = {
-                'nav-dashboard': 'dashboard', 
-                'nav-trends': 'trends', 
-                'nav-logbook': 'logbook',
-                'nav-roadmap': 'roadmap', 
-                'nav-gear': 'gear', 
-                'nav-zones': 'zones', 
-                'nav-ftp': 'ftp',
-                'nav-readiness': 'readiness', 
-                'nav-metrics': 'metrics'
-            };
-            
-            Object.keys(navMap).forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('click', () => {
-                        this.navigate(navMap[id]);
-                    });
-                }
-            });
-
-            // Mobile Sidebar Toggles
-            const btnOpen = document.getElementById('btn-sidebar-open');
-            const btnClose = document.getElementById('btn-sidebar-close');
-            const overlay = document.getElementById('sidebar-overlay');
-            if (btnOpen) btnOpen.addEventListener('click', () => this.toggleSidebar());
-            if (btnClose) btnClose.addEventListener('click', () => this.toggleSidebar());
-            if (overlay) overlay.addEventListener('click', () => this.toggleSidebar());
         },
 
         navigate(view) { 
@@ -167,21 +168,17 @@
             const content = document.getElementById('content');
             if(!content) return;
             
-            // Validate View
-            const validViews = ['dashboard', 'trends', 'logbook', 'roadmap', 'gear', 'zones', 'ftp', 'readiness', 'metrics'];
-            if (!validViews.includes(view)) view = 'dashboard';
-
-            // Update Header Title
-            const titleEl = document.getElementById('header-title-dynamic');
-            if(titleEl) titleEl.innerText = view.charAt(0).toUpperCase() + view.slice(1);
-
-            // Update Active State
+            // Highlight Tab
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             const navBtn = document.getElementById(`nav-${view}`);
             if(navBtn) navBtn.classList.add('active');
 
-            // Render
+            // Header Title
+            const titleEl = document.getElementById('header-title-dynamic');
+            if(titleEl) titleEl.innerText = view.charAt(0).toUpperCase() + view.slice(1);
+
             content.classList.add('opacity-0');
+            
             setTimeout(() => {
                 try {
                     if (view === 'metrics' && renderMetrics) content.innerHTML = renderMetrics(this.allData);
@@ -219,12 +216,11 @@
                     content.innerHTML = `<p class="text-red-400">Error loading view: ${e.message}</p>`;
                 }
                 content.classList.remove('opacity-0');
-                if (window.innerWidth < 1024) this.toggleSidebar(false); // Close mobile menu on nav
+                if (window.innerWidth < 1024) this.toggleSidebar(false);
             }, 150);
         },
 
         async checkSecurity() {
-            // (Standard security check - simplified for brevity)
             if (document.cookie.includes('dashboard_access=true')) {
                 const curtain = document.getElementById('security-curtain');
                 if(curtain) curtain.classList.add('hidden');
@@ -246,35 +242,22 @@
         },
         
         getStatsBar() {
-            return `
-                <div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                    <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex flex-col justify-center shadow-lg">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase">Current Phase</p>
-                        <div class="flex flex-col"><span class="text-lg font-bold text-blue-500" id="stat-phase">--</span><span class="text-sm text-white" id="stat-week">--</span></div>
-                    </div>
-                    <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex justify-between items-center shadow-lg">
-                        <div>
-                            <p class="text-[10px] font-bold text-slate-500 uppercase">Next Event</p>
-                            <div id="stat-event"><p class="text-lg font-bold text-white" id="stat-event-name">--</p><span id="stat-event-date" class="text-slate-400 text-xs">--</span></div>
-                        </div>
-                        <div class="text-right pl-4 border-l border-slate-700/50" id="stat-readiness-box" style="display:none;">
-                            <span id="stat-readiness-val" class="text-3xl font-black text-slate-200">--%</span>
-                            <div class="text-[9px] font-bold text-slate-500 uppercase mt-1">Readiness</div>
-                        </div>
-                    </div>
-                </div>`;
+            return `<div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex flex-col justify-center shadow-lg">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Phase</p>
+                    <div class="flex flex-col"><span class="text-lg font-bold text-blue-500" id="stat-phase">--</span><span class="text-sm text-white" id="stat-week">--</span></div>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl"><div id="stat-event"><p class="text-lg font-bold text-white" id="stat-event-name">--</p><span id="stat-event-date" class="text-slate-400 text-xs">--</span></div></div>
+            </div>`;
         },
         
         updateStats() {
             if(!this.planMd) return;
-            const lines = this.planMd.split('\n');
             const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(.*?)\s+-\s+(.*)/i);
             if(statusMatch) {
                 document.getElementById('stat-phase').innerText = statusMatch[1].trim();
                 document.getElementById('stat-week').innerText = statusMatch[2].trim();
             }
-            // Logic for Event Date & Readiness
-            // (Keeping it lightweight for reliability)
         }
     };
 
