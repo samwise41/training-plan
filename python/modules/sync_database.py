@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import ast
 import sys
 from datetime import datetime, timedelta
 
@@ -49,36 +48,52 @@ def get_current_ftp():
 
 def bundle_activities(activities):
     if not activities: return None
+    # Sort by duration to find the "Main" activity
     activities.sort(key=lambda x: x.get('duration', 0) or 0, reverse=True)
     main = activities[0]
     combined = main.copy()
     
-    # Preserve key metadata from the main file
+    # --- METADATA PRESERVATION ---
+    # Ensure specific fields from the main file are kept
     combined['trainingEffectLabel'] = main.get('trainingEffectLabel')
+    combined['activityType'] = main.get('activityType')
+    combined['sportTypeId'] = main.get('sportTypeId')
+    combined['vO2MaxValue'] = main.get('vO2MaxValue')
     
+    # --- SUMMATIONS ---
     combined['duration'] = sum((a.get('duration') or 0) for a in activities)
     combined['distance'] = sum((a.get('distance') or 0) for a in activities)
     combined['calories'] = sum((a.get('calories') or 0) for a in activities)
     combined['elevationGain'] = sum((a.get('elevationGain') or 0) for a in activities)
     
+    # --- WEIGHTED AVERAGES ---
     total_dur = combined['duration']
     if total_dur > 0:
         def weighted(key):
             val = sum((a.get(key) or 0) * (a.get('duration') or 0) for a in activities)
             return val / total_dur
+        
         combined['averageHR'] = weighted('averageHR')
         combined['avgPower'] = weighted('avgPower')
         combined['normPower'] = weighted('normPower')
-    
+        combined['averageSpeed'] = weighted('averageSpeed')
+        combined['averageBikingCadenceInRevPerMinute'] = weighted('averageBikingCadenceInRevPerMinute')
+        combined['averageRunningCadenceInStepsPerMinute'] = weighted('averageRunningCadenceInStepsPerMinute')
+        combined['avgStrideLength'] = weighted('avgStrideLength')
+        combined['avgVerticalOscillation'] = weighted('avgVerticalOscillation')
+        combined['avgGroundContactTime'] = weighted('avgGroundContactTime')
+
+    # --- MAXIMA ---
     combined['maxHR'] = max((a.get('maxHR') or 0) for a in activities)
     combined['maxPower'] = max((a.get('maxPower') or 0) for a in activities)
+    combined['maxSpeed'] = max((a.get('maxSpeed') or 0) for a in activities)
     
+    # --- IDS ---
     all_ids = [str(a.get('activityId')) for a in activities if a.get('activityId')]
     combined['activityId'] = ",".join(all_ids)
     
     if len(activities) > 1:
         base_name = main.get('activityName', 'Activity')
-        sport = normalize_sport(base_name, main.get('activityType', {}).get('typeKey'))
         combined['activityName'] = f"{base_name} (+{len(activities)-1})"
         
     return combined
@@ -172,7 +187,7 @@ def sync():
         if p_date < cutoff_date or p_date > today_str: continue 
         if not p_name or "rest day" in p_name.lower(): continue
         
-        # --- SUNDAY FILTER: Skip unless it's a real workout ---
+        # Skip Sundays unless explicitly planned
         if plan.get('day') == 'Sunday' and not plan.get('plannedSport'):
             continue
         
@@ -189,7 +204,8 @@ def sync():
                 "plannedDuration": plan.get('plannedDuration'), "actualWorkout": "",
                 "actualDuration": None, "notes": plan.get('notes', ''),
                 "distance": None, "movingTime": None, "avgPower": None, "normPower": None,
-                "avgHr": None, "tss": None, "if": None
+                "avgHr": None, "tss": None, "if": None,
+                "Match Status": "Planned"
             }
             db_data.append(new_rec)
             count_new_plan += 1
@@ -217,35 +233,73 @@ def sync():
         comp_id_str = str(composite.get('activityId'))
         comp_ids = comp_id_str.split(',')
         
+        # --- FULL METRICS EXTRACTION ---
         metrics = {
+            # Identity
             "id": comp_id_str,
+            "date": g_date,
+            "status": "COMPLETED",
+            "Match Status": "Matched", # Default, changed later if unplanned
+            
+            # Types
             "actualSport": sport,
-            "actualWorkout": composite.get('activityName'),
-            "actualDuration": clean_numeric(composite.get('duration', 0)) / 60.0,
-            "movingTime": clean_numeric(composite.get('duration')),
+            "activityId": comp_id_str,
+            "activityName": composite.get('activityName'),
+            "actualWorkout": composite.get('activityName'), # Duplicate for compat
+            "activityType": composite.get('activityType'),
+            "sportTypeId": composite.get('sportTypeId'),
+
+            # Core Stats
+            "duration": clean_numeric(composite.get('duration')), # Seconds
+            "actualDuration": clean_numeric(composite.get('duration', 0)) / 60.0, # Minutes
+            "movingTime": clean_numeric(composite.get('movingDuration')),
             "distance": clean_numeric(composite.get('distance')),
-            "avgHr": clean_numeric(composite.get('averageHR')),
-            "maxHr": clean_numeric(composite.get('maxHR')),
-            "avgPower": clean_numeric(composite.get('avgPower')),
-            "normPower": clean_numeric(composite.get('normPower')),
             "calories": clean_numeric(composite.get('calories')),
-            "elevation": clean_numeric(composite.get('elevationGain')),
-            "rpe": clean_numeric(composite.get('perceivedEffort')),
-            "feeling": clean_numeric(composite.get('feeling')),
-            # --- NEW: Capture Training Effect Label ---
-            "trainingEffectLabel": composite.get('trainingEffectLabel')
+            "elevationGain": clean_numeric(composite.get('elevationGain')),
+
+            # Heart Rate
+            "averageHR": clean_numeric(composite.get('averageHR')),
+            "maxHR": clean_numeric(composite.get('maxHR')),
+            
+            # Power
+            "avgPower": clean_numeric(composite.get('avgPower')),
+            "maxPower": clean_numeric(composite.get('maxPower')),
+            "normPower": clean_numeric(composite.get('normPower')),
+            
+            # Speed & Cadence
+            "averageSpeed": clean_numeric(composite.get('averageSpeed')),
+            "maxSpeed": clean_numeric(composite.get('maxSpeed')),
+            "averageBikingCadenceInRevPerMinute": clean_numeric(composite.get('averageBikingCadenceInRevPerMinute')),
+            "averageRunningCadenceInStepsPerMinute": clean_numeric(composite.get('averageRunningCadenceInStepsPerMinute')),
+
+            # Running Dynamics
+            "avgStrideLength": clean_numeric(composite.get('avgStrideLength')),
+            "avgVerticalOscillation": clean_numeric(composite.get('avgVerticalOscillation')),
+            "avgGroundContactTime": clean_numeric(composite.get('avgGroundContactTime')),
+            
+            # Physiology
+            "aerobicTrainingEffect": clean_numeric(composite.get('aerobicTrainingEffect')),
+            "anaerobicTrainingEffect": clean_numeric(composite.get('anaerobicTrainingEffect')),
+            "trainingEffectLabel": composite.get('trainingEffectLabel'),
+            "vO2MaxValue": clean_numeric(composite.get('vO2MaxValue')),
+            
+            # Subjective
+            "RPE": clean_numeric(composite.get('perceivedEffort')),
+            "Feeling": clean_numeric(composite.get('feeling'))
         }
+        
+        # Calculations
         if metrics['normPower'] and metrics['movingTime']:
             i_factor = metrics['normPower'] / current_ftp
-            metrics['if'] = round(i_factor, 2)
-            metrics['tss'] = round((metrics['movingTime'] * metrics['normPower'] * i_factor) / (current_ftp * 3600) * 100, 1)
+            metrics['intensityFactor'] = round(i_factor, 2)
+            metrics['trainingStressScore'] = round((metrics['movingTime'] * metrics['normPower'] * i_factor) / (current_ftp * 3600) * 100, 1)
 
+        # Logic: Link to Existing or Create New
         found_existing = False
         for cid in comp_ids:
             if cid in existing_ids:
                 rec = existing_ids[cid]
                 rec.update(metrics)
-                rec['status'] = "COMPLETED"
                 found_existing = True
                 break
         
@@ -257,7 +311,6 @@ def sync():
             if rec.get('date') == g_date and (rec_status == 'PENDING' or rec_status == 'PLANNED'):
                 if rec.get('plannedSport') == sport:
                     rec.update(metrics)
-                    rec['status'] = "COMPLETED"
                     for cid in comp_ids: existing_ids[cid] = rec
                     count_linked += 1
                     matched = True
@@ -265,9 +318,12 @@ def sync():
         
         if not matched:
             new_unp = {
-                "date": g_date, "status": "COMPLETED",
-                "plannedWorkout": "", "plannedDuration": None,
-                "plannedSport": None, "notes": "Unplanned Session"
+                "date": g_date, 
+                "plannedWorkout": "", 
+                "plannedDuration": None,
+                "plannedSport": None, 
+                "notes": "Unplanned Session",
+                "Match Status": "Unplanned"
             }
             new_unp.update(metrics)
             db_data.append(new_unp)
