@@ -1,81 +1,163 @@
 // js/views/metrics/charts.js
 import { METRIC_DEFINITIONS } from './definitions.js';
-import { calculateTrend, getTrendIcon } from './utils.js';
-import { extractMetricData } from './table.js';
+import { calculateTrend, getTrendIcon, checkSport } from './utils.js';
 
-const METRIC_FORMULAS = {
-    'subjective_bike': '(Avg Power / RPE)',
-    'subjective_run': '(Avg Speed / RPE)',
-    'subjective_swim': '(Avg Speed / RPE)',
-    'endurance': '(Norm Power / Avg HR)',
-    'strength': '(Torque / Output)',
-    'run': '(Avg Power / Avg Speed)',
-    'swim': '(Avg Speed / Stroke Rate)',
-    'mechanical': '(Vert Osc / GCT)'
-};
+// --- DATA EXTRACTION ---
+// This aligns strictly with your new JSON schema
 
-// --- Helper to calculate Subjective Efficiency per Sport ---
-const calculateSubjectiveEfficiency = (allData, sportMode) => {
-    return allData
-        .map(d => {
-            const rpe = parseFloat(d.RPE);
-            if (!rpe || rpe <= 0) return null;
+const extractChartData = (allData, key) => {
+    // Helper: Must be a number > 0 to be charted
+    const valid = (val) => typeof val === 'number' && val > 0;
 
-            let val = 0;
-            let breakdown = "";
-            let match = false;
-
-            // BIKE (Power / RPE)
-            if (sportMode === 'bike') {
-                const isBike = d.sportTypeId == '2' || (d.activityType && d.activityType.includes('cycl')) || (d.actualType === 'Bike');
-                const pwr = parseFloat(d.avgPower);
-                if (isBike && pwr > 0) {
-                    val = pwr / rpe;
-                    breakdown = `${Math.round(pwr)}W / ${rpe} RPE`;
-                    match = true;
-                }
-            }
-            // RUN (Speed / RPE)
-            else if (sportMode === 'run') {
-                const isRun = d.sportTypeId == '1' || (d.activityType && d.activityType.includes('run')) || (d.actualType === 'Run');
-                const spd = parseFloat(d.avgSpeed); 
-                if (isRun && spd > 0) {
-                    val = spd / rpe;
-                    breakdown = `${spd.toFixed(2)} m/s / ${rpe} RPE`;
-                    match = true;
-                }
-            }
-            // SWIM (Speed / RPE)
-            else if (sportMode === 'swim') {
-                const isSwim = d.sportTypeId == '5' || (d.activityType && d.activityType.includes('swim')) || (d.actualType === 'Swim');
-                const spd = parseFloat(d.avgSpeed);
-                if (isSwim && spd > 0) {
-                    val = spd / rpe;
-                    breakdown = `${spd.toFixed(2)} m/s / ${rpe} RPE`;
-                    match = true;
-                }
-            }
-
-            if (match && val > 0) {
-                return {
+    switch(key) {
+        // --- CYCLING ---
+        case 'endurance': // Aerobic Efficiency (NP / HR)
+            return allData.filter(d => checkSport(d, 'BIKE') && valid(d.normPower) && valid(d.avgHR))
+                .map(d => ({
                     date: d.date,
                     dateStr: d.date.toISOString().split('T')[0],
-                    val: val,
-                    name: d.actualName || d.activityName || 'Activity',
-                    breakdown: breakdown
-                };
-            }
-            return null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.date - b.date);
+                    val: d.normPower / d.avgHR,
+                    name: d.actualName,
+                    breakdown: `${Math.round(d.normPower)}w / ${Math.round(d.avgHR)}bpm`
+                }));
+
+        case 'strength': // Torque Proxy (Power / Cadence)
+            return allData.filter(d => checkSport(d, 'BIKE') && valid(d.avgPower) && valid(d.avgCadence))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: d.avgPower / d.avgCadence,
+                    name: d.actualName,
+                    breakdown: `${Math.round(d.avgPower)}w / ${Math.round(d.avgCadence)}rpm`
+                }));
+
+        case 'subjective_bike': // Efficiency (Power / RPE)
+            return allData.filter(d => checkSport(d, 'BIKE') && valid(d.avgPower) && valid(d.RPE))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: d.avgPower / d.RPE,
+                    name: d.actualName,
+                    breakdown: `${Math.round(d.avgPower)}w / ${d.RPE} RPE`
+                }));
+
+        // --- RUNNING ---
+        case 'run': // Running Efficiency (Speed / HR)
+            return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgSpeed) && valid(d.avgHR))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: (d.avgSpeed * 60) / d.avgHR, // Meters per min per beat
+                    name: d.actualName,
+                    breakdown: `${(1000/(d.avgSpeed*60)).toFixed(2)} / ${Math.round(d.avgHR)}bpm`
+                }));
+
+        case 'subjective_run': // Efficiency (Speed / RPE)
+            return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgSpeed) && valid(d.RPE))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: d.avgSpeed / d.RPE,
+                    name: d.actualName,
+                    breakdown: `${d.avgSpeed.toFixed(2)}m/s / ${d.RPE} RPE`
+                }));
+
+        case 'mechanical': // Stiffness (Speed / Power) - Requires Running Power
+            return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgSpeed) && valid(d.avgPower))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: (d.avgSpeed * 100) / d.avgPower,
+                    name: d.actualName,
+                    breakdown: `${d.avgSpeed.toFixed(1)}m/s / ${Math.round(d.avgPower)}w`
+                }));
+
+        case 'gct': // Ground Contact Time
+            return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgGroundContactTime))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: d.avgGroundContactTime,
+                    name: d.actualName,
+                    breakdown: `${Math.round(d.avgGroundContactTime)}ms`
+                }));
+
+        case 'vert': // Vertical Oscillation
+            return allData.filter(d => checkSport(d, 'RUN') && valid(d.avgVerticalOscillation))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: d.avgVerticalOscillation,
+                    name: d.actualName,
+                    breakdown: `${d.avgVerticalOscillation.toFixed(1)}cm`
+                }));
+
+        // --- SWIMMING ---
+        case 'swim': // Swim Efficiency (Speed / HR)
+            return allData.filter(d => checkSport(d, 'SWIM') && valid(d.avgSpeed) && valid(d.avgHR))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: (d.avgSpeed * 60) / d.avgHR,
+                    name: d.actualName,
+                    breakdown: `${(d.avgSpeed*60).toFixed(1)}m/min / ${Math.round(d.avgHR)}bpm`
+                }));
+
+        case 'subjective_swim': // Efficiency (Speed / RPE)
+            return allData.filter(d => checkSport(d, 'SWIM') && valid(d.avgSpeed) && valid(d.RPE))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: d.avgSpeed / d.RPE,
+                    name: d.actualName,
+                    breakdown: `${d.avgSpeed.toFixed(1)}m/s / ${d.RPE} RPE`
+                }));
+
+        // --- PHYSIOLOGY (General) ---
+        case 'vo2max':
+            return allData.filter(d => valid(d.vO2MaxValue))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: d.vO2MaxValue,
+                    name: "VO2 Max",
+                    breakdown: `Score: ${d.vO2MaxValue}`
+                }));
+
+        case 'anaerobic':
+            return allData.filter(d => valid(d.anaerobicTrainingEffect))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: d.anaerobicTrainingEffect,
+                    name: d.actualName,
+                    breakdown: `TE: ${d.anaerobicTrainingEffect}`
+                }));
+
+        case 'tss':
+            // TSS needs special weekly aggregation, handled in utils usually, 
+            // but for charts we can just plot daily TSS for now or reuse the agg logic if available.
+            return allData.filter(d => valid(d.trainingStressScore))
+                .map(d => ({
+                    date: d.date,
+                    dateStr: d.date.toISOString().split('T')[0],
+                    val: d.trainingStressScore,
+                    name: d.actualName,
+                    breakdown: `${Math.round(d.trainingStressScore)} TSS`
+                }));
+
+        default:
+            return [];
+    }
 };
+
+// --- CHART BUILDER (Standardized) ---
 
 const buildMetricChart = (displayData, fullData, key) => {
     const def = METRIC_DEFINITIONS[key];
     if (!def) return `<div class="p-4 text-red-500 text-xs">Error: Definition missing for ${key}</div>`;
 
-    const unitLabel = def.rangeInfo.split(' ').pop(); 
+    const unitLabel = def.rangeInfo ? def.rangeInfo.split(' ').pop() : '';
     const color = def.colorVar;
 
     const now = new Date();
@@ -103,12 +185,10 @@ const buildMetricChart = (displayData, fullData, key) => {
             </div>
         </div>`;
 
-    const formula = METRIC_FORMULAS[key] || '';
     const titleHtml = `
         <h3 class="text-xs font-bold text-white flex items-center gap-2">
             <i class="fa-solid ${def.icon}" style="color: ${color}"></i> 
             ${def.title}
-            ${formula ? `<span class="text-[10px] font-normal opacity-50 ml-1 font-mono">${formula}</span>` : ''}
         </h3>
     `;
 
@@ -117,91 +197,62 @@ const buildMetricChart = (displayData, fullData, key) => {
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                 ${titleHtml}
             </div>
-            <div class="flex-1 flex items-center justify-center"><p class="text-xs text-slate-500 italic">No data available.</p></div>
+            <div class="flex-1 flex items-center justify-center"><p class="text-xs text-slate-500 italic">Not enough data to chart.</p></div>
         </div>`;
     }
 
+    // Chart Dimensions
     const width = 800, height = 150;
     const pad = { t: 20, b: 30, l: 50, r: 20 };
+    
+    // Scaling
     const getX = (d, i) => pad.l + (i / (displayData.length - 1)) * (width - pad.l - pad.r);
     
-    const dataValues = displayData.map(d => d.val);
-    let minV = Math.min(...dataValues);
-    let maxV = Math.max(...dataValues);
+    const vals = displayData.map(d => d.val);
+    let minV = Math.min(...vals);
+    let maxV = Math.max(...vals);
 
-    if (def.refMin !== undefined) minV = Math.min(minV, def.refMin);
-    if (def.refMax !== undefined) maxV = Math.max(maxV, def.refMax);
-
+    // Padding for Y-Axis
     const range = maxV - minV;
-    const buf = range * 0.15 || (maxV * 0.1); 
-    const domainMin = Math.max(0, minV - buf);
-    const domainMax = maxV + buf;
+    const buf = range * 0.1 || (maxV * 0.05) || 1;
+    const dMin = Math.max(0, minV - buf);
+    const dMax = maxV + buf;
 
-    const getY = (val) => height - pad.b - ((val - domainMin) / (domainMax - domainMin)) * (height - pad.t - pad.b);
+    const getY = (v) => height - pad.b - ((v - dMin) / (dMax - dMin)) * (height - pad.t - pad.b);
 
-    let refLinesHtml = '';
-    if (def.refMin !== undefined && def.refMax !== undefined) {
-        const yMin = getY(def.refMin);
-        const yMax = getY(def.refMax);
-        const colorMax = def.invertRanges ? '#ef4444' : '#10b981';
-        const colorMin = def.invertRanges ? '#10b981' : '#ef4444';
-
-        if (yMin >= pad.t && yMin <= height - pad.b) refLinesHtml += `<line x1="${pad.l}" y1="${yMin}" x2="${width - pad.r}" y2="${yMin}" stroke="${colorMin}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />`;
-        if (yMax >= pad.t && yMax <= height - pad.b) refLinesHtml += `<line x1="${pad.l}" y1="${yMax}" x2="${width - pad.r}" y2="${yMax}" stroke="${colorMax}" stroke-width="1" stroke-dasharray="4,4" opacity="0.6" />`;
-    }
-
+    // SVG Elements
     const yAxisLine = `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${height - pad.b}" stroke="#475569" stroke-width="1" />`;
-    const yMid = (domainMin + domainMax) / 2;
-    const axisLabelsHtml = `
-        <text x="${pad.l - 6}" y="${getY(domainMax) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMax.toFixed(2)}</text>
-        <text x="${pad.l - 6}" y="${getY(yMid) + 4}" text-anchor="end" font-size="9" fill="#64748b">${yMid.toFixed(2)}</text>
-        <text x="${pad.l - 6}" y="${getY(domainMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${domainMin.toFixed(2)}</text>
+    
+    // Y-Axis Labels (Max, Mid, Min)
+    const yMid = (dMin + dMax) / 2;
+    const axisLabels = `
+        <text x="${pad.l - 6}" y="${getY(dMax) + 4}" text-anchor="end" font-size="9" fill="#64748b">${dMax.toFixed(1)}</text>
+        <text x="${pad.l - 6}" y="${getY(yMid) + 4}" text-anchor="end" font-size="9" fill="#64748b">${yMid.toFixed(1)}</text>
+        <text x="${pad.l - 6}" y="${getY(dMin) + 4}" text-anchor="end" font-size="9" fill="#64748b">${dMin.toFixed(1)}</text>
     `;
 
-    // X-Axis Date Labels
-    let xAxisLabelsHtml = '';
-    if (displayData.length > 1) {
-        const targetCount = 5; 
-        const step = (displayData.length - 1) / (targetCount - 1);
-        const indices = new Set();
-        
-        for (let j = 0; j < targetCount; j++) {
-            indices.add(Math.round(j * step));
-        }
-        
-        indices.forEach(index => {
-            if (index < displayData.length) {
-                const d = displayData[index];
-                const xPos = getX(d, index);
-                const dateObj = new Date(d.date);
-                const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                
-                let anchor = 'middle';
-                if (index === 0) anchor = 'start';
-                if (index === displayData.length - 1) anchor = 'end';
-                
-                xAxisLabelsHtml += `<text x="${xPos}" y="${height - 5}" text-anchor="${anchor}" font-size="9" fill="#64748b">${label}</text>`;
-            }
-        });
-    }
+    // Trend Line
+    const trend = calculateTrend(displayData);
+    const trendLine = trend ? 
+        `<line x1="${getX(null,0)}" y1="${getY(trend.startVal)}" x2="${getX(null,displayData.length-1)}" y2="${getY(trend.endVal)}" stroke="${color}" stroke-width="2" stroke-dasharray="4,4" opacity="0.4" />` 
+        : '';
 
-    const chartTrend = calculateTrend(displayData);
-    let trendHtml = chartTrend ? `<line x1="${getX(null, 0)}" y1="${getY(chartTrend.startVal)}" x2="${getX(null, displayData.length - 1)}" y2="${getY(chartTrend.endVal)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.5" />` : '';
-    
+    // Data Line & Points
     let pathD = `M ${getX(displayData[0], 0)} ${getY(displayData[0].val)}`;
-    let pointsHtml = '';
+    let points = '';
+    
     displayData.forEach((d, i) => {
-        const x = getX(d, i), y = getY(d.val);
+        const x = getX(d, i);
+        const y = getY(d.val);
         pathD += ` L ${x} ${y}`;
-        pointsHtml += `<circle cx="${x}" cy="${y}" r="3.5" fill="#0f172a" stroke="${color}" stroke-width="2" class="cursor-pointer hover:stroke-white transition-all" onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown || ""}', '${color}')"></circle>`;
+        points += `<circle cx="${x}" cy="${y}" r="3" fill="#0f172a" stroke="${color}" stroke-width="2" class="cursor-pointer hover:stroke-white transition-all" 
+            onclick="window.showMetricTooltip(event, '${d.dateStr}', '${d.name.replace(/'/g, "")}', '${d.val.toFixed(2)}', '${unitLabel}', '${d.breakdown}', '${color}')" />`;
     });
 
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-4 h-full flex flex-col hover:border-slate-600 transition-colors">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <div class="flex items-center gap-2">
-                    ${titleHtml}
-                </div>
+                <div class="flex items-center gap-2">${titleHtml}</div>
                 <div class="flex items-center gap-3">
                     ${indicatorsHtml}
                     <div class="cursor-pointer text-slate-500 hover:text-white transition-colors p-1" onclick="window.showAnalysisTooltip(event, '${key}')">
@@ -212,59 +263,61 @@ const buildMetricChart = (displayData, fullData, key) => {
             <div class="flex-1 w-full h-[120px]">
                 <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible">
                     ${yAxisLine}
-                    ${axisLabelsHtml}
-                    ${xAxisLabelsHtml}
-                    ${refLinesHtml}
-                    ${trendHtml}
-                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9" />
-                    ${pointsHtml}
+                    ${axisLabels}
+                    ${trendLine}
+                    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.8" />
+                    ${points}
                 </svg>
             </div>
         </div>
     `;
 };
 
+// --- MAIN UPDATE FUNCTION ---
+
 export const updateCharts = (allData, timeRange) => {
     if (!allData || allData.length === 0) return;
     
+    // Determine Cutoff Date
     const cutoff = new Date();
     if (timeRange === '30d') cutoff.setDate(cutoff.getDate() - 30);
     else if (timeRange === '90d') cutoff.setDate(cutoff.getDate() - 90);
     else if (timeRange === '6m') cutoff.setMonth(cutoff.getMonth() - 6);
     else if (timeRange === '1y') cutoff.setFullYear(cutoff.getFullYear() - 1);
     
-    const render = (id, key) => {
-        const el = document.getElementById(id);
+    // Helper to Render One Chart
+    const render = (containerId, metricKey) => {
+        const el = document.getElementById(containerId);
         if (el) {
-            let full;
-            if (key === 'subjective_bike') full = calculateSubjectiveEfficiency(allData, 'bike');
-            else if (key === 'subjective_run') full = calculateSubjectiveEfficiency(allData, 'run');
-            else if (key === 'subjective_swim') full = calculateSubjectiveEfficiency(allData, 'swim');
-            else full = extractMetricData(allData, key).sort((a,b) => a.date - b.date);
-            
-            const display = full.filter(d => d.date >= cutoff);
-            el.innerHTML = buildMetricChart(display, full, key);
+            const fullSet = extractChartData(allData, metricKey).sort((a,b) => new Date(a.date) - new Date(b.date));
+            const displaySet = fullSet.filter(d => d.date >= cutoff);
+            el.innerHTML = buildMetricChart(displaySet, fullSet, metricKey);
         }
     };
 
-    // Render grouped charts
+    // --- EXECUTE RENDER ---
+    // General
     render('metric-chart-vo2max', 'vo2max');
     render('metric-chart-tss', 'tss');
     render('metric-chart-anaerobic', 'anaerobic');
 
+    // Cycling
     render('metric-chart-subjective_bike', 'subjective_bike');
     render('metric-chart-endurance', 'endurance');
     render('metric-chart-strength', 'strength');
 
+    // Running
     render('metric-chart-subjective_run', 'subjective_run');
     render('metric-chart-run', 'run');
     render('metric-chart-mechanical', 'mechanical');
     render('metric-chart-gct', 'gct');
     render('metric-chart-vert', 'vert');
 
+    // Swimming
     render('metric-chart-subjective_swim', 'subjective_swim');
     render('metric-chart-swim', 'swim');
 
+    // Update Button State
     ['30d', '90d', '6m', '1y'].forEach(range => {
         const btn = document.getElementById(`btn-metric-${range}`);
         if(btn) {
