@@ -1,12 +1,11 @@
 // js/app.js
 
 (async function initApp() {
-    console.log("🚀 Booting App (Adapter Mode: Active)...");
+    console.log("🚀 Booting App (Aggressive Fix Mode)...");
 
     const cacheBuster = Date.now();
     
-    // --- 1. NAVIGATION SETUP (Priority 1) ---
-    // Ensures tabs are clickable immediately, even if data loads slowly.
+    // --- 1. SETUP NAVIGATION ---
     function setupEventListeners() {
         const navMap = {
             'nav-dashboard': 'dashboard', 'nav-trends': 'trends', 'nav-logbook': 'logbook',
@@ -58,66 +57,56 @@
     const App = {
         planMd: "", gearMd: "", allData: [], 
 
-        // --- 3. THE ADAPTER (HYDRATION) ---
-        // This function translates "New Database Format" -> "Legacy Chart Format"
+        // --- 3. THE "NUCLEAR" ADAPTER ---
         hydrateData(jsonArray) {
             if (!Array.isArray(jsonArray)) return [];
+            console.log("💧 Hydrating Data: Processing " + jsonArray.length + " records...");
             
             return jsonArray.map(item => {
+                // 1. REMOVE the problem field entirely.
+                // We strip 'activityType' out so it cannot accidentally be spread back in.
+                const { activityType, ...cleanItem } = item;
+
+                // 2. Prepare Safe Values
                 const dateObj = new Date(`${item.date}T12:00:00`); 
                 const getNum = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v) : 0;
-                
-                // Consolidate Cadence fields into one
                 const cad = getNum(item.averageBikingCadenceInRevPerMinute) || getNum(item.averageRunningCadenceInStepsPerMinute);
 
-                // --- FIX A: FLATTEN ACTIVITY TYPE ---
-                // Prevents "d.activityType.includes is not a function" crash.
-                // We extract the string "cycling" from the object, or default to empty string.
-                let flatActivityType = "";
-                if (item.activityType) {
-                    if (typeof item.activityType === 'string') {
-                        flatActivityType = item.activityType;
-                    } else if (item.activityType.typeKey) {
-                        flatActivityType = item.activityType.typeKey; 
-                    }
-                }
-
-                // --- FIX B: INJECT LEGACY SPORT IDs ---
-                // definitions.js filters data by these exact IDs:
-                // Run=1, Bike=2, Swim=5. We force them here based on the name.
+                // 3. Force Sport Identity
                 let safeActualSport = item.actualSport || "Other";
-                let safeSportId = item.sportTypeId; 
+                let safeSportId = 99;
 
                 if (safeActualSport.includes('Bike') || safeActualSport.includes('Cycl')) {
                     safeActualSport = 'Bike';
-                    safeSportId = 2; // Force ID 2
+                    safeSportId = 2; // Matches definitions.js ID for Bike
                 } else if (safeActualSport.includes('Run')) {
                     safeActualSport = 'Run';
-                    safeSportId = 1; // Force ID 1
+                    safeSportId = 1; // Matches definitions.js ID for Run
                 } else if (safeActualSport.includes('Swim')) {
                     safeActualSport = 'Swim';
-                    safeSportId = 5; // Force ID 5
+                    safeSportId = 5; // Matches definitions.js ID for Swim
                 }
 
                 return {
-                    ...item, 
+                    ...cleanItem, // Spread the clean item (WITHOUT activityType)
                     
                     // Core Identity
                     date: dateObj,
                     id: item.id,
-                    dayName: item.Day || item.day || "Unknown",
                     type: safeActualSport, 
                     
-                    // --- MAPPED FIELDS FOR LEGACY CHARTS ---
-                    actualType: safeActualSport,     // Used by utils.js fallback
-                    activityType: flatActivityType,  // Used by charts.js (now a String)
-                    sportTypeId: safeSportId,        // Used by definitions.js (Correct ID)
+                    // --- SAFETY OVERRIDES ---
+                    // We set activityType to NULL. This forces utils.js to skip the .includes() check
+                    // and fall back to checking 'actualType', which we ensure is a string.
+                    activityType: null, 
+                    actualType: safeActualSport,
+                    sportTypeId: safeSportId,
                     
                     // Strings for Heatmap
                     plannedWorkout: item.plannedWorkout || "",
                     actualWorkout: item.actualWorkout || "",
                     
-                    // Metric Mapping (New JSON Name -> Old App Name)
+                    // Metric Mapping (Old Name -> New JSON Value)
                     plannedDuration: getNum(item.plannedDuration),
                     actualDuration: getNum(item.actualDuration),
                     avgHR: getNum(item.averageHR),
@@ -164,6 +153,9 @@
                 if (historyRes.ok) {
                     const rawJson = await historyRes.json();
                     this.allData = this.hydrateData(rawJson).sort((a,b) => b.date - a.date);
+                    console.log("✅ Data Hydrated Successfully. Rows:", this.allData.length);
+                } else {
+                    console.error("❌ Failed to load training_log.json");
                 }
                 
                 this.renderView(startView);
