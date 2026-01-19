@@ -1,24 +1,10 @@
 [
     {
-        "id": "130552cc-6e65-4899-bc5d-bdcb65807f45",
-        "status": "PLANNED",
-        "completed": false,
-        "actualDuration": 0,
-        "distance": 0,
-        "averageHR": 0,
-        "maxHR": 0,
-        "avgPower": 0,
-        "calories": 0,
-        "RPE": 0,
-        "Feeling": 0,
+        "id": "ae19912a-31fb-48ad-a18e-655781e5d91f",
         "date": "2026-01-12",
-        "activityName": "North Ayrshire Virtual Cycling",
-        "activityType": "Other",
+        "activityName": "[BIKE] Strength / Hill Focus",
+        "activityType": "Bike",
         "plannedDuration": 45,
-        "notes": "**Deload.** Focus: Low Cadence (60-65 rpm) intervals to fix low Torque Efficiency (1.90) ."
-    },
-    {
-        "id": "6e975479-7013-4581-ab2c-b55d824fed18",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -28,15 +14,14 @@
         "avgPower": 0,
         "calories": 0,
         "RPE": 0,
-        "Feeling": 0,
+        "Feeling": 0
+    },
+    {
+        "id": "88d8d4f2-f300-44dd-bdea-d9edc87ca322",
         "date": "2026-01-13",
-        "activityName": "Swim coaching session",
-        "activityType": "Other",
+        "activityName": "[SWIM] Technique Focus",
+        "activityType": "Swim",
         "plannedDuration": 30,
-        "notes": "**Deload.** Use a Pull Buoy if ankle kicking is painful. Focus: Smooth rotation."
-    },
-    {
-        "id": "1d103614-a1dc-4f57-9691-577799da3da5",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -46,15 +31,14 @@
         "avgPower": 0,
         "calories": 0,
         "RPE": 0,
-        "Feeling": 0,
+        "Feeling": 0
+    },
+    {
+        "id": "e83100ff-2852-49b0-b8a1-2bcbf34868e8",
         "date": "2026-01-14",
-        "activityName": "Zwift - Race: Zwift Crit Racing Club - Avon Flyer (D) on Avon Flyer in New York (+2)",
-        "activityType": "Other",
+        "activityName": "[BIKE] Zwift Race",
+        "activityType": "Bike",
         "plannedDuration": 53,
-        "notes": "**Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus."
-    },
-    {
-        "id": "8be0fcfb-d14a-4920-a26c-b6b7fd95d651",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -64,15 +48,14 @@
         "avgPower": 0,
         "calories": 0,
         "RPE": 0,
-        "Feeling": 0,
+        "Feeling": 0
+    },
+    {
+        "id": "dd666751-ff21-4901-83b6-a98367ac93f0",
         "date": "2026-01-15",
-        "activityName": "North Ayrshire Virtual Cycling",
-        "activityType": "Other",
+        "activityName": "[BIKE] Zone 2 Endurance",
+        "activityType": "Bike",
         "plannedDuration": 45,
-        "notes": "**Deload.** Easy spin. Zone 2 (134-180W). Keep it smooth."
-    },
-    {
-        "id": "d0ab45b3-87e3-4228-ac73-1c2ce59b16a6",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -82,15 +65,14 @@
         "avgPower": 0,
         "calories": 0,
         "RPE": 0,
-        "Feeling": 0,
+        "Feeling": 0
+    },
+    {
+        "id": "3270997b-9616-40ec-9728-2193bd0d3268",
         "date": "2026-01-16",
-        "activityName": "Roy - 25 Min at high cadence",
-        "activityType": "Other",
+        "activityName": "[RUN] Easy / Base",
+        "activityType": "Run",
         "plannedDuration": 27,
-        "notes": "**Ankle Test.** Flat surface only. Focus: High Cadence (175+ spm) to fix Ground Contact Time."
-    },
-    {
-        "id": "8713d5ee-4968-47c1-acfa-5c9044f9b13e",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -100,15 +82,14 @@
         "avgPower": 0,
         "calories": 0,
         "RPE": 0,
-        "Feeling": 0,
+        "Feeling": 0
+    },
+    {
+        "id": "81341226-bc41-4ce0-808e-2785270953c7",
         "date": "2026-01-17",
-        "activityName": "Thio Virtual Cycling",
-        "activityType": "Other",
+        "activityName": "[BIKE] Long Steady Distance",
+        "activityType": "Bike",
         "plannedDuration": 76,
-        "notes": "**Deload.** Reduced volume. Zone 2 Focus. Monitor Aerobic Efficiency."
-    },
-    {
-        "id": "15b35425-bded-42c3-b316-81eadc233032",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -118,11 +99,23 @@
         "avgPower": 0,
         "calories": 0,
         "RPE": 0,
-        "Feeling": 0,
+        "Feeling": 0
+    },
+    {
+        "id": "1a88d16e-b1b3-4cae-b1be-464e7573ab8b",
         "date": "2026-01-18",
-        "activityName": "",
+        "activityName": "Rest",
         "activityType": "Other",
         "plannedDuration": 0,
-        "notes": "Total Recovery. Ice ankle if needed."
+        "status": "PLANNED",
+        "completed": false,
+        "actualDuration": 0,
+        "distance": 0,
+        "averageHR": 0,
+        "maxHR": 0,
+        "avgPower": 0,
+        "calories": 0,
+        "RPE": 0,
+        "Feeling": 0
     }
 ]
