@@ -3,18 +3,18 @@ import { renderPlannedWorkouts } from './plannedWorkouts.js';
 import { renderProgressWidget, renderNextEvent } from './progressWidget.js';
 import { renderHeatmaps } from './heatmaps.js';
 
+// --- Sync Logic ---
 window.triggerGitHubSync = async () => {
     const btn = document.querySelector('button[onclick="window.triggerGitHubSync()"]');
     if(btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Syncing...';
         btn.classList.add('opacity-50', 'cursor-not-allowed');
     }
-    
     // Dispatch event for app.js to handle
     window.dispatchEvent(new CustomEvent('trigger-sync'));
 };
 
-// Helper: Parse current phase/block from MD headers
+// --- Helper: Parse Phase/Block ---
 function getPhaseInfo(planMd) {
     if (!planMd) return { phase: "Unknown Phase", block: "Unknown Block" };
     
@@ -24,11 +24,11 @@ function getPhaseInfo(planMd) {
 
     for (let line of lines) {
         const trimmed = line.trim();
-        // Look for "# Phase 1..."
+        // Look for "# Phase X"
         if (trimmed.match(/^#+\s*Phase/i)) {
             phase = trimmed.replace(/^#+\s*/, '');
         }
-        // Look for "Block X..."
+        // Look for "Block X"
         if (trimmed.match(/Block\s*\d+/i)) {
             const match = trimmed.match(/(Block\s*\d+.*)/i);
             if(match) block = match[1];
@@ -42,17 +42,19 @@ function getPhaseInfo(planMd) {
     };
 }
 
+// --- Main Render Function ---
 export function renderDashboard(planMd, cleanLogData) {
-    // 1. Prepare Data Synchronously (No loading state needed for these)
+    // 1. Prepare Data Synchronously
     const { phase, block } = getPhaseInfo(planMd);
-    const eventCardHtml = renderNextEvent(planMd); // Generates the full Event Card HTML
+    const eventCardHtml = renderNextEvent(planMd); // Generates the Next Event card immediately
 
-    // 2. Build the Complete Dashboard Layout
-    // We inject the phase/block and eventHtml directly here.
+    // 2. Build the Layout (SINGLE DEFINITION)
+    // We use a CSS grid to put Phase (left) and Event (right) side-by-side on desktop
     const html = `
         <div class="space-y-6">
+            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-lg flex flex-col justify-center">
+                <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-lg flex flex-col justify-center min-h-[140px]">
                     <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Current Phase</div>
                     <h1 class="text-xl sm:text-2xl font-black text-blue-500 mb-1 leading-tight">${phase}</h1>
                     <p class="text-sm text-slate-300 font-mono">${block}</p>
@@ -71,37 +73,34 @@ export function renderDashboard(planMd, cleanLogData) {
                 <div class="animate-pulse bg-slate-800/50 h-32 rounded-xl"></div>
             </div>
 
-            <div id="dash-workouts">
-                </div>
+            <div id="dash-workouts"></div>
 
-            <div id="dash-heatmaps">
-                </div>
+            <div id="dash-heatmaps"></div>
         </div>
 
         <div id="dashboard-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed"></div>
     `;
 
-    // 3. Fetch JSON & Hydrate the Bottom Widgets
+    // 3. Fetch JSON & Populate Widgets
     fetch('data/planned.json')
         .then(res => res.json())
         .then(plannedJson => {
-            // Render Progress Widget
+            // A. Progress Widget (Bars Only)
             const widgetEl = document.getElementById('dash-widget');
             if (widgetEl) widgetEl.innerHTML = renderProgressWidget(plannedJson, cleanLogData);
 
-            // Render Daily Cards
+            // B. Daily Workouts
             const workoutsEl = document.getElementById('dash-workouts');
             if (workoutsEl) workoutsEl.innerHTML = renderPlannedWorkouts(plannedJson, cleanLogData);
 
-            // Render Heatmaps
+            // C. Heatmaps
             const heatmapsEl = document.getElementById('dash-heatmaps');
             if (heatmapsEl) heatmapsEl.innerHTML = renderHeatmaps(cleanLogData, plannedJson);
         })
         .catch(err => {
             console.error("Error loading planned.json:", err);
-            // On error, just clear the loader
             const wEl = document.getElementById('dash-widget');
-            if(wEl) wEl.innerHTML = '<div class="text-red-500 text-xs">Failed to load plan data.</div>';
+            if(wEl) wEl.innerHTML = '<div class="p-4 text-red-500 text-xs text-center border border-red-900/50 rounded bg-red-900/10">Failed to load plan data. Run the python script.</div>';
         });
 
     return html;
