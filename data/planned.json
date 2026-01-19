@@ -1,10 +1,10 @@
 [
     {
-        "id": "8fe832a1-06c8-45b7-be16-75cf5cd0d6cf",
+        "id": "15b74693-ac11-40e5-9f02-70e5b1da373f",
         "date": "2026-01-12",
         "activityName": "[BIKE] Strength / Hill Focus",
         "activityType": "Bike",
-        "plannedDuration": 45,
+        "plannedDuration": 40,
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -17,7 +17,7 @@
         "Feeling": 0
     },
     {
-        "id": "3d1f7f8b-7edf-470b-94d9-93aa29026284",
+        "id": "ede76ad3-3ca3-4c26-992c-fa6d415058ad",
         "date": "2026-01-13",
         "activityName": "[SWIM] Technique Focus",
         "activityType": "Swim",
@@ -34,11 +34,11 @@
         "Feeling": 0
     },
     {
-        "id": "1423ec16-a499-46b5-8e0a-3b75a89ce918",
+        "id": "bd3eea34-8bd9-4c1d-a5ae-30c12f77e534",
         "date": "2026-01-14",
         "activityName": "[BIKE] Zwift Race",
         "activityType": "Bike",
-        "plannedDuration": 53,
+        "plannedDuration": 45,
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -51,7 +51,7 @@
         "Feeling": 0
     },
     {
-        "id": "58e1f815-7bf1-49a9-b1f1-a32216987754",
+        "id": "2a2e6e37-8e60-48f9-9baf-bab69178f34a",
         "date": "2026-01-15",
         "activityName": "[BIKE] Zone 2 Endurance",
         "activityType": "Bike",
@@ -68,11 +68,11 @@
         "Feeling": 0
     },
     {
-        "id": "73613b03-2d22-45d3-88d6-ab2a128913df",
+        "id": "ee17cd2a-064a-4d85-8cda-3eea4b587807",
         "date": "2026-01-16",
         "activityName": "[RUN] Easy / Base",
         "activityType": "Run",
-        "plannedDuration": 27,
+        "plannedDuration": 25,
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -85,11 +85,11 @@
         "Feeling": 0
     },
     {
-        "id": "f56f65b1-4d91-42e0-8f7d-95f526ce79b7",
+        "id": "55607bc4-3eb4-47c0-877f-437adefbcaf6",
         "date": "2026-01-17",
         "activityName": "[BIKE] Long Steady Distance",
         "activityType": "Bike",
-        "plannedDuration": 76,
+        "plannedDuration": 75,
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -102,7 +102,7 @@
         "Feeling": 0
     },
     {
-        "id": "ba7c018b-49c8-4a70-bc6d-62855c9fc0f5",
+        "id": "56c44b22-ea66-4843-9c2b-e53ce8bf1d5f",
         "date": "2026-01-18",
         "activityName": "Rest",
         "activityType": "Other",
