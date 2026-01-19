@@ -1,6 +1,6 @@
 [
     {
-        "id": "2860db1b-94ba-46bd-b08d-0e32879f28b6",
+        "id": "bd70947c-e0e7-45b7-bc09-9bcf9450e127",
         "date": "2026-01-19",
         "day": "Monday",
         "activityName": "[BIKE] Strength / Hill Focus",
@@ -10,7 +10,7 @@
         "status": "PLANNED"
     },
     {
-        "id": "5ecb951d-a8cb-42a9-abc9-95d946e298d1",
+        "id": "d0969d38-2ef1-4c13-95af-b0bf40febefe",
         "date": "2026-01-20",
         "day": "Tuesday",
         "activityName": "[SWIM] Technique Focus",
@@ -20,7 +20,7 @@
         "status": "PLANNED"
     },
     {
-        "id": "f5cfa3e3-8795-43fe-a284-c61e802e8058",
+        "id": "592b312f-4097-40d2-b115-056235adc551",
         "date": "2026-01-21",
         "day": "Wednesday",
         "activityName": "[RUN] Tempo / Threshold",
@@ -30,7 +30,7 @@
         "status": "PLANNED"
     },
     {
-        "id": "141618c8-a7c5-482c-ae79-64b7b29088d0",
+        "id": "8a7998fa-da4e-42f4-9ca9-48c6a963004f",
         "date": "2026-01-22",
         "day": "Thursday",
         "activityName": "[BIKE] Mid-Week Aerobic Volume",
@@ -40,7 +40,7 @@
         "status": "PLANNED"
     },
     {
-        "id": "f2f9ae04-2431-4f75-9151-5924e3828019",
+        "id": "cf03e702-fc91-459d-b12f-b4403cf715bf",
         "date": "2026-01-23",
         "day": "Friday",
         "activityName": "[SWIM] Touch Swim",
@@ -50,7 +50,7 @@
         "status": "PLANNED"
     },
     {
-        "id": "bf97dd9d-32f0-4f9b-9bdd-6352f3e852c0",
+        "id": "33741381-919e-4eeb-b2ca-b8693683b49f",
         "date": "2026-01-23",
         "day": "Friday",
         "activityName": "[RUN] Aerobic Maintenance",
@@ -60,7 +60,7 @@
         "status": "PLANNED"
     },
     {
-        "id": "d1500e44-489c-4636-b139-72e7791e3d60",
+        "id": "fa2df2ba-d13b-48ad-99b4-14193dd9053e",
         "date": "2026-01-24",
         "day": "Saturday",
         "activityName": "[BIKE] Long Steady Distance",
@@ -70,7 +70,7 @@
         "status": "PLANNED"
     },
     {
-        "id": "8560282e-5a1b-4ef0-8ed9-37dc4f9cea8f",
+        "id": "208b8d7c-cca2-4ddb-9acb-5bde3a114428",
         "date": "2026-01-25",
         "day": "Sunday",
         "activityName": "Rest",
