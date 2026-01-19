@@ -3,7 +3,7 @@
         "id": "21597324841",
         "date": "2026-01-19",
         "Day": "Monday",
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Match Status": "Unplanned",
         "activityType": "Other",
         "plannedWorkout": "",
@@ -26,7 +26,7 @@
         "id": "21597324841",
         "date": "2026-01-19",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -37,7 +37,7 @@
         "averageHR": 133.0,
         "avgPower": 175.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -78,7 +78,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -119,7 +119,7 @@
         "id": "21576827226",
         "date": "2026-01-17",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -130,13 +130,13 @@
         "averageHR": 131.0,
         "avgPower": 141.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "21575536690",
         "date": "2026-01-17",
         "Day": "Saturday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -147,7 +147,7 @@
         "averageHR": 129.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -191,7 +191,7 @@
         "id": "21565654253",
         "date": "2026-01-16",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -202,7 +202,7 @@
         "averageHR": 156.0,
         "avgPower": 379.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -246,7 +246,7 @@
         "id": "21555400588",
         "date": "2026-01-15",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -257,7 +257,7 @@
         "averageHR": 129.0,
         "avgPower": 165.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -301,7 +301,7 @@
         "id": "21543836765,21544205799,21544384067",
         "date": "2026-01-14",
         "Day": "Wednesday",
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Match Status": "Unplanned",
         "activityType": "Other",
         "plannedWorkout": "",
@@ -324,7 +324,7 @@
         "id": "21543836765,21544205799,21544384067",
         "date": "2026-01-14",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -335,7 +335,30 @@
         "averageHR": 144.68860602297423,
         "avgPower": 180.98633964607265,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
+    },
+    {
+        "id": "21543836765,21544205799,21544384067",
+        "date": "2026-01-14",
+        "Day": "Wednesday",
+        "Status": "UNPLANNED",
+        "Match Status": "Unplanned",
+        "activityType": "Bike",
+        "plannedWorkout": "",
+        "plannedDuration": null,
+        "notes": "",
+        "actualWorkout": "Zwift - Race: Zwift Crit Racing Club - Avon Flyer (D) on Avon Flyer in New York (+2)",
+        "actualDuration": 53.7,
+        "duration": 3221.0,
+        "distance": 29294.109375,
+        "calories": 600.0,
+        "elevationGain": 170.93,
+        "averageHR": 144.68860602297423,
+        "maxHR": 193.0,
+        "avgPower": 180.98633964607265,
+        "normPower": 200.2723517572926,
+        "RPE": 9,
+        "Feeling": 5
     },
     {
         "Status": "COMPLETED",
@@ -379,7 +402,7 @@
         "id": "21540135238",
         "date": "2026-01-13",
         "Day": "Tuesday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -390,7 +413,7 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -431,7 +454,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -472,7 +495,7 @@
         "id": "21522302639",
         "date": "2026-01-12",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -483,13 +506,13 @@
         "averageHR": 143.0,
         "avgPower": 176.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "21521650444",
         "date": "2026-01-12",
         "Day": "Monday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -500,10 +523,10 @@
         "averageHR": 137.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -541,7 +564,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "[BIKE] Long Steady Distance",
         "plannedDuration": null,
@@ -579,7 +602,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "[BIKE] Long Steady Distance",
         "plannedDuration": null,
@@ -617,7 +640,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -658,7 +681,7 @@
         "id": "21502893617",
         "date": "2026-01-10",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -669,13 +692,13 @@
         "averageHR": 131.0,
         "avgPower": 146.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "21501230950",
         "date": "2026-01-10",
         "Day": "Saturday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -686,7 +709,7 @@
         "averageHR": 136.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -730,7 +753,7 @@
         "id": "21491950789",
         "date": "2026-01-09",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -741,7 +764,7 @@
         "averageHR": 148.0,
         "avgPower": 340.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -785,7 +808,7 @@
         "id": "21482224757",
         "date": "2026-01-08",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -796,7 +819,7 @@
         "averageHR": 125.0,
         "avgPower": 139.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -840,7 +863,7 @@
         "id": "21471583079",
         "date": "2026-01-07",
         "Day": "Wednesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -851,7 +874,7 @@
         "averageHR": 150.0,
         "avgPower": 358.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -895,7 +918,7 @@
         "id": "21460455111",
         "date": "2026-01-06",
         "Day": "Tuesday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -906,7 +929,7 @@
         "averageHR": 125.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -950,7 +973,7 @@
         "id": "21450339268",
         "date": "2026-01-05",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -961,10 +984,10 @@
         "averageHR": 141.0,
         "avgPower": 169.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "[BIKE] Long Steady Distance",
         "plannedDuration": null,
@@ -1005,7 +1028,7 @@
         "id": "21430613393",
         "date": "2026-01-03",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1016,7 +1039,7 @@
         "averageHR": 136.0,
         "avgPower": 151.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -1060,7 +1083,7 @@
         "id": "21419915623",
         "date": "2026-01-02",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1071,14 +1094,14 @@
         "averageHR": 147.0,
         "avgPower": 341.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "21414583520",
         "date": "2026-01-01",
         "Day": "Thursday",
-        "Status": "COMPLETED",
-        "Match Status": "Unplanned",
+        "Status": "UNPLANNED",
+        "Match Status": "Linked",
         "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -1142,7 +1165,7 @@
         "id": "21402836501",
         "date": "2025-12-31",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1153,7 +1176,7 @@
         "averageHR": 128.0,
         "avgPower": 159.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -1197,7 +1220,7 @@
         "id": "21392665719",
         "date": "2025-12-30",
         "Day": "Tuesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1208,7 +1231,7 @@
         "averageHR": 144.0,
         "avgPower": 341.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -1287,7 +1310,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -1328,7 +1351,7 @@
         "id": "21365025939",
         "date": "2025-12-27",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1339,13 +1362,13 @@
         "averageHR": 129.0,
         "avgPower": 159.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "21363993117",
         "date": "2025-12-27",
         "Day": "Saturday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1356,7 +1379,7 @@
         "averageHR": 117.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -1400,7 +1423,7 @@
         "id": "21355282531",
         "date": "2025-12-26",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1411,7 +1434,7 @@
         "averageHR": 150.0,
         "avgPower": 338.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -1455,7 +1478,7 @@
         "id": "21347428905",
         "date": "2025-12-25",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1466,7 +1489,7 @@
         "averageHR": 136.0,
         "avgPower": 162.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -1510,7 +1533,7 @@
         "id": "21341393579",
         "date": "2025-12-24",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1521,7 +1544,7 @@
         "averageHR": 120.0,
         "avgPower": 120.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -1562,7 +1585,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -1603,7 +1626,7 @@
         "id": "21331586325,21331728746",
         "date": "2025-12-23",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1614,7 +1637,7 @@
         "averageHR": 153.89872673849166,
         "avgPower": 212.13398628795298,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -1655,7 +1678,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -1696,7 +1719,7 @@
         "id": "21309912155",
         "date": "2025-12-20",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1707,13 +1730,13 @@
         "averageHR": 147.0,
         "avgPower": 152.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "21305772239",
         "date": "2025-12-20",
         "Day": "Saturday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1724,7 +1747,7 @@
         "averageHR": 126.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -1768,7 +1791,7 @@
         "id": "21298044597",
         "date": "2025-12-19",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1779,7 +1802,7 @@
         "averageHR": 151.0,
         "avgPower": 323.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -1861,7 +1884,7 @@
         "id": "21289830125",
         "date": "2025-12-18",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1872,7 +1895,7 @@
         "averageHR": 118.0,
         "avgPower": 146.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -1954,7 +1977,7 @@
         "id": "21272208595",
         "date": "2025-12-16",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -1965,7 +1988,7 @@
         "averageHR": 147.0,
         "avgPower": 188.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -2006,7 +2029,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -2085,7 +2108,7 @@
         "id": "21247412842,21248283077",
         "date": "2025-12-13",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2096,7 +2119,7 @@
         "averageHR": 135.95779347523236,
         "avgPower": 142.72402825541823,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2140,7 +2163,7 @@
         "id": "21237874811",
         "date": "2025-12-12",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2151,7 +2174,7 @@
         "averageHR": 146.0,
         "avgPower": 324.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2233,7 +2256,7 @@
         "id": "21233520275",
         "date": "2025-12-11",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2244,7 +2267,7 @@
         "averageHR": 136.0,
         "avgPower": 156.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2288,7 +2311,7 @@
         "id": "21220528664",
         "date": "2025-12-10",
         "Day": "Wednesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2299,7 +2322,7 @@
         "averageHR": 141.0,
         "avgPower": 322.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2343,7 +2366,7 @@
         "id": "21212937186",
         "date": "2025-12-09",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2354,7 +2377,7 @@
         "averageHR": 140.0,
         "avgPower": 173.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2398,7 +2421,7 @@
         "id": "21201288872",
         "date": "2025-12-08",
         "Day": "Monday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2409,10 +2432,10 @@
         "averageHR": 123.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -2491,7 +2514,7 @@
         "id": "21186856698",
         "date": "2025-12-06",
         "Day": "Saturday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2502,13 +2525,13 @@
         "averageHR": 163.0,
         "avgPower": 368.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "21183998146",
         "date": "2025-12-06",
         "Day": "Saturday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2519,10 +2542,10 @@
         "averageHR": 128.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -2601,7 +2624,7 @@
         "id": "21175545787",
         "date": "2025-12-05",
         "Day": "Friday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2612,7 +2635,7 @@
         "averageHR": 144.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2694,7 +2717,7 @@
         "id": "21171009238",
         "date": "2025-12-04",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2705,7 +2728,7 @@
         "averageHR": 131.0,
         "avgPower": 151.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2749,7 +2772,7 @@
         "id": "21158636550",
         "date": "2025-12-03",
         "Day": "Wednesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2760,7 +2783,7 @@
         "averageHR": 159.0,
         "avgPower": 354.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2804,7 +2827,7 @@
         "id": "21149163183",
         "date": "2025-12-02",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2815,7 +2838,7 @@
         "averageHR": 145.0,
         "avgPower": 167.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2859,7 +2882,7 @@
         "id": "21139107284",
         "date": "2025-12-01",
         "Day": "Monday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2870,7 +2893,7 @@
         "averageHR": 143.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2914,7 +2937,7 @@
         "id": "21114574435",
         "date": "2025-11-28",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2925,7 +2948,7 @@
         "averageHR": 156.0,
         "avgPower": 335.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -2969,7 +2992,7 @@
         "id": "21106121388",
         "date": "2025-11-27",
         "Day": "Thursday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -2980,7 +3003,7 @@
         "averageHR": 162.0,
         "avgPower": 359.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3024,7 +3047,7 @@
         "id": "21095755582",
         "date": "2025-11-26",
         "Day": "Wednesday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3035,7 +3058,7 @@
         "averageHR": 129.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3079,7 +3102,7 @@
         "id": "21088747868",
         "date": "2025-11-25",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3090,7 +3113,7 @@
         "averageHR": 141.0,
         "avgPower": 167.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3134,7 +3157,7 @@
         "id": "21079887240",
         "date": "2025-11-24",
         "Day": "Monday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3145,7 +3168,7 @@
         "averageHR": 110.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3189,7 +3212,7 @@
         "id": "21062564187",
         "date": "2025-11-22",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3200,7 +3223,7 @@
         "averageHR": 150.0,
         "avgPower": 172.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3244,7 +3267,7 @@
         "id": "21052251510",
         "date": "2025-11-21",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3255,7 +3278,7 @@
         "averageHR": 163.0,
         "avgPower": 357.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3299,7 +3322,7 @@
         "id": "21044929035",
         "date": "2025-11-20",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3310,7 +3333,7 @@
         "averageHR": 155.0,
         "avgPower": 203.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3354,7 +3377,7 @@
         "id": "21035833949",
         "date": "2025-11-19",
         "Day": "Wednesday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3365,7 +3388,7 @@
         "averageHR": 125.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3409,7 +3432,7 @@
         "id": "21026701403",
         "date": "2025-11-18",
         "Day": "Tuesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3420,7 +3443,7 @@
         "averageHR": 164.0,
         "avgPower": 388.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3464,7 +3487,7 @@
         "id": "21019742111",
         "date": "2025-11-17",
         "Day": "Monday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3475,10 +3498,10 @@
         "averageHR": 110.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -3557,7 +3580,7 @@
         "id": "20996439411",
         "date": "2025-11-15",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3568,13 +3591,13 @@
         "averageHR": 143.0,
         "avgPower": 165.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "20995549971",
         "date": "2025-11-15",
         "Day": "Saturday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3585,7 +3608,7 @@
         "averageHR": 140.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -3629,7 +3652,7 @@
         "id": "20989426052",
         "date": "2025-11-14",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3640,7 +3663,7 @@
         "averageHR": 161.0,
         "avgPower": 367.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -3836,7 +3859,7 @@
         "id": "20956892191",
         "date": "2025-11-11",
         "Day": "Tuesday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3847,7 +3870,7 @@
         "averageHR": 142.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -3891,8 +3914,8 @@
         "id": "20931783734",
         "date": "2025-11-08",
         "Day": "Saturday",
-        "Status": "COMPLETED",
-        "Match Status": "Unplanned",
+        "Status": "UNPLANNED",
+        "Match Status": "Linked",
         "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -3956,7 +3979,7 @@
         "id": "20923220781",
         "date": "2025-11-07",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -3967,7 +3990,7 @@
         "averageHR": 152.0,
         "avgPower": 145.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -4049,7 +4072,7 @@
         "id": "20914289339",
         "date": "2025-11-06",
         "Day": "Thursday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4060,7 +4083,7 @@
         "averageHR": 156.0,
         "avgPower": 348.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -4142,7 +4165,7 @@
         "id": "20903355677",
         "date": "2025-11-05",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4153,7 +4176,7 @@
         "averageHR": 130.0,
         "avgPower": 141.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -4235,7 +4258,7 @@
         "id": "20882588601",
         "date": "2025-11-03",
         "Day": "Monday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4246,10 +4269,10 @@
         "averageHR": 140.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "[BIKE] Long Endurance",
         "plannedDuration": null,
@@ -4287,7 +4310,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -4328,7 +4351,7 @@
         "id": "20858909014",
         "date": "2025-11-01",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4339,13 +4362,13 @@
         "averageHR": 132.0,
         "avgPower": 134.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "20858034434",
         "date": "2025-11-01",
         "Day": "Saturday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4356,7 +4379,7 @@
         "averageHR": 134.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -4397,7 +4420,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -4438,7 +4461,7 @@
         "id": "20852720587",
         "date": "2025-10-31",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4449,13 +4472,13 @@
         "averageHR": 167.0,
         "avgPower": 197.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "20848886158",
         "date": "2025-10-31",
         "Day": "Friday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4466,7 +4489,7 @@
         "averageHR": 128.0,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -4624,7 +4647,7 @@
         "id": "20826240754",
         "date": "2025-10-28",
         "Day": "Tuesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4635,7 +4658,7 @@
         "averageHR": 164.0,
         "avgPower": 406.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -4679,7 +4702,7 @@
         "id": "20810343598,20810788949",
         "date": "2025-10-27",
         "Day": "Monday",
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Match Status": "Unplanned",
         "activityType": "Other",
         "plannedWorkout": "",
@@ -4705,7 +4728,7 @@
         "id": "20810343598,20810788949",
         "date": "2025-10-27",
         "Day": "Monday",
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Match Status": "Unplanned",
         "activityType": "Other",
         "plannedWorkout": "",
@@ -4728,7 +4751,7 @@
         "id": "20817007819",
         "date": "2025-10-27",
         "Day": "Monday",
-        "activityType": "Swim",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4739,13 +4762,13 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "20810343598,20810788949",
         "date": "2025-10-27",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4756,10 +4779,33 @@
         "averageHR": 156.95591476855253,
         "avgPower": 199.62454077883908,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "id": "20810343598,20810788949",
+        "date": "2025-10-27",
+        "Day": "Monday",
+        "Status": "UNPLANNED",
+        "Match Status": "Unplanned",
+        "activityType": "Bike",
+        "plannedWorkout": "",
+        "plannedDuration": null,
+        "notes": "",
+        "actualWorkout": "Zwift - Race: SAZ speed race on Ocean Lava Cliffside Loop in Watopia (+1)",
+        "actualDuration": 45.4,
+        "duration": 2722.0,
+        "distance": 24092.480712890625,
+        "calories": 561.0,
+        "elevationGain": 175.0,
+        "averageHR": 156.95591476855253,
+        "maxHR": 185.0,
+        "avgPower": 199.62454077883908,
+        "normPower": 224.4957719269727,
+        "RPE": null,
+        "Feeling": null
+    },
+    {
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -4800,7 +4846,7 @@
         "id": "20792797470",
         "date": "2025-10-25",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4811,10 +4857,10 @@
         "averageHR": 137.0,
         "avgPower": 153.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -4855,7 +4901,7 @@
         "id": "20783515550",
         "date": "2025-10-24",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4866,10 +4912,10 @@
         "averageHR": 132.0,
         "avgPower": 149.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -4910,7 +4956,7 @@
         "id": "20776712517",
         "date": "2025-10-23",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4921,7 +4967,7 @@
         "averageHR": 76.0,
         "avgPower": 166.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -4965,7 +5011,7 @@
         "id": "20728322407",
         "date": "2025-10-18",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -4976,7 +5022,7 @@
         "averageHR": 139.0,
         "avgPower": 154.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -5020,7 +5066,7 @@
         "id": "20706851340",
         "date": "2025-10-16",
         "Day": "Thursday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5031,10 +5077,10 @@
         "averageHR": 135.0,
         "avgPower": 327.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -5072,7 +5118,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -5113,7 +5159,7 @@
         "id": "20696300096",
         "date": "2025-10-15",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5124,7 +5170,7 @@
         "averageHR": 126.0,
         "avgPower": 149.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -5168,7 +5214,7 @@
         "id": "20686025947",
         "date": "2025-10-14",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5179,7 +5225,7 @@
         "averageHR": 134.0,
         "avgPower": 143.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -5223,7 +5269,7 @@
         "id": "20680957458",
         "date": "2025-10-13",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5234,7 +5280,7 @@
         "averageHR": 135.0,
         "avgPower": 144.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -5316,7 +5362,7 @@
         "id": "20647998706",
         "date": "2025-10-10",
         "Day": "Friday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5327,7 +5373,7 @@
         "averageHR": 176.0,
         "avgPower": 394.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -5371,7 +5417,7 @@
         "id": "20632416963",
         "date": "2025-10-08",
         "Day": "Wednesday",
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Match Status": "Unplanned",
         "activityType": "Other",
         "plannedWorkout": "",
@@ -5395,24 +5441,31 @@
         "maxPower": null
     },
     {
-        "id": "20630152573",
+        "id": "20632416963",
         "date": "2025-10-08",
         "Day": "Wednesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
-        "actualWorkout": "Roy Running",
-        "actualDuration": 9.6,
-        "distance": 1911.3699951171875,
-        "calories": 141.0,
-        "averageHR": 154.0,
-        "avgPower": 393.0,
-        "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "actualWorkout": "Weber County Walking",
+        "actualDuration": 12.2,
+        "distance": 676.780029296875,
+        "calories": 44.0,
+        "averageHR": 71.0,
+        "avgPower": null,
+        "Match Status": "Linked",
+        "Status": "UNPLANNED",
+        "duration": 731.7670288085938,
+        "elevationGain": 0.0,
+        "maxHR": 80.0,
+        "maxPower": null,
+        "normPower": null,
+        "RPE": null,
+        "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -5453,7 +5506,7 @@
         "id": "20621415715",
         "date": "2025-10-07",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5464,7 +5517,7 @@
         "averageHR": 131.0,
         "avgPower": 137.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -5508,7 +5561,7 @@
         "id": "20609685045",
         "date": "2025-10-06",
         "Day": "Monday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5519,14 +5572,14 @@
         "averageHR": 159.0,
         "avgPower": 383.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "20600086735",
         "date": "2025-10-05",
         "Day": "Sunday",
-        "Status": "COMPLETED",
-        "Match Status": "Unplanned",
+        "Status": "UNPLANNED",
+        "Match Status": "Linked",
         "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -5590,7 +5643,7 @@
         "id": "20586684797",
         "date": "2025-10-04",
         "Day": "Saturday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5601,7 +5654,7 @@
         "averageHR": 154.0,
         "avgPower": 336.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -5683,7 +5736,7 @@
         "id": "20561481238",
         "date": "2025-10-01",
         "Day": "Wednesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5694,10 +5747,10 @@
         "averageHR": 163.0,
         "avgPower": 375.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -5738,7 +5791,7 @@
         "id": "20548039437",
         "date": "2025-09-30",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5749,7 +5802,7 @@
         "averageHR": 140.0,
         "avgPower": 171.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -5831,7 +5884,7 @@
         "id": "20516531725",
         "date": "2025-09-27",
         "Day": "Saturday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5842,7 +5895,7 @@
         "averageHR": 155.0,
         "avgPower": 346.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -5886,7 +5939,7 @@
         "id": "20506007904",
         "date": "2025-09-26",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5897,10 +5950,10 @@
         "averageHR": 130.0,
         "avgPower": 146.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -5941,7 +5994,7 @@
         "id": "20496350825",
         "date": "2025-09-25",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -5952,7 +6005,7 @@
         "averageHR": 140.0,
         "avgPower": 169.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -5996,7 +6049,7 @@
         "id": "20486354338",
         "date": "2025-09-24",
         "Day": "Wednesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6007,7 +6060,7 @@
         "averageHR": 149.0,
         "avgPower": 345.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -6051,7 +6104,7 @@
         "id": "20465366573",
         "date": "2025-09-22",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6062,7 +6115,7 @@
         "averageHR": 117.0,
         "avgPower": 144.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -6106,7 +6159,7 @@
         "id": "20446230754",
         "date": "2025-09-20",
         "Day": "Saturday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6117,10 +6170,10 @@
         "averageHR": 153.0,
         "avgPower": 337.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -6161,7 +6214,7 @@
         "id": "20434447500",
         "date": "2025-09-19",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6172,7 +6225,7 @@
         "averageHR": 170.0,
         "avgPower": 237.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "EXTRA",
@@ -6254,7 +6307,7 @@
         "id": "20414063802",
         "date": "2025-09-17",
         "Day": "Wednesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6265,10 +6318,10 @@
         "averageHR": 157.0,
         "avgPower": 331.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -6309,7 +6362,7 @@
         "id": "20403435856",
         "date": "2025-09-16",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6320,7 +6373,7 @@
         "averageHR": 146.0,
         "avgPower": 169.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -6364,7 +6417,7 @@
         "id": "20395959508",
         "date": "2025-09-15",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6375,7 +6428,7 @@
         "averageHR": 94.0,
         "avgPower": 131.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -6416,7 +6469,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -6457,7 +6510,7 @@
         "id": "20375492961,20375928859",
         "date": "2025-09-13",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6468,7 +6521,7 @@
         "averageHR": 131.31923974659514,
         "avgPower": 139.59432572768122,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -6512,7 +6565,7 @@
         "id": "20362223439",
         "date": "2025-09-12",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6523,7 +6576,7 @@
         "averageHR": 153.0,
         "avgPower": 200.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "EXTRA",
@@ -6605,7 +6658,7 @@
         "id": "20341462413",
         "date": "2025-09-10",
         "Day": "Wednesday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6616,10 +6669,10 @@
         "averageHR": 142.64166216945495,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -6660,7 +6713,7 @@
         "id": "20333699966",
         "date": "2025-09-09",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6671,7 +6724,7 @@
         "averageHR": 134.0,
         "avgPower": 155.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -6715,7 +6768,7 @@
         "id": "20319965519",
         "date": "2025-09-08",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6726,7 +6779,7 @@
         "averageHR": 40.0,
         "avgPower": 147.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -6770,7 +6823,7 @@
         "id": "20299205685",
         "date": "2025-09-06",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6781,7 +6834,7 @@
         "averageHR": 117.0,
         "avgPower": 140.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -6822,7 +6875,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -6863,7 +6916,7 @@
         "id": "20287945817,20288048150",
         "date": "2025-09-05",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6874,7 +6927,7 @@
         "averageHR": 160.58651026392963,
         "avgPower": 194.98952660242983,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -6918,7 +6971,7 @@
         "id": "20279132817",
         "date": "2025-09-04",
         "Day": "Thursday",
-        "activityType": "Run",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6929,10 +6982,10 @@
         "averageHR": 128.91224268689058,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -6973,7 +7026,7 @@
         "id": "20267061275",
         "date": "2025-09-03",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -6984,10 +7037,10 @@
         "averageHR": 126.0,
         "avgPower": 146.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7025,7 +7078,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7066,7 +7119,7 @@
         "id": "20256594778",
         "date": "2025-09-02",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7077,7 +7130,7 @@
         "averageHR": 130.0,
         "avgPower": 140.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -7121,7 +7174,7 @@
         "id": "20244718438",
         "date": "2025-09-01",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7132,10 +7185,10 @@
         "averageHR": 115.0,
         "avgPower": 106.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7176,7 +7229,7 @@
         "id": "20225723199",
         "date": "2025-08-30",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7187,10 +7240,10 @@
         "averageHR": 134.0,
         "avgPower": 147.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7231,7 +7284,7 @@
         "id": "20214776339",
         "date": "2025-08-29",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7242,14 +7295,14 @@
         "averageHR": 140.0,
         "avgPower": 139.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "21160002577",
         "date": "2025-08-28",
         "Day": "Thursday",
-        "Status": "COMPLETED",
-        "Match Status": "Unplanned",
+        "Status": "UNPLANNED",
+        "Match Status": "Linked",
         "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7272,7 +7325,7 @@
         "maxPower": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7313,7 +7366,7 @@
         "id": "20194913127",
         "date": "2025-08-27",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7324,10 +7377,10 @@
         "averageHR": 134.0,
         "avgPower": 146.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7368,7 +7421,7 @@
         "id": "20183161009",
         "date": "2025-08-26",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7379,10 +7432,10 @@
         "averageHR": 140.0,
         "avgPower": 158.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7423,7 +7476,7 @@
         "id": "20172232692",
         "date": "2025-08-25",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7434,10 +7487,10 @@
         "averageHR": 119.0,
         "avgPower": 115.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7478,7 +7531,7 @@
         "id": "20152013017",
         "date": "2025-08-23",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7489,7 +7542,7 @@
         "averageHR": 136.0,
         "avgPower": 143.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -7533,7 +7586,7 @@
         "id": "20141294734",
         "date": "2025-08-22",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7544,7 +7597,7 @@
         "averageHR": 153.0,
         "avgPower": 187.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -7585,7 +7638,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7626,7 +7679,7 @@
         "id": "20119994731",
         "date": "2025-08-20",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7637,7 +7690,7 @@
         "averageHR": 122.0,
         "avgPower": 137.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -7678,7 +7731,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7719,7 +7772,7 @@
         "id": "20109630403",
         "date": "2025-08-19",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7730,10 +7783,10 @@
         "averageHR": 90.0,
         "avgPower": 112.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "[BIKE] Active Recovery Ride",
         "plannedDuration": null,
@@ -7812,7 +7865,7 @@
         "id": "20098404647",
         "date": "2025-08-18",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7823,7 +7876,7 @@
         "averageHR": 137.0,
         "avgPower": 166.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -7864,7 +7917,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -7905,7 +7958,7 @@
         "id": "20076482628,20080578006",
         "date": "2025-08-16",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -7916,7 +7969,7 @@
         "averageHR": 147.875556329518,
         "avgPower": 140.02871777011123,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -7998,7 +8051,7 @@
         "id": "20060657595",
         "date": "2025-08-14",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8009,10 +8062,10 @@
         "averageHR": 160.0,
         "avgPower": 170.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8053,7 +8106,7 @@
         "id": "20045711267",
         "date": "2025-08-13",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8064,7 +8117,7 @@
         "averageHR": 119.0,
         "avgPower": 143.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -8108,7 +8161,7 @@
         "id": "20034423754",
         "date": "2025-08-12",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8119,7 +8172,7 @@
         "averageHR": 134.0,
         "avgPower": 144.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "MISSED",
@@ -8160,7 +8213,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8274,7 +8327,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8315,7 +8368,7 @@
         "id": "19959523744",
         "date": "2025-08-05",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8326,7 +8379,7 @@
         "averageHR": 142.0,
         "avgPower": 164.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "EXTRA",
@@ -8408,7 +8461,7 @@
         "id": "19916176247",
         "date": "2025-08-01",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8419,10 +8472,10 @@
         "averageHR": 0.0,
         "avgPower": 142.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8463,7 +8516,7 @@
         "id": "19906185003",
         "date": "2025-07-31",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8474,10 +8527,10 @@
         "averageHR": 127.0,
         "avgPower": 141.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8515,7 +8568,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8556,7 +8609,7 @@
         "id": "19895560822,19895921470",
         "date": "2025-07-30",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8567,10 +8620,10 @@
         "averageHR": 155.93178654292345,
         "avgPower": 222.49466357308586,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8611,7 +8664,7 @@
         "id": "19883605297",
         "date": "2025-07-29",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8622,10 +8675,10 @@
         "averageHR": 127.0,
         "avgPower": 182.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8666,7 +8719,7 @@
         "id": "19874437401",
         "date": "2025-07-28",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8677,10 +8730,10 @@
         "averageHR": 116.0,
         "avgPower": 131.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8718,7 +8771,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8759,7 +8812,7 @@
         "id": "19843392717,19844014197",
         "date": "2025-07-25",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8770,10 +8823,10 @@
         "averageHR": 117.81584582441114,
         "avgPower": 195.72614798953128,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8814,7 +8867,7 @@
         "id": "19823825122",
         "date": "2025-07-23",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8825,10 +8878,10 @@
         "averageHR": 138.0,
         "avgPower": 154.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8869,7 +8922,7 @@
         "id": "19812734047",
         "date": "2025-07-22",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8880,10 +8933,10 @@
         "averageHR": 129.0,
         "avgPower": 154.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8924,7 +8977,7 @@
         "id": "19802675432",
         "date": "2025-07-21",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8935,10 +8988,10 @@
         "averageHR": 132.0,
         "avgPower": 138.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -8979,7 +9032,7 @@
         "id": "19783691516",
         "date": "2025-07-19",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -8990,10 +9043,10 @@
         "averageHR": 146.0,
         "avgPower": 160.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9034,7 +9087,7 @@
         "id": "19761635876",
         "date": "2025-07-17",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9045,10 +9098,10 @@
         "averageHR": 121.0,
         "avgPower": 124.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9089,7 +9142,7 @@
         "id": "19751199144",
         "date": "2025-07-16",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9100,10 +9153,10 @@
         "averageHR": 121.0,
         "avgPower": 126.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9144,7 +9197,7 @@
         "id": "19740650027",
         "date": "2025-07-15",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9155,10 +9208,10 @@
         "averageHR": 147.0,
         "avgPower": 190.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9199,7 +9252,7 @@
         "id": "19730045263",
         "date": "2025-07-14",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9210,10 +9263,10 @@
         "averageHR": 121.0,
         "avgPower": 132.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9254,7 +9307,7 @@
         "id": "19710292575",
         "date": "2025-07-12",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9265,10 +9318,10 @@
         "averageHR": 143.0,
         "avgPower": 159.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9309,7 +9362,7 @@
         "id": "19689534665",
         "date": "2025-07-10",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9320,10 +9373,10 @@
         "averageHR": 123.0,
         "avgPower": 165.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9364,7 +9417,7 @@
         "id": "19681452680",
         "date": "2025-07-09",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9375,10 +9428,10 @@
         "averageHR": 95.0,
         "avgPower": 181.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9419,7 +9472,7 @@
         "id": "19669059098",
         "date": "2025-07-08",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9430,10 +9483,10 @@
         "averageHR": 119.0,
         "avgPower": 137.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9474,7 +9527,7 @@
         "id": "19659557750",
         "date": "2025-07-07",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9485,10 +9538,10 @@
         "averageHR": 121.0,
         "avgPower": 155.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9526,7 +9579,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9567,7 +9620,7 @@
         "id": "19630265594,19631106968",
         "date": "2025-07-04",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9578,10 +9631,10 @@
         "averageHR": 144.9438286039597,
         "avgPower": 136.16088928905864,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9622,7 +9675,7 @@
         "id": "19619557102",
         "date": "2025-07-03",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9633,10 +9686,10 @@
         "averageHR": 121.0,
         "avgPower": 141.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9674,7 +9727,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9715,7 +9768,7 @@
         "id": "19608803005,19609367612",
         "date": "2025-07-02",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9726,10 +9779,10 @@
         "averageHR": 148.91323692992214,
         "avgPower": 201.91323692992214,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9770,7 +9823,7 @@
         "id": "19599388351",
         "date": "2025-07-01",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9781,10 +9834,10 @@
         "averageHR": 146.0,
         "avgPower": 189.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9825,7 +9878,7 @@
         "id": "19589871899",
         "date": "2025-06-30",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9836,10 +9889,10 @@
         "averageHR": 130.0,
         "avgPower": 151.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9877,7 +9930,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9918,7 +9971,7 @@
         "id": "19570399500,19572042829",
         "date": "2025-06-28",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9929,10 +9982,10 @@
         "averageHR": 138.85504739460288,
         "avgPower": 142.50779268271447,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -9973,7 +10026,7 @@
         "id": "19560156226",
         "date": "2025-06-27",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -9984,10 +10037,10 @@
         "averageHR": 141.0,
         "avgPower": 159.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10028,7 +10081,7 @@
         "id": "19540333777",
         "date": "2025-06-25",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10039,10 +10092,10 @@
         "averageHR": 142.0,
         "avgPower": 164.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10083,7 +10136,7 @@
         "id": "19530067895",
         "date": "2025-06-24",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10094,10 +10147,10 @@
         "averageHR": 146.0,
         "avgPower": 177.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10135,7 +10188,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10176,7 +10229,7 @@
         "id": "19523337520,19523501823",
         "date": "2025-06-23",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10187,14 +10240,14 @@
         "averageHR": 140.95370957514268,
         "avgPower": 178.4578313253012,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "19515754588",
         "date": "2025-06-22",
         "Day": "Sunday",
-        "Status": "COMPLETED",
-        "Match Status": "Unplanned",
+        "Status": "UNPLANNED",
+        "Match Status": "Linked",
         "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10217,7 +10270,7 @@
         "maxPower": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10258,7 +10311,7 @@
         "id": "19501526516",
         "date": "2025-06-21",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10269,10 +10322,10 @@
         "averageHR": 138.0,
         "avgPower": 155.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10313,7 +10366,7 @@
         "id": "19491201959",
         "date": "2025-06-20",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10324,10 +10377,10 @@
         "averageHR": 140.0,
         "avgPower": 166.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10368,7 +10421,7 @@
         "id": "19481278497",
         "date": "2025-06-19",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10379,10 +10432,10 @@
         "averageHR": 140.0,
         "avgPower": 157.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10423,7 +10476,7 @@
         "id": "19470375231",
         "date": "2025-06-18",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10434,10 +10487,10 @@
         "averageHR": 87.0,
         "avgPower": 155.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10475,7 +10528,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10516,7 +10569,7 @@
         "id": "19459123303,19459516354",
         "date": "2025-06-17",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10527,10 +10580,10 @@
         "averageHR": 148.90684315684317,
         "avgPower": 175.16983016983016,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10571,7 +10624,7 @@
         "id": "19454395524",
         "date": "2025-06-16",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10582,10 +10635,10 @@
         "averageHR": 117.0,
         "avgPower": 142.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10626,7 +10679,7 @@
         "id": "19430392559",
         "date": "2025-06-14",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10637,10 +10690,10 @@
         "averageHR": 146.0,
         "avgPower": 161.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10681,7 +10734,7 @@
         "id": "19419900722",
         "date": "2025-06-13",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10692,10 +10745,10 @@
         "averageHR": 129.0,
         "avgPower": 136.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10736,7 +10789,7 @@
         "id": "19410245568",
         "date": "2025-06-12",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10747,10 +10800,10 @@
         "averageHR": 129.0,
         "avgPower": 141.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10791,7 +10844,7 @@
         "id": "19399226790",
         "date": "2025-06-11",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10802,10 +10855,10 @@
         "averageHR": 165.0,
         "avgPower": 209.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10846,7 +10899,7 @@
         "id": "19389101135",
         "date": "2025-06-10",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10857,10 +10910,10 @@
         "averageHR": 143.0,
         "avgPower": 146.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10901,7 +10954,7 @@
         "id": "19378891536",
         "date": "2025-06-09",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10912,10 +10965,10 @@
         "averageHR": 116.0,
         "avgPower": 130.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -10956,7 +11009,7 @@
         "id": "19359900442",
         "date": "2025-06-07",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -10967,10 +11020,10 @@
         "averageHR": 152.0,
         "avgPower": 158.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11011,7 +11064,7 @@
         "id": "19349849471",
         "date": "2025-06-06",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11022,10 +11075,10 @@
         "averageHR": 141.0,
         "avgPower": 158.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11066,7 +11119,7 @@
         "id": "19339994070",
         "date": "2025-06-05",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11077,10 +11130,10 @@
         "averageHR": 147.0,
         "avgPower": 164.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11121,7 +11174,7 @@
         "id": "19330133598",
         "date": "2025-06-04",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11132,10 +11185,10 @@
         "averageHR": 157.0,
         "avgPower": 182.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11176,7 +11229,7 @@
         "id": "19293160977",
         "date": "2025-05-31",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11187,10 +11240,10 @@
         "averageHR": 154.0,
         "avgPower": 117.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11231,7 +11284,7 @@
         "id": "19275302593",
         "date": "2025-05-29",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11242,10 +11295,10 @@
         "averageHR": 103.0,
         "avgPower": 57.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11286,7 +11339,7 @@
         "id": "21159771016",
         "date": "2025-05-27",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11297,10 +11350,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11341,7 +11394,7 @@
         "id": "19242940851",
         "date": "2025-05-26",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11352,10 +11405,10 @@
         "averageHR": null,
         "avgPower": 38.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11396,7 +11449,7 @@
         "id": "19221463353",
         "date": "2025-05-24",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11407,10 +11460,10 @@
         "averageHR": 155.0,
         "avgPower": 143.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Friday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11451,7 +11504,7 @@
         "id": "21159952061",
         "date": "2025-05-23",
         "Day": "Friday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11462,10 +11515,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11506,7 +11559,7 @@
         "id": "19196016197",
         "date": "2025-05-21",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11517,10 +11570,10 @@
         "averageHR": 157.0,
         "avgPower": 160.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11561,7 +11614,7 @@
         "id": "21159763894",
         "date": "2025-05-20",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11572,10 +11625,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11616,7 +11669,7 @@
         "id": "21159760979",
         "date": "2025-05-19",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11627,10 +11680,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11671,7 +11724,7 @@
         "id": "19083954460",
         "date": "2025-05-10",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11682,10 +11735,10 @@
         "averageHR": 161.0,
         "avgPower": 143.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11726,7 +11779,7 @@
         "id": "18964587866",
         "date": "2025-04-28",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11737,10 +11790,10 @@
         "averageHR": 152.0,
         "avgPower": 153.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11778,7 +11831,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11819,7 +11872,7 @@
         "id": "21159753470",
         "date": "2025-04-26",
         "Day": "Saturday",
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Match Status": "Unplanned",
         "activityType": "Other",
         "plannedWorkout": "",
@@ -11843,24 +11896,31 @@
         "maxPower": null
     },
     {
-        "id": "18941120047",
+        "id": "21159753470",
         "date": "2025-04-26",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
-        "actualWorkout": "Roy Road Cycling",
-        "actualDuration": 159.9,
-        "distance": 72458.53125,
-        "calories": 1640.0,
-        "averageHR": 158.0,
-        "avgPower": 144.0,
-        "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "actualWorkout": "Manual Ride",
+        "actualDuration": 39.4,
+        "distance": 0.0,
+        "calories": 133.0,
+        "averageHR": null,
+        "avgPower": null,
+        "Match Status": "Linked",
+        "Status": "UNPLANNED",
+        "duration": 2361.0,
+        "elevationGain": null,
+        "maxHR": null,
+        "maxPower": null,
+        "normPower": null,
+        "RPE": null,
+        "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11901,7 +11961,7 @@
         "id": "18895148091",
         "date": "2025-04-21",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11912,10 +11972,10 @@
         "averageHR": 162.0,
         "avgPower": 177.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -11956,7 +12016,7 @@
         "id": "18806937000",
         "date": "2025-04-12",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -11967,10 +12027,10 @@
         "averageHR": 157.0,
         "avgPower": 152.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12011,7 +12071,7 @@
         "id": "18777627033",
         "date": "2025-04-09",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12022,10 +12082,10 @@
         "averageHR": 151.0,
         "avgPower": 151.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12066,7 +12126,7 @@
         "id": "18742756104",
         "date": "2025-04-05",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12077,10 +12137,10 @@
         "averageHR": 160.0,
         "avgPower": 167.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Wednesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12121,7 +12181,7 @@
         "id": "18712250933",
         "date": "2025-04-02",
         "Day": "Wednesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12132,10 +12192,10 @@
         "averageHR": null,
         "avgPower": 163.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12176,7 +12236,7 @@
         "id": "18636340512",
         "date": "2025-03-25",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12187,10 +12247,10 @@
         "averageHR": 163.0,
         "avgPower": 159.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12231,7 +12291,7 @@
         "id": "18606507062",
         "date": "2025-03-22",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12242,10 +12302,10 @@
         "averageHR": 157.0,
         "avgPower": 139.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12286,7 +12346,7 @@
         "id": "18410797942",
         "date": "2025-03-01",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12297,10 +12357,10 @@
         "averageHR": 155.0,
         "avgPower": 133.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12338,7 +12398,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12379,7 +12439,7 @@
         "id": "21159726324,21159731348",
         "date": "2025-02-25",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12390,10 +12450,10 @@
         "averageHR": 0.0,
         "avgPower": 0.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12434,7 +12494,7 @@
         "id": "18368062453",
         "date": "2025-02-24",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12445,10 +12505,10 @@
         "averageHR": 153.0,
         "avgPower": 133.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12489,7 +12549,7 @@
         "id": "21159722439",
         "date": "2025-02-18",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12500,14 +12560,14 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "id": "21159880621",
         "date": "2025-02-17",
         "Day": "Monday",
-        "Status": "COMPLETED",
-        "Match Status": "Unplanned",
+        "Status": "UNPLANNED",
+        "Match Status": "Linked",
         "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12530,7 +12590,7 @@
         "maxPower": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12571,7 +12631,7 @@
         "id": "21159718066",
         "date": "2025-02-15",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12582,10 +12642,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12626,7 +12686,7 @@
         "id": "21159823402",
         "date": "2025-01-20",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12637,10 +12697,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12681,7 +12741,7 @@
         "id": "21159704629",
         "date": "2025-01-18",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12692,10 +12752,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12703,7 +12763,7 @@
         "actualDuration": 53.9,
         "notes": "",
         "date": "2025-01-16",
-        "Match Status": "Unplanned",
+        "Match Status": "Linked",
         "id": "21159847790",
         "activityType": "Other",
         "sportTypeId": null,
@@ -12733,7 +12793,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Monday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12774,7 +12834,7 @@
         "id": "21159051459",
         "date": "2025-01-13",
         "Day": "Monday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12785,10 +12845,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12829,7 +12889,7 @@
         "id": "21159044112",
         "date": "2025-01-11",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12840,10 +12900,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12884,7 +12944,7 @@
         "id": "21159032781",
         "date": "2025-01-09",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12895,10 +12955,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12906,7 +12966,7 @@
         "actualDuration": 60.0,
         "notes": "",
         "date": "2025-01-02",
-        "Match Status": "Unplanned",
+        "Match Status": "Linked",
         "id": "21159841646",
         "activityType": "Other",
         "sportTypeId": null,
@@ -12936,7 +12996,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -12977,7 +13037,7 @@
         "id": "17884816552",
         "date": "2024-12-31",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -12988,10 +13048,10 @@
         "averageHR": null,
         "avgPower": null,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -13032,7 +13092,7 @@
         "id": "17326162183",
         "date": "2024-10-19",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -13043,10 +13103,10 @@
         "averageHR": 156.0,
         "avgPower": 145.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -13087,7 +13147,7 @@
         "id": "17267869269",
         "date": "2024-10-12",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -13098,10 +13158,10 @@
         "averageHR": 154.0,
         "avgPower": 162.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -13139,7 +13199,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -13180,7 +13240,7 @@
         "id": "17210557038,17210897026",
         "date": "2024-10-05",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -13191,10 +13251,10 @@
         "averageHR": 146.9364919005111,
         "avgPower": 130.53228255506718,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Thursday rsday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -13235,7 +13295,7 @@
         "id": "17196281931",
         "date": "2024-10-03",
         "Day": "Thursday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -13246,10 +13306,10 @@
         "averageHR": 161.0,
         "avgPower": 166.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Tuesday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -13290,7 +13350,7 @@
         "id": "17179518510",
         "date": "2024-10-01",
         "Day": "Tuesday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -13301,10 +13361,10 @@
         "averageHR": 160.0,
         "avgPower": 176.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "",
         "plannedDuration": null,
@@ -13345,7 +13405,7 @@
         "id": "17153208477",
         "date": "2024-09-28",
         "Day": "Saturday",
-        "activityType": "Bike",
+        "activityType": "Other",
         "plannedWorkout": "",
         "plannedDuration": 0,
         "notes": "",
@@ -13356,7 +13416,7 @@
         "averageHR": 146.0,
         "avgPower": 143.0,
         "Match Status": "Unplanned",
-        "Status": "COMPLETED"
+        "Status": "UNPLANNED"
     },
     {
         "Status": "COMPLETED",
@@ -13549,7 +13609,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "[BIKE] Long Steady Distance",
         "plannedDuration": null,
@@ -13777,7 +13837,7 @@
         "Feeling": null
     },
     {
-        "Status": "COMPLETED",
+        "Status": "UNPLANNED",
         "Day": "Saturday",
         "plannedWorkout": "[BIKE] Long Steady Distance",
         "plannedDuration": null,
