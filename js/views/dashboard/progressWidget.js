@@ -30,25 +30,43 @@ function findNextEvent(planMd) {
     return null;
 }
 
-export function renderProgressWidget(plannedWorkouts, fullLogData, planMd) { 
-    // 1. Determine Week Window from Planned Data (Source of Truth)
-    // We assume plannedWorkouts contains the current week's schedule.
+// --- NEW EXPORT: Render Just the Event Card ---
+export function renderNextEvent(planMd) {
+    const nextEvent = findNextEvent(planMd);
+    if (!nextEvent) return '';
+
+    return `
+        <div class="bg-blue-900/10 border border-blue-500/20 rounded-xl p-4 mb-6 flex justify-between items-center relative overflow-hidden shadow-sm">
+            <div class="relative z-10 flex items-center gap-4">
+                <div class="bg-blue-600/20 text-blue-400 border border-blue-500/30 w-12 h-12 rounded-lg flex flex-col items-center justify-center shadow-lg">
+                    <span class="text-lg font-bold leading-none">${nextEvent.daysToGo}</span>
+                    <span class="text-[8px] uppercase font-bold">Days</span>
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase tracking-widest text-blue-400 font-bold mb-0.5">Up Next</div>
+                    <div class="text-white font-bold text-base leading-tight">${nextEvent.name}</div>
+                    <div class="text-xs text-slate-400 mt-0.5 font-mono">${nextEvent.date.toLocaleDateString()}</div>
+                </div>
+            </div>
+            <i class="fa-solid fa-flag-checkered text-6xl text-blue-500/5 absolute -right-2 -bottom-4 transform -rotate-12 pointer-events-none"></i>
+        </div>
+    `;
+}
+
+// --- UPDATED: Render Just the Progress Bars ---
+export function renderProgressWidget(plannedWorkouts, fullLogData) { 
+    // 1. Determine Week Window
     let minDate = new Date(8640000000000000);
     let maxDate = new Date(-8640000000000000);
-    let hasPlan = false;
 
     if (plannedWorkouts && plannedWorkouts.length > 0) {
-        hasPlan = true;
         plannedWorkouts.forEach(w => {
             const d = new Date(w.date);
             if (d < minDate) minDate = d;
             if (d > maxDate) maxDate = d;
         });
         
-        // Adjust to Sunday start / Saturday end to be safe?
-        // User said: "It is Sunday to Saturday window"
-        // Let's force the window based on the planned dates found.
-        const startDay = minDate.getDay(); // 0=Sun, 6=Sat
+        const startDay = minDate.getDay(); 
         minDate.setDate(minDate.getDate() - startDay); // Back to Sunday
         minDate.setHours(0,0,0,0);
         
@@ -56,7 +74,6 @@ export function renderProgressWidget(plannedWorkouts, fullLogData, planMd) {
         maxDate.setDate(minDate.getDate() + 6); // Forward to Saturday
         maxDate.setHours(23,59,59,999);
     } else {
-        // Fallback if no plan: Current Week
         const today = new Date(); today.setHours(0,0,0,0);
         const day = today.getDay();
         minDate = new Date(today); minDate.setDate(today.getDate() - day);
@@ -76,12 +93,10 @@ export function renderProgressWidget(plannedWorkouts, fullLogData, planMd) {
     if (plannedWorkouts) {
         plannedWorkouts.forEach(w => {
             const d = new Date(w.date);
-            // Even though we used these to define the window, let's double check range
             if (d >= minDate && d <= maxDate) {
                 const dur = w.plannedDuration || 0;
                 totalPlanned += dur;
                 
-                // Map sport
                 let sport = null;
                 const type = (w.activityType || '').toUpperCase();
                 if (type === 'BIKE') sport = 'Bike';
@@ -97,13 +112,10 @@ export function renderProgressWidget(plannedWorkouts, fullLogData, planMd) {
     if (fullLogData) {
         fullLogData.forEach(d => {
             const date = new Date(d.date);
-            // Strict Window Check
             if (date >= minDate && date <= maxDate) {
                 const dur = d.duration || 0;
                 totalActual += dur;
-
-                // Strict Sport Check
-                const sport = d.sport; // Bike, Run, Swim
+                const sport = d.sport; 
                 if (buckets[sport]) {
                     buckets[sport].actual += dur;
                 }
@@ -116,13 +128,11 @@ export function renderProgressWidget(plannedWorkouts, fullLogData, planMd) {
         const planned = bucketData ? bucketData.planned : totalPlanned;
         const actual = bucketData ? bucketData.actual : totalActual;
         
-        // Hide empty rows (except Total)
         if (!isTotal && planned === 0 && actual === 0) return '';
 
         const pct = planned > 0 ? Math.round((actual / planned) * 100) : 0;
         const width = Math.min(pct, 100);
         
-        // Color Selection (Sport or Total)
         let barColorVar = 'var(--color-all)';
         if (label === 'Bike') barColorVar = 'var(--color-bike)';
         if (label === 'Run') barColorVar = 'var(--color-run)';
@@ -131,7 +141,6 @@ export function renderProgressWidget(plannedWorkouts, fullLogData, planMd) {
         const iconColorStyle = `style="color: ${barColorVar}"`;
         const barStyle = `style="width: ${width}%; background-color: ${barColorVar}"`;
         
-        // Formatting
         const actHrs = (actual/60).toFixed(1);
         const plnHrs = (planned/60).toFixed(1);
         const mbClass = isTotal ? 'mb-6' : 'mb-4';
@@ -161,32 +170,8 @@ export function renderProgressWidget(plannedWorkouts, fullLogData, planMd) {
         </div>`;
     };
 
-    // 6. Next Event Card
-    const nextEvent = findNextEvent(planMd);
-    let eventHtml = '';
-    if (nextEvent) {
-        eventHtml = `
-            <div class="bg-blue-900/10 border border-blue-500/20 rounded-xl p-4 mb-6 flex justify-between items-center relative overflow-hidden">
-                <div class="relative z-10 flex items-center gap-4">
-                    <div class="bg-blue-600/20 text-blue-400 border border-blue-500/30 w-12 h-12 rounded-lg flex flex-col items-center justify-center shadow-lg">
-                        <span class="text-lg font-bold leading-none">${nextEvent.daysToGo}</span>
-                        <span class="text-[8px] uppercase font-bold">Days</span>
-                    </div>
-                    <div>
-                        <div class="text-[10px] uppercase tracking-widest text-blue-400 font-bold mb-0.5">Up Next</div>
-                        <div class="text-white font-bold text-base leading-tight">${nextEvent.name}</div>
-                        <div class="text-xs text-slate-400 mt-0.5 font-mono">${nextEvent.date.toLocaleDateString()}</div>
-                    </div>
-                </div>
-                <i class="fa-solid fa-flag-checkered text-6xl text-blue-500/5 absolute -right-2 -bottom-4 transform -rotate-12 pointer-events-none"></i>
-            </div>
-        `;
-    }
-
     return `
     <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 shadow-sm">
-        ${eventHtml}
-        
         ${generateBar('Total', 'fa-layer-group', null, true)}
         
         <div class="grid grid-cols-1 gap-1">
