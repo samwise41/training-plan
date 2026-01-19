@@ -7,9 +7,12 @@ MODULES_DIR = os.path.dirname(os.path.abspath(__file__))
 PYTHON_DIR = os.path.dirname(MODULES_DIR) # python/
 ROOT_DIR = os.path.dirname(PYTHON_DIR)    # Project Root
 
+# Define the main data directory
+DATA_DIR = os.path.join(ROOT_DIR, 'data')
+
 PLAN_FILE = os.path.join(ROOT_DIR, 'endurance_plan.md')
 # CHANGED: Now points to the JSON database
-MASTER_DB = os.path.join(ROOT_DIR, 'data', 'training_log.json')
+MASTER_DB = os.path.join(DATA_DIR, 'training_log.json')
 BRIEF_FILE = os.path.join(ROOT_DIR, 'COACH_BRIEFING.md') 
 
 # Point to the 'garmin_data' folder
