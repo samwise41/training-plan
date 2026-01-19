@@ -37,7 +37,6 @@ def run_build_plan_script():
     """
     Executes _03_build_plan.py to refresh data/planned.json
     """
-    # Assuming _03_build_plan.py is in the parent 'python/' directory relative to this module
     script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '_03_build_plan.py')
     
     if os.path.exists(script_path):
@@ -88,6 +87,7 @@ def sync():
     log_map = {}
     for i, entry in enumerate(existing_log):
         date = entry.get('date')
+        # Robustly find the sport type from either field
         sport = normalize_sport(entry.get('plannedWorkout') or entry.get('activityType'))
         if date and sport:
             log_map[f"{date}|{sport}"] = i
@@ -98,40 +98,52 @@ def sync():
 
     for plan in planned_data:
         p_date = plan.get('date')
-        p_sport = normalize_sport(plan.get('plannedWorkout'))
+        
+        # KEY FIX: Handle field name mismatch (activityName vs plannedWorkout)
+        p_workout_name = plan.get('activityName') or plan.get('plannedWorkout')
+        p_sport = plan.get('activityType') or normalize_sport(p_workout_name)
         
         # Skip if date is missing or sport is unknown
         if not p_date or p_sport == 'Other': continue
 
-        # Only process past or today (as per user request: "not in the future")
+        # Only process past or today (skip future)
+        # strict string comparison works for ISO dates
         if p_date > today:
             continue
 
         key = f"{p_date}|{p_sport}"
         
+        # Helper to get Day name if missing (e.g., "Monday")
+        p_day = plan.get('day') or plan.get('Day')
+        if not p_day and p_date:
+             try:
+                 p_day = datetime.strptime(p_date, '%Y-%m-%d').strftime('%A')
+             except: pass
+
         if key in log_map:
-            # Update existing record with latest Plan details (in case markdown changed)
+            # Update existing record
             idx = log_map[key]
-            existing_log[idx]['plannedWorkout'] = plan.get('plannedWorkout')
+            existing_log[idx]['plannedWorkout'] = p_workout_name
             existing_log[idx]['plannedDuration'] = plan.get('plannedDuration')
             existing_log[idx]['notes'] = plan.get('notes')
-            existing_log[idx]['Day'] = plan.get('day')
-            # Ensure Status is pending if no actual workout linked yet
+            if p_day: existing_log[idx]['Day'] = p_day
+            
+            # Auto-mark Missed if it's in the past and still pending
             if existing_log[idx]['Status'] == 'Pending' and p_date < today:
-                 existing_log[idx]['Status'] = 'Missed' # Auto-mark past pending as missed
+                 existing_log[idx]['Status'] = 'Missed' 
             
             updates += 1
         else:
             # Create New Record
             new_record = {
-                "id": None, # No ID yet
+                "id": None, 
                 "date": p_date,
-                "Day": plan.get('day'),
-                "Status": "Pending", # Default
+                "Day": p_day,
+                "Status": "Pending", 
                 "Match Status": "",
                 
                 # Plan Fields
-                "plannedWorkout": plan.get('plannedWorkout'),
+                "plannedWorkout": p_workout_name,
                 "plannedDuration": plan.get('plannedDuration'),
                 "notes": plan.get('notes'),
                 
@@ -153,13 +165,14 @@ def sync():
                 "vO2MaxValue": None, "calories": None, "elevationGain": None,
                 "RPE": None, "Feeling": None
             }
-            # Auto-mark missed if date is in past
+            
+            # Auto-mark missed if date is strictly in past
             if p_date < today:
                  new_record['Status'] = 'Missed'
-                 new_record['Match Status'] = 'Missed'
 
             existing_log.append(new_record)
-            log_map[key] = len(existing_log) - 1 # Add to map so we don't duplicate if list has dupes
+            # Add to map so we don't duplicate if list has duplicates
+            log_map[key] = len(existing_log) - 1 
             inserts += 1
 
     print(f"      - Added {inserts} new planned records, updated {updates}.")
@@ -183,7 +196,6 @@ def sync():
     # 3a. Hydrate Existing Log Entries
     for entry in existing_log:
         e_date = entry.get('date')
-        # Use existing activityType if set, otherwise derive from plannedWorkout
         e_sport = entry.get('activityType') or normalize_sport(entry.get('plannedWorkout'))
         
         if not e_date or not e_sport: continue
@@ -198,20 +210,25 @@ def sync():
             activities.sort(key=lambda x: x.get('duration', 0) or 0, reverse=True)
             main_act = activities[0]
             
+            # Combine metrics if multiple (e.g. warm up + race)
+            total_duration = sum(a.get('duration', 0) or 0 for a in activities)
+            total_dist = sum(a.get('distance', 0) or 0 for a in activities)
+            total_cal = sum(a.get('calories', 0) or 0 for a in activities)
+            total_elev = sum(a.get('elevationGain', 0) or 0 for a in activities)
+            
             # Update Log Entry
             entry['id'] = str(main_act.get('activityId'))
             entry['Match Status'] = "Linked"
             entry['Status'] = "COMPLETED"
             
-            # Actuals
             entry['actualWorkout'] = main_act.get('activityName')
-            entry['actualDuration'] = round((main_act.get('duration', 0) or 0) / 60, 1) # Minutes
+            entry['actualDuration'] = round(total_duration / 60, 1) # Minutes
             
             # Metrics
-            entry['duration'] = main_act.get('duration')
-            entry['distance'] = main_act.get('distance')
-            entry['calories'] = main_act.get('calories')
-            entry['elevationGain'] = main_act.get('elevationGain')
+            entry['duration'] = total_duration
+            entry['distance'] = total_dist
+            entry['calories'] = total_cal
+            entry['elevationGain'] = total_elev
             
             entry['averageHR'] = main_act.get('averageHR')
             entry['maxHR'] = main_act.get('maxHR')
@@ -247,7 +264,6 @@ def sync():
 
             matches += 1
             
-            # Remove from map so we don't double add as unplanned
             garmin_map.pop(key) 
 
     # 3b. Add Unmatched Garmin Activities (Unplanned workouts)
