@@ -1,4 +1,3 @@
-// js/views/dashboard/progressWidget.js
 import { getSportColorVar } from './utils.js';
 
 // --- HELPER: Parse Next Event ---
@@ -22,7 +21,7 @@ function findNextEvent(planMd) {
             const headers = trimmed.split('|').map(h => h.trim().toLowerCase());
             
             headers.forEach((h, idx) => {
-                const realIdx = idx - 1; // Adjust for empty first element from split
+                const realIdx = idx - 1; 
                 if (h.includes('date')) colMap.date = realIdx;
                 else if (h.includes('event') || h.includes('race') || h.includes('name')) colMap.event = realIdx;
             });
@@ -57,7 +56,7 @@ function findNextEvent(planMd) {
     return futureEvents.length > 0 ? futureEvents[0] : null;
 }
 
-// --- EXPORT 1: Render Next Event Card (Used by index.js) ---
+// --- EXPORT 1: Render Next Event Card (Used by index.js ONLY) ---
 export function renderNextEvent(planMd) {
     const nextEvent = findNextEvent(planMd);
     
