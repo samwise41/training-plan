@@ -1,17 +1,13 @@
 import json
 import os
-import re
 import sys
-from datetime import datetime, timedelta
+import subprocess
+from datetime import datetime
 
 try:
     from . import config
 except ImportError:
     import config
-
-# --- CONFIGURATION ---
-# We use a massive window to ensure ALL history is rebuilt
-SYNC_WINDOW_DAYS = 3650 
 
 def clean_numeric(val):
     if val is None or val == "": return None
@@ -25,229 +21,284 @@ def normalize_sport(val, activity_type=None):
     val = str(val).upper() if val else ""
     act_type = str(activity_type).upper() if activity_type else ""
     
+    # 1. Garmin/Strava Types
     if 'RIDE' in act_type or 'CYCL' in act_type or 'BIK' in act_type: return 'Bike'
     if 'RUN' in act_type: return 'Run'
     if 'SWIM' in act_type or 'POOL' in act_type: return 'Swim'
 
+    # 2. Text Matching
     if '[BIKE]' in val or 'ZWIFT' in val or 'CYCLING' in val: return 'Bike'
     if '[RUN]' in val or 'RUNNING' in val: return 'Run'
     if '[SWIM]' in val or 'SWIMMING' in val: return 'Swim'
+    
     return 'Other'
 
-def get_current_ftp():
-    if not os.path.exists(config.PLAN_FILE): return 241
-    try:
-        with open(config.PLAN_FILE, 'r', encoding='utf-8') as f:
-            content = f.read()
-            match = re.search(r"Cycling FTP[:\*]*\s*(\d+)", content, re.IGNORECASE)
-            if match: return int(match.group(1))
-    except: pass
-    return 241
-
-def bundle_activities(activities):
-    if not activities: return None
-    # Primary activity is the one with the longest duration
-    activities.sort(key=lambda x: x.get('duration', 0) or 0, reverse=True)
-    main = activities[0]
-    combined = main.copy()
-    
-    # 1. Summations
-    for key in ['duration', 'distance', 'calories', 'elevationGain']:
-        combined[key] = sum((a.get(key) or 0) for a in activities)
-
-    # 2. Weighted Averages
-    total_dur = combined['duration']
-    if total_dur > 0:
-        def weighted(k):
-            val = sum((a.get(k) or 0) * (a.get('duration') or 0) for a in activities)
-            return val / total_dur
-        
-        combined['averageHR'] = weighted('averageHR')
-        combined['avgPower'] = weighted('avgPower')
-        combined['normPower'] = weighted('normPower')
-        combined['averageSpeed'] = weighted('averageSpeed')
-        combined['averageBikingCadenceInRevPerMinute'] = weighted('averageBikingCadenceInRevPerMinute')
-        combined['averageRunningCadenceInStepsPerMinute'] = weighted('averageRunningCadenceInStepsPerMinute')
-        combined['avgStrideLength'] = weighted('avgStrideLength')
-        combined['avgVerticalOscillation'] = weighted('avgVerticalOscillation')
-        combined['avgGroundContactTime'] = weighted('avgGroundContactTime')
-
-    # 3. Maxima
-    combined['maxHR'] = max((a.get('maxHR') or 0) for a in activities)
-    combined['maxPower'] = max((a.get('maxPower') or 0) for a in activities)
-    combined['maxSpeed'] = max((a.get('maxSpeed') or 0) for a in activities)
-    
-    # 4. Concatenate IDs
-    all_ids = [str(a.get('activityId')) for a in activities if a.get('activityId')]
-    combined['activityId'] = ",".join(all_ids)
-    
-    if len(activities) > 1:
-        base_name = main.get('activityName', 'Activity')
-        combined['activityName'] = f"{base_name} (+{len(activities)-1})"
-        
-    return combined
-
-def extract_planned_workouts():
-    if not os.path.exists(config.PLAN_FILE): return []
-    with open(config.PLAN_FILE, 'r', encoding='utf-8') as f: lines = f.readlines()
-    
-    data = []
-    # Simple parser assuming table structure
-    # | Date | Day | Planned Workout | Duration | Notes |
-    for line in lines:
-        if '|' in line and not '---' in line and not 'Date' in line:
-            parts = [p.strip() for p in line.split('|')]
-            if len(parts) > 5:
-                try:
-                    p_date = parts[1]
-                    datetime.strptime(p_date, '%Y-%m-%d') # Validate format
-                    data.append({
-                        'date': p_date,
-                        'day': parts[2],
-                        'plannedWorkout': parts[3],
-                        'plannedDuration': clean_numeric(re.sub(r"[^0-9\.]", "", parts[4])),
-                        'notes': parts[5]
-                    })
-                except: continue
-    return data
+def run_build_plan_script():
+    """
+    Executes _03_build_plan.py to refresh data/planned.json
+    """
+    script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '_03_build_plan.py')
+    if os.path.exists(script_path):
+        print(f"🔨 Running Build Plan Script: {os.path.basename(script_path)}...")
+        try:
+            subprocess.run([sys.executable, script_path], check=True)
+            print("   ✅ Plan built successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"   ❌ Error building plan: {e}")
+    else:
+        print(f"   ⚠️ Build plan script not found at {script_path}")
 
 def sync():
-    print(f"🔄 SYNC: REBUILDING DATABASE from Garmin Data...")
+    print(f"🚀 SYNC: Starting Database Sync...")
     
-    if not os.path.exists(config.GARMIN_JSON):
-        print("❌ Garmin JSON not found.")
-        return []
+    # STEP 1: Refresh the Planned Data
+    run_build_plan_script()
     
-    with open(config.GARMIN_JSON, 'r', encoding='utf-8') as f: 
-        garmin_list = json.load(f)
+    # Define file paths
+    PLANNED_JSON = os.path.join(config.DATA_DIR, 'planned.json')
+    TRAINING_LOG = config.MASTER_DB # data/training_log.json
+    GARMIN_JSON = config.GARMIN_JSON
 
-    plan_list = extract_planned_workouts()
-    current_ftp = get_current_ftp()
+    # Load Data
+    planned_data = []
+    if os.path.exists(PLANNED_JSON):
+        with open(PLANNED_JSON, 'r', encoding='utf-8') as f:
+            planned_data = json.load(f)
     
-    # 1. Group Garmin Activities by Date + Sport
-    grouped = {}
-    for g in garmin_list:
+    existing_log = []
+    if os.path.exists(TRAINING_LOG):
+        with open(TRAINING_LOG, 'r', encoding='utf-8') as f:
+            existing_log = json.load(f)
+
+    garmin_data = []
+    if os.path.exists(GARMIN_JSON):
+        with open(GARMIN_JSON, 'r', encoding='utf-8') as f:
+            garmin_data = json.load(f)
+
+    print(f"   📊 Loaded: {len(planned_data)} Plans | {len(existing_log)} Logs | {len(garmin_data)} Garmin Activities")
+
+    # STEP 2: Upsert Planned Workouts into Training Log
+    # We match based on Date + ActivityType to avoid duplicates
+    print("   🔄 Merging Planned Workouts into Log...")
+    
+    # Index existing log for fast lookup
+    # Key: "YYYY-MM-DD|Type"
+    log_map = {}
+    for i, entry in enumerate(existing_log):
+        date = entry.get('date')
+        sport = normalize_sport(entry.get('plannedWorkout') or entry.get('activityType'))
+        if date and sport:
+            log_map[f"{date}|{sport}"] = i
+
+    updates = 0
+    inserts = 0
+    today = datetime.now().strftime('%Y-%m-%d')
+
+    for plan in planned_data:
+        p_date = plan.get('date')
+        p_sport = normalize_sport(plan.get('plannedWorkout'))
+        
+        # Skip if date is missing or sport is unknown
+        if not p_date or p_sport == 'Other': continue
+
+        # Only process past or today (as per user request: "not in the future")
+        # Adjust logic: Usually we want future plans in the log too for the calendar view.
+        # But sticking to instructions: "adds any planned workouts that are not in the future"
+        if p_date > today:
+            continue
+
+        key = f"{p_date}|{p_sport}"
+        
+        if key in log_map:
+            # Update existing record with latest Plan details (in case markdown changed)
+            idx = log_map[key]
+            existing_log[idx]['plannedWorkout'] = plan.get('plannedWorkout')
+            existing_log[idx]['plannedDuration'] = plan.get('plannedDuration')
+            existing_log[idx]['notes'] = plan.get('notes')
+            existing_log[idx]['Day'] = plan.get('day')
+            updates += 1
+        else:
+            # Create New Record
+            new_record = {
+                "id": None, # No ID yet
+                "date": p_date,
+                "Day": plan.get('day'),
+                "Status": "Pending", # Default
+                "Match Status": "",
+                
+                # Plan Fields
+                "plannedWorkout": plan.get('plannedWorkout'),
+                "plannedDuration": plan.get('plannedDuration'),
+                "notes": plan.get('notes'),
+                
+                # Activity Type for Matching
+                "activityType": p_sport,
+                
+                # Empty Actuals
+                "actualWorkout": "",
+                "actualDuration": None,
+                
+                # Empty Metrics
+                "duration": None, "distance": None, "averageHR": None, "maxHR": None,
+                "aerobicTrainingEffect": None, "anaerobicTrainingEffect": None,
+                "trainingEffectLabel": None, "avgPower": None, "maxPower": None,
+                "normPower": None, "trainingStressScore": None, "intensityFactor": None,
+                "averageSpeed": None, "maxSpeed": None, "averageBikingCadenceInRevPerMinute": None,
+                "averageRunningCadenceInStepsPerMinute": None, "avgStrideLength": None,
+                "avgVerticalOscillation": None, "avgGroundContactTime": None,
+                "vO2MaxValue": None, "calories": None, "elevationGain": None,
+                "RPE": None, "Feeling": None
+            }
+            existing_log.append(new_record)
+            log_map[key] = len(existing_log) - 1 # Add to map so we don't duplicate if list has dupes
+            inserts += 1
+
+    print(f"      - Added {inserts} new planned records, updated {updates}.")
+
+    # STEP 3: Match Against Garmin Data
+    print("   🔗 Matching Garmin Activities...")
+    matches = 0
+    garmin_inserts = 0
+    
+    # Group Garmin by Date|Type for lookup
+    garmin_map = {}
+    for g in garmin_data:
         g_date = g.get('startTimeLocal', '')[:10]
         g_sport = normalize_sport(g.get('activityName'), g.get('activityType', {}).get('typeKey', ''))
-        key = f"{g_date}|{g_sport}"
-        if key not in grouped: grouped[key] = []
-        grouped[key].append(g)
-
-    # 2. Build Master List
-    master_db = []
-    
-    # Map Planned Items First (Lookup Dict)
-    plan_map = {f"{p['date']}|{normalize_sport(p['plannedWorkout'])}": p for p in plan_list}
-
-    # Process Completed Activities
-    for key, activities in grouped.items():
-        g_date, g_sport = key.split('|')
+        g_key = f"{g_date}|{g_sport}"
         
-        # Calculate Day of Week
-        try:
-            day_name = datetime.strptime(g_date, '%Y-%m-%d').strftime('%A')
-        except: day_name = "Unknown"
+        # We might have multiple activities per day/sport (e.g. warm up + race)
+        # For simplicity in this structure, we take the longest or list them.
+        # This logic bundles them if they exist.
+        if g_key not in garmin_map:
+            garmin_map[g_key] = []
+        garmin_map[g_key].append(g)
 
-        composite = bundle_activities(activities)
+    # 3a. Hydrate Existing Log Entries
+    for entry in existing_log:
+        e_date = entry.get('date')
+        # Use existing activityType if set, otherwise derive from plannedWorkout
+        e_sport = entry.get('activityType') or normalize_sport(entry.get('plannedWorkout'))
         
-        # Link to Plan if exists
-        plan_data = plan_map.get(key, {})
+        if not e_date or not e_sport: continue
         
-        # --- FINAL SCHEMA MAPPING ---
-        record = {
-            # Identity
-            "id": str(composite.get('activityId')),
+        key = f"{e_date}|{e_sport}"
+        
+        if key in garmin_map:
+            # FOUND MATCH
+            activities = garmin_map[key]
+            
+            # Use bundle logic if multiple activities match single plan entry
+            # (e.g. warmup + race + cooldown matching "[BIKE] Interval")
+            
+            # Sort by duration to get primary
+            activities.sort(key=lambda x: x.get('duration', 0) or 0, reverse=True)
+            main_act = activities[0]
+            
+            # Combine metrics if multiple
+            total_duration = sum(a.get('duration', 0) or 0 for a in activities)
+            total_dist = sum(a.get('distance', 0) or 0 for a in activities)
+            total_cal = sum(a.get('calories', 0) or 0 for a in activities)
+            total_elev = sum(a.get('elevationGain', 0) or 0 for a in activities)
+            
+            # Update Log Entry
+            entry['id'] = str(main_act.get('activityId'))
+            entry['Match Status'] = "Linked"
+            entry['Status'] = "COMPLETED"
+            
+            entry['actualWorkout'] = main_act.get('activityName')
+            entry['actualDuration'] = round(total_duration / 60, 1) # Minutes
+            
+            # Metrics
+            entry['duration'] = total_duration
+            entry['distance'] = total_dist
+            entry['calories'] = total_cal
+            entry['elevationGain'] = total_elev
+            
+            entry['averageHR'] = main_act.get('averageHR')
+            entry['maxHR'] = main_act.get('maxHR')
+            entry['avgPower'] = main_act.get('avgPower')
+            entry['normPower'] = main_act.get('normPower')
+            entry['maxPower'] = main_act.get('maxPower')
+            entry['aerobicTrainingEffect'] = main_act.get('aerobicTrainingEffect')
+            entry['anaerobicTrainingEffect'] = main_act.get('anaerobicTrainingEffect')
+            entry['trainingEffectLabel'] = main_act.get('trainingEffectLabel')
+            
+            # Zwift/Garmin specifics
+            entry['RPE'] = main_act.get('perceivedEffort')
+            entry['Feeling'] = main_act.get('feeling')
+            
+            # Calculate TSS/IF if missing
+            if entry['normPower'] and entry['duration'] and not entry.get('trainingStressScore'):
+                ftp = 241 # Default or fetch dynamically
+                sec = entry['duration']
+                np = entry['normPower']
+                entry['intensityFactor'] = round(np / ftp, 2)
+                entry['trainingStressScore'] = round((sec * np * entry['intensityFactor']) / (ftp * 3600) * 100, 1)
+
+            matches += 1
+            
+            # Mark these garmin activities as 'consumed' so we don't double add them later?
+            # Or we just rely on the key map. 
+            # Ideally we remove them from a 'to_be_processed' list.
+            garmin_map.pop(key) 
+
+    # 3b. Add Unmatched Garmin Activities (Unplanned workouts)
+    # Anything remaining in garmin_map was not linked to a plan
+    for key, activities in garmin_map.items():
+        # These are completed activities that had no plan
+        activities.sort(key=lambda x: x.get('duration', 0) or 0, reverse=True)
+        main = activities[0]
+        
+        g_date = main.get('startTimeLocal', '')[:10]
+        day_name = datetime.strptime(g_date, '%Y-%m-%d').strftime('%A')
+        
+        # Filter junk (e.g. manual entries with 0 duration)
+        if (main.get('duration') or 0) < 60: continue # Skip < 1 min activities
+
+        new_entry = {
+            "id": str(main.get('activityId')),
             "date": g_date,
-            "Day": day_name, # Critical for UI
+            "Day": day_name,
             "Status": "COMPLETED",
-            "Match Status": "Matched" if plan_data else "Unplanned",
+            "Match Status": "Unplanned",
+            "activityType": normalize_sport(main.get('activityName'), main.get('activityType', {}).get('typeKey', '')),
             
-            # Plan Data
-            "plannedWorkout": plan_data.get('plannedWorkout', ""),
-            "plannedDuration": plan_data.get('plannedDuration', 0),
-            "notes": plan_data.get('notes', ""),
+            "plannedWorkout": "",
+            "plannedDuration": None,
+            "notes": "",
             
-            # Actual Data
-            "actualSport": g_sport,
-            "actualWorkout": composite.get('activityName'),
-            "actualDuration": clean_numeric(composite.get('duration', 0)) / 60.0,
+            "actualWorkout": main.get('activityName'),
+            "actualDuration": round((main.get('duration') or 0) / 60, 1),
             
-            # All Requested Metrics
-            "activityType": composite.get('activityType'),
-            "sportTypeId": composite.get('sportTypeId'),
-            "duration": clean_numeric(composite.get('duration')),
-            "distance": clean_numeric(composite.get('distance')),
-            "averageHR": clean_numeric(composite.get('averageHR')),
-            "maxHR": clean_numeric(composite.get('maxHR')),
-            "aerobicTrainingEffect": clean_numeric(composite.get('aerobicTrainingEffect')),
-            "anaerobicTrainingEffect": clean_numeric(composite.get('anaerobicTrainingEffect')),
-            "trainingEffectLabel": composite.get('trainingEffectLabel'),
-            "avgPower": clean_numeric(composite.get('avgPower')),
-            "maxPower": clean_numeric(composite.get('maxPower')),
-            "normPower": clean_numeric(composite.get('normPower')),
-            "averageSpeed": clean_numeric(composite.get('averageSpeed')),
-            "maxSpeed": clean_numeric(composite.get('maxSpeed')),
-            "averageBikingCadenceInRevPerMinute": clean_numeric(composite.get('averageBikingCadenceInRevPerMinute')),
-            "averageRunningCadenceInStepsPerMinute": clean_numeric(composite.get('averageRunningCadenceInStepsPerMinute')),
-            "avgStrideLength": clean_numeric(composite.get('avgStrideLength')),
-            "avgVerticalOscillation": clean_numeric(composite.get('avgVerticalOscillation')),
-            "avgGroundContactTime": clean_numeric(composite.get('avgGroundContactTime')),
-            "vO2MaxValue": clean_numeric(composite.get('vO2MaxValue')),
-            "calories": clean_numeric(composite.get('calories')),
-            "elevationGain": clean_numeric(composite.get('elevationGain')),
-            "RPE": clean_numeric(composite.get('perceivedEffort')),
-            "Feeling": clean_numeric(composite.get('feeling'))
+            "duration": main.get('duration'),
+            "distance": main.get('distance'),
+            "averageHR": main.get('averageHR'),
+            "maxHR": main.get('maxHR'),
+            "avgPower": main.get('avgPower'),
+            "normPower": main.get('normPower'),
+            "calories": main.get('calories'),
+            "elevationGain": main.get('elevationGain'),
+            "aerobicTrainingEffect": main.get('aerobicTrainingEffect'),
+            "anaerobicTrainingEffect": main.get('anaerobicTrainingEffect'),
+            "trainingEffectLabel": main.get('trainingEffectLabel'),
+            "RPE": main.get('perceivedEffort'),
+            "Feeling": main.get('feeling')
         }
-        
-        # Calc TSS/IF
-        if record['normPower'] and record['duration']:
-            sec = record['duration']
-            np = record['normPower']
-            record['intensityFactor'] = round(np / current_ftp, 2)
-            record['trainingStressScore'] = round((sec * np * record['intensityFactor']) / (current_ftp * 3600) * 100, 1)
-        else:
-            record['intensityFactor'] = 0
-            record['trainingStressScore'] = 0
+        existing_log.append(new_entry)
+        garmin_inserts += 1
 
-        master_db.append(record)
+    print(f"      - Matched {matches} existing records.")
+    print(f"      - Added {garmin_inserts} unplanned/new Garmin activities.")
 
-    # 3. Add Future/Missed Plans
-    for p in plan_list:
-        p_sport = normalize_sport(p['plannedWorkout'])
-        key = f"{p['date']}|{p_sport}"
-        
-        # If this plan wasn't matched to a Garmin activity
-        is_matched = False
-        for rec in master_db:
-            if rec['date'] == p['date'] and rec['actualSport'] == p_sport:
-                is_matched = True
-                break
-        
-        if not is_matched:
-            # Determine if Missed or Pending
-            status = "Pending"
-            if p['date'] < datetime.now().strftime('%Y-%m-%d'):
-                status = "Missed"
-                
-            master_db.append({
-                "date": p['date'],
-                "Day": p['day'],
-                "Status": status,
-                "plannedWorkout": p['plannedWorkout'],
-                "plannedDuration": p['plannedDuration'],
-                "notes": p['notes'],
-                "actualSport": p_sport, # Placeholder for UI logic
-                "Match Status": "Planned"
-            })
-
-    # Sort and Save
-    master_db.sort(key=lambda x: x['date'], reverse=True)
+    # 4. Sort and Save
+    existing_log.sort(key=lambda x: x.get('date', '0000-00-00'), reverse=True)
     
-    with open(config.MASTER_DB, 'w', encoding='utf-8') as f:
-        json.dump(master_db, f, indent=2)
+    with open(TRAINING_LOG, 'w', encoding='utf-8') as f:
+        json.dump(existing_log, f, indent=4)
         
-    print(f"✅ REBUILD COMPLETE: {len(master_db)} records saved.")
-    return master_db
+    print(f"✅ DB Sync Complete. Total Records: {len(existing_log)}")
+    return existing_log
 
 if __name__ == "__main__":
     sync()
