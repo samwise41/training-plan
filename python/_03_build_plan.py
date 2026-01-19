@@ -8,22 +8,21 @@ from pathlib import Path
 PLAN_FILE = Path("endurance_plan.md")
 OUTPUT_FILE = Path("data/planned.json")
 
-# Mapping Sport Names to Standard Types
-SPORT_MAP = {
+# Strict Tag Mapping (Upper Case Tag inside [] -> Standard Type)
+TAG_MAP = {
     "RUN": "Run",
     "BIKE": "Bike",
-    "RIDE": "Bike",
     "SWIM": "Swim",
     "STRENGTH": "Strength",
     "REST": "Rest"
 }
 
 def parse_duration(duration_str):
-    """Parses '1h 30m', '45m', '1:30' into total minutes."""
-    if not duration_str or duration_str.strip() == "-":
+    """Parses '1h 30m', '45m', '1:30', '45' into total minutes."""
+    if not duration_str or str(duration_str).strip() == "-":
         return 0
     
-    s = duration_str.lower().strip()
+    s = str(duration_str).lower().strip()
     total_minutes = 0
     
     # Format: 1h 30m
@@ -44,22 +43,30 @@ def parse_duration(duration_str):
             pass
             
     # Format: Just number (assume minutes)
-    if total_minutes == 0 and s.isdigit():
-        total_minutes = int(s)
+    if total_minutes == 0:
+        num_match = re.search(r'(\d+)', s)
+        if num_match:
+            total_minutes = int(num_match.group(1))
         
     return total_minutes
 
-def normalize_sport(sport_str):
-    """Normalizes sport string to standard types."""
-    if not sport_str:
+def extract_sport_from_tags(activity_name):
+    """
+    STRICT: Only looks for [TAG] in the activity name.
+    No guessing. No keywords. No fallbacks.
+    """
+    if not activity_name:
         return "Other"
     
-    # Clean up formatting (e.g. **Run**)
-    clean = sport_str.replace("*", "").strip().upper()
+    # Look for content inside square brackets: [RUN], [BIKE], etc.
+    match = re.search(r'\[(.*?)]', str(activity_name))
     
-    for key, val in SPORT_MAP.items():
-        if key in clean:
-            return val
+    if match:
+        tag_content = match.group(1).upper().strip()
+        # Check against allowed map
+        if tag_content in TAG_MAP:
+            return TAG_MAP[tag_content]
+    
     return "Other"
 
 def parse_plan():
@@ -75,12 +82,12 @@ def parse_plan():
     json_output = []
     in_schedule = False
     headers = []
-    header_map = {} # Maps 'column name' -> index
+    header_map = {} 
 
     for line in lines:
         stripped = line.strip()
         
-        # 1. Detect Section Start (Flexible)
+        # 1. Detect Section Start
         if "weekly schedule" in stripped.lower() and stripped.startswith("##"):
             in_schedule = True
             print("   -> Found 'Weekly Schedule' section.")
@@ -89,7 +96,6 @@ def parse_plan():
         # 2. Detect Section End
         if in_schedule and stripped.startswith("##") and "weekly schedule" not in stripped.lower():
             in_schedule = False
-            print("   -> End of section reached.")
             continue
 
         if not in_schedule:
@@ -97,31 +103,28 @@ def parse_plan():
 
         # 3. Detect Table Header
         if stripped.startswith("|") and "date" in stripped.lower() and not headers:
-            # Parse Headers
-            raw_headers = [h.strip().lower() for h in stripped.strip("|").split("|")]
-            headers = raw_headers
+            raw_headers = [h.strip() for h in stripped.strip("|").split("|")]
+            headers = [h.lower() for h in raw_headers]
             
+            print(f"   -> Raw Headers Found: {raw_headers}")
+
             # Map standard keys to column indices
             for idx, h in enumerate(headers):
                 if "date" in h: header_map["date"] = idx
-                elif "activity" in h or "workout" in h: header_map["activity"] = idx
-                elif "type" in h or "sport" in h: header_map["type"] = idx
-                elif "duration" in h or "time" in h: header_map["duration"] = idx
-                elif "notes" in h: header_map["notes"] = idx
+                elif "activity" in h or "workout" in h or "name" in h: header_map["activity"] = idx
+                elif "duration" in h or "time" in h or "planned" in h or "vol" in h or "est" in h: header_map["duration"] = idx
+                elif "notes" in h or "desc" in h: header_map["notes"] = idx
 
-            print(f"   -> Found headers: {headers}")
-            print(f"   -> Mapped columns: {header_map}")
+            print(f"   -> Mapped Columns: {header_map}")
             continue
 
         # 4. Process Rows
         if stripped.startswith("|") and not "---" in stripped and headers:
             cols = [c.strip() for c in stripped.strip("|").split("|")]
             
-            # Ensure we have enough columns to match the headers
-            if len(cols) != len(headers):
-                # Sometimes splitting by pipe creates empty strings at edges if spacing is off
-                # Try to adjust if length matches reasonably well
-                pass 
+            # Simple validation
+            if "date" in header_map and len(cols) <= header_map["date"]:
+                continue
 
             entry = {
                 "id": str(uuid.uuid4()),
@@ -134,38 +137,35 @@ def parse_plan():
 
             try:
                 # --- DATE ---
-                if "date" in header_map:
+                if "date" in header_map and len(cols) > header_map["date"]:
                     raw_date = cols[header_map["date"]]
-                    # Try converting YYYY-MM-DD
                     try:
                         dt = datetime.datetime.strptime(raw_date, "%Y-%m-%d")
                         entry["date"] = dt.strftime("%Y-%m-%d")
                     except ValueError:
                         entry["date"] = raw_date
                 else:
-                    continue # No date, skip row
+                    continue 
 
                 # --- ACTIVITY NAME ---
-                if "activity" in header_map:
+                if "activity" in header_map and len(cols) > header_map["activity"]:
                     entry["activityName"] = cols[header_map["activity"]]
                 else:
                     entry["activityName"] = "Workout"
 
-                # --- TYPE ---
-                if "type" in header_map:
-                    entry["activityType"] = normalize_sport(cols[header_map["type"]])
-                else:
-                    # Guess from Name
-                    entry["activityType"] = normalize_sport(entry["activityName"])
+                # --- STRICT TYPE DETECTION (FROM NAME ONLY) ---
+                # We ignore any "Type" column. We only look at the name.
+                entry["activityType"] = extract_sport_from_tags(entry["activityName"])
 
                 # --- DURATION ---
-                if "duration" in header_map:
-                    entry["plannedDuration"] = parse_duration(cols[header_map["duration"]])
+                if "duration" in header_map and len(cols) > header_map["duration"]:
+                    dur_val = cols[header_map["duration"]]
+                    entry["plannedDuration"] = parse_duration(dur_val)
                 else:
                     entry["plannedDuration"] = 0
 
                 # --- NOTES ---
-                if "notes" in header_map:
+                if "notes" in header_map and len(cols) > header_map["notes"]:
                     entry["notes"] = cols[header_map["notes"]]
                 else:
                     entry["notes"] = ""
@@ -173,11 +173,14 @@ def parse_plan():
                 json_output.append(entry)
 
             except Exception as e:
-                # print(f"⚠️ Skipped Row: {cols} | {e}")
+                print(f"⚠️ Error parsing row: {cols} | {e}")
                 continue
 
     # 5. Output Results
     print(f"✅ Parsed {len(json_output)} workouts.")
+    if len(json_output) > 0:
+        sample = json_output[0]
+        print(f"   Sample: '{sample['activityName']}' -> Type: {sample['activityType']} ({sample['plannedDuration']}m)")
     
     OUTPUT_FILE.parent.mkdir(exist_ok=True)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
