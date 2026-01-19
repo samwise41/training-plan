@@ -33,7 +33,8 @@ export function renderPlannedWorkouts(planMd, cleanLogData) {
             let cardBorder = 'border border-slate-700 hover:border-slate-600'; 
             let actualDur = 0;
 
-            // Match against Clean Log Data (App.allData)
+            // Match against Clean Log Data
+            // We match by Date AND Sport (e.g. "Run" == "Run")
             const match = cleanLogData.find(d => 
                 toLocalYMD(d.date) === dateKey && 
                 d.sport.toUpperCase() === w.type.toUpperCase()
@@ -42,7 +43,8 @@ export function renderPlannedWorkouts(planMd, cleanLogData) {
             if (match) {
                 statusText = "COMPLETED";
                 statusColorClass = "text-emerald-500";
-                actualDur = match.duration; // Use clean duration
+                actualDur = Math.round(match.duration); // FIX: Round to integer
+                
                 const plan = w.plannedDuration || 0;
                 const ratio = plan > 0 ? (actualDur / plan) : 1;
                 
@@ -51,6 +53,9 @@ export function renderPlannedWorkouts(planMd, cleanLogData) {
                 else cardBorder = 'ring-2 ring-red-500 ring-offset-2 ring-offset-slate-900'; 
             } else if (dateObj.getTime() === today.getTime()) {
                 cardBorder = 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900';
+            } else if (dateObj < today) {
+                // Past and unmatched = Missed?
+                // cardBorder = 'opacity-60 border border-slate-800';
             }
 
             const titleStyle = `style="color: ${getSportColorVar(w.type)}"`;
