@@ -1,6 +1,7 @@
+// js/views/dashboard/progressWidget.js
 import { getSportColorVar } from './utils.js';
 
-// --- HELPER: Parse Next Event (Used by renderNextEvent only) ---
+// --- HELPER: Parse Next Event (Used by renderNextEvent ONLY) ---
 function findNextEvent(planMd) {
     if (!planMd) return null;
     const lines = planMd.split('\n');
@@ -86,7 +87,7 @@ export function renderNextEvent(planMd) {
     `;
 }
 
-// --- EXPORT 2: Render Progress Bars ONLY (No Events, No Phases) ---
+// --- EXPORT 2: Render Progress Bars ONLY (CRITICAL: DO NOT RENDER EVENT CARD HERE) ---
 export function renderProgressWidget(plannedWorkouts, fullLogData) { 
     // 1. Determine Week Window
     let minDate = new Date(8640000000000000);
@@ -194,7 +195,7 @@ export function renderProgressWidget(plannedWorkouts, fullLogData) {
         </div>`;
     };
 
-    // 5. RETURN ONLY THE WIDGET WRAPPER
+    // 5. RETURN ONLY THE WIDGET WRAPPER (No Events, No Phase)
     return `
     <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 shadow-sm">
         ${generateBar('Total', 'fa-layer-group', null, true)}
