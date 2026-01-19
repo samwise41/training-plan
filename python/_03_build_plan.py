@@ -109,7 +109,7 @@ def parse_plan():
                     col_date = idx
                 elif "planned workout" in h: 
                     col_workout = idx
-                elif "planned duration" in h or "duration" in h: 
+                elif "planned duration" in h: 
                     col_duration = idx
                 elif "notes" in h:
                     col_notes = idx
@@ -118,21 +118,22 @@ def parse_plan():
             continue
 
         # 4. Parse Data Rows
-        if stripped.startswith("|") and not "---" in stripped and col_workout > -1:
+        # Ensure we have identified the necessary columns
+        if stripped.startswith("|") and not "---" in stripped and col_workout > -1 and col_duration > -1:
             cols = [c.strip() for c in stripped.strip("|").split("|")]
             
             # Ensure row has enough columns
-            if len(cols) <= col_workout: continue
+            if len(cols) <= max(col_workout, col_duration): continue
 
             # Extract Data
             raw_workout = cols[col_workout]
-            raw_duration = cols[col_duration] if col_duration > -1 and len(cols) > col_duration else "0"
+            raw_duration = cols[col_duration]
             raw_date = cols[col_date] if col_date > -1 and len(cols) > col_date else ""
 
             # 1. Sport (From [TAG] in Planned Workout)
             sport = get_sport_from_tag(raw_workout)
             
-            # 2. Duration
+            # 2. Duration (From Planned Duration)
             dur = parse_duration(raw_duration)
 
             # 3. Date Parsing
