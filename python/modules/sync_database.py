@@ -37,7 +37,9 @@ def run_build_plan_script():
     """
     Executes _03_build_plan.py to refresh data/planned.json
     """
+    # Assuming _03_build_plan.py is in the parent 'python/' directory relative to this module
     script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '_03_build_plan.py')
+    
     if os.path.exists(script_path):
         print(f"🔨 Running Build Plan Script: {os.path.basename(script_path)}...")
         try:
@@ -51,7 +53,7 @@ def run_build_plan_script():
 def sync():
     print(f"🚀 SYNC: Starting Database Sync...")
     
-    # STEP 1: Refresh the Planned Data
+    # STEP 1: Refresh the Planned Data (Generate planned.json from MD)
     run_build_plan_script()
     
     # Define file paths
@@ -102,8 +104,6 @@ def sync():
         if not p_date or p_sport == 'Other': continue
 
         # Only process past or today (as per user request: "not in the future")
-        # Adjust logic: Usually we want future plans in the log too for the calendar view.
-        # But sticking to instructions: "adds any planned workouts that are not in the future"
         if p_date > today:
             continue
 
@@ -116,6 +116,10 @@ def sync():
             existing_log[idx]['plannedDuration'] = plan.get('plannedDuration')
             existing_log[idx]['notes'] = plan.get('notes')
             existing_log[idx]['Day'] = plan.get('day')
+            # Ensure Status is pending if no actual workout linked yet
+            if existing_log[idx]['Status'] == 'Pending' and p_date < today:
+                 existing_log[idx]['Status'] = 'Missed' # Auto-mark past pending as missed
+            
             updates += 1
         else:
             # Create New Record
@@ -149,6 +153,11 @@ def sync():
                 "vO2MaxValue": None, "calories": None, "elevationGain": None,
                 "RPE": None, "Feeling": None
             }
+            # Auto-mark missed if date is in past
+            if p_date < today:
+                 new_record['Status'] = 'Missed'
+                 new_record['Match Status'] = 'Missed'
+
             existing_log.append(new_record)
             log_map[key] = len(existing_log) - 1 # Add to map so we don't duplicate if list has dupes
             inserts += 1
@@ -167,9 +176,6 @@ def sync():
         g_sport = normalize_sport(g.get('activityName'), g.get('activityType', {}).get('typeKey', ''))
         g_key = f"{g_date}|{g_sport}"
         
-        # We might have multiple activities per day/sport (e.g. warm up + race)
-        # For simplicity in this structure, we take the longest or list them.
-        # This logic bundles them if they exist.
         if g_key not in garmin_map:
             garmin_map[g_key] = []
         garmin_map[g_key].append(g)
@@ -188,32 +194,24 @@ def sync():
             # FOUND MATCH
             activities = garmin_map[key]
             
-            # Use bundle logic if multiple activities match single plan entry
-            # (e.g. warmup + race + cooldown matching "[BIKE] Interval")
-            
-            # Sort by duration to get primary
+            # Sort by duration to get primary (longest activity)
             activities.sort(key=lambda x: x.get('duration', 0) or 0, reverse=True)
             main_act = activities[0]
-            
-            # Combine metrics if multiple
-            total_duration = sum(a.get('duration', 0) or 0 for a in activities)
-            total_dist = sum(a.get('distance', 0) or 0 for a in activities)
-            total_cal = sum(a.get('calories', 0) or 0 for a in activities)
-            total_elev = sum(a.get('elevationGain', 0) or 0 for a in activities)
             
             # Update Log Entry
             entry['id'] = str(main_act.get('activityId'))
             entry['Match Status'] = "Linked"
             entry['Status'] = "COMPLETED"
             
+            # Actuals
             entry['actualWorkout'] = main_act.get('activityName')
-            entry['actualDuration'] = round(total_duration / 60, 1) # Minutes
+            entry['actualDuration'] = round((main_act.get('duration', 0) or 0) / 60, 1) # Minutes
             
             # Metrics
-            entry['duration'] = total_duration
-            entry['distance'] = total_dist
-            entry['calories'] = total_cal
-            entry['elevationGain'] = total_elev
+            entry['duration'] = main_act.get('duration')
+            entry['distance'] = main_act.get('distance')
+            entry['calories'] = main_act.get('calories')
+            entry['elevationGain'] = main_act.get('elevationGain')
             
             entry['averageHR'] = main_act.get('averageHR')
             entry['maxHR'] = main_act.get('maxHR')
@@ -224,12 +222,23 @@ def sync():
             entry['anaerobicTrainingEffect'] = main_act.get('anaerobicTrainingEffect')
             entry['trainingEffectLabel'] = main_act.get('trainingEffectLabel')
             
+            entry['averageSpeed'] = main_act.get('averageSpeed')
+            entry['maxSpeed'] = main_act.get('maxSpeed')
+            
+            # Cadence / Running Dynamics
+            entry['averageBikingCadenceInRevPerMinute'] = main_act.get('averageBikingCadenceInRevPerMinute')
+            entry['averageRunningCadenceInStepsPerMinute'] = main_act.get('averageRunningCadenceInStepsPerMinute')
+            entry['avgStrideLength'] = main_act.get('avgStrideLength')
+            entry['avgVerticalOscillation'] = main_act.get('avgVerticalOscillation')
+            entry['avgGroundContactTime'] = main_act.get('avgGroundContactTime')
+            entry['vO2MaxValue'] = main_act.get('vO2MaxValue')
+
             # Zwift/Garmin specifics
             entry['RPE'] = main_act.get('perceivedEffort')
             entry['Feeling'] = main_act.get('feeling')
             
             # Calculate TSS/IF if missing
-            if entry['normPower'] and entry['duration'] and not entry.get('trainingStressScore'):
+            if entry.get('normPower') and entry.get('duration') and not entry.get('trainingStressScore'):
                 ftp = 241 # Default or fetch dynamically
                 sec = entry['duration']
                 np = entry['normPower']
@@ -238,15 +247,11 @@ def sync():
 
             matches += 1
             
-            # Mark these garmin activities as 'consumed' so we don't double add them later?
-            # Or we just rely on the key map. 
-            # Ideally we remove them from a 'to_be_processed' list.
+            # Remove from map so we don't double add as unplanned
             garmin_map.pop(key) 
 
     # 3b. Add Unmatched Garmin Activities (Unplanned workouts)
-    # Anything remaining in garmin_map was not linked to a plan
     for key, activities in garmin_map.items():
-        # These are completed activities that had no plan
         activities.sort(key=lambda x: x.get('duration', 0) or 0, reverse=True)
         main = activities[0]
         
@@ -254,7 +259,7 @@ def sync():
         day_name = datetime.strptime(g_date, '%Y-%m-%d').strftime('%A')
         
         # Filter junk (e.g. manual entries with 0 duration)
-        if (main.get('duration') or 0) < 60: continue # Skip < 1 min activities
+        if (main.get('duration') or 0) < 60: continue 
 
         new_entry = {
             "id": str(main.get('activityId')),
@@ -263,6 +268,7 @@ def sync():
             "Status": "COMPLETED",
             "Match Status": "Unplanned",
             "activityType": normalize_sport(main.get('activityName'), main.get('activityType', {}).get('typeKey', '')),
+            "sportTypeId": main.get('sportTypeId'),
             
             "plannedWorkout": "",
             "plannedDuration": None,
@@ -277,11 +283,24 @@ def sync():
             "maxHR": main.get('maxHR'),
             "avgPower": main.get('avgPower'),
             "normPower": main.get('normPower'),
+            "maxPower": main.get('maxPower'),
             "calories": main.get('calories'),
             "elevationGain": main.get('elevationGain'),
             "aerobicTrainingEffect": main.get('aerobicTrainingEffect'),
             "anaerobicTrainingEffect": main.get('anaerobicTrainingEffect'),
             "trainingEffectLabel": main.get('trainingEffectLabel'),
+            "averageSpeed": main.get('averageSpeed'),
+            "maxSpeed": main.get('maxSpeed'),
+            "averageBikingCadenceInRevPerMinute": main.get('averageBikingCadenceInRevPerMinute'),
+            "averageRunningCadenceInStepsPerMinute": main.get('averageRunningCadenceInStepsPerMinute'),
+            "avgStrideLength": main.get('avgStrideLength'),
+            "avgVerticalOscillation": main.get('avgVerticalOscillation'),
+            "avgGroundContactTime": main.get('avgGroundContactTime'),
+            "vO2MaxValue": main.get('vO2MaxValue'),
+            
+            "trainingStressScore": main.get('trainingStressScore'),
+            "intensityFactor": main.get('intensityFactor'),
+            
             "RPE": main.get('perceivedEffort'),
             "Feeling": main.get('feeling')
         }
