@@ -8,13 +8,13 @@ from pathlib import Path
 PLAN_FILE = Path("endurance_plan.md")
 OUTPUT_FILE = Path("data/planned.json")
 
-# Strict Tag Mapping (Upper Case Tag inside [] -> Standard Type)
+# User-defined Tags -> App Standard Types
 TAG_MAP = {
     "RUN": "Run",
     "BIKE": "Bike",
     "SWIM": "Swim",
-    "STRENGTH": "Strength",
-    "REST": "Rest"
+    "REST": "Rest",
+    "STRENGTH": "Strength"
 }
 
 def parse_duration(duration_str):
@@ -42,7 +42,7 @@ def parse_duration(duration_str):
         except:
             pass
             
-    # Format: Just number (assume minutes)
+    # Format: Just number (assume minutes if reasonable)
     if total_minutes == 0:
         num_match = re.search(r'(\d+)', s)
         if num_match:
@@ -52,18 +52,19 @@ def parse_duration(duration_str):
 
 def extract_sport_from_tags(activity_name):
     """
-    STRICT: Only looks for [TAG] in the activity name.
-    No guessing. No keywords. No fallbacks.
+    STRICT: Looks for [TAG] in the activity name string.
+    Example: "[BIKE] Interval Session" -> "Bike"
+    Returns "Other" if no valid tag is found.
     """
     if not activity_name:
         return "Other"
     
-    # Look for content inside square brackets: [RUN], [BIKE], etc.
-    match = re.search(r'\[(.*?)]', str(activity_name))
+    # Regex: Find content inside square brackets
+    # Handles [BIKE], [ RUN ], [Swim]
+    match = re.search(r'\[\s*(\w+)\s*\]', str(activity_name), re.IGNORECASE)
     
     if match:
-        tag_content = match.group(1).upper().strip()
-        # Check against allowed map
+        tag_content = match.group(1).upper()
         if tag_content in TAG_MAP:
             return TAG_MAP[tag_content]
     
@@ -112,7 +113,7 @@ def parse_plan():
             for idx, h in enumerate(headers):
                 if "date" in h: header_map["date"] = idx
                 elif "activity" in h or "workout" in h or "name" in h: header_map["activity"] = idx
-                elif "duration" in h or "time" in h or "planned" in h or "vol" in h or "est" in h: header_map["duration"] = idx
+                elif "duration" in h or "time" in h or "planned" in h: header_map["duration"] = idx
                 elif "notes" in h or "desc" in h: header_map["notes"] = idx
 
             print(f"   -> Mapped Columns: {header_map}")
@@ -122,7 +123,7 @@ def parse_plan():
         if stripped.startswith("|") and not "---" in stripped and headers:
             cols = [c.strip() for c in stripped.strip("|").split("|")]
             
-            # Simple validation
+            # Validation: Must have at least a date
             if "date" in header_map and len(cols) <= header_map["date"]:
                 continue
 
@@ -130,7 +131,7 @@ def parse_plan():
                 "id": str(uuid.uuid4()),
                 "status": "PLANNED",
                 "completed": False,
-                # Default numeric fields for app.js compatibility
+                # Default numeric fields for app compatibility
                 "actualDuration": 0, "distance": 0, "averageHR": 0,
                 "maxHR": 0, "avgPower": 0, "calories": 0, "RPE": 0, "Feeling": 0
             }
@@ -147,14 +148,14 @@ def parse_plan():
                 else:
                     continue 
 
-                # --- ACTIVITY NAME ---
+                # --- ACTIVITY NAME (Source of Truth for Type) ---
                 if "activity" in header_map and len(cols) > header_map["activity"]:
                     entry["activityName"] = cols[header_map["activity"]]
                 else:
                     entry["activityName"] = "Workout"
 
-                # --- STRICT TYPE DETECTION (FROM NAME ONLY) ---
-                # We ignore any "Type" column. We only look at the name.
+                # --- STRICT TYPE DETECTION ---
+                # Only use the [TAG] from the name. No guessing.
                 entry["activityType"] = extract_sport_from_tags(entry["activityName"])
 
                 # --- DURATION ---
@@ -179,8 +180,9 @@ def parse_plan():
     # 5. Output Results
     print(f"✅ Parsed {len(json_output)} workouts.")
     if len(json_output) > 0:
-        sample = json_output[0]
-        print(f"   Sample: '{sample['activityName']}' -> Type: {sample['activityType']} ({sample['plannedDuration']}m)")
+        print("   --- DEBUG: First 3 Rows Processed ---")
+        for i, sample in enumerate(json_output[:3]):
+            print(f"   {i+1}. Name: '{sample['activityName']}' -> Detected Type: {sample['activityType']}")
     
     OUTPUT_FILE.parent.mkdir(exist_ok=True)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
