@@ -1,24 +1,25 @@
 // js/views/dashboard/heatmaps.js
 import { toLocalYMD, getSportColorVar } from './utils.js';
-import { Parser } from '../../parser.js';
 
-// Helper: Get plan compliance map
-function getComplianceMap(fullLog, planMd) {
+// Helper: Get plan compliance map from JSON
+function getComplianceMap(fullLog, plannedJson) {
     const map = {};
     
-    // 1. Map Planned Duration per Day
-    const schedule = Parser.getSection(planMd, "Weekly Schedule");
-    if (schedule) {
-        const workouts = Parser._parseTableBlock(schedule);
-        workouts.forEach(w => {
+    // 1. Map Planned Duration per Day (from JSON)
+    if (plannedJson && Array.isArray(plannedJson)) {
+        plannedJson.forEach(w => {
             const k = toLocalYMD(w.date);
             if (!map[k]) map[k] = { planned: 0, actual: 0, details: [] };
-            map[k].planned += (w.plannedDuration || 0);
-            map[k].details.push(`Plan: ${w.planName} (${w.plannedDuration}m)`);
+            
+            const dur = w.plannedDuration || 0;
+            if (dur > 0) {
+                map[k].planned += dur;
+                map[k].details.push(`Plan: ${w.activityName} (${dur}m)`);
+            }
         });
     }
 
-    // 2. Map Actual Duration per Day
+    // 2. Map Actual Duration per Day (from Log)
     if (fullLog) {
         fullLog.forEach(d => {
             const k = toLocalYMD(d.date);
@@ -35,7 +36,6 @@ function getComplianceMap(fullLog, planMd) {
 function buildHeatmap(dataMap, startDate, endDate, title, containerId) {
     const startDay = startDate.getDay();
     let cells = '';
-    // Spacer for start of week
     for(let i=0; i<startDay; i++) cells += `<div class="w-3 h-3 m-[1px] opacity-0"></div>`;
 
     let cur = new Date(startDate);
@@ -62,7 +62,7 @@ function buildHeatmap(dataMap, startDate, endDate, title, containerId) {
                 bg = 'bg-slate-800'; // Empty Future
             }
         } else {
-            // Past Logic (Compliance)
+            // Past Logic
             if (planned > 0) {
                 if (actual === 0) {
                     bg = 'bg-red-500'; // Missed
@@ -78,16 +78,11 @@ function buildHeatmap(dataMap, startDate, endDate, title, containerId) {
                     }
                 }
             } else if (actual > 0) {
-                bg = 'bg-blue-500'; // Unplanned / Extra
+                bg = 'bg-blue-500'; // Unplanned
                 tooltip = 'Unplanned / Extra';
             } else {
-                 // Rest Day / Empty Past
-                 if (dayOfWeek === 0) {
-                     // Hide empty Sundays to keep grid tight? Or just fade them
-                     bg = 'bg-slate-800/30';
-                 } else {
-                     bg = 'bg-slate-800/50';
-                 }
+                 if (dayOfWeek === 0) bg = 'bg-slate-800/30';
+                 else bg = 'bg-slate-800/50';
             }
         }
 
@@ -95,14 +90,10 @@ function buildHeatmap(dataMap, startDate, endDate, title, containerId) {
             `onclick="window.showDashboardTooltip(event, '${k}', ${planned}, ${actual}, '${tooltip}', '#fff', 'Compliance', '${detailsStr.replace(/'/g, "")}')"` : '';
         const cursor = (planned > 0 || actual > 0) ? 'cursor-pointer hover:opacity-80' : '';
         
-        // Hide completely empty cells if you prefer, or keep grid structure
-        // Keeping grid structure is usually better for alignment.
         cells += `<div class="w-3 h-3 rounded-sm ${bg} ${cursor} m-[1px]" ${clickAttr}></div>`;
-        
         cur.setDate(cur.getDate()+1);
     }
 
-    // Scroll container
     const idAttr = containerId ? `id="${containerId}"` : '';
     return `
         <div class="bg-slate-800/30 border border-slate-700 rounded-xl p-6 h-full flex flex-col">
@@ -121,8 +112,9 @@ function buildHeatmap(dataMap, startDate, endDate, title, containerId) {
     `;
 }
 
-export function renderHeatmaps(cleanLogData, planMd) {
-    const complianceMap = getComplianceMap(cleanLogData, planMd);
+export function renderHeatmaps(cleanLogData, plannedJson) {
+    // Note: planMd is no longer needed here for dates, we use plannedJson
+    const complianceMap = getComplianceMap(cleanLogData, plannedJson);
     const today = new Date(); today.setHours(0,0,0,0);
     
     // Annual
@@ -133,7 +125,7 @@ export function renderHeatmaps(cleanLogData, planMd) {
 
     setTimeout(() => {
         const el = document.getElementById('heatmap-annual-scroll');
-        if(el) el.scrollLeft = el.scrollWidth; // Scroll to end
+        if(el) el.scrollLeft = el.scrollWidth;
     }, 50);
 
     return `<div class="mt-8">${yearHtml}</div>`;
