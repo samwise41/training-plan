@@ -1,4 +1,4 @@
-name: Update Planned Workouts JSON
+name: 04.1 Update Planned Workouts JSON
 
 on:
   # 1. Run automatically when you edit the plan or the script
