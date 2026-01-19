@@ -1,6 +1,6 @@
 [
     {
-        "id": "c792d0e6-c605-426f-b60a-be9e9302cf90",
+        "id": "cd41dfce-56c8-4f25-8b3e-f672c804e1b4",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -14,11 +14,11 @@
         "date": "2026-01-12",
         "activityName": "North Ayrshire Virtual Cycling",
         "activityType": "Other",
-        "plannedDuration": 0,
+        "plannedDuration": 45,
         "notes": "**Deload.** Focus: Low Cadence (60-65 rpm) intervals to fix low Torque Efficiency (1.90) ."
     },
     {
-        "id": "dba67538-f274-48e4-b335-cd07c63e552b",
+        "id": "48689074-34bc-4fe6-ae64-acae7f9592e8",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -31,12 +31,12 @@
         "Feeling": 0,
         "date": "2026-01-13",
         "activityName": "Swim coaching session",
-        "activityType": "Swim",
-        "plannedDuration": 0,
+        "activityType": "Other",
+        "plannedDuration": 30,
         "notes": "**Deload.** Use a Pull Buoy if ankle kicking is painful. Focus: Smooth rotation."
     },
     {
-        "id": "746db037-9586-49bb-8165-3d3a903255c0",
+        "id": "bc9cb693-5549-4f9d-95ed-0ded91b24ade",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -50,11 +50,11 @@
         "date": "2026-01-14",
         "activityName": "Zwift - Race: Zwift Crit Racing Club - Avon Flyer (D) on Avon Flyer in New York (+2)",
         "activityType": "Other",
-        "plannedDuration": 0,
+        "plannedDuration": 53,
         "notes": "**Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus."
     },
     {
-        "id": "ba4d1d0b-acd7-457f-86ac-9affda917ab5",
+        "id": "58180ade-0b3c-4480-937b-efe338f61154",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -68,11 +68,11 @@
         "date": "2026-01-15",
         "activityName": "North Ayrshire Virtual Cycling",
         "activityType": "Other",
-        "plannedDuration": 0,
+        "plannedDuration": 45,
         "notes": "**Deload.** Easy spin. Zone 2 (134-180W). Keep it smooth."
     },
     {
-        "id": "9e0a3d1c-8aa0-45f8-bd6d-1ed9e0c5951b",
+        "id": "5eebff5d-e5ae-46a5-91c4-ec5f3b603808",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -86,11 +86,11 @@
         "date": "2026-01-16",
         "activityName": "Roy - 25 Min at high cadence",
         "activityType": "Other",
-        "plannedDuration": 0,
+        "plannedDuration": 27,
         "notes": "**Ankle Test.** Flat surface only. Focus: High Cadence (175+ spm) to fix Ground Contact Time."
     },
     {
-        "id": "162f3963-9665-4b95-9717-34a5999d34ac",
+        "id": "e90a4079-f1fc-4624-9a27-b875872089bf",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
@@ -104,11 +104,11 @@
         "date": "2026-01-17",
         "activityName": "Thio Virtual Cycling",
         "activityType": "Other",
-        "plannedDuration": 0,
+        "plannedDuration": 76,
         "notes": "**Deload.** Reduced volume. Zone 2 Focus. Monitor Aerobic Efficiency."
     },
     {
-        "id": "1384f3a6-b9bf-404e-b654-e8bcc8d437bb",
+        "id": "7faf9565-74e3-4843-a0bd-9c926c2b319f",
         "status": "PLANNED",
         "completed": false,
         "actualDuration": 0,
