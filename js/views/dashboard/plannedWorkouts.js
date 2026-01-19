@@ -1,15 +1,16 @@
 // js/views/dashboard/plannedWorkouts.js
-import { Parser } from '../../parser.js';
 import { toLocalYMD, getSportColorVar, getIcon, buildCollapsibleSection } from './utils.js';
 
-export function renderPlannedWorkouts(planMd, cleanLogData) {
-    const scheduleSection = Parser.getSection(planMd, "Weekly Schedule");
-    if (!scheduleSection) return '<p class="text-slate-500 italic">No Weekly Schedule found.</p>';
+export function renderPlannedWorkouts(plannedJson, cleanLogData) {
+    if (!plannedJson || plannedJson.length === 0) {
+        return buildCollapsibleSection('planned-workouts-section', 'Planned Workouts', '<p class="text-slate-500 italic">No planned workouts found in JSON.</p>', true);
+    }
 
-    const workouts = Parser._parseTableBlock(scheduleSection);
-    workouts.sort((a, b) => a.date - b.date);
+    // 1. Sort by Date
+    // Create a copy to avoid mutating the original prop
+    const workouts = [...plannedJson].sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Group by Date
+    // 2. Group by Date
     let cardsHtml = '';
     const grouped = {};
     workouts.forEach(w => { 
@@ -23,7 +24,10 @@ export function renderPlannedWorkouts(planMd, cleanLogData) {
 
     sortedKeys.forEach(dateKey => {
         const dailyWorkouts = grouped[dateKey];
-        const dateObj = dailyWorkouts[0].date;
+        // Parse date from YYYY-MM-DD string safely
+        const [y, m, d] = dateKey.split('-').map(Number);
+        const dateObj = new Date(y, m-1, d); // Month is 0-indexed
+        
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
         
         dailyWorkouts.forEach(w => {
@@ -33,17 +37,16 @@ export function renderPlannedWorkouts(planMd, cleanLogData) {
             let cardBorder = 'border border-slate-700 hover:border-slate-600'; 
             let actualDur = 0;
 
-            // Match against Clean Log Data
-            // We match by Date AND Sport (e.g. "Run" == "Run")
+            // Match against Clean Log Data (App.allData)
             const match = cleanLogData.find(d => 
                 toLocalYMD(d.date) === dateKey && 
-                d.sport.toUpperCase() === w.type.toUpperCase()
+                d.sport.toUpperCase() === w.activityType.toUpperCase()
             );
 
             if (match) {
                 statusText = "COMPLETED";
                 statusColorClass = "text-emerald-500";
-                actualDur = Math.round(match.duration); // FIX: Round to integer
+                actualDur = Math.round(match.duration);
                 
                 const plan = w.plannedDuration || 0;
                 const ratio = plan > 0 ? (actualDur / plan) : 1;
@@ -53,18 +56,15 @@ export function renderPlannedWorkouts(planMd, cleanLogData) {
                 else cardBorder = 'ring-2 ring-red-500 ring-offset-2 ring-offset-slate-900'; 
             } else if (dateObj.getTime() === today.getTime()) {
                 cardBorder = 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900';
-            } else if (dateObj < today) {
-                // Past and unmatched = Missed?
-                // cardBorder = 'opacity-60 border border-slate-800';
             }
 
-            const titleStyle = `style="color: ${getSportColorVar(w.type)}"`;
+            const titleStyle = `style="color: ${getSportColorVar(w.activityType)}"`;
 
             cardsHtml += `
             <div class="bg-slate-800 rounded-xl p-6 shadow-lg relative overflow-hidden transition-all ${cardBorder}">
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">${dayName}</span>
-                    ${getIcon(w.type)}
+                    ${getIcon(w.activityType)}
                 </div>
                 <div class="flex justify-between items-center mb-6 mt-1">
                     <div class="flex flex-col">
@@ -75,7 +75,7 @@ export function renderPlannedWorkouts(planMd, cleanLogData) {
                         <div class="text-sm font-bold ${statusColorClass} uppercase tracking-widest mt-1">${statusText}</div>
                     </div>
                     <div class="text-right pl-4 max-w-[55%]">
-                        <h3 class="text-lg font-bold leading-tight" ${titleStyle}>${w.planName}</h3>
+                        <h3 class="text-lg font-bold leading-tight" ${titleStyle}>${w.activityName}</h3>
                     </div>
                 </div>
                 <div class="h-px bg-slate-700 w-full mb-4"></div>
