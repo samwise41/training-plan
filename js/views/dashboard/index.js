@@ -1,4 +1,3 @@
-// js/views/dashboard/index.js
 import { renderPlannedWorkouts } from './plannedWorkouts.js';
 import { renderProgressWidget, renderNextEvent } from './progressWidget.js';
 import { renderHeatmaps } from './heatmaps.js';
