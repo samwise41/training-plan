@@ -3,26 +3,33 @@ import { renderPlannedWorkouts } from './plannedWorkouts.js';
 import { renderProgressWidget, renderNextEvent } from './progressWidget.js';
 import { renderHeatmaps } from './heatmaps.js';
 
-window.triggerGitHubSync = async () => { /* ... sync logic ... */ };
+window.triggerGitHubSync = async () => {
+    const btn = document.querySelector('button[onclick="window.triggerGitHubSync()"]');
+    if(btn) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Syncing...';
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    
+    // Dispatch event for app.js to handle
+    window.dispatchEvent(new CustomEvent('trigger-sync'));
+};
 
 // Helper: Parse current phase/block from MD headers
 function getPhaseInfo(planMd) {
     if (!planMd) return { phase: "Unknown Phase", block: "Unknown Block" };
     
-    // Look for lines starting with # or ## that match common patterns
     const lines = planMd.split('\n');
     let phase = "";
     let block = "";
 
     for (let line of lines) {
         const trimmed = line.trim();
-        // # Phase 1 (Base)
+        // Look for "# Phase 1..."
         if (trimmed.match(/^#+\s*Phase/i)) {
             phase = trimmed.replace(/^#+\s*/, '');
         }
-        // ## Block 2 Week 1 or just "Weekly Schedule: Block 2..."
+        // Look for "Block X..."
         if (trimmed.match(/Block\s*\d+/i)) {
-            // Try to extract just the Block info
             const match = trimmed.match(/(Block\s*\d+.*)/i);
             if(match) block = match[1];
         }
@@ -30,63 +37,71 @@ function getPhaseInfo(planMd) {
     }
     
     return {
-        phase: phase || "Current Phase",
-        block: block || "Weekly Schedule"
+        phase: phase || "No Phase Found",
+        block: block || "Check Plan Headers"
     };
 }
 
 export function renderDashboard(planMd, cleanLogData) {
-    // 1. Get Phase Info
+    // 1. Prepare Data Synchronously (No loading state needed for these)
     const { phase, block } = getPhaseInfo(planMd);
+    const eventCardHtml = renderNextEvent(planMd); // Generates the full Event Card HTML
 
-    // 2. Build Skeleton
+    // 2. Build the Complete Dashboard Layout
+    // We inject the phase/block and eventHtml directly here.
     const html = `
-        <div class="bg-slate-800 rounded-xl p-6 mb-6 border border-slate-700 shadow-lg">
-            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Phase</div>
-            <h1 class="text-2xl font-black text-blue-500 mb-1">${phase}</h1>
-            <p class="text-sm text-slate-300 font-mono">${block}</p>
+        <div class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-lg flex flex-col justify-center">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Current Phase</div>
+                    <h1 class="text-xl sm:text-2xl font-black text-blue-500 mb-1 leading-tight">${phase}</h1>
+                    <p class="text-sm text-slate-300 font-mono">${block}</p>
+                </div>
+
+                ${eventCardHtml}
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="window.triggerGitHubSync()" class="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 font-bold py-2 px-4 rounded hover:text-white hover:border-slate-600 transition-all">
+                    <i class="fa-solid fa-rotate mr-1"></i> Sync Data
+                </button>
+            </div>
+
+            <div id="dash-widget">
+                <div class="animate-pulse bg-slate-800/50 h-32 rounded-xl"></div>
+            </div>
+
+            <div id="dash-workouts">
+                </div>
+
+            <div id="dash-heatmaps">
+                </div>
         </div>
 
-        <div id="dash-event"></div>
-
-        <div class="flex justify-end mb-4">
-            <button onclick="window.triggerGitHubSync()" class="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-400 border border-slate-700 font-bold py-1.5 px-3 rounded hover:text-white transition-colors">
-                <i class="fa-solid fa-rotate mr-1"></i> Sync Data
-            </button>
-        </div>
-
-        <div id="dash-widget"></div>
-        <div id="dash-workouts"></div>
-        <div id="dash-heatmaps"></div>
-        
         <div id="dashboard-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed"></div>
     `;
 
-    // 3. Populate Data
+    // 3. Fetch JSON & Hydrate the Bottom Widgets
     fetch('data/planned.json')
         .then(res => res.json())
         .then(plannedJson => {
-            // Event
-            const eventEl = document.getElementById('dash-event');
-            if (eventEl) eventEl.innerHTML = renderNextEvent(planMd);
-
-            // Progress
+            // Render Progress Widget
             const widgetEl = document.getElementById('dash-widget');
             if (widgetEl) widgetEl.innerHTML = renderProgressWidget(plannedJson, cleanLogData);
 
-            // Workouts
+            // Render Daily Cards
             const workoutsEl = document.getElementById('dash-workouts');
             if (workoutsEl) workoutsEl.innerHTML = renderPlannedWorkouts(plannedJson, cleanLogData);
 
-            // Heatmaps
+            // Render Heatmaps
             const heatmapsEl = document.getElementById('dash-heatmaps');
             if (heatmapsEl) heatmapsEl.innerHTML = renderHeatmaps(cleanLogData, plannedJson);
         })
         .catch(err => {
-            console.error("Error:", err);
-            // Fallback: If JSON missing, still try to render event/phase
-            const eventEl = document.getElementById('dash-event');
-            if (eventEl) eventEl.innerHTML = renderNextEvent(planMd);
+            console.error("Error loading planned.json:", err);
+            // On error, just clear the loader
+            const wEl = document.getElementById('dash-widget');
+            if(wEl) wEl.innerHTML = '<div class="text-red-500 text-xs">Failed to load plan data.</div>';
         });
 
     return html;
