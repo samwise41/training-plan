@@ -75,116 +75,111 @@ def parse_plan():
     json_output = []
     in_schedule = False
     headers = []
-    
-    # 1. Find Section and Parse
+    header_map = {} # Maps 'column name' -> index
+
     for line in lines:
         stripped = line.strip()
         
-        # Detect Start of Section
-        if "## Weekly Schedule" in line:
+        # 1. Detect Section Start (Flexible)
+        if "weekly schedule" in stripped.lower() and stripped.startswith("##"):
             in_schedule = True
+            print("   -> Found 'Weekly Schedule' section.")
             continue
         
-        # Detect End of Section (Next Header)
-        if in_schedule and line.startswith("## "):
+        # 2. Detect Section End
+        if in_schedule and stripped.startswith("##") and "weekly schedule" not in stripped.lower():
             in_schedule = False
+            print("   -> End of section reached.")
             continue
+
+        if not in_schedule:
+            continue
+
+        # 3. Detect Table Header
+        if stripped.startswith("|") and "date" in stripped.lower() and not headers:
+            # Parse Headers
+            raw_headers = [h.strip().lower() for h in stripped.strip("|").split("|")]
+            headers = raw_headers
             
-        if in_schedule and stripped.startswith("|"):
-            # Header Row
-            if "Date" in line and not headers:
-                headers = [h.strip().lower() for h in stripped.strip("|").split("|")]
-                continue
-                
-            # Skip Separator
-            if "---" in line:
-                continue
-                
-            # Data Row
+            # Map standard keys to column indices
+            for idx, h in enumerate(headers):
+                if "date" in h: header_map["date"] = idx
+                elif "activity" in h or "workout" in h: header_map["activity"] = idx
+                elif "type" in h or "sport" in h: header_map["type"] = idx
+                elif "duration" in h or "time" in h: header_map["duration"] = idx
+                elif "notes" in h: header_map["notes"] = idx
+
+            print(f"   -> Found headers: {headers}")
+            print(f"   -> Mapped columns: {header_map}")
+            continue
+
+        # 4. Process Rows
+        if stripped.startswith("|") and not "---" in stripped and headers:
             cols = [c.strip() for c in stripped.strip("|").split("|")]
             
-            # Simple check to ensure row isn't empty or malformed
-            if len(cols) < 3: 
-                continue
+            # Ensure we have enough columns to match the headers
+            if len(cols) != len(headers):
+                # Sometimes splitting by pipe creates empty strings at edges if spacing is off
+                # Try to adjust if length matches reasonably well
+                pass 
 
-            # Map Columns using Headers
             entry = {
-                "id": str(uuid.uuid4()), # Generate ID
+                "id": str(uuid.uuid4()),
                 "status": "PLANNED",
                 "completed": False,
-                # Default "Null" values for Log Schema fields
-                "actualDuration": 0,
-                "distance": 0,
-                "averageHR": 0,
-                "maxHR": 0,
-                "avgPower": 0,
-                "calories": 0,
-                "RPE": 0,
-                "Feeling": 0
+                # Default numeric fields for app.js compatibility
+                "actualDuration": 0, "distance": 0, "averageHR": 0,
+                "maxHR": 0, "avgPower": 0, "calories": 0, "RPE": 0, "Feeling": 0
             }
 
-            # Map based on header position
             try:
-                # DATE
-                if "date" in headers:
-                    date_idx = headers.index("date")
-                    # Try to ensure YYYY-MM-DD format
-                    raw_date = cols[date_idx]
+                # --- DATE ---
+                if "date" in header_map:
+                    raw_date = cols[header_map["date"]]
+                    # Try converting YYYY-MM-DD
                     try:
                         dt = datetime.datetime.strptime(raw_date, "%Y-%m-%d")
                         entry["date"] = dt.strftime("%Y-%m-%d")
                     except ValueError:
-                        # Fallback: leave as string if not strictly YYYY-MM-DD
                         entry["date"] = raw_date
+                else:
+                    continue # No date, skip row
 
-                # ACTIVITY NAME
-                if "activity" in headers:
-                    entry["activityName"] = cols[headers.index("activity")]
-                elif "workout" in headers:
-                    entry["activityName"] = cols[headers.index("workout")]
+                # --- ACTIVITY NAME ---
+                if "activity" in header_map:
+                    entry["activityName"] = cols[header_map["activity"]]
                 else:
                     entry["activityName"] = "Workout"
 
-                # TYPE (Sport)
-                if "type" in headers:
-                    raw_type = cols[headers.index("type")]
-                    entry["activityType"] = normalize_sport(raw_type)
-                elif "sport" in headers:
-                    raw_type = cols[headers.index("sport")]
-                    entry["activityType"] = normalize_sport(raw_type)
+                # --- TYPE ---
+                if "type" in header_map:
+                    entry["activityType"] = normalize_sport(cols[header_map["type"]])
                 else:
-                    entry["activityType"] = normalize_sport(entry["activityName"]) # Guess from name
+                    # Guess from Name
+                    entry["activityType"] = normalize_sport(entry["activityName"])
 
-                # DURATION
-                if "duration" in headers:
-                    dur_str = cols[headers.index("duration")]
-                    entry["plannedDuration"] = parse_duration(dur_str)
-                elif "time" in headers:
-                    dur_str = cols[headers.index("time")]
-                    entry["plannedDuration"] = parse_duration(dur_str)
+                # --- DURATION ---
+                if "duration" in header_map:
+                    entry["plannedDuration"] = parse_duration(cols[header_map["duration"]])
                 else:
                     entry["plannedDuration"] = 0
 
-                # NOTES
-                if "notes" in headers:
-                    entry["notes"] = cols[headers.index("notes")]
+                # --- NOTES ---
+                if "notes" in header_map:
+                    entry["notes"] = cols[header_map["notes"]]
                 else:
                     entry["notes"] = ""
 
-                # Only add if valid date
-                if "date" in entry:
-                    json_output.append(entry)
+                json_output.append(entry)
 
             except Exception as e:
-                print(f"⚠️ Skipped Row: {cols} | Error: {e}")
+                # print(f"⚠️ Skipped Row: {cols} | {e}")
                 continue
 
-    # 2. Write JSON
+    # 5. Output Results
     print(f"✅ Parsed {len(json_output)} workouts.")
     
-    # Ensure directory exists
     OUTPUT_FILE.parent.mkdir(exist_ok=True)
-    
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(json_output, f, indent=4)
         
