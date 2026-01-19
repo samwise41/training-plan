@@ -48,7 +48,7 @@ export function renderDashboard(planMd, cleanLogData) {
     const { phase, block } = getPhaseInfo(planMd);
     const eventCardHtml = renderNextEvent(planMd); 
 
-    // 2. Build the Layout (SINGLE DEFINITION - No Duplicates)
+    // 2. Build the Layout (SINGLE DEFINITION)
     const html = `
         <div class="space-y-6">
             
