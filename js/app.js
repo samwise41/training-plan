@@ -73,60 +73,42 @@
             console.log(`📥 Ingesting ${jsonArray.length} records...`);
 
             return jsonArray.map(item => {
-                // Helper: Ensure we get a number, or null (never undefined/NaN)
                 const num = (v) => (v !== null && v !== undefined && !isNaN(v) && v !== "") ? Number(v) : null;
                 const str = (v) => (v || "").toString();
 
-                // A. IDENTITY
                 const dateObj = new Date(`${item.date}T12:00:00`); 
                 
-                // B. SPORT NORMALIZATION
-                // We flatten "Virtual Cycling", "Road Cycling" -> "Bike"
                 let rawSport = str(item.actualSport || item.activityType?.typeKey || "Other");
                 let cleanSport = "Other";
                 if (rawSport.match(/Run|Jog/i)) cleanSport = "Run";
                 else if (rawSport.match(/Bike|Cycl|Ride|Zwift/i)) cleanSport = "Bike";
                 else if (rawSport.match(/Swim|Pool/i)) cleanSport = "Swim";
 
-                // C. CADENCE MERGE
-                // Bike and Run cadence are in different source fields. We merge them.
                 const cadBike = num(item.averageBikingCadenceInRevPerMinute);
                 const cadRun = num(item.averageRunningCadenceInStepsPerMinute);
                 const cleanCadence = cadBike || cadRun || 0;
 
-                // --- D. THE STANDARD SCHEMA ---
                 return {
-                    // Identity
                     id: str(item.id),
                     date: dateObj,
-                    dateStr: item.date, // Keep ISO string for easy ref
+                    dateStr: item.date, 
                     title: str(item.actualWorkout || item.activityName || "Workout"),
-                    sport: cleanSport, // "Bike", "Run", "Swim", "Other"
-
-                    // Volume
-                    duration: num(item.actualDuration) || 0, // Minutes
-                    distance: num(item.distance) || 0,       // Meters
-
-                    // Intensity
+                    sport: cleanSport, 
+                    duration: num(item.actualDuration) || 0, 
+                    distance: num(item.distance) || 0,       
                     hr: num(item.averageHR) || 0,
                     power: num(item.avgPower) || num(item.normPower) || 0,
                     speed: num(item.averageSpeed) || 0,
                     cadence: cleanCadence,
                     rpe: num(item.RPE) || 0,
-                    
-                    // Load
                     tss: num(item.trainingStressScore) || 0,
                     feel: num(item.Feeling) || 0,
-
-                    // Physio & Dynamics
                     vo2: num(item.vO2MaxValue) || 0,
                     anaerobic: num(item.anaerobicTrainingEffect) || 0,
                     gct: num(item.avgGroundContactTime) || 0,
                     vert: num(item.avgVerticalOscillation) || 0,
-                    
-                    // Metadata
                     status: item.status === 'COMPLETED' ? 'COMPLETED' : 'PLANNED',
-                    source: item // Keep raw just in case, but views should NOT use it
+                    source: item 
                 };
             }).sort((a,b) => b.date - a.date);
         },
@@ -138,7 +120,6 @@
             const startView = window.location.hash.substring(1) || 'dashboard';
             
             try {
-                // Parallel Fetch
                 const [planRes, gearRes, historyRes] = await Promise.all([
                     fetch(`./${CONFIG.PLAN_FILE}?t=${cacheBuster}`),
                     fetch(`./${CONFIG.GEAR_FILE}?t=${cacheBuster}`),
@@ -150,15 +131,7 @@
                 
                 if (historyRes.ok) {
                     const rawJson = await historyRes.json();
-                    // RUN THE INGESTOR
                     this.allData = this.processData(rawJson);
-                    
-                    // DEBUG: Validate Schema in Console
-                    if(this.allData.length > 0) {
-                        console.log("✅ Schema Verification (First Record):", this.allData[0]);
-                    }
-                } else {
-                    console.error("❌ Failed to load training_log.json");
                 }
                 
                 this.renderView(startView);
@@ -177,7 +150,6 @@
             const content = document.getElementById('content');
             if(!content) return;
             
-            // UI Updates
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             const navBtn = document.getElementById(`nav-${view}`);
             if(navBtn) navBtn.classList.add('active');
@@ -187,16 +159,15 @@
             content.classList.add('opacity-0');
             setTimeout(() => {
                 try {
-                    // Pass CLEAN data to views
                     if (view === 'metrics' && renderMetrics) content.innerHTML = renderMetrics(this.allData);
                     else if (view === 'trends' && renderTrends) {
                         const res = renderTrends(this.allData);
                         content.innerHTML = res.html;
                         if(updateDurationAnalysis) updateDurationAnalysis(this.allData);
                     }
+                    // CRITICAL FIX: Removed `this.getStatsBar()`
                     else if (view === 'dashboard' && renderDashboard) {
-                        content.innerHTML = this.getStatsBar() + renderDashboard(this.planMd, this.allData);
-                        this.updateStats();
+                        content.innerHTML = renderDashboard(this.planMd, this.allData);
                     }
                     else if (view === 'gear' && renderGear) {
                         const res = renderGear(this.gearMd, this.currentTemp, this.hourlyWeather);
@@ -211,7 +182,6 @@
                     else if (view === 'zones' && renderZones) content.innerHTML = renderZones(this.planMd);
                     else if (view === 'ftp' && renderFTP) content.innerHTML = renderFTP(this.planMd);
                     else if (view === 'logbook') {
-                        // Debug View for Clean Data
                         let rows = this.allData.map(d => 
                             `<tr><td class="p-2 border-b border-slate-700 text-xs">${d.date.toLocaleDateString()}</td>
                                  <td class="p-2 border-b border-slate-700 text-xs font-bold ${d.sport === 'Run' ? 'text-pink-400' : d.sport === 'Bike' ? 'text-purple-400' : 'text-cyan-400'}">${d.sport}</td>
@@ -248,25 +218,6 @@
             } else {
                 sidebar.classList.toggle('sidebar-closed'); sidebar.classList.toggle('sidebar-open');
                 overlay.classList.toggle('hidden');
-            }
-        },
-        
-        getStatsBar() {
-            return `<div id="stats-bar" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex flex-col justify-center shadow-lg">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase">Phase</p>
-                    <div class="flex flex-col"><span class="text-lg font-bold text-blue-500" id="stat-phase">--</span><span class="text-sm text-white" id="stat-week">--</span></div>
-                </div>
-                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl"><div id="stat-event"><p class="text-lg font-bold text-white" id="stat-event-name">--</p><span id="stat-event-date" class="text-slate-400 text-xs">--</span></div></div>
-            </div>`;
-        },
-        
-        updateStats() {
-            if(!this.planMd) return;
-            const statusMatch = this.planMd.match(/\*\*Status:\*\*\s*(.*?)\s+-\s+(.*)/i);
-            if(statusMatch) {
-                document.getElementById('stat-phase').innerText = statusMatch[1].trim();
-                document.getElementById('stat-week').innerText = statusMatch[2].trim();
             }
         }
     };
