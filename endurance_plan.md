@@ -157,13 +157,14 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 
 | **Status** | **Day** | **Planned Workout** | **Planned Duration** | **Actual Workout** | **Actual Duration** | **Notes / Targets** | **Date** |
 |:---|:---|:---|:---|:---|:---|:---|:---|
-| COMPLETED | Monday | [BIKE] Strength / Hill Focus | 40 mins | [BIKE] North Ayrshire Virtual Cycling | 45.7 | **Deload.** Focus: Low Cadence (60-65 rpm) intervals to fix low Torque Efficiency (1.90) . | 2026-01-12 |
-| COMPLETED | Tuesday | [SWIM] Technique Focus | 30 mins | [SWIM] Swim coaching session | 30.0 | **Deload.** Use a Pull Buoy if ankle kicking is painful. Focus: Smooth rotation. | 2026-01-13 |
-| COMPLETED | Wednesday | [BIKE] Zwift Race | 45 mins | [BIKE] Zwift - Race: Zwift Crit Racing Club - Avon Flyer (D) on Avon Flyer in New York (+2) | 53.7 | **Ankle Swap.** Replaces Run Tempo. Fun Factor: Go hard. High intensity stimulus. | 2026-01-14 |
-| PLANNED | Thursday | [BIKE] Zone 2 Endurance | 45 mins | | | **Deload.** Easy spin. Zone 2 (134-180W). Keep it smooth. | 2026-01-15 |
-| PLANNED | Friday | [RUN] Easy / Base | 25 mins | | | **Ankle Test.** Flat surface only. Focus: High Cadence (175+ spm) to fix Ground Contact Time. | 2026-01-16 |
-| PLANNED | Saturday | [BIKE] Long Steady Distance | 75 mins | | | **Deload.** Reduced volume. Zone 2 Focus. Monitor Aerobic Efficiency. | 2026-01-17 |
-| PLANNED | Sunday | Rest | - | | | Total Recovery. Ice ankle if needed. | 2026-01-18 |
+| PLANNED | Monday | [BIKE] Strength / Hill Focus | 60 mins | | | **File:** `Sweet_Spot___2_x_15.zwo`. **Focus:** Perform intervals at **Low Cadence (60-70 RPM)** to fix Torque Efficiency (1.97). Grind it out. | 2026-01-19 |
+| PLANNED | Tuesday | [SWIM] Technique Focus | 40 mins | | | **Focus:** Smooth rotation. Swim Efficiency is improving (0.50) but needs maintenance. Use Pull Buoy if legs are tired. | 2026-01-20 |
+| PLANNED | Wednesday | [RUN] Tempo / Threshold | 45 mins | | | **Focus:** Run Durability. Include 4-6 x 20sec "Strides" at the end. **Target:** High Cadence (175+ spm) to lower Ground Contact Time. | 2026-01-21 |
+| PLANNED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | | | **File:** `Zone_2___71___90_min_.zwo`. **Winter Strategy:** Volume re-allocated here. Strict Zone 2 (134-180W). | 2026-01-22 |
+| PLANNED | Friday | [SWIM] Touch Swim | 20 mins | | | Very easy. Drills only. Maintain "feel for water." | 2026-01-23 |
+| PLANNED | Friday | [RUN] Aerobic Maintenance | 50 mins | | | **Focus:** Pure Zone 2. Keep HR < 152 bpm. Focus on quick feet / low vertical oscillation. | 2026-01-23 |
+| PLANNED | Saturday | [BIKE] Long Steady Distance | 120 mins | | | **File:** `Zone_2___71___2_hrs_.zwo`. **Winter Cap Applied.** 2.0 Hours max. Fueling practice (60-90g carb/hr). | 2026-01-24 |
+| PLANNED | Sunday | Rest | - | | | Strict recovery. No activity. | 2026-01-25 |
 
 
 
