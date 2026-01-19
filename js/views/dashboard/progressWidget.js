@@ -1,49 +1,37 @@
 // js/views/dashboard/progressWidget.js
 import { getSportColorVar } from './utils.js';
 
-function calculateDailyStreak(fullLogData) {
-    if (!fullLogData || fullLogData.length === 0) return 0;
-
+// Helper: Find next event
+function findNextEvent(planMd) {
+    if (!planMd) return null;
+    const lines = planMd.split('\n');
+    let inTable = false;
     const today = new Date(); today.setHours(0,0,0,0);
-    const dayOfWeek = today.getDay(); 
-    const currentWeekStart = new Date(today); 
-    currentWeekStart.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
     
-    const weeksMap = {};
-    fullLogData.forEach(item => {
-        if (!item.date) return;
-        const d = new Date(item.date); d.setHours(0,0,0,0);
-        
-        // Skip future/current week for streak calculation
-        if (d >= currentWeekStart) return;
-
-        const day = d.getDay(); 
-        const weekStart = new Date(d); 
-        weekStart.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
-        const key = weekStart.toISOString().split('T')[0];
-        
-        if (!weeksMap[key]) weeksMap[key] = { failed: false };
-        
-        // Logic: If planned duration exists but not completed
-        // Note: app.js doesn't import 'plannedDuration' for historical records by default unless mapped.
-        // Assuming we rely on 'duration' > 0 for actuals.
-        if (item.status !== 'COMPLETED' && (!item.duration || item.duration === 0)) {
-             // In pure log mode, we might not know if it was planned-but-missed unless we merge plan vs actuals.
-             // For now, assume if it's in the log, it happened.
+    // Simple parser for the "Event Schedule" table
+    for (let line of lines) {
+        if (line.includes('| **Date** |')) { inTable = true; continue; }
+        if (inTable && line.startsWith('| :---')) continue;
+        if (inTable && line.startsWith('|')) {
+            const cols = line.split('|').map(c => c.trim());
+            // Col 1: Date, Col 2: Name
+            if (cols.length >= 3) {
+                const dateStr = cols[1];
+                const d = new Date(dateStr);
+                if (!isNaN(d) && d >= today) {
+                    return {
+                        name: cols[2].replace(/\*\*/g, ''),
+                        date: d,
+                        daysToGo: Math.ceil((d - today) / (1000 * 60 * 60 * 24))
+                    };
+                }
+            }
         }
-    });
-    
-    // Simplified: Just count weeks with activity
-    // (Real streak logic needs merged plan+actual data which we might not have fully historically)
-    return 0; // Placeholder until strict historical plan merging is added
+    }
+    return null;
 }
 
-function calculateVolumeStreak(fullLogData) {
-    // Simplified volume streak
-    return 0; 
-}
-
-export function renderProgressWidget(workouts, fullLogData) {
+export function renderProgressWidget(workouts, fullLogData, planMd) { // Added planMd argument
     // 1. Define Current Week
     const today = new Date(); today.setHours(0,0,0,0);
     const currentDay = today.getDay(); 
@@ -53,53 +41,42 @@ export function renderProgressWidget(workouts, fullLogData) {
 
     // 2. Init Stats
     const sportStats = { 
-        Bike: { planned: 0, actual: 0, dailyMarkers: {} }, 
-        Run: { planned: 0, actual: 0, dailyMarkers: {} }, 
-        Swim: { planned: 0, actual: 0, dailyMarkers: {} },
-        Other: { planned: 0, actual: 0, dailyMarkers: {} } 
+        Bike: { planned: 0, actual: 0 }, 
+        Run: { planned: 0, actual: 0 }, 
+        Swim: { planned: 0, actual: 0 },
+        Other: { planned: 0, actual: 0 } 
     };
     
     let totalPlanned = 0; 
     let totalActual = 0; 
-    const totalDailyMarkers = {};
 
-    // 3. Process PLANNED (from Schedule Markdown)
+    // 3. Process PLANNED
     if (workouts) {
         workouts.forEach(w => {
             const d = new Date(w.date);
             if (d >= monday && d <= sunday) {
                 const planDur = w.plannedDuration || 0;
-                const dateKey = w.date.toISOString().split('T')[0];
-                
                 totalPlanned += planDur;
-                if (!totalDailyMarkers[dateKey]) totalDailyMarkers[dateKey] = 0;
-                totalDailyMarkers[dateKey] += planDur;
 
-                // Detect Sport from Plan Name
                 let sport = 'Other';
-                const name = (w.planName || '').toUpperCase();
-                if (name.includes('RUN')) sport = 'Run';
-                else if (name.includes('BIKE')) sport = 'Bike';
-                else if (name.includes('SWIM')) sport = 'Swim';
+                const type = (w.type || '').toUpperCase();
+                if (type.includes('RUN')) sport = 'Run';
+                else if (type.includes('BIKE')) sport = 'Bike';
+                else if (type.includes('SWIM')) sport = 'Swim';
 
-                if (sportStats[sport]) {
-                    sportStats[sport].planned += planDur;
-                    if (!sportStats[sport].dailyMarkers[dateKey]) sportStats[sport].dailyMarkers[dateKey] = 0;
-                    sportStats[sport].dailyMarkers[dateKey] += planDur;
-                }
+                if (sportStats[sport]) sportStats[sport].planned += planDur;
             }
         });
     }
 
-    // 4. Process ACTUAL (from Clean App Data)
+    // 4. Process ACTUAL
     if (fullLogData) {
         fullLogData.forEach(item => {
             const d = new Date(item.date);
             if (d >= monday && d <= sunday) {
-                const actDur = item.duration || 0; // Use clean 'duration'
+                const actDur = item.duration || 0;
                 if (actDur > 0) {
                     totalActual += actDur;
-                    // Use clean 'sport'
                     const sport = sportStats[item.sport] ? item.sport : 'Other';
                     sportStats[sport].actual += actDur;
                 }
@@ -107,35 +84,22 @@ export function renderProgressWidget(workouts, fullLogData) {
         });
     }
 
-    // 5. Generate HTML (Helper)
-    const generateBarHtml = (label, iconClass, actual, planned, dailyMap, isMain = false, sportType = 'All') => {
+    // 5. Build Bars HTML
+    const generateBarHtml = (label, iconClass, actual, planned, isMain = false, sportType = 'All') => {
+        if (!isMain && planned === 0 && actual === 0) return '';
+
         const rawPct = planned > 0 ? Math.round((actual / planned) * 100) : 0; 
-        const displayPct = rawPct; 
         const barWidth = Math.min(rawPct, 100); 
         const actualHrs = (actual / 60).toFixed(1); 
         const plannedHrs = (planned / 60).toFixed(1);
-        
-        let markersHtml = ''; 
-        let runningTotal = 0; 
-        const sortedDays = Object.keys(dailyMap).sort();
-        
-        if (planned > 0) { 
-            for (let i = 0; i < sortedDays.length - 1; i++) { 
-                runningTotal += dailyMap[sortedDays[i]]; 
-                const pct = (runningTotal / planned) * 100; 
-                markersHtml += `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 z-10" style="left: ${pct}%"></div>`; 
-            } 
-        }
         
         const labelHtml = isMain ? `<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">${label}</span>` : ''; 
         const colorStyle = `style="color: ${getSportColorVar(sportType)}"`;
         const iconHtml = iconClass ? `<i class="fa-solid ${iconClass} mr-2 w-4 text-center" ${colorStyle}></i>` : ''; 
         const heightClass = isMain ? 'h-3' : 'h-2.5'; 
         const mbClass = isMain ? 'mb-4' : 'mb-3'; 
-        const pctColor = displayPct > 100 ? 'text-emerald-400' : 'text-blue-400';
+        const pctColor = rawPct >= 100 ? 'text-emerald-400' : 'text-blue-400';
         const barBgStyle = `style="width: ${barWidth}%; background-color: ${getSportColorVar(sportType)}"`;
-
-        if (!isMain && planned === 0 && actual === 0) return '';
 
         return `
         <div class="flex-1 w-full ${mbClass}">
@@ -150,22 +114,47 @@ export function renderProgressWidget(workouts, fullLogData) {
                         </span>
                     </div>
                 </div>
-                <span class="text-xs font-bold ${pctColor}">${displayPct}%</span>
+                <span class="text-xs font-bold ${pctColor}">${rawPct}%</span>
             </div>
             <div class="relative w-full ${heightClass} bg-slate-700 rounded-full overflow-hidden">
-                ${markersHtml}
                 <div class="absolute top-0 left-0 h-full transition-all duration-1000 ease-out" ${barBgStyle}></div>
             </div>
         </div>`;
     };
 
+    // 6. Next Event Logic
+    const nextEvent = findNextEvent(planMd);
+    let eventHtml = '';
+    if (nextEvent) {
+        eventHtml = `
+            <div class="bg-blue-600/10 border border-blue-500/30 rounded-xl p-4 mb-6 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-600 text-white w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xl shadow-lg">
+                        ${nextEvent.daysToGo}
+                    </div>
+                    <div>
+                        <div class="text-[10px] uppercase tracking-widest text-blue-300 font-bold">Days To Go</div>
+                        <div class="text-white font-bold text-lg leading-none">${nextEvent.name}</div>
+                        <div class="text-xs text-blue-200 mt-0.5">${nextEvent.date.toLocaleDateString()}</div>
+                    </div>
+                </div>
+                <div class="hidden sm:block text-right">
+                    <i class="fa-solid fa-flag-checkered text-4xl text-blue-500/20"></i>
+                </div>
+            </div>
+        `;
+    }
+
     return `
-    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 flex flex-col md:flex-row items-start gap-6 shadow-sm">
-        <div class="flex-1 w-full">
-            ${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, totalDailyMarkers, true, 'All')}
-            ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, sportStats.Bike.dailyMarkers, false, 'Bike')}
-            ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, sportStats.Run.dailyMarkers, false, 'Run')}
-            ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, sportStats.Swim.dailyMarkers, false, 'Swim')}
+    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 shadow-sm">
+        ${eventHtml}
+        <div class="flex flex-col md:flex-row items-start gap-6">
+            <div class="flex-1 w-full">
+                ${generateBarHtml('Weekly Goal', null, totalActual, totalPlanned, true, 'All')}
+                ${generateBarHtml('Bike', 'fa-bicycle', sportStats.Bike.actual, sportStats.Bike.planned, false, 'Bike')}
+                ${generateBarHtml('Run', 'fa-person-running', sportStats.Run.actual, sportStats.Run.planned, false, 'Run')}
+                ${generateBarHtml('Swim', 'fa-person-swimming', sportStats.Swim.actual, sportStats.Swim.planned, false, 'Swim')}
+            </div>
         </div>
     </div>`;
 }
