@@ -9,11 +9,10 @@ window.triggerGitHubSync = async () => {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Syncing...';
         btn.classList.add('opacity-50', 'cursor-not-allowed');
     }
-    // Dispatch event for app.js to handle
     window.dispatchEvent(new CustomEvent('trigger-sync'));
 };
 
-// --- Helper: Parse Phase/Block from Markdown ---
+// --- Helper: Parse Phase/Block ---
 function getPhaseInfo(planMd) {
     if (!planMd) return { phase: "Unknown Phase", block: "Unknown Block" };
     
@@ -23,11 +22,7 @@ function getPhaseInfo(planMd) {
 
     for (let line of lines) {
         const trimmed = line.trim();
-        // Look for "# Phase X"
-        if (trimmed.match(/^#+\s*Phase/i)) {
-            phase = trimmed.replace(/^#+\s*/, '');
-        }
-        // Look for "Block X"
+        if (trimmed.match(/^#+\s*Phase/i)) phase = trimmed.replace(/^#+\s*/, '');
         if (trimmed.match(/Block\s*\d+/i)) {
             const match = trimmed.match(/(Block\s*\d+.*)/i);
             if(match) block = match[1];
@@ -43,16 +38,15 @@ function getPhaseInfo(planMd) {
 
 // --- Main Render Function ---
 export function renderDashboard(planMd, cleanLogData) {
-    // 1. Prepare Data Synchronously (Phase & Event)
+    // 1. Prepare Static Data
     const { phase, block } = getPhaseInfo(planMd);
     const eventCardHtml = renderNextEvent(planMd); 
 
-    // 2. Build the Layout (SINGLE DEFINITION)
+    // 2. Build Layout (SINGLE DEFINITION)
     const html = `
         <div class="space-y-6">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
                 <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-lg flex flex-col justify-center min-h-[140px]">
                     <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Current Phase</div>
                     <h1 class="text-xl sm:text-2xl font-black text-blue-500 mb-1 leading-tight">${phase}</h1>
@@ -80,19 +74,16 @@ export function renderDashboard(planMd, cleanLogData) {
         <div id="dashboard-tooltip-popup" class="z-50 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl text-xs pointer-events-none opacity-0 transition-opacity fixed"></div>
     `;
 
-    // 3. Fetch JSON & Populate Widgets (Async)
+    // 3. Async Data Loading
     fetch('data/planned.json')
         .then(res => res.json())
         .then(plannedJson => {
-            // A. Progress Widget (Bars Only)
             const widgetEl = document.getElementById('dash-widget');
             if (widgetEl) widgetEl.innerHTML = renderProgressWidget(plannedJson, cleanLogData);
 
-            // B. Daily Workouts
             const workoutsEl = document.getElementById('dash-workouts');
             if (workoutsEl) workoutsEl.innerHTML = renderPlannedWorkouts(plannedJson, cleanLogData);
 
-            // C. Heatmaps
             const heatmapsEl = document.getElementById('dash-heatmaps');
             if (heatmapsEl) heatmapsEl.innerHTML = renderHeatmaps(cleanLogData, plannedJson);
         })
