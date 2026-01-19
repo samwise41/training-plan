@@ -1,6 +1,6 @@
 import { getSportColorVar } from './utils.js';
 
-// --- HELPER: Parse Next Event ---
+// --- HELPER: Parse Next Event (Used by renderNextEvent only) ---
 function findNextEvent(planMd) {
     if (!planMd) return null;
     const lines = planMd.split('\n');
@@ -21,7 +21,7 @@ function findNextEvent(planMd) {
             const headers = trimmed.split('|').map(h => h.trim().toLowerCase());
             
             headers.forEach((h, idx) => {
-                const realIdx = idx - 1; 
+                const realIdx = idx - 1; // Adjust for split() empty first element
                 if (h.includes('date')) colMap.date = realIdx;
                 else if (h.includes('event') || h.includes('race') || h.includes('name')) colMap.event = realIdx;
             });
@@ -56,7 +56,7 @@ function findNextEvent(planMd) {
     return futureEvents.length > 0 ? futureEvents[0] : null;
 }
 
-// --- EXPORT 1: Render Next Event Card (Used by index.js ONLY) ---
+// --- EXPORT 1: Render Next Event Card (Used by index.js Top Row) ---
 export function renderNextEvent(planMd) {
     const nextEvent = findNextEvent(planMd);
     
@@ -86,7 +86,7 @@ export function renderNextEvent(planMd) {
     `;
 }
 
-// --- EXPORT 2: Render Progress Bars (NO CARDS INCLUDED) ---
+// --- EXPORT 2: Render Progress Bars ONLY (No Events, No Phases) ---
 export function renderProgressWidget(plannedWorkouts, fullLogData) { 
     // 1. Determine Week Window
     let minDate = new Date(8640000000000000);
@@ -194,7 +194,7 @@ export function renderProgressWidget(plannedWorkouts, fullLogData) {
         </div>`;
     };
 
-    // 5. Return ONLY the Widget Container (NO EVENT CARD HERE)
+    // 5. RETURN ONLY THE WIDGET WRAPPER
     return `
     <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-5 mb-8 shadow-sm">
         ${generateBar('Total', 'fa-layer-group', null, true)}
