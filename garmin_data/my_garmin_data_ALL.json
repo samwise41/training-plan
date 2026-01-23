@@ -215,7 +215,9 @@
         "elevationCorrected": false,
         "atpActivity": false,
         "perceivedEffort": 4,
-        "feeling": 4
+        "feeling": 4,
+        "moderateIntensityMinutes": 4,
+        "vigorousIntensityMinutes": 43
     },
     {
         "activityId": 21639067102,
