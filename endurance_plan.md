@@ -192,7 +192,7 @@ This logic dictates the maximum allowed week-over-week volume increase. The tota
 | COMPLETED | Thursday | [BIKE] Mid-Week Aerobic Volume | 90 mins | [BIKE] Innsbruck Virtual Cycling | 87.0 | **File:** `Zone_2___71___90_min_.zwo`. **Winter Strategy:** Volume re-allocated here. Strict Zone 2 (134-180W). | 2026-01-22 |
 | COMPLETED | Friday | [SWIM] Touch Swim | 20 mins | [SWIM] Pool Swim - Drills | 21.9 | Very easy. Drills only. Maintain "feel for water." | 2026-01-23 |
 | COMPLETED | Friday | [RUN] Aerobic Maintenance | 50 mins | [RUN] Roy - Zone 2 - 45 Minutes | 48.4 | **Focus:** Pure Zone 2. Keep HR < 152 bpm. Focus on quick feet / low vertical oscillation. | 2026-01-23 |
-| PLANNED | Saturday | [BIKE] Long Steady Distance | 120 mins | | | **File:** `Zone_2___71___2_hrs_.zwo`. **Winter Cap Applied.** 2.0 Hours max. Fueling practice (60-90g carb/hr). | 2026-01-24 |
+| COMPLETED | Saturday | [BIKE] Long Steady Distance | 120 mins | [BIKE] Innsbruck Virtual Cycling | 132.7 | **File:** `Zone_2___71___2_hrs_.zwo`. **Winter Cap Applied.** 2.0 Hours max. Fueling practice (60-90g carb/hr). | 2026-01-24 |
 | PLANNED | Sunday | Rest | - | | | Strict recovery. No activity. | 2026-01-25 |
 
 
