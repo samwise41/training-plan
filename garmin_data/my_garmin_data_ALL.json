@@ -220,8 +220,8 @@
             }
         ],
         "hasSplits": true,
-        "moderateIntensityMinutes": 0,
-        "vigorousIntensityMinutes": 3,
+        "moderateIntensityMinutes": 1,
+        "vigorousIntensityMinutes": 40,
         "avgGradeAdjustedSpeed": 3.1300001144409184,
         "differenceBodyBattery": -10,
         "hasHeatMap": false,
