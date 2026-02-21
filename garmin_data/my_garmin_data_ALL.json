@@ -1,5 +1,183 @@
 [
     {
+        "activityId": 21931743036,
+        "activityName": "Roy Running",
+        "startTimeLocal": "2026-02-20 13:45:01",
+        "startTimeGMT": "2026-02-20 20:45:01",
+        "activityType": {
+            "typeId": 1,
+            "typeKey": "running",
+            "parentTypeId": 17,
+            "isHidden": false,
+            "trimmable": true,
+            "restricted": false
+        },
+        "eventType": {
+            "typeId": 9,
+            "typeKey": "uncategorized",
+            "sortOrder": 10
+        },
+        "distance": 9075.25,
+        "duration": 2934.339111328125,
+        "elapsedDuration": 2940.3349609375,
+        "movingDuration": 2930.5020141601562,
+        "elevationGain": 43.0,
+        "elevationLoss": 43.0,
+        "averageSpeed": 3.092999935150147,
+        "maxSpeed": 3.686000108718872,
+        "startLatitude": 41.15537591278553,
+        "startLongitude": -112.05111530609429,
+        "hasPolyline": true,
+        "hasImages": false,
+        "ownerId": 126059504,
+        "ownerDisplayName": "745c9190-476c-43f3-a5bf-923d3a9ba345",
+        "ownerFullName": "Sam",
+        "ownerProfileImageUrlSmall": "https://s3.amazonaws.com/garmin-connect-prod/profile_images/5536f95b-13fb-4a0f-a7ae-3703e8c0e9b5-prth.png",
+        "ownerProfileImageUrlMedium": "https://s3.amazonaws.com/garmin-connect-prod/profile_images/5536f95b-13fb-4a0f-a7ae-3703e8c0e9b5-prfr.png",
+        "ownerProfileImageUrlLarge": "https://s3.amazonaws.com/garmin-connect-prod/profile_images/5536f95b-13fb-4a0f-a7ae-3703e8c0e9b5-prof.png",
+        "calories": 731.0,
+        "bmrCalories": 73.0,
+        "averageHR": 154.0,
+        "maxHR": 167.0,
+        "averageRunningCadenceInStepsPerMinute": 172.546875,
+        "maxRunningCadenceInStepsPerMinute": 188.0,
+        "steps": 8470,
+        "userRoles": [
+            "SCOPE_GOLF_API_READ",
+            "SCOPE_DI_OAUTH_2_DEVICE_REVOCATION_WRITE",
+            "SCOPE_DI_OAUTH_2_CREATE_DI_USER",
+            "SCOPE_ATP_READ",
+            "SCOPE_DIVE_API_WRITE",
+            "SCOPE_COMMUNITY_COURSE_ADMIN_READ",
+            "SCOPE_DIVE_API_READ",
+            "SCOPE_DI_OAUTH_2_CLIENT_READ",
+            "SCOPE_CONNECT_WRITE",
+            "SCOPE_COMMUNITY_COURSE_WRITE",
+            "SCOPE_CONNECT_MCT_DAILY_LOG_READ",
+            "SCOPE_CONNECT_API_CREATE_UPDATE_USER",
+            "SCOPE_MESSAGE_GENERATION_READ",
+            "SCOPE_GARMIN_PROFILE_WRITE",
+            "SCOPE_DI_OAUTH_2_CLIENT_REVOCATION_ADMIN",
+            "SCOPE_CONNECT_WEB_TEMPLATE_RENDER",
+            "SCOPE_ACTIVITY_DETECTION_READ",
+            "SCOPE_OMT_SUBSCRIPTION_ADMIN_READ",
+            "SCOPE_DI_OAUTH_2_MANAGED_STATUS_ADMIN_WRITE",
+            "SCOPE_CONNECT_NON_SOCIAL_SHARED_READ",
+            "SCOPE_CONNECT_READ",
+            "SCOPE_GARMIN_PROFILE_READ",
+            "SCOPE_DI_OAUTH_2_PRERELEASE_PERMISSIONS_ADMIN_WRITE",
+            "SCOPE_DI_OAUTH_2_TOKEN_ADMIN",
+            "ROLE_CONNECTUSER",
+            "ROLE_FITNESS_USER",
+            "ROLE_WELLNESS_USER"
+        ],
+        "privacy": {
+            "typeId": 3,
+            "typeKey": "subscribers"
+        },
+        "userPro": false,
+        "hasVideo": false,
+        "timeZoneId": 153,
+        "beginTimestamp": 1771620301000,
+        "sportTypeId": 1,
+        "avgPower": 352.0,
+        "maxPower": 539.0,
+        "aerobicTrainingEffect": 3.5999999046325684,
+        "anaerobicTrainingEffect": 0.0,
+        "normPower": 362.0,
+        "avgVerticalOscillation": 8.290000152587892,
+        "avgGroundContactTime": 252.3000030517578,
+        "avgStrideLength": 106.98000488281251,
+        "vO2MaxValue": 52.0,
+        "avgVerticalRatio": 7.760000228881836,
+        "deviceId": 3482801261,
+        "minTemperature": 15.0,
+        "maxTemperature": 27.0,
+        "minElevation": 1328.0,
+        "maxElevation": 1350.800048828125,
+        "avgElevation": 1338.7020448399956,
+        "maxDoubleCadence": 188.0,
+        "summarizedDiveInfo": {
+            "summarizedDiveGases": []
+        },
+        "maxVerticalSpeed": 0.60009765625,
+        "manufacturer": "GARMIN",
+        "locationName": "Roy",
+        "lapCount": 6,
+        "endLatitude": 41.155489487573504,
+        "endLongitude": -112.0514033921063,
+        "waterEstimated": 814.0,
+        "trainingEffectLabel": "TEMPO",
+        "minActivityLapDuration": 336.7380065917969,
+        "aerobicTrainingEffectMessage": "IMPACTING_TEMPO_22",
+        "anaerobicTrainingEffectMessage": "NO_ANAEROBIC_BENEFIT_0",
+        "splitSummaries": [
+            {
+                "noOfSplits": 2,
+                "totalAscent": 0.0,
+                "duration": 97.6050033569336,
+                "splitType": "RWD_WALK",
+                "numClimbSends": 0,
+                "maxElevationGain": 0.0,
+                "averageElevationGain": 0.0,
+                "maxDistance": 97,
+                "distance": 126.01000213623047,
+                "averageSpeed": 1.2910000085830688,
+                "maxSpeed": 1.819000005722046,
+                "numFalls": 0,
+                "elevationLoss": 3.0
+            },
+            {
+                "noOfSplits": 3,
+                "totalAscent": 43.0,
+                "duration": 2836.715087890625,
+                "splitType": "RWD_RUN",
+                "numClimbSends": 0,
+                "maxElevationGain": 22.0,
+                "averageElevationGain": 14.0,
+                "maxDistance": 4039,
+                "distance": 8949.240234375,
+                "averageSpeed": 3.1549999713897705,
+                "maxSpeed": 3.686000108718872,
+                "numFalls": 0,
+                "elevationLoss": 40.0
+            }
+        ],
+        "hasSplits": true,
+        "moderateIntensityMinutes": 1,
+        "vigorousIntensityMinutes": 47,
+        "avgGradeAdjustedSpeed": 3.128000020980835,
+        "differenceBodyBattery": -9,
+        "hasHeatMap": false,
+        "fastestSplit_1000": 303.66900634765625,
+        "fastestSplit_1609": 491.87298583984375,
+        "fastestSplit_5000": 1601.6619873046875,
+        "hrTimeInZone_1": 367.985,
+        "hrTimeInZone_2": 329.001,
+        "hrTimeInZone_3": 1713.655,
+        "hrTimeInZone_4": 506.003,
+        "hrTimeInZone_5": 0.0,
+        "powerTimeInZone_1": 671.683,
+        "powerTimeInZone_2": 1680.97,
+        "powerTimeInZone_3": 295.984,
+        "powerTimeInZone_4": 107.002,
+        "powerTimeInZone_5": 7.002,
+        "endTimeGMT": "2026-02-20 21:34:01",
+        "qualifyingDive": false,
+        "activityUUID": "882e3ad5-f932-450c-9b6c-bcacadbc336c",
+        "pr": false,
+        "purposeful": false,
+        "manualActivity": false,
+        "favorite": false,
+        "autoCalcCalories": false,
+        "decoDive": false,
+        "elevationCorrected": false,
+        "atpActivity": false,
+        "parent": false,
+        "perceivedEffort": 5,
+        "feeling": 4
+    },
+    {
         "activityId": 21927294547,
         "activityName": "Pool Swim",
         "startTimeLocal": "2026-02-20 05:27:46",
@@ -9,8 +187,8 @@
             "typeKey": "lap_swimming",
             "parentTypeId": 26,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": false
+            "trimmable": false,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -135,8 +313,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -283,8 +461,8 @@
             "typeKey": "running",
             "parentTypeId": 17,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -537,8 +715,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -680,8 +858,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -827,8 +1005,8 @@
             "typeKey": "lap_swimming",
             "parentTypeId": 26,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": false
+            "trimmable": false,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -954,8 +1132,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -1102,8 +1280,8 @@
             "typeKey": "lap_swimming",
             "parentTypeId": 26,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": false
+            "trimmable": false,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -1228,8 +1406,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -1374,8 +1552,8 @@
             "typeKey": "lap_swimming",
             "parentTypeId": 26,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": false
+            "trimmable": false,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -1501,8 +1679,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -1648,8 +1826,8 @@
             "typeKey": "running",
             "parentTypeId": 17,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -1825,8 +2003,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -1978,8 +2156,8 @@
             "typeKey": "running",
             "parentTypeId": 17,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -2217,8 +2395,8 @@
             "typeKey": "lap_swimming",
             "parentTypeId": 26,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": false
+            "trimmable": false,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -2342,8 +2520,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -2485,8 +2663,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -2631,8 +2809,8 @@
             "typeKey": "lap_swimming",
             "parentTypeId": 26,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": false
+            "trimmable": false,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -2758,8 +2936,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -2905,8 +3083,8 @@
             "typeKey": "running",
             "parentTypeId": 17,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -3143,8 +3321,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -3291,8 +3469,8 @@
             "typeKey": "indoor_cycling",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -3404,8 +3582,8 @@
             "typeKey": "indoor_cycling",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -3518,8 +3696,8 @@
             "typeKey": "treadmill_running",
             "parentTypeId": 1,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -3706,8 +3884,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -3854,8 +4032,8 @@
             "typeKey": "running",
             "parentTypeId": 17,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -4077,8 +4255,8 @@
             "typeKey": "lap_swimming",
             "parentTypeId": 26,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": false
+            "trimmable": false,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -4203,8 +4381,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -4354,8 +4532,8 @@
             "typeKey": "indoor_running",
             "parentTypeId": 1,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -4519,8 +4697,8 @@
             "typeKey": "running",
             "parentTypeId": 17,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -4757,8 +4935,8 @@
             "typeKey": "lap_swimming",
             "parentTypeId": 26,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": false
+            "trimmable": false,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -4885,8 +5063,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -5033,8 +5211,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -5182,8 +5360,8 @@
             "typeKey": "lap_swimming",
             "parentTypeId": 26,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": false
+            "trimmable": false,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -5307,8 +5485,8 @@
             "typeKey": "running",
             "parentTypeId": 17,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -5521,8 +5699,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -5669,8 +5847,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -5811,8 +5989,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
@@ -5961,8 +6139,8 @@
             "typeKey": "virtual_ride",
             "parentTypeId": 2,
             "isHidden": false,
-            "restricted": false,
-            "trimmable": true
+            "trimmable": true,
+            "restricted": false
         },
         "eventType": {
             "typeId": 9,
