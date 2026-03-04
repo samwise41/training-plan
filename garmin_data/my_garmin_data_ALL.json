@@ -21,8 +21,8 @@
         "duration": 2683.924072265625,
         "elapsedDuration": 2683.924072265625,
         "movingDuration": 2640.4189949035645,
-        "elevationGain": 59.0,
-        "elevationLoss": 53.0,
+        "elevationGain": 59.13,
+        "elevationLoss": 53.04,
         "averageSpeed": 3.046999931335449,
         "maxSpeed": 4.870999813079834,
         "startLatitude": 41.15536903962493,
@@ -254,7 +254,10 @@
         "parent": false,
         "manualActivity": false,
         "perceivedEffort": 6,
-        "feeling": 4
+        "feeling": 4,
+        "avgVerticalSpeed": 2.203117524937368,
+        "caloriesConsumed": 0.0,
+        "waterConsumed": 0.0
     },
     {
         "activityId": 22046232349,
