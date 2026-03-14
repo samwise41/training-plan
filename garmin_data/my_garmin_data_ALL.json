@@ -161,7 +161,9 @@
         "manualActivity": false,
         "favorite": false,
         "perceivedEffort": 3,
-        "feeling": 5
+        "feeling": 5,
+        "moderateIntensityMinutes": 1,
+        "vigorousIntensityMinutes": 13
     },
     {
         "activityId": 22170641875,
