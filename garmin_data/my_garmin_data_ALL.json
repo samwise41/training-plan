@@ -162,7 +162,7 @@
         "hasSplits": true,
         "hasIntensityIntervals": false,
         "moderateIntensityMinutes": 0,
-        "vigorousIntensityMinutes": 8,
+        "vigorousIntensityMinutes": 21,
         "avgGradeAdjustedSpeed": 3.4010000228881836,
         "differenceBodyBattery": -7,
         "hasHeatMap": false,
